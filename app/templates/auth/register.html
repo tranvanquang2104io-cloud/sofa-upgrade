@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Register - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4">Register Company</h2>
+                    <p class="text-center text-muted mb-4">Create a new SofaFlow account</p>
+
+                    <form method="POST" action="{{ url_for('auth.register') }}">
+                        <div class="mb-3">
+                            <label for="company_code" class="form-label">Company Code</label>
+                            <input type="text" class="form-control" id="company_code" name="company_code" placeholder="e.g., SOFA-001" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="company_name" class="form-label">Company Name</label>
+                            <input type="text" class="form-control" id="company_name" name="company_name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Company Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label">Your Full Name</label>
+                            <input type="text" class="form-control" id="full_name" name="full_name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Register</button>
+                    </form>
+
+                    <hr>
+
+                    <p class="text-center text-muted mb-0">
+                        Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

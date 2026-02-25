@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Create Quotation - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-plus-circle"></i> Create Quotation</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dashboard.create_quotation', order_id=order.id) }}" id="quotation-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="quotation_number" class="form-label">Quotation Number *</label>
+                                <input type="text" class="form-control" id="quotation_number" name="quotation_number" required placeholder="e.g., QT-001">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="quotation_date" class="form-label">Quotation Date *</label>
+                                <input type="date" class="form-control" id="quotation_date" name="quotation_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="validity_days" class="form-label">Validity (Days)</label>
+                                <input type="number" class="form-control" id="validity_days" name="validity_days" value="30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <div class="mb-3">
+                        <h5>Items</h5>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-tbody">
+                                <tr class="item-row">
+                                    <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name"></td>
+                                    <td><input type="number" class="form-control form-control-sm qty" name="item_quantity[]" placeholder="0" step="0.01"></td>
+                                    <td><input type="number" class="form-control form-control-sm price" name="item_price[]" placeholder="0.00" step="0.01"></td>
+                                    <td><input type="number" class="form-control form-control-sm total" readonly></td>
+                                    <td><button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addRow()">
+                            <i class="bi bi-plus"></i> Add Item
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3 ms-auto">
+                            <div class="mb-3">
+                                <label for="total_amount" class="form-label">Total Amount *</label>
+                                <input type="number" class="form-control" id="total_amount" name="total_amount" required readonly step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Create Quotation
+                    </button>
+                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function addRow() {
+        const tbody = document.getElementById('items-tbody');
+        const row = document.createElement('tr');
+        row.className = 'item-row';
+        row.innerHTML = `
+            <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name"></td>
+            <td><input type="number" class="form-control form-control-sm qty" name="item_quantity[]" placeholder="0" step="0.01"></td>
+            <td><input type="number" class="form-control form-control-sm price" name="item_price[]" placeholder="0.00" step="0.01"></td>
+            <td><input type="number" class="form-control form-control-sm total" readonly></td>
+            <td><button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+        `;
+        tbody.appendChild(row);
+        attachCalculation(row);
+    }
+
+    function removeRow(btn) {
+        btn.closest('tr').remove();
+        calculateTotal();
+    }
+
+    function attachCalculation(row) {
+        row.querySelector('.qty').addEventListener('input', calculateTotal);
+        row.querySelector('.price').addEventListener('input', calculateTotal);
+    }
+
+    function calculateTotal() {
+        let grandTotal = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.qty').value) || 0;
+            const price = parseFloat(row.querySelector('.price').value) || 0;
+            const total = qty * price;
+            row.querySelector('.total').value = total.toFixed(2);
+            grandTotal += total;
+        });
+        document.getElementById('total_amount').value = grandTotal.toFixed(2);
+    }
+
+    // Initialize calculation on existing rows
+    document.querySelectorAll('.item-row').forEach(attachCalculation);
+</script>
+{% endblock %}

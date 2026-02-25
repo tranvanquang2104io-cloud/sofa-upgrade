@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block title %}Order - SofaFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .timeline-item {
+        display: flex;
+        margin-bottom: 30px;
+    }
+    
+    .timeline-marker {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        margin-right: 20px;
+        flex-shrink: 0;
+    }
+    
+    .timeline-marker.completed {
+        background-color: #28a745;
+    }
+    
+    .timeline-marker.in-progress {
+        background-color: #ffc107;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    .timeline-marker.pending {
+        background-color: #6c757d;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .timeline-content {
+        flex-grow: 1;
+    }
+    
+    .timeline-line {
+        width: 2px;
+        background-color: #dee2e6;
+        position: absolute;
+        left: 19px;
+        top: 40px;
+        bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>
+            <i class="bi bi-box"></i> {{ order.order_code }}
+        </h1>
+        <p class="text-muted">{{ order.title }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Order Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Order Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Order Code:</strong> {{ order.order_code }}</p>
+                        <p><strong>Customer:</strong> <a href="{{ url_for('dashboard.view_customer', customer_id=order.customer.id) }}">{{ order.customer.name }}</a></p>
+                        <p><strong>Store:</strong> {{ order.store.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Total Amount:</strong> ${{ order.total_amount|default('0') }}</p>
+                        <p><strong>Advance Amount:</strong> ${{ order.advance_amount|default('0') }}</p>
+                        <p><strong>Final Amount:</strong> ${{ order.final_amount|default('0') }}</p>
+                    </div>
+                </div>
+                {% if order.description %}
+                <p><strong>Description:</strong> {{ order.description }}</p>
+                {% endif %}
+                {% if order.notes %}
+                <p><strong>Notes:</strong> {{ order.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Lifecycle Timeline -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-hourglass"></i> Order Lifecycle</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-line"></div>
+                    
+                    <!-- Quotation Created -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if lifecycle.quotation_created %}completed{% else %}pending{% endif %}">
+                            {% if lifecycle.quotation_created %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>Quotation Created</h6>
+                            {% if lifecycle.quotation_created %}
+                                <p class="text-muted small">{{ lifecycle.quotation_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.quotation_created_at else 'N/A' }}</p>
+                                {% for quotation in quotations %}
+                                {% if quotation.is_active and not quotation.is_canceled %}
+                                <div class="alert {% if quotation.is_approved %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ quotation.quotation_number }}</strong> - ${{ quotation.total_amount }} ({{ quotation.items|length }} items)
+                                            {% if quotation.is_approved %}
+                                            <span class="badge bg-success ms-2">Approved</span>
+                                            {% else %}
+                                            <span class="badge bg-warning ms-2">Pending</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-outline-primary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if quotation.can_approve() %}
+                                            <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;">
+                                                <button type="submit" class="btn btn-outline-success" title="Approve" onclick="return confirm('Approve this quotation?')">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModal{{ quotation.id }}" title="Generate Document">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Generate Document Modal for this quotation -->
+                                <div class="modal fade" id="generateModal{{ quotation.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-sm">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Generate Document</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='quotation', ref_id=quotation.id) }}">
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label for="format" class="form-label">Format</label>
+                                                        <select class="form-select" name="format" required>
+                                                            <option value="pdf">PDF</option>
+                                                            <option value="docx">DOCX</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                    <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Pending</p>
+                                <a href="{{ url_for('dashboard.create_quotation', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus"></i> Create Quotation
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Quote Approved -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if lifecycle.quotation_approved %}completed{% elif lifecycle.quotation_created %}in-progress{% else %}pending{% endif %}">
+                            {% if lifecycle.quotation_approved %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>Quotation Approved</h6>
+                            {% if lifecycle.quotation_approved %}
+                                <p class="text-muted small">{{ lifecycle.quotation_approved_at.strftime('%Y-%m-%d %H:%M') if lifecycle.quotation_approved_at else 'N/A' }}</p>
+                            {% else %}
+                                <p class="text-muted">Pending</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Contract Created -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if lifecycle.contract_created %}completed{% elif lifecycle.quotation_approved %}in-progress{% else %}pending{% endif %}">
+                            {% if lifecycle.contract_created %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>Contract Created</h6>
+                            {% if lifecycle.contract_created %}
+                                <p class="text-muted small">{{ lifecycle.contract_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.contract_created_at else 'N/A' }}</p>
+                                {% set active_contracts = order.contracts|selectattr('is_active')|list %}
+                                {% for contract in active_contracts %}
+                                <div class="alert {% if contract.is_signed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ contract.contract_number }}</strong> - ${{ contract.contract_value }}
+                                            {% if contract.is_signed %}
+                                            <span class="badge bg-success ms-2">Signed</span>
+                                            {% else %}
+                                            <span class="badge bg-warning ms-2">Unsigned</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-outline-primary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if contract.can_edit() %}
+                                            <a href="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}" class="btn btn-outline-info" title="Edit Contract">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% endif %}
+                                            {% if contract.can_sign() %}
+                                            <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;">
+                                                <button type="submit" class="btn btn-outline-success" title="Sign" onclick="return confirm('Sign this contract?')">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModal{{ contract.id }}" title="Generate Document">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Generate Document Modal for this contract -->
+                                <div class="modal fade" id="generateModal{{ contract.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-sm">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Generate Document</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}">
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label for="format" class="form-label">Format</label>
+                                                        <select class="form-select" name="format" required>
+                                                            <option value="pdf">PDF</option>
+                                                            <option value="docx">DOCX</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                    <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Pending</p>
+                                {% if lifecycle.quotation_approved %}
+                                <a href="{{ url_for('dashboard.create_contract', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus"></i> Create Contract
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Contract Signed -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if lifecycle.contract_signed %}completed{% elif lifecycle.quotation_approved %}in-progress{% else %}pending{% endif %}">
+                            {% if lifecycle.contract_signed %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>Contract Signed</h6>
+                            {% if lifecycle.contract_signed %}
+                                <p class="text-muted small">{{ lifecycle.contract_signed_at.strftime('%Y-%m-%d %H:%M') if lifecycle.contract_signed_at else 'N/A' }}</p>
+                                {% for contract in contracts %}
+                                <div class="alert alert-success py-2 px-3">
+                                    <strong>{{ contract.contract_number }}</strong> - ${{ contract.contract_value }}
+                                    <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}" style="display:inline;">
+                                        <select name="format" class="form-select form-select-sm d-inline w-auto">
+                                            <option value="pdf">PDF</option>
+                                            <option value="docx">DOCX</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-info">Generate</button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Pending</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Delivery Completed -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if lifecycle.delivery_confirmed %}completed{% elif lifecycle.contract_created %}in-progress{% else %}pending{% endif %}">
+                            {% if lifecycle.delivery_confirmed %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>Delivery Completed</h6>
+                            {% if lifecycle.delivery_confirmed %}
+                                <p class="text-muted small">{{ lifecycle.delivery_confirmed_at.strftime('%Y-%m-%d %H:%M') if lifecycle.delivery_confirmed_at else 'N/A' }}</p>
+                                {% for delivery in delivery_reports %}
+                                <div class="alert alert-success py-2 px-3">
+                                    <strong>{{ delivery.report_number }}</strong> - {{ delivery.delivery_date.strftime('%Y-%m-%d') }}
+                                    <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='delivery', ref_id=delivery.id) }}" style="display:inline;">
+                                        <select name="format" class="form-select form-select-sm d-inline w-auto">
+                                            <option value="pdf">PDF</option>
+                                            <option value="docx">DOCX</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-info">Generate</button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Pending</p>
+                                {% if lifecycle.contract_created %}
+                                <a href="{{ url_for('dashboard.create_delivery', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus"></i> Create Delivery Report
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Advance Payment -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if lifecycle.advance_paid %}completed{% elif lifecycle.delivery_confirmed %}in-progress{% else %}pending{% endif %}">
+                            {% if lifecycle.advance_paid %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>Advance Payment</h6>
+                            {% if lifecycle.advance_paid %}
+                                <p class="text-muted small">{{ lifecycle.advance_paid_at.strftime('%Y-%m-%d %H:%M') if lifecycle.advance_paid_at else 'N/A' }}</p>
+                                {% for payment in payment_reports %}
+                                    {% if payment.payment_type == 'advance' %}
+                                    <div class="alert alert-success py-2 px-3">
+                                        <strong>{{ payment.report_number }}</strong> - ${{ payment.amount }}
+                                        <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}" style="display:inline;">
+                                            <select name="format" class="form-select form-select-sm d-inline w-auto">
+                                                <option value="pdf">PDF</option>
+                                                <option value="docx">DOCX</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-info">Generate</button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Pending</p>
+                                {% if lifecycle.delivery_confirmed %}
+                                <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus"></i> Record Advance Payment
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Final Payment -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if lifecycle.fully_paid %}completed{% elif lifecycle.advance_paid %}in-progress{% else %}pending{% endif %}">
+                            {% if lifecycle.fully_paid %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>Final Payment</h6>
+                            {% if lifecycle.fully_paid %}
+                                <p class="text-muted small">{{ lifecycle.fully_paid_at.strftime('%Y-%m-%d %H:%M') if lifecycle.fully_paid_at else 'N/A' }}</p>
+                                {% for payment in payment_reports %}
+                                    {% if payment.payment_type == 'final' %}
+                                    <div class="alert alert-success py-2 px-3">
+                                        <strong>{{ payment.report_number }}</strong> - ${{ payment.amount }}
+                                        <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}" style="display:inline;">
+                                            <select name="format" class="form-select form-select-sm d-inline w-auto">
+                                                <option value="pdf">PDF</option>
+                                                <option value="docx">DOCX</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-info">Generate</button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Pending</p>
+                                {% if lifecycle.advance_paid %}
+                                <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}?type=final" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus"></i> Record Final Payment
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if not lifecycle.quotation_created %}
+                    <a href="{{ url_for('dashboard.create_quotation', order_id=order.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Create Quotation
+                    </a>
+                    {% endif %}
+                    
+                    {% set active_contract = order.contracts|selectattr('is_active')|list|first %}
+                    {% if lifecycle.quotation_approved and not active_contract %}
+                    <a href="{{ url_for('dashboard.create_contract', order_id=order.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Create Contract
+                    </a>
+                    {% endif %}
+                    
+                    {% if lifecycle.contract_created and not lifecycle.delivery_confirmed %}
+                    <a href="{{ url_for('dashboard.create_delivery', order_id=order.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Create Delivery Report
+                    </a>
+                    {% endif %}
+                    
+                    {% if lifecycle.delivery_confirmed and not lifecycle.advance_paid %}
+                    <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Record Advance Payment
+                    </a>
+                    {% endif %}
+                    
+                    {% if lifecycle.advance_paid and not lifecycle.fully_paid %}
+                    <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}?type=final" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Record Final Payment
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('dashboard.list_documents', order_id=order.id) }}" class="btn btn-info">
+                        <i class="bi bi-file-pdf"></i> Documents
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <small class="text-muted">Quotation</small>
+                    <div>
+                        {% if lifecycle.quotation_created %}
+                        <span class="badge bg-success">✓ Created</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Contract</small>
+                    <div>
+                        {% if lifecycle.contract_created %}
+                        {% set active_contract = order.contracts|selectattr('is_active')|list|first %}
+                        {% if active_contract and active_contract.is_signed %}
+                        <span class="badge bg-success">✓ Signed</span>
+                        {% elif active_contract %}
+                        <span class="badge bg-info">✓ Created</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Delivery</small>
+                    <div>
+                        {% if lifecycle.delivery_confirmed %}
+                        <span class="badge bg-success">✓ Confirmed</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Payment</small>
+                    <div>
+                        {% if lifecycle.fully_paid %}
+                        <span class="badge bg-success">✓ Completed</span>
+                        {% elif lifecycle.advance_paid %}
+                        <span class="badge bg-warning">Advance Paid</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Contract - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-pencil-square"></i> Edit Contract - {{ contract.contract_number }}</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contract_number" class="form-label">Contract Number</label>
+                                <input type="text" class="form-control" id="contract_number" name="contract_number" disabled value="{{ contract.contract_number }}" placeholder="Read-only">
+                                <small class="text-muted">Contract number cannot be changed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contract_date" class="form-label">Contract Date</label>
+                                <input type="date" class="form-control" id="contract_date" name="contract_date" disabled value="{{ contract.contract_date.strftime('%Y-%m-%d') }}" placeholder="Read-only">
+                                <small class="text-muted">Contract date cannot be changed</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contract_value" class="form-label">Contract Value *</label>
+                                <input type="number" class="form-control" id="contract_value" name="contract_value" required step="0.01" value="{{ contract.contract_value }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Line Items Section -->
+                    <div class="mb-4">
+                        <h6 class="mb-3"><i class="bi bi-list-ul"></i> Line Items</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40%">Item Name</th>
+                                        <th style="width: 15%" class="text-end">Qty</th>
+                                        <th style="width: 20%" class="text-end">Unit Price</th>
+                                        <th style="width: 15%" class="text-end">Total</th>
+                                        <th style="width: 10%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-body">
+                                    {% if contract.items %}
+                                        {% for item in contract.items %}
+                                        <tr class="item-row">
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm item-name" name="item_name[]" value="{{ item.name }}" placeholder="Item name">
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm item-qty text-end" name="item_quantity[]" value="{{ item.quantity }}" step="0.01" placeholder="0">
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm item-price text-end" name="item_price[]" value="{{ item.unit_price }}" step="0.01" placeholder="0.00">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm item-total text-end" value="${{ item.total }}" readonly style="background-color: #f8f9fa;">
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-item" title="Remove item">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="add-item-btn">
+                            <i class="bi bi-plus"></i> Add Item
+                        </button>
+                    </div>
+
+                    <!-- Total Amount (Read-only) -->
+                    <div class="mb-3">
+                        <label for="total_amount" class="form-label">Total Amount (from items)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control" id="total_amount" value="{{ contract.contract_value }}" readonly style="background-color: #f8f9fa;">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="terms_and_conditions" class="form-label">Terms & Conditions</label>
+                        <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5" placeholder="Enter terms and conditions">{{ contract.terms_and_conditions or '' }}</textarea>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-block">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Save Changes
+                        </button>
+                        <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsBody = document.getElementById('items-body');
+    const addItemBtn = document.getElementById('add-item-btn');
+    const totalAmountInput = document.getElementById('total_amount');
+    const contractValueInput = document.getElementById('contract_value');
+
+    function createItemRow(name = '', qty = 0, price = 0) {
+        const row = document.createElement('tr');
+        row.className = 'item-row';
+        row.innerHTML = `
+            <td>
+                <input type="text" class="form-control form-control-sm item-name" name="item_name[]" value="${name}" placeholder="Item name">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm item-qty text-end" name="item_quantity[]" value="${qty}" step="0.01" placeholder="0">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm item-price text-end" name="item_price[]" value="${price}" step="0.01" placeholder="0.00">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm item-total text-end" value="$0.00" readonly style="background-color: #f8f9fa;">
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-item" title="Remove item">
+                    <i class="bi bi-x"></i>
+                </button>
+            </td>
+        `;
+        
+        const removeBtn = row.querySelector('.remove-item');
+        removeBtn.addEventListener('click', () => {
+            row.remove();
+            updateTotal();
+        });
+
+        row.querySelector('.item-qty').addEventListener('change', updateTotal);
+        row.querySelector('.item-price').addEventListener('change', updateTotal);
+        row.querySelector('.item-qty').addEventListener('input', updateTotal);
+        row.querySelector('.item-price').addEventListener('input', updateTotal);
+
+        return row;
+    }
+
+    function updateTotal() {
+        let total = 0;
+        const rows = document.querySelectorAll('.item-row');
+        rows.forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            const itemTotal = (qty * price).toFixed(2);
+            row.querySelector('.item-total').value = `$${itemTotal}`;
+            total += qty * price;
+        });
+        totalAmountInput.value = total.toFixed(2);
+        contractValueInput.value = total.toFixed(2);
+    }
+
+    addItemBtn.addEventListener('click', () => {
+        itemsBody.appendChild(createItemRow());
+    });
+
+    // Attach event listeners to existing items
+    document.querySelectorAll('.item-row').forEach(row => {
+        row.querySelector('.remove-item').addEventListener('click', () => {
+            row.remove();
+            updateTotal();
+        });
+        row.querySelector('.item-qty').addEventListener('change', updateTotal);
+        row.querySelector('.item-price').addEventListener('change', updateTotal);
+        row.querySelector('.item-qty').addEventListener('input', updateTotal);
+        row.querySelector('.item-price').addEventListener('input', updateTotal);
+    });
+
+    // Initial total calculation
+    updateTotal();
+});
+</script>
+{% endblock %}

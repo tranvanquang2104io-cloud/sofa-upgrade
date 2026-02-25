@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Create Order - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-plus-circle"></i> Create Order</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dashboard.create_order') }}">
+                    <div class="mb-3">
+                        <label for="store_id" class="form-label">Store *</label>
+                        <select class="form-select" id="store_id" name="store_id" required onchange="updateCustomers()">
+                            <option value="">Select a store</option>
+                            {% for store in stores %}
+                            <option value="{{ store.id }}">{{ store.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="customer_id" class="form-label">Customer *</label>
+                        <select class="form-select" id="customer_id" name="customer_id" required>
+                            <option value="">Select a customer</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="order_code" class="form-label">Order Code *</label>
+                        <input type="text" class="form-control" id="order_code" name="order_code" required placeholder="e.g., ORD-001">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Order Title *</label>
+                        <input type="text" class="form-control" id="title" name="title" required placeholder="e.g., Sofa Repair">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Create Order
+                    </button>
+                    <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storeCustomers = {{ store_customers|tojson }};
+    
+    function updateCustomers() {
+        const storeId = document.getElementById('store_id').value;
+        const customerSelect = document.getElementById('customer_id');
+        customerSelect.innerHTML = '<option value="">Select a customer</option>';
+        
+        if (storeId && storeCustomers[storeId]) {
+            storeCustomers[storeId].forEach(customer => {
+                const option = document.createElement('option');
+                option.value = customer.id;
+                option.textContent = customer.name + ' (' + customer.customer_code + ')';
+                customerSelect.appendChild(option);
+            });
+        }
+    }
+</script>
+{% endblock %}

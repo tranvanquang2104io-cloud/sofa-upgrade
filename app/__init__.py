@@ -1,0 +1,72 @@
+"""
+Flask application factory
+"""
+import os
+import logging
+from datetime import datetime
+from flask import Flask, render_template, session, g
+from app.config import init_db, config
+from app.routes.auth_routes import auth_bp
+from app.routes.dashboard_routes import dashboard_bp
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+
+
+def create_app(config_name=None):
+    """Application factory"""
+    
+    # Determine config
+    if config_name is None:
+        config_name = os.environ.get('FLASK_ENV', 'development')
+    
+    app = Flask(__name__, 
+                template_folder=os.path.join(os.path.dirname(__file__), 'templates'),
+                static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+    
+    # Load configuration
+    app.config.from_object(config[config_name])
+    
+    # Create upload directories
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['TEMPLATES_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['DOCUMENTS_FOLDER'], exist_ok=True)
+    
+    # Initialize database
+    init_db(app)
+    
+    # Register blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(dashboard_bp)
+    
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template('errors/404.html'), 404
+    
+    @app.errorhandler(403)
+    def forbidden(error):
+        return render_template('errors/403.html'), 403
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        return render_template('errors/500.html'), 500
+    
+    # Context processors
+    @app.context_processor
+    def inject_user():
+        """Inject user and utilities into templates"""
+        return dict(
+            current_user=g.get('user'),
+            company_id=g.get('company_id'),
+            now=datetime.now
+        )
+    
+    logger.info(f"Flask app created with config: {config_name}")
+    
+    return app

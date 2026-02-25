@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Create Payment Report - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-plus-circle"></i> Create Payment Report</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dashboard.create_payment', order_id=order.id) }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_number" class="form-label">Report Number *</label>
+                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="e.g., PR-001">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_type" class="form-label">Payment Type *</label>
+                                <select class="form-select" id="payment_type" name="payment_type" required>
+                                    <option value="">Select type</option>
+                                    <option value="advance" {% if default_type == 'advance' %}selected{% endif %}>Advance</option>
+                                    <option value="final" {% if default_type == 'final' %}selected{% endif %}>Final</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_date" class="form-label">Report Date *</label>
+                                <input type="date" class="form-control" id="report_date" name="report_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_date" class="form-label">Payment Date *</label>
+                                <input type="date" class="form-control" id="payment_date" name="payment_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Amount *</label>
+                                <input type="number" class="form-control" id="amount" name="amount" required step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_method" class="form-label">Payment Method</label>
+                                <input type="text" class="form-control" id="payment_method" name="payment_method" placeholder="e.g., Bank Transfer, Cash, Check">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="transaction_reference" class="form-label">Transaction Reference</label>
+                        <input type="text" class="form-control" id="transaction_reference" name="transaction_reference" placeholder="e.g., Check #, Bank Ref, etc.">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Create Payment Report
+                    </button>
+                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

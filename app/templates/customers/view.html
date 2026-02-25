@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}View Customer - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-person"></i> {{ customer.name }}</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('dashboard.list_customers') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Customer Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Customer Code:</strong> {{ customer.customer_code }}</p>
+                        <p><strong>Phone:</strong> {{ customer.phone or '-' }}</p>
+                        <p><strong>Email:</strong> {{ customer.email or '-' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>City:</strong> {{ customer.city or '-' }}</p>
+                        <p><strong>Postal Code:</strong> {{ customer.postal_code or '-' }}</p>
+                        <p><strong>Country:</strong> {{ customer.country or '-' }}</p>
+                    </div>
+                </div>
+                {% if customer.address %}
+                <p><strong>Address:</strong> {{ customer.address }}</p>
+                {% endif %}
+                {% if customer.notes %}
+                <p><strong>Notes:</strong> {{ customer.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-boxes"></i> Orders</h5>
+            </div>
+            <div class="card-body">
+                {% if orders %}
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order Code</th>
+                                <th>Title</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td><strong>{{ order.order_code }}</strong></td>
+                                <td>{{ order.title }}</td>
+                                <td>${{ order.total_amount|default('0') }}</td>
+                                <td>
+                                    {% if order.lifecycle.completed %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif order.lifecycle.fully_paid %}
+                                        <span class="badge bg-info">Fully Paid</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted">No orders for this customer.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

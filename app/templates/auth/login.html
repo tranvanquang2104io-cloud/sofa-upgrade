@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Login - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4">
+                        <i class="bi bi-sofa"></i> SofaFlow
+                    </h2>
+                    <p class="text-center text-muted mb-4">Customer Lifecycle Management System</p>
+
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        <div class="mb-3">
+                            <label for="company_code" class="form-label">Company Code</label>
+                            <input type="text" class="form-control" id="company_code" name="company_code" placeholder="e.g., SOFA-001" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
+                    </form>
+
+                    <hr>
+
+                    <p class="text-center text-muted mb-0">
+                        Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

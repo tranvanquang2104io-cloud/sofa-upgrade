@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Create Delivery Report - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-plus-circle"></i> Create Delivery Report</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dashboard.create_delivery', order_id=order.id) }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_number" class="form-label">Report Number *</label>
+                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="e.g., DR-001">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_date" class="form-label">Report Date *</label>
+                                <input type="date" class="form-control" id="report_date" name="report_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="delivery_date" class="form-label">Delivery Date *</label>
+                        <input type="date" class="form-control" id="delivery_date" name="delivery_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="work_description" class="form-label">Work Description</label>
+                        <textarea class="form-control" id="work_description" name="work_description" rows="4"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="materials_used" class="form-label">Materials Used</label>
+                        <textarea class="form-control" id="materials_used" name="materials_used" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Create Delivery Report
+                    </button>
+                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

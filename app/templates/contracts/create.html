@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Create Contract - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-plus-circle"></i> Create Contract</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dashboard.create_contract', order_id=order.id) }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contract_number" class="form-label">Contract Number *</label>
+                                <input type="text" class="form-control" id="contract_number" name="contract_number" required placeholder="e.g., CT-001">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="quotation_id" class="form-label">Source Quotation</label>
+                                <select class="form-select" id="quotation_id" name="quotation_id">
+                                    <option value="">Select a quotation</option>
+                                    {% for quotation in quotations %}
+                                    <option value="{{ quotation.id }}" data-amount="{{ quotation.total_amount }}">{{ quotation.quotation_number }} - ${{ quotation.total_amount }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contract_date" class="form-label">Contract Date *</label>
+                                <input type="date" class="form-control" id="contract_date" name="contract_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contract_value" class="form-label">Contract Value *</label>
+                                <input type="number" class="form-control" id="contract_value" name="contract_value" required step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quotation Items Display Section -->
+                    <div id="quotation-items-section" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Items from Selected Quotation</strong></label>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th class="text-end">Qty</th>
+                                            <th class="text-end">Unit Price</th>
+                                            <th class="text-end">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="quotation-items-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="terms_and_conditions" class="form-label">Terms & Conditions</label>
+                        <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Create Contract
+                    </button>
+                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quotationSelect = document.getElementById('quotation_id');
+    const contractValueInput = document.getElementById('contract_value');
+    const itemsSection = document.getElementById('quotation-items-section');
+    const itemsBody = document.getElementById('quotation-items-body');
+
+    quotationSelect.addEventListener('change', async function() {
+        console.log('Quotation selected:', this.value);
+        if (!this.value) {
+            itemsSection.style.display = 'none';
+            contractValueInput.value = '';
+            return;
+        }
+
+        try {
+            // Fetch quotation details via AJAX
+            const url = `/dashboard/api/quotations/${this.value}`;
+            console.log('Fetching from:', url);
+            const response = await fetch(url);
+            const data = await response.json();
+
+            console.log('Response:', response.status, data);
+
+            if (response.ok) {
+                // Auto-populate contract value
+                contractValueInput.value = data.total_amount;
+                console.log('Contract value populated:', data.total_amount);
+
+                // Display items from quotation
+                itemsBody.innerHTML = '';
+                console.log('Items array:', data.items, 'Length:', data.items ? data.items.length : 0);
+                
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach((item, index) => {
+                        console.log(`Item ${index}:`, item);
+                        const row = document.createElement('tr');
+                        const qty = parseFloat(item.quantity || 0);
+                        const price = parseFloat(item.unit_price || 0);
+                        const total = (qty * price).toFixed(2);
+                        row.innerHTML = `
+                            <td>${item.name || 'N/A'}</td>
+                            <td class="text-end">${qty}</td>
+                            <td class="text-end">$${price.toFixed(2)}</td>
+                            <td class="text-end">$${total}</td>
+                        `;
+                        itemsBody.appendChild(row);
+                    });
+                    itemsSection.style.display = 'block';
+                    console.log('Items table displayed');
+                } else {
+                    console.log('No items to display');
+                    itemsSection.style.display = 'none';
+                }
+            } else {
+                console.error('API Error:', data.error);
+                itemsSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            itemsSection.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}
+
