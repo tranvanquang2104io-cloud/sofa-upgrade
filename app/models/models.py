@@ -142,8 +142,8 @@ class LifecycleStatus(db.Model):
     contract_signed = db.Column(db.Boolean, default=False)
     contract_signed_at = db.Column(db.DateTime)
     
-    delivery_confirmed = db.Column(db.Boolean, default=False)
-    delivery_confirmed_at = db.Column(db.DateTime)
+    handover_confirmed = db.Column(db.Boolean, default=False)
+    handover_confirmed_at = db.Column(db.DateTime)
     
     advance_paid = db.Column(db.Boolean, default=False)
     advance_paid_at = db.Column(db.DateTime)
@@ -191,7 +191,7 @@ class Order(db.Model):
     lifecycle = db.relationship('LifecycleStatus', backref='order', uselist=False, lazy=True, cascade='all, delete-orphan', foreign_keys='LifecycleStatus.order_id')
     quotations = db.relationship('Quotation', backref='order', lazy=True, cascade='all, delete-orphan')
     contracts = db.relationship('Contract', backref='order', lazy=True, cascade='all, delete-orphan')
-    delivery_reports = db.relationship('DeliveryReport', backref='order', lazy=True, cascade='all, delete-orphan')
+    handover_records = db.relationship('HandoverRecord', backref='order', lazy=True, cascade='all, delete-orphan')
     payment_reports = db.relationship('PaymentReport', backref='order', lazy=True, cascade='all, delete-orphan')
     documents = db.relationship('Document', backref='order', lazy=True, cascade='all, delete-orphan')
     
@@ -261,6 +261,9 @@ class Contract(db.Model):
     is_signed = db.Column(db.Boolean, default=False, index=True)
     signed_date = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True, index=True)  # Only one active contract per order
+    is_canceled = db.Column(db.Boolean, default=False, index=True)
+    canceled_at = db.Column(db.DateTime)
+    canceled_reason = db.Column(db.Text)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -273,38 +276,61 @@ class Contract(db.Model):
         return f'<Contract {self.contract_number}>'
     
     def can_edit(self):
-        """Contract can always be edited (products can be added)"""
-        return not self.is_signed
+        """Contract can be edited if not signed and not canceled"""
+        return not self.is_signed and not self.is_canceled
     
     def can_sign(self):
         """Check if contract can be signed"""
-        return not self.is_signed
+        return not self.is_signed and not self.is_canceled
+    
+    def can_cancel(self):
+        """Check if contract can be canceled"""
+        return self.is_active and not self.is_canceled and not self.is_signed
 
 
-class DeliveryReport(db.Model):
-    """Delivery/Work completion report"""
-    __tablename__ = 'delivery_reports'
+class HandoverRecord(db.Model):
+    """Handover Record (Biên Bản Bàn Giao) - confirms customer acceptance of product/service"""
+    __tablename__ = 'handover_records'
     
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('orders.id'), nullable=False, index=True)
     
     report_number = db.Column(db.String(50), nullable=False, unique=True)
     report_date = db.Column(db.Date, nullable=False)
-    delivery_date = db.Column(db.Date, nullable=False)
+    handover_date = db.Column(db.Date, nullable=False)
     
-    work_description = db.Column(db.Text)
-    materials_used = db.Column(db.Text)
+    customer_representative = db.Column(db.String(200))  # Customer's representative name
+    company_representative = db.Column(db.String(200))  # Company's representative name
+    product_condition = db.Column(db.Text)  # Description of product condition at handover
+    customer_signature_confirmed = db.Column(db.Boolean, default=False)  # Customer confirmed receipt
+    
     notes = db.Column(db.Text)
     is_confirmed = db.Column(db.Boolean, default=False, index=True)
     confirmed_date = db.Column(db.DateTime)
+    is_canceled = db.Column(db.Boolean, default=False, index=True)
+    canceled_at = db.Column(db.DateTime)
+    canceled_reason = db.Column(db.Text)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    documents = db.relationship('Document', backref='delivery_report', lazy=True)
+    documents = db.relationship('Document', backref='handover_record', lazy=True)
     
     def __repr__(self):
-        return f'<DeliveryReport {self.report_number}>'
+        return f'<HandoverRecord {self.report_number}>'
+    
+    def can_edit(self):
+        """Handover record can be edited if not confirmed and not canceled"""
+        return not self.is_confirmed and not self.is_canceled
+    
+    def can_confirm(self):
+        """Check if handover can be confirmed"""
+        return not self.is_confirmed and not self.is_canceled
+    
+    def can_cancel(self):
+        """Check if handover can be canceled"""
+        return not self.is_confirmed and not self.is_canceled
 
 
 class PaymentReport(db.Model):
@@ -326,6 +352,10 @@ class PaymentReport(db.Model):
     notes = db.Column(db.Text)
     is_confirmed = db.Column(db.Boolean, default=False, index=True)
     confirmed_date = db.Column(db.DateTime)
+    is_canceled = db.Column(db.Boolean, default=False, index=True)
+    canceled_at = db.Column(db.DateTime)
+    canceled_reason = db.Column(db.Text)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -334,6 +364,18 @@ class PaymentReport(db.Model):
     
     def __repr__(self):
         return f'<PaymentReport {self.report_number}>'
+    
+    def can_edit(self):
+        """Payment can be edited if not confirmed and not canceled"""
+        return not self.is_confirmed and not self.is_canceled
+    
+    def can_confirm(self):
+        """Check if payment can be confirmed"""
+        return not self.is_confirmed and not self.is_canceled
+    
+    def can_cancel(self):
+        """Check if payment can be canceled"""
+        return not self.is_confirmed and not self.is_canceled
 
 
 class DocumentTemplate(db.Model):
@@ -372,7 +414,7 @@ class Document(db.Model):
     template_id = db.Column(UUID(as_uuid=True), db.ForeignKey('document_templates.id'))
     quotation_id = db.Column(UUID(as_uuid=True), db.ForeignKey('quotations.id'))
     contract_id = db.Column(UUID(as_uuid=True), db.ForeignKey('contracts.id'))
-    delivery_report_id = db.Column(UUID(as_uuid=True), db.ForeignKey('delivery_reports.id'))
+    handover_record_id = db.Column(UUID(as_uuid=True), db.ForeignKey('handover_records.id'))
     payment_report_id = db.Column(UUID(as_uuid=True), db.ForeignKey('payment_reports.id'))
     
     document_name = db.Column(db.String(255), nullable=False)

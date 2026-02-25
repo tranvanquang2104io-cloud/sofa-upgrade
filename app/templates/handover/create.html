@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Create Handover Record - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-file-earmark-check"></i> Create Handover Record (Biên Bản Bàn Giao)</h1>
+        <p class="text-muted">Document confirming customer acceptance of product/service</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Order
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dashboard.create_handover', order_id=order.id) }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_number" class="form-label">Record Number *</label>
+                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="e.g., HR-001">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_date" class="form-label">Report Date *</label>
+                                <input type="date" class="form-control" id="report_date" name="report_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="handover_date" class="form-label">Handover Date *</label>
+                                <input type="date" class="form-control" id="handover_date" name="handover_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="company_representative" class="form-label">Company Representative *</label>
+                                <input type="text" class="form-control" id="company_representative" name="company_representative" required placeholder="Full name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer_representative" class="form-label">Customer Representative *</label>
+                                <input type="text" class="form-control" id="customer_representative" name="customer_representative" required placeholder="Full name">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="product_condition" class="form-label">Product Condition Description *</label>
+                        <textarea class="form-control" id="product_condition" name="product_condition" rows="4" required placeholder="Describe the condition of product/service at handover"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Any additional information..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Note:</strong> This handover record can only be created after advance payment has been confirmed.
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Create Handover Record
+                    </button>
+                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <h6>Order Summary</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-5">Order:</dt>
+                    <dd class="col-sm-7">{{ order.order_code }}</dd>
+                    <dt class="col-sm-5">Customer:</dt>
+                    <dd class="col-sm-7">{{ order.customer.name }}</dd>
+                    <dt class="col-sm-5">Total Amount:</dt>
+                    <dd class="col-sm-7">${{ "%.2f"|format(order.total_amount) }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

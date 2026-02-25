@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Handover Record - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-pencil"></i> Edit Handover Record</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                {% if not handover.can_edit() %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> This handover record cannot be edited (already confirmed or cancelled)
+                </div>
+                <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-secondary">Back</a>
+                {% else %}
+                
+                <form method="POST" action="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_number" class="form-label">Record Number *</label>
+                                <input type="text" class="form-control" id="report_number" name="report_number" required value="{{ handover.report_number }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_date" class="form-label">Report Date *</label>
+                                <input type="date" class="form-control" id="report_date" name="report_date" required value="{{ handover.report_date }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="handover_date" class="form-label">Handover Date *</label>
+                        <input type="date" class="form-control" id="handover_date" name="handover_date" required value="{{ handover.handover_date }}">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="company_representative" class="form-label">Company Representative *</label>
+                                <input type="text" class="form-control" id="company_representative" name="company_representative" required value="{{ handover.company_representative or '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer_representative" class="form-label">Customer Representative *</label>
+                                <input type="text" class="form-control" id="customer_representative" name="customer_representative" required value="{{ handover.customer_representative or '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="product_condition" class="form-label">Product Condition Description *</label>
+                        <textarea class="form-control" id="product_condition" name="product_condition" rows="4" required>{{ handover.product_condition or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2">{{ handover.notes or '' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save Changes
+                    </button>
+                    <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

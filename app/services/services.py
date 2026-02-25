@@ -8,11 +8,11 @@ from app.config.database import db
 from app.repositories.repository import (
     CompanyRepository, StoreRepository, UserRepository, CustomerRepository,
     OrderRepository, QuotationRepository, ContractRepository,
-    DeliveryReportRepository, PaymentReportRepository, DocumentRepository,
+    HandoverRecordRepository, PaymentReportRepository, DocumentRepository,
     DocumentTemplateRepository, LifecycleStatusRepository
 )
 from app.utils.template_engine import TemplateEngine, DocumentVariableCollector
-from app.models import Document, Order, Quotation, Contract
+from app.models import Document, Order, Quotation, Contract, HandoverRecord
 import logging
 
 logger = logging.getLogger(__name__)
@@ -224,7 +224,7 @@ class OrderService:
     def get_order_with_details(self, order_id, company_id):
         """Get order with all related data"""
         from app.repositories.repository import QuotationRepository, ContractRepository
-        from app.repositories.repository import DeliveryReportRepository, PaymentReportRepository
+        from app.repositories.repository import HandoverRecordRepository, PaymentReportRepository
         
         order = self.get_order(order_id, company_id)
         if not order:
@@ -234,7 +234,7 @@ class OrderService:
             'order': order,
             'quotations': QuotationRepository().get_for_order(order_id),
             'contracts': ContractRepository().get_for_order(order_id),
-            'delivery_reports': DeliveryReportRepository().get_for_order(order_id),
+            'handover_records': HandoverRecordRepository().get_for_order(order_id),
             'payment_reports': PaymentReportRepository().get_for_order(order_id),
             'lifecycle': order.lifecycle
         }
@@ -459,71 +459,151 @@ class ContractService:
             logger.error(f"Error marking contract as signed: {str(e)}")
             db.session.rollback()
             raise
-
-
-class DeliveryReportService:
-    """Service for delivery report management"""
     
-    def __init__(self):
-        self.repo = DeliveryReportRepository()
-    
-    def create_delivery_report(self, order_id, report_number, report_date, delivery_date,
-                              work_description=None, materials_used=None, notes=None):
-        """Create delivery report"""
-        existing = self.repo.get_by_number(report_number)
-        if existing:
-            raise ValueError(f"Delivery report {report_number} already exists")
-        
-        # Note: Delivery reports can have multiple (before/after), so we don't deactivate previous
-        # But we ensure only one is confirmed at a time
-        
-        report = self.repo.create(
-            order_id=order_id,
-            report_number=report_number,
-            report_date=report_date,
-            delivery_date=delivery_date,
-            work_description=work_description,
-            materials_used=materials_used,
-            notes=notes
-        )
-        
-        logger.info(f"Delivery report created: {report_number}")
-        return report
-    
-    def get_delivery_report(self, report_id):
-        """Get delivery report"""
-        return self.repo.get_by_id(report_id)
-    
-    def mark_confirmed(self, report_id, order_id):
-        """Mark delivery as confirmed and update lifecycle atomically"""
+    def cancel_contract(self, contract_id, order_id, reason=""):
+        """Cancel contract and update lifecycle atomically"""
         try:
-            report = self.repo.get_by_id(report_id)
-            if not report:
-                raise ValueError(f"Delivery report {report_id} not found")
+            contract = self.repo.get_by_id(contract_id)
+            if not contract:
+                raise ValueError(f"Contract {contract_id} not found")
             
-            if report.is_confirmed:
-                logger.warning(f"Delivery {report_id} already confirmed at {report.confirmed_date}")
-                return report
+            if not contract.can_cancel():
+                raise ValueError("Contract cannot be canceled (already signed or canceled)")
             
-            # Update delivery report
-            report.is_confirmed = True
-            report.confirmed_date = datetime.utcnow()
+            # Update contract
+            contract.is_canceled = True
+            contract.canceled_at = datetime.utcnow()
+            contract.canceled_reason = reason
+            contract.is_active = False
             
-            # Update lifecycle - mark delivery as confirmed
+            # Update lifecycle - reset contract creation if no other active contract
             lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
-            lifecycle.delivery_confirmed = True
-            lifecycle.delivery_confirmed_at = datetime.utcnow()
             
-            # Make both updates atomic - add both to session before committing
-            db.session.add(report)
+            # Check if there are any other active contracts
+            other_active = db.session.query(Contract).filter(
+                Contract.order_id == order_id,
+                Contract.is_active == True,
+                Contract.id != contract_id
+            ).first()
+            
+            if not other_active:
+                lifecycle.contract_created = False
+                lifecycle.contract_created_at = None
+            
+            # Make both updates atomic
+            db.session.add(contract)
             db.session.add(lifecycle)
             db.session.commit()
             
-            logger.info(f"Delivery {report.report_number} confirmed and lifecycle updated")
-            return report
+            logger.info(f"Contract {contract.contract_number} canceled with reason: {reason}")
+            return contract
             
         except Exception as e:
-            logger.error(f"Error confirming delivery: {str(e)}")
+            logger.error(f"Error canceling contract: {str(e)}")
+            db.session.rollback()
+            raise
+
+
+class HandoverRecordService:
+    """Service for handover record management (Biên Bản Bàn Giao)"""
+    
+    def __init__(self):
+        self.repo = HandoverRecordRepository()
+    
+    def create_handover_record(self, order_id, report_number, report_date, handover_date,
+                              customer_representative=None, company_representative=None,
+                              product_condition=None, notes=None):
+        """Create handover record"""
+        existing = self.repo.get_by_number(report_number)
+        if existing:
+            raise ValueError(f"Handover record {report_number} already exists")
+        
+        # Check workflow: advance payment must be confirmed before handover
+        order = OrderRepository().get_by_id(order_id)
+        if not order or not order.lifecycle or not order.lifecycle.advance_paid:
+            raise ValueError("Advance payment must be confirmed before creating handover record")
+        
+        record = self.repo.create(
+            order_id=order_id,
+            report_number=report_number,
+            report_date=report_date,
+            handover_date=handover_date,
+            customer_representative=customer_representative,
+            company_representative=company_representative,
+            product_condition=product_condition,
+            notes=notes
+        )
+        
+        logger.info(f"Handover record created: {report_number}")
+        return record
+    
+    def get_handover_record(self, record_id):
+        """Get handover record"""
+        return self.repo.get_by_id(record_id)
+    
+    def confirm_handover(self, record_id, order_id):
+        """Mark handover as confirmed and update lifecycle atomically"""
+        try:
+            record = self.repo.get_by_id(record_id)
+            if not record:
+                raise ValueError(f"Handover record {record_id} not found")
+            
+            if record.is_confirmed:
+                logger.warning(f"Handover {record_id} already confirmed at {record.confirmed_date}")
+                return record
+            
+            if not record.can_confirm():
+                raise ValueError("Handover record cannot be confirmed (already confirmed or canceled)")
+            
+            # Update handover record
+            record.is_confirmed = True
+            record.confirmed_date = datetime.utcnow()
+            record.customer_signature_confirmed = True
+            
+            # Update lifecycle - mark handover as confirmed
+            lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
+            lifecycle.handover_confirmed = True
+            lifecycle.handover_confirmed_at = datetime.utcnow()
+            
+            # Make both updates atomic - add both to session before committing
+            db.session.add(record)
+            db.session.add(lifecycle)
+            db.session.commit()
+            
+            logger.info(f"Handover {record.report_number} confirmed and lifecycle updated")
+            return record
+            
+        except Exception as e:
+            logger.error(f"Error confirming handover: {str(e)}")
+            db.session.rollback()
+            raise
+    
+    def cancel_handover(self, record_id, order_id, reason=""):
+        """Cancel handover record and update lifecycle atomically"""
+        try:
+            record = self.repo.get_by_id(record_id)
+            if not record:
+                raise ValueError(f"Handover record {record_id} not found")
+            
+            if not record.can_cancel():
+                raise ValueError("Handover record cannot be canceled (already confirmed or canceled)")
+            
+            # Update handover record
+            record.is_canceled = True
+            record.canceled_at = datetime.utcnow()
+            record.canceled_reason = reason
+            
+            # Lifecycle does not revert - handover can be recreated after cancellation
+            
+            # Make update atomic
+            db.session.add(record)
+            db.session.commit()
+            
+            logger.info(f"Handover record {record.report_number} canceled with reason: {reason}")
+            return record
+            
+        except Exception as e:
+            logger.error(f"Error canceling handover record: {str(e)}")
             db.session.rollback()
             raise
 
@@ -541,6 +621,18 @@ class PaymentReportService:
         existing = self.repo.get_by_number(report_number)
         if existing:
             raise ValueError(f"Payment report {report_number} already exists")
+        
+        # Validate workflow sequencing
+        order = OrderRepository().get_by_id(order_id)
+        if not order or not order.lifecycle:
+            raise ValueError("Order not found")
+        
+        if payment_type == 'advance':
+            if not order.lifecycle.contract_signed:
+                raise ValueError("Advance payment can only be created after contract is signed")
+        elif payment_type == 'final':
+            if not order.lifecycle.handover_confirmed:
+                raise ValueError("Final payment can only be created after handover record is confirmed")
         
         report = self.repo.create(
             order_id=order_id,
@@ -601,6 +693,35 @@ class PaymentReportService:
             
         except Exception as e:
             logger.error(f"Error confirming payment: {str(e)}")
+            db.session.rollback()
+            raise
+    
+    def cancel_payment(self, payment_id, order_id, reason=""):
+        """Cancel payment report and update lifecycle atomically"""
+        try:
+            payment = self.repo.get_by_id(payment_id)
+            if not payment:
+                raise ValueError(f"Payment report {payment_id} not found")
+            
+            if not payment.can_cancel():
+                raise ValueError("Payment cannot be canceled (already confirmed or canceled)")
+            
+            # Update payment report
+            payment.is_canceled = True
+            payment.canceled_at = datetime.utcnow()
+            payment.canceled_reason = reason
+            
+            # Lifecycle does not revert - payment can be recreated after cancellation
+            
+            # Make update atomic
+            db.session.add(payment)
+            db.session.commit()
+            
+            logger.info(f"Payment {payment.report_number} canceled with reason: {reason}")
+            return payment
+            
+        except Exception as e:
+            logger.error(f"Error canceling payment: {str(e)}")
             db.session.rollback()
             raise
 
@@ -688,10 +809,10 @@ class DocumentService:
     def generate_delivery_document(self, delivery_report_id, order_id, company_id, format='pdf'):
         """Generate delivery document"""
         from app.repositories.repository import (
-            DeliveryReportRepository, OrderRepository, CustomerRepository
+            HandoverRecordRepository, OrderRepository, CustomerRepository
         )
         
-        delivery_report = DeliveryReportRepository().get_by_id(delivery_report_id)
+        delivery_report = HandoverRecordRepository().get_by_id(delivery_report_id)
         order = OrderRepository().get_by_id(order_id)
         customer = CustomerRepository().get_by_id(order.customer_id)
         

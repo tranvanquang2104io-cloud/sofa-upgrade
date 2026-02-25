@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Payment Report - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-pencil"></i> Edit Payment Report</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                {% if not payment.can_edit() %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> This payment cannot be edited (already confirmed or cancelled)
+                </div>
+                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-secondary">Back</a>
+                {% else %}
+                
+                <form method="POST" action="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_number" class="form-label">Report Number *</label>
+                                <input type="text" class="form-control" id="report_number" name="report_number" required value="{{ payment.report_number }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_type" class="form-label">Payment Type (Read-only)</label>
+                                <input type="text" class="form-control" disabled value="{% if payment.payment_type == 'advance' %}Advance{% else %}Final{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="report_date" class="form-label">Report Date *</label>
+                                <input type="date" class="form-control" id="report_date" name="report_date" required value="{{ payment.report_date }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_date" class="form-label">Payment Date *</label>
+                                <input type="date" class="form-control" id="payment_date" name="payment_date" required value="{{ payment.payment_date }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Amount *</label>
+                                <input type="number" class="form-control" id="amount" name="amount" required step="0.01" value="{{ payment.amount }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_method" class="form-label">Payment Method</label>
+                                <input type="text" class="form-control" id="payment_method" name="payment_method" value="{{ payment.payment_method or '' }}" placeholder="e.g., Bank Transfer, Cash">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="transaction_reference" class="form-label">Transaction Reference</label>
+                        <input type="text" class="form-control" id="transaction_reference" name="transaction_reference" value="{{ payment.transaction_reference or '' }}" placeholder="e.g., Check #, Bank Ref">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3">{{ payment.notes or '' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save Changes
+                    </button>
+                    <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6>Payment Information</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-6">Status:</dt>
+                    <dd class="col-sm-6">
+                        {% if payment.is_confirmed %}
+                            <span class="badge bg-success">Confirmed</span>
+                        {% elif payment.is_canceled %}
+                            <span class="badge bg-danger">Cancelled</span>
+                        {% else %}
+                            <span class="badge bg-warning">Draft</span>
+                        {% endif %}
+                    </dd>
+                    <dt class="col-sm-6">Amount:</dt>
+                    <dd class="col-sm-6">${{ "%.2f"|format(payment.amount) }}</dd>
+                    <dt class="col-sm-6">Created:</dt>
+                    <dd class="col-sm-6">{{ payment.created_at.strftime('%Y-%m-%d') }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        {% if payment.documents %}
+        <div class="card">
+            <div class="card-header">
+                <h6>Generated Documents</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-sm">
+                    {% for doc in payment.documents %}
+                    <a href="{{ url_for('dashboard.download_document', document_id=doc.id) }}" class="list-group-item list-group-item-action py-2">
+                        <small>
+                            <i class="bi bi-file-pdf"></i> {{ doc.document_name }}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

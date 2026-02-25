@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app.utils.auth_utils import login_required, ensure_tenant_access, get_current_company_id
 from app.services.services import (
     StoreService, CustomerService, OrderService, QuotationService,
-    ContractService, DeliveryReportService, PaymentReportService, DocumentService
+    ContractService, HandoverRecordService, PaymentReportService, DocumentService
 )
 from app.repositories.repository import (
     StoreRepository, CustomerRepository, OrderRepository, DocumentRepository
@@ -557,10 +557,10 @@ def sign_contract(contract_id):
 
 # ===== DELIVERY REPORTS =====
 
-@dashboard_bp.route('/delivery/<order_id>/create', methods=['GET', 'POST'])
+@dashboard_bp.route('/handover/<order_id>/create', methods=['GET', 'POST'])
 @login_required
-def create_delivery(order_id):
-    """Create delivery report"""
+def create_handover(order_id):
+    """Create handover record"""
     company_id = get_current_company_id()
     order_service = OrderService()
     
@@ -571,50 +571,51 @@ def create_delivery(order_id):
     
     if request.method == 'POST':
         try:
-            delivery_service = DeliveryReportService()
-            delivery = delivery_service.create_delivery_report(
+            handover_service = HandoverRecordService()
+            handover = handover_service.create_handover_record(
                 order_id=order_id,
                 report_number=request.form.get('report_number', '').strip(),
                 report_date=datetime.strptime(request.form.get('report_date'), '%Y-%m-%d').date(),
-                delivery_date=datetime.strptime(request.form.get('delivery_date'), '%Y-%m-%d').date(),
-                work_description=request.form.get('work_description', '').strip() or None,
-                materials_used=request.form.get('materials_used', '').strip() or None,
+                handover_date=datetime.strptime(request.form.get('handover_date'), '%Y-%m-%d').date(),
+                customer_representative=request.form.get('customer_representative', '').strip() or None,
+                company_representative=request.form.get('company_representative', '').strip() or None,
+                product_condition=request.form.get('product_condition', '').strip() or None,
                 notes=request.form.get('notes', '').strip() or None
             )
             
-            flash('Delivery report created successfully', 'success')
+            flash('Handover record created successfully', 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
         except Exception as e:
-            logger.error(f"Error creating delivery report: {str(e)}")
-            flash('Error creating delivery report', 'error')
+            logger.error(f"Error creating handover record: {str(e)}")
+            flash('Error creating handover record', 'error')
     
-    return render_template('delivery/create.html', order=order)
+    return render_template('handover/create.html', order=order)
 
 
-@dashboard_bp.route('/delivery/<delivery_id>/confirm', methods=['POST'])
+@dashboard_bp.route('/handover/<handover_id>/confirm', methods=['POST'])
 @login_required
-def confirm_delivery(delivery_id):
-    """Mark delivery as confirmed"""
+def confirm_handover(handover_id):
+    """Mark handover as confirmed"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import DeliveryReportRepository
-    delivery_repo = DeliveryReportRepository()
-    delivery = delivery_repo.get_by_id(delivery_id)
+    from app.repositories.repository import HandoverRecordRepository
+    handover_repo = HandoverRecordRepository()
+    handover = handover_repo.get_by_id(handover_id)
     
-    if not delivery or str(delivery.order.company_id) != str(company_id):
-        flash('Delivery report not found or access denied', 'error')
+    if not handover or str(handover.order.company_id) != str(company_id):
+        flash('Handover record not found or access denied', 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     try:
-        delivery_service = DeliveryReportService()
-        delivery_service.mark_confirmed(delivery_id, delivery.order_id)
-        flash('Delivery marked as confirmed', 'success')
+        handover_service = HandoverRecordService()
+        handover_service.confirm_handover(handover_id, handover.order_id)
+        flash('Handover record confirmed', 'success')
     except Exception as e:
-        logger.error(f"Error confirming delivery: {str(e)}")
-        flash('Error confirming delivery', 'error')
+        logger.error(f"Error confirming handover: {str(e)}")
+        flash('Error confirming handover', 'error')
     
-    return redirect(url_for('dashboard.view_order', order_id=delivery.order_id))
+    return redirect(url_for('dashboard.view_order', order_id=handover.order_id))
 
 
 # ===== PAYMENT REPORTS =====
@@ -640,12 +641,12 @@ def create_payment(order_id):
             payment_type = request.form.get('payment_type')
             
             # Validate payment sequencing
-            if payment_type == 'advance' and not order.lifecycle.delivery_confirmed:
-                flash('Advance payment can only be recorded after delivery is confirmed', 'error')
+            if payment_type == 'advance' and not order.lifecycle.contract_signed:
+                flash('Advance payment can only be recorded after contract is signed', 'error')
                 return render_template('payment/create.html', order=order, default_type=default_type)
             
-            if payment_type == 'final' and not order.lifecycle.advance_paid:
-                flash('Final payment can only be recorded after advance payment is confirmed', 'error')
+            if payment_type == 'final' and not order.lifecycle.handover_confirmed:
+                flash('Final payment can only be recorded after handover is confirmed', 'error')
                 return render_template('payment/create.html', order=order, default_type=default_type)
             
             payment = payment_service.create_payment_report(
@@ -697,6 +698,95 @@ def confirm_payment(payment_id):
     return redirect(url_for('dashboard.view_order', order_id=payment.order_id))
 
 
+@dashboard_bp.route('/payment/<payment_id>', methods=['GET'])
+@login_required
+def view_payment(payment_id):
+    """View payment report details"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import PaymentReportRepository
+    payment_repo = PaymentReportRepository()
+    payment = payment_repo.get_by_id(payment_id)
+    
+    if not payment or str(payment.order.company_id) != str(company_id):
+        flash('Payment report not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    return render_template('payments/view.html', payment=payment)
+
+
+@dashboard_bp.route('/payment/<payment_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_payment(payment_id):
+    """Edit payment report"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import PaymentReportRepository
+    payment_repo = PaymentReportRepository()
+    payment = payment_repo.get_by_id(payment_id)
+    
+    if not payment or str(payment.order.company_id) != str(company_id):
+        flash('Payment report not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    if request.method == 'POST':
+        try:
+            # Only allow editing if not confirmed and not canceled
+            if not payment.can_edit():
+                flash('Payment cannot be edited (already confirmed or canceled)', 'error')
+                return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
+            
+            # Update payment fields
+            payment.report_number = request.form.get('report_number', '').strip()
+            payment.report_date = datetime.strptime(request.form.get('report_date'), '%Y-%m-%d').date()
+            payment.payment_date = datetime.strptime(request.form.get('payment_date'), '%Y-%m-%d').date()
+            payment.amount = float(request.form.get('amount') or 0)
+            payment.payment_method = request.form.get('payment_method', '').strip() or None
+            payment.transaction_reference = request.form.get('transaction_reference', '').strip() or None
+            payment.notes = request.form.get('notes', '').strip() or None
+            payment.updated_at = datetime.utcnow()
+            
+            db.session.add(payment)
+            db.session.commit()
+            
+            flash('Payment report updated successfully', 'success')
+            return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
+            
+        except ValueError as e:
+            flash(f'Error: {str(e)}', 'error')
+        except Exception as e:
+            logger.error(f"Error updating payment report: {str(e)}")
+            flash('Error updating payment report', 'error')
+    
+    return render_template('payments/edit.html', payment=payment)
+
+
+@dashboard_bp.route('/payment/<payment_id>/cancel', methods=['POST'])
+@login_required
+def cancel_payment(payment_id):
+    """Cancel payment report"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import PaymentReportRepository
+    payment_repo = PaymentReportRepository()
+    payment = payment_repo.get_by_id(payment_id)
+    
+    if not payment or str(payment.order.company_id) != str(company_id):
+        flash('Payment report not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    try:
+        payment_service = PaymentReportService()
+        reason = request.form.get('reason', '').strip()
+        payment_service.cancel_payment(payment_id, payment.order_id, reason)
+        flash('Payment report canceled successfully', 'success')
+    except Exception as e:
+        logger.error(f"Error canceling payment: {str(e)}")
+        flash(f'Error canceling payment: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
+
+
 # ===== DOCUMENTS =====
 
 @dashboard_bp.route('/documents/generate/<doc_type>/<ref_id>', methods=['POST'])
@@ -729,14 +819,14 @@ def generate_document(doc_type, ref_id):
                 quotation_id=contract.quotation_id, format=doc_format
             )
         
-        elif doc_type == 'delivery':
-            from app.repositories.repository import DeliveryReportRepository
-            delivery = DeliveryReportRepository().get_by_id(ref_id)
-            if not delivery or str(delivery.order.company_id) != str(company_id):
-                flash('Delivery report not found', 'error')
+        elif doc_type == 'handover':
+            from app.repositories.repository import HandoverRecordRepository
+            handover = HandoverRecordRepository().get_by_id(ref_id)
+            if not handover or str(handover.order.company_id) != str(company_id):
+                flash('Handover record not found', 'error')
                 return redirect(request.referrer)
             
-            document = document_service.generate_delivery_document(ref_id, delivery.order_id, company_id, doc_format)
+            document = document_service.generate_delivery_document(ref_id, handover.order_id, company_id, doc_format)
         
         elif doc_type == 'payment':
             from app.repositories.repository import PaymentReportRepository

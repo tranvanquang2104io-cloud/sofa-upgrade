@@ -4,7 +4,7 @@ Repository layer for data access
 from app.config.database import db
 from app.models import (
     Company, Store, User, Customer, Order, Quotation, Contract,
-    DeliveryReport, PaymentReport, Document, DocumentTemplate, LifecycleStatus
+    HandoverRecord, PaymentReport, Document, DocumentTemplate, LifecycleStatus
 )
 from sqlalchemy import and_, desc
 import logging
@@ -267,18 +267,18 @@ class ContractRepository(BaseRepository):
         ).first()
 
 
-class DeliveryReportRepository(BaseRepository):
-    """Repository for DeliveryReport model"""
+class HandoverRecordRepository(BaseRepository):
+    """Repository for HandoverRecord model"""
     
     def __init__(self):
-        super().__init__(DeliveryReport)
+        super().__init__(HandoverRecord)
     
     def get_by_number(self, report_number):
-        """Get delivery report by number"""
+        """Get handover record by number"""
         return self.model.query.filter_by(report_number=report_number).first()
     
     def get_for_order(self, order_id):
-        """Get all delivery reports for order"""
+        """Get all handover records for order"""
         return self.model.query.filter_by(order_id=order_id).order_by(
             desc(self.model.created_at)
         ).all()
