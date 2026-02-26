@@ -206,7 +206,15 @@ def create_order():
     
     store_customers = {}
     for store in stores:
-        store_customers[str(store.id)] = customer_repo.query.filter_by(store_id=store.id, is_active=True).all()
+        customers = customer_repo.get_customers_for_store(store.id)
+        store_customers[str(store.id)] = [
+            {
+                'id': str(customer.id),
+                'customer_code': customer.customer_code,
+                'name': customer.name
+            }
+            for customer in customers
+        ]
     
     return render_template('orders/create.html', stores=stores, store_customers=store_customers)
 
@@ -616,6 +624,95 @@ def confirm_handover(handover_id):
         flash('Error confirming handover', 'error')
     
     return redirect(url_for('dashboard.view_order', order_id=handover.order_id))
+
+
+@dashboard_bp.route('/handover/<handover_id>', methods=['GET'])
+@login_required
+def view_handover(handover_id):
+    """View handover record details"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import HandoverRecordRepository
+    handover_repo = HandoverRecordRepository()
+    handover = handover_repo.get_by_id(handover_id)
+    
+    if not handover or str(handover.order.company_id) != str(company_id):
+        flash('Handover record not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    return render_template('handover/view.html', handover=handover)
+
+
+@dashboard_bp.route('/handover/<handover_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_handover(handover_id):
+    """Edit handover record"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import HandoverRecordRepository
+    handover_repo = HandoverRecordRepository()
+    handover = handover_repo.get_by_id(handover_id)
+    
+    if not handover or str(handover.order.company_id) != str(company_id):
+        flash('Handover record not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    if request.method == 'POST':
+        try:
+            # Only allow editing if not confirmed and not canceled
+            if not handover.can_edit():
+                flash('Handover record cannot be edited (already confirmed or canceled)', 'error')
+                return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
+            
+            # Update handover fields
+            handover.report_number = request.form.get('report_number', '').strip()
+            handover.report_date = datetime.strptime(request.form.get('report_date'), '%Y-%m-%d').date()
+            handover.handover_date = datetime.strptime(request.form.get('handover_date'), '%Y-%m-%d').date()
+            handover.company_representative = request.form.get('company_representative', '').strip() or None
+            handover.customer_representative = request.form.get('customer_representative', '').strip() or None
+            handover.product_condition = request.form.get('product_condition', '').strip() or None
+            handover.notes = request.form.get('notes', '').strip() or None
+            handover.updated_at = datetime.utcnow()
+            
+            db.session.add(handover)
+            db.session.commit()
+            
+            flash('Handover record updated successfully', 'success')
+            return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
+            
+        except ValueError as e:
+            flash(f'Error: {str(e)}', 'error')
+        except Exception as e:
+            logger.error(f"Error updating handover record: {str(e)}")
+            flash('Error updating handover record', 'error')
+    
+    return render_template('handover/edit.html', handover=handover)
+
+
+@dashboard_bp.route('/handover/<handover_id>/cancel', methods=['POST'])
+@login_required
+def cancel_handover(handover_id):
+    """Cancel handover record"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import HandoverRecordRepository
+    handover_repo = HandoverRecordRepository()
+    handover = handover_repo.get_by_id(handover_id)
+    
+    if not handover or str(handover.order.company_id) != str(company_id):
+        flash('Handover record not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    try:
+        handover_service = HandoverRecordService()
+        reason = request.form.get('reason', '').strip()
+        handover_service.cancel_handover(handover_id, handover.order_id, reason)
+        flash('Handover record canceled successfully', 'success')
+    except Exception as e:
+        logger.error(f"Error canceling handover: {str(e)}")
+        flash(f'Error canceling handover: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
 
 
 # ===== PAYMENT REPORTS =====

@@ -288,9 +288,6 @@
                             <h6>Advance Payment</h6>
                             {% set advance_payments = payment_reports|selectattr('payment_type', 'equalto', 'advance')|list %}
                             {% if advance_payments %}
-                                {% if lifecycle.advance_paid %}
-                                    <p class="text-muted small">{{ lifecycle.advance_paid_at.strftime('%Y-%m-%d %H:%M') if lifecycle.advance_paid_at else 'N/A' }}</p>
-                                {% endif %}
                                 {% for payment in advance_payments %}
                                     <div class="alert {% if payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">
@@ -370,22 +367,31 @@
                         <div class="timeline-content">
                             <h6>Handover Record</h6>
                             {% if handover_records %}
-                                {% if lifecycle.handover_confirmed %}
-                                    <p class="text-muted small">{{ lifecycle.handover_confirmed_at.strftime('%Y-%m-%d %H:%M') if lifecycle.handover_confirmed_at else 'N/A' }}</p>
-                                {% endif %}
                                 {% for handover in handover_records %}
+                                <p class="text-muted small">Created: {{ handover.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                {% if handover.is_confirmed %}
+                                <p class="text-muted small">Confirmed: {{ handover.confirmed_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                                {% endif %}
                                 <div class="alert {% if handover.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <strong>{{ handover.record_number }}</strong> - {{ handover.handover_date.strftime('%Y-%m-%d') }}
+                                            <strong>{{ handover.report_number }}</strong> - {{ handover.handover_date.strftime('%Y-%m-%d') }}
                                             {% if handover.is_confirmed %}
                                                 <span class="badge bg-success ms-2">Confirmed</span>
                                             {% else %}
                                                 <span class="badge bg-warning ms-2">Pending Confirmation</span>
                                             {% endif %}
                                         </div>
-                                        <div class="btn-group btn-group-sm">                                            
-                                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModal{{ handover.id }}" title="Generate">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-outline-primary" title="View Handover">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if handover.can_edit() %}
+                                            <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModal{{ handover.id }}" title="Generate Document">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                             {% if not handover.is_confirmed %}
@@ -445,10 +451,11 @@
                             <h6>Final Payment</h6>
                             {% set final_payments = payment_reports|selectattr('payment_type', 'equalto', 'final')|list %}
                             {% if final_payments %}
-                                {% if lifecycle.fully_paid %}
-                                    <p class="text-muted small">{{ lifecycle.fully_paid_at.strftime('%Y-%m-%d %H:%M') if lifecycle.fully_paid_at else 'N/A' }}</p>
-                                {% endif %}
                                 {% for payment in final_payments %}
+                                    <p class="text-muted small">Created: {{ payment.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                    {% if payment.is_confirmed %}
+                                    <p class="text-muted small">Confirmed: {{ payment.confirmed_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                                    {% endif %}
                                     <div class="alert {% if payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
@@ -460,7 +467,15 @@
                                                 {% endif %}
                                             </div>
                                             <div class="btn-group btn-group-sm">
-                                                <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate">
+                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-outline-primary" title="View Payment">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                {% if payment.can_edit() %}
+                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                {% endif %}
+                                                <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate Document">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
                                                 {% if not payment.is_confirmed %}
