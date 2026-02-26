@@ -28,17 +28,17 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard.index') }}">
+                            <a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard.list_customers') }}">
+                            <a class="nav-link {% if 'customer' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_customers') }}">
                                 <i class="bi bi-people"></i> Customers
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard.list_orders') }}">
+                            <a class="nav-link {% if 'order' in (request.endpoint or '') or 'quotation' in (request.endpoint or '') or 'contract' in (request.endpoint or '') or 'handover' in (request.endpoint or '') or 'payment' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_orders') }}">
                                 <i class="bi bi-boxes"></i> Orders
                             </a>
                         </li>

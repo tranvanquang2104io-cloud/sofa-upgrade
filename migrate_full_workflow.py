@@ -100,7 +100,7 @@ def migrate_delivery_to_handover():
             
             # Check if new columns exist
             new_columns_needed = [
-                'customer_representative', 'company_representative', 
+                'items', 'customer_representative', 'company_representative', 
                 'product_condition', 'customer_signature_confirmed',
                 'is_canceled', 'canceled_at', 'canceled_reason'
             ]
@@ -111,7 +111,12 @@ def migrate_delivery_to_handover():
                 print(f"  Adding missing columns: {missing_columns}")
                 
                 for col in missing_columns:
-                    if col == 'customer_representative':
+                    if col == 'items':
+                        connection.execute(db.text("""
+                            ALTER TABLE handover_records 
+                            ADD COLUMN items JSON DEFAULT '[]'
+                        """))
+                    elif col == 'customer_representative':
                         connection.execute(db.text("""
                             ALTER TABLE handover_records 
                             ADD COLUMN customer_representative VARCHAR(200) NULL
@@ -202,6 +207,14 @@ def migrate_delivery_to_handover():
             ADD COLUMN canceled_reason TEXT NULL
         """))
         
+        # Add the 'items' column to the handover_records table
+        connection.execute(db.text("""
+            ALTER TABLE handover_records 
+            ADD COLUMN items JSON DEFAULT '[]'
+        """))
+        
+        print("  ✓ Added 'items' column to handover_records")
+        
         # Remove old columns
         connection.execute(db.text("""
             ALTER TABLE handover_records DROP COLUMN work_description, DROP COLUMN materials_used
@@ -252,6 +265,31 @@ def migrate_documents_table():
         if 'handover_record_id' in document_columns:
             print("  ✓ Columns already renamed in documents")
             
+            # Check if the foreign key constraint needs updating
+            # Get all foreign keys for the documents table
+            fks = inspector.get_foreign_keys('documents')
+            
+            # Check if there's a foreign key pointing to delivery_reports
+            has_old_fk = any(fk.get('referred_table') == 'delivery_reports' for fk in fks)
+            has_new_fk = any(fk.get('referred_table') == 'handover_records' for fk in fks)
+            
+            if has_old_fk and not has_new_fk:
+                print("  Updating foreign key constraint...")
+                
+                # Drop old foreign key constraint
+                connection.execute(db.text("""
+                    ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_delivery_report_id_fkey
+                """))
+                
+                # Create new foreign key constraint
+                connection.execute(db.text("""
+                    ALTER TABLE documents 
+                    ADD CONSTRAINT documents_handover_record_id_fkey 
+                    FOREIGN KEY (handover_record_id) REFERENCES handover_records(id) ON DELETE CASCADE
+                """))
+                
+                print("  ✓ Updated foreign key constraint to reference handover_records")
+            
             # Check if old column still exists
             if 'delivery_report_id' in document_columns:
                 print("  Removing old delivery_report_id column...")
@@ -271,8 +309,24 @@ def migrate_documents_table():
             ALTER TABLE documents RENAME COLUMN delivery_report_id TO handover_record_id
         """))
         
-        # Update foreign key constraint (PostgreSQL specific)
         print("  ✓ Renamed delivery_report_id -> handover_record_id")
+        
+        # Update foreign key constraint
+        print("  Updating foreign key constraint...")
+        
+        # Drop old foreign key constraint
+        connection.execute(db.text("""
+            ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_delivery_report_id_fkey
+        """))
+        
+        # Create new foreign key constraint
+        connection.execute(db.text("""
+            ALTER TABLE documents 
+            ADD CONSTRAINT documents_handover_record_id_fkey 
+            FOREIGN KEY (handover_record_id) REFERENCES handover_records(id) ON DELETE CASCADE
+        """))
+        
+        print("  ✓ Updated foreign key constraint to reference handover_records")
 
 def main():
     """Run all migrations"""

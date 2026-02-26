@@ -1,5 +1,9 @@
 """
-Document template engine - handles RTF templates and document generation
+Document template engine - handles RTF and DOCX templates (via docxtpl) and document generation.
+
+Two engines are available:
+  - DocxTemplateEngine  : modern engine using docxtpl + Jinja2 (recommended)
+  - TemplateEngine      : legacy text / placeholder-based engine (kept for backward-compat)
 """
 import os
 import re
@@ -224,88 +228,265 @@ class TemplateEngine:
             return False
 
 
+class DocxTemplateEngine:
+    """
+    Modern template engine that renders .docx templates via docxtpl + Jinja2.
+
+    Template design (Microsoft Word):
+      - Use {{ variable }} for scalar substitutions.
+      - For repeating table rows, put {%tr for item in items %} in the first cell
+        of the row to repeat, and {%tr endfor %} in the last cell of that row.
+      - Use {{ loop.index }} for row numbers inside loops.
+      - Conditional blocks: {% if condition %}...{% endif %}
+
+    Context is built by DocumentVariableCollector.collect_*_variables().
+    Items lists contain dicts:  {stt, name, unit, quantity, unit_price, total, notes}
+    """
+
+    @staticmethod
+    def render(template_path: str, context: dict) -> BytesIO:
+        """
+        Render a .docx template and return a BytesIO DOCX.
+
+        Args:
+            template_path: Absolute path to the .docx template file.
+            context:        Jinja2 context dict (scalars + lists for table loops).
+
+        Returns:
+            BytesIO: Rendered DOCX document.
+        """
+        from docxtpl import DocxTemplate
+        tpl = DocxTemplate(template_path)
+        tpl.render(context)
+        output = BytesIO()
+        tpl.save(output)
+        output.seek(0)
+        return output
+
+    @staticmethod
+    def render_to_file(template_path: str, context: dict, output_path: str) -> None:
+        """Render template and save to output_path (creates parent dirs if needed)."""
+        from docxtpl import DocxTemplate
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        tpl = DocxTemplate(template_path)
+        tpl.render(context)
+        tpl.save(output_path)
+
+    @staticmethod
+    def is_docx_template(template_file: str) -> bool:
+        """Return True if the template file is a DOCX file."""
+        return (template_file or '').lower().endswith('.docx')
+
+
+# ---------------------------------------------------------------------------
+# Helper: number formatter
+# ---------------------------------------------------------------------------
+
+def _fmt(value, decimals=0) -> str:
+    """Format a numeric value with thousands separator."""
+    try:
+        v = float(value) if value is not None else 0
+        if decimals:
+            return f"{v:,.{decimals}f}"
+        return f"{v:,.0f}"
+    except (TypeError, ValueError):
+        return str(value) if value is not None else ''
+
+
+def _fmt_date(d, fmt='%d/%m/%Y') -> str:
+    """Format a date / datetime to string."""
+    if d is None:
+        return ''
+    try:
+        return d.strftime(fmt)
+    except AttributeError:
+        return str(d)
+
+
 class DocumentVariableCollector:
-    """Collects variables needed for document generation"""
-    
+    """
+    Builds Jinja2 context dicts for each document type.
+
+    All collectors accept an optional ``company`` kwarg so that company
+    header information (name, address, phone) can be embedded in the
+    template.  Items lists are returned as a list-of-dicts so that
+    DocxTemplateEngine can loop over them in table rows.
+    """
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
     @staticmethod
-    def collect_quotation_variables(quotation, customer, order):
-        """Collect variables for quotation document"""
-        items_list = quotation.items or []
-        items_text = '\n'.join([
-            f"  {item.get('name', '')}: {item.get('quantity', 0)} x {item.get('unit_price', 0)} = {item.get('total', 0)}"
-            for item in items_list
-        ])
-        
+    def _build_items(raw_items: list) -> list:
+        """Convert raw JSON items list to template-friendly dicts."""
+        result = []
+        for i, item in enumerate(raw_items or []):
+            result.append({
+                'stt':        str(i + 1),
+                'name':       item.get('name', ''),
+                'unit':       item.get('unit', 'Cái'),
+                'quantity':   _fmt(item.get('quantity', 0)),
+                'unit_price': _fmt(item.get('unit_price', 0)),
+                'total':      _fmt(item.get('total', 0)),
+                'notes':      item.get('notes', ''),
+            })
+        return result
+
+    @staticmethod
+    def _company_ctx(company) -> dict:
+        if company is None:
+            return {
+                'company_name': '',
+                'company_address': '',
+                'company_phone': '',
+                'company_email': '',
+                'company_tax_code': '',
+            }
         return {
+            'company_name':     getattr(company, 'name', ''),
+            'company_address':  getattr(company, 'address', '') or '',
+            'company_phone':    getattr(company, 'phone', '') or '',
+            'company_email':    getattr(company, 'email', '') or '',
+            'company_tax_code': getattr(company, 'tax_code', '') or '',
+        }
+
+    # ------------------------------------------------------------------
+    # Public collectors
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def collect_quotation_variables(quotation, customer, order, company=None):
+        """Context for quotation document."""
+        ctx = DocumentVariableCollector._company_ctx(company)
+        ctx.update({
+            # Quotation
             'quotation_number': quotation.quotation_number,
-            'quotation_date': quotation.quotation_date.strftime('%Y-%m-%d') if quotation.quotation_date else '',
-            'validity_days': str(quotation.validity_days),
-            'customer_name': customer.name,
-            'customer_code': customer.customer_code,
-            'customer_phone': customer.phone or '',
-            'customer_email': customer.email or '',
-            'customer_address': customer.address or '',
-            'customer_city': customer.city or '',
+            'quotation_date':   _fmt_date(quotation.quotation_date),
+            'validity_days':    str(quotation.validity_days or 30),
+            # Customer
+            'customer_name':        customer.name,
+            'customer_code':        customer.customer_code,
+            'customer_phone':       customer.phone or '',
+            'customer_email':       customer.email or '',
+            'customer_address':     customer.address or '',
+            'customer_city':        customer.city or '',
             'customer_postal_code': customer.postal_code or '',
-            'order_code': order.order_code,
+            # Order
+            'order_code':  order.order_code,
             'order_title': order.title,
-            'items': items_text,
-            'total_amount': str(quotation.total_amount),
-            'notes': quotation.notes or '',
-            'generated_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        }
-    
+            # Items (list → table loop)
+            'items':        DocumentVariableCollector._build_items(quotation.items),
+            'total_amount': _fmt(quotation.total_amount),
+            # Misc
+            'notes':          quotation.notes or '',
+            'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
+        })
+        return ctx
+
     @staticmethod
-    def collect_contract_variables(contract, quotation, customer, order):
-        """Collect variables for contract document"""
-        return {
+    def collect_contract_variables(contract, quotation, customer, order, company=None):
+        """Context for contract document."""
+        ctx = DocumentVariableCollector._company_ctx(company)
+        ctx.update({
+            # Contract
             'contract_number': contract.contract_number,
-            'contract_date': contract.contract_date.strftime('%Y-%m-%d') if contract.contract_date else '',
+            'contract_date':   _fmt_date(contract.contract_date),
+            'contract_value':  _fmt(contract.contract_value),
+            # Related quotation
             'quotation_number': quotation.quotation_number if quotation else '',
-            'customer_name': customer.name,
-            'customer_code': customer.customer_code,
-            'customer_phone': customer.phone or '',
-            'customer_email': customer.email or '',
+            # Customer
+            'customer_name':    customer.name,
+            'customer_code':    customer.customer_code,
+            'customer_phone':   customer.phone or '',
+            'customer_email':   customer.email or '',
             'customer_address': customer.address or '',
-            'order_code': order.order_code,
+            # Order
+            'order_code':  order.order_code,
             'order_title': order.title,
-            'contract_value': str(contract.contract_value),
+            # Items (list → table loop)
+            'items': DocumentVariableCollector._build_items(
+                contract.items or (quotation.items if quotation else [])
+            ),
+            # Terms, misc
             'terms_and_conditions': contract.terms_and_conditions or '',
-            'generated_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        }
-    
+            'notes':                getattr(contract, 'notes', '') or '',
+            'generated_date':       datetime.now().strftime('%d/%m/%Y %H:%M'),
+        })
+        return ctx
+
     @staticmethod
-    def collect_delivery_variables(delivery_report, customer, order):
-        """Collect variables for delivery report"""
-        return {
-            'report_number': delivery_report.report_number,
-            'report_date': delivery_report.report_date.strftime('%Y-%m-%d') if delivery_report.report_date else '',
-            'delivery_date': delivery_report.delivery_date.strftime('%Y-%m-%d') if delivery_report.delivery_date else '',
+    def collect_delivery_variables(delivery_report, customer, order, company=None):
+        """Context for handover / delivery record."""
+        ctx = DocumentVariableCollector._company_ctx(company)
+        # Build items with acceptance columns
+        raw_items = delivery_report.items or []
+        handover_items = []
+        for i, item in enumerate(raw_items):
+            handover_items.append({
+                'stt':              str(i + 1),
+                'name':             item.get('name', ''),
+                'unit':             item.get('unit', 'Cái'),
+                'quantity':         _fmt(item.get('quantity', 0)),
+                'delivered_qty':    _fmt(item.get('delivered_qty', item.get('quantity', 0))),
+                'accepted_qty':     _fmt(item.get('accepted_qty', item.get('quantity', 0))),
+                'accepted':         'Đạt' if item.get('accepted', True) else 'Không đạt',
+                'rejection_reason': item.get('rejection_reason', ''),
+                'notes':            item.get('notes', ''),
+            })
+        ctx.update({
+            # Report
+            'report_number':  delivery_report.report_number,
+            'report_date':    _fmt_date(delivery_report.report_date),
+            'handover_date':  _fmt_date(delivery_report.handover_date),
+            'delivery_date':  _fmt_date(delivery_report.handover_date),
+            # Customer
+            'customer_name':    customer.name,
+            'customer_code':    customer.customer_code,
+            'customer_phone':   customer.phone or '',
+            'customer_address': customer.address or '',
+            # Order
+            'order_code':  order.order_code,
+            'order_title': order.title,
+            # Items list
+            'items': handover_items,
+            # Representatives
+            'company_representative':  delivery_report.company_representative or '',
+            'customer_representative': delivery_report.customer_representative or '',
+            'product_condition':       delivery_report.product_condition or '',
+            'notes':                   delivery_report.notes or '',
+            'generated_date':          datetime.now().strftime('%d/%m/%Y %H:%M'),
+        })
+        return ctx
+
+    @staticmethod
+    def collect_payment_variables(payment_report, customer, order, company=None):
+        """Context for payment report."""
+        payment_type_display = {
+            'advance': 'Tạm ứng (Advance)',
+            'final':   'Thanh toán cuối (Final)',
+        }.get(payment_report.payment_type, payment_report.payment_type)
+
+        ctx = DocumentVariableCollector._company_ctx(company)
+        ctx.update({
+            # Report
+            'report_number':       payment_report.report_number,
+            'payment_type':        payment_report.payment_type,
+            'payment_type_display': payment_type_display,
+            'report_date':         _fmt_date(payment_report.report_date),
+            'payment_date':        _fmt_date(payment_report.payment_date),
+            # Customer
             'customer_name': customer.name,
             'customer_code': customer.customer_code,
-            'order_code': order.order_code,
+            # Order
+            'order_code':  order.order_code,
             'order_title': order.title,
-            'work_description': delivery_report.work_description or '',
-            'materials_used': delivery_report.materials_used or '',
-            'notes': delivery_report.notes or '',
-            'generated_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        }
-    
-    @staticmethod
-    def collect_payment_variables(payment_report, customer, order):
-        """Collect variables for payment report"""
-        return {
-            'report_number': payment_report.report_number,
-            'payment_type': payment_report.payment_type,
-            'report_date': payment_report.report_date.strftime('%Y-%m-%d') if payment_report.report_date else '',
-            'payment_date': payment_report.payment_date.strftime('%Y-%m-%d') if payment_report.payment_date else '',
-            'customer_name': customer.name,
-            'customer_code': customer.customer_code,
-            'order_code': order.order_code,
-            'order_title': order.title,
-            'amount': str(payment_report.amount),
-            'payment_method': payment_report.payment_method or '',
+            # Financials
+            'amount':                _fmt(payment_report.amount),
+            'payment_method':        payment_report.payment_method or '',
             'transaction_reference': payment_report.transaction_reference or '',
-            'notes': payment_report.notes or '',
-            'generated_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        }
+            # Misc
+            'notes':          payment_report.notes or '',
+            'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
+        })
+        return ctx

@@ -28,7 +28,7 @@
     <div class="col-md-8">
         <div class="card mb-3">
             <div class="card-header">
-                <h6>Payment Details</h6>
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Payment Details</h5>
             </div>
             <div class="card-body">
                 <dl class="row">
@@ -84,7 +84,7 @@
         {% if payment.documents %}
         <div class="card mb-3">
             <div class="card-header">
-                <h6>Generated Documents</h6>
+                <h5 class="mb-0"><i class="bi bi-file-pdf"></i> Generated Documents</h5>
             </div>
             <div class="card-body">
                 <div class="list-group">
@@ -117,42 +117,42 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h6>Actions</h6>
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Actions</h5>
             </div>
             <div class="card-body">
+                <div class="d-grid gap-2">
                 {% if payment.can_edit() %}
-                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-secondary w-100 mb-2">
+                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-warning">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
                 {% endif %}
 
                 {% if payment.can_confirm() %}
-                <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="margin-bottom: 10px;">
-                    <button type="submit" class="btn btn-sm btn-success w-100"  onclick="return confirm('Confirm this payment?')">
+                <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}">
+                    <button type="submit" class="btn btn-success w-100" onclick="return confirm('Confirm this payment?')">
                         <i class="bi bi-check-circle"></i> Confirm Payment
                     </button>
                 </form>
                 {% endif %}
 
                 {% if payment.can_cancel() %}
-                <button type="button" class="btn btn-sm btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
                     <i class="bi bi-x-circle"></i> Cancel
                 </button>
                 {% endif %}
 
                 <!-- Generate Document -->
-                <div class="mt-2">
-                    <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
-                        <div class="mb-2">
-                            <select name="format" class="form-select form-select-sm">
-                                <option value="pdf">Download as PDF</option>
-                                <option value="docx">Download as DOCX</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-sm btn-info w-100">
-                            <i class="bi bi-download"></i> Generate Document
-                        </button>
-                    </form>
+                <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
+                    <div class="mb-2">
+                        <select name="format" class="form-select">
+                            <option value="pdf">Download as PDF</option>
+                            <option value="docx">Download as DOCX</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="bi bi-download"></i> Generate Document
+                    </button>
+                </form>
                 </div>
             </div>
         </div>
@@ -160,7 +160,7 @@
         <!-- Order Summary -->
         <div class="card mt-3">
             <div class="card-header">
-                <h6>Order Information</h6>
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Order Information</h5>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">

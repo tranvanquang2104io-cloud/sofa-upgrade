@@ -334,9 +334,9 @@ class DocumentRepository(BaseRepository):
         """Get documents for contract"""
         return self.model.query.filter_by(contract_id=contract_id).all()
     
-    def get_for_delivery(self, delivery_report_id):
-        """Get documents for delivery report"""
-        return self.model.query.filter_by(delivery_report_id=delivery_report_id).all()
+    def get_for_delivery(self, handover_record_id):
+        """Get documents for handover record"""
+        return self.model.query.filter_by(handover_record_id=handover_record_id).all()
     
     def get_for_payment(self, payment_report_id):
         """Get documents for payment report"""

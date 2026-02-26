@@ -89,21 +89,38 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>Order Code:</strong> {{ order.order_code }}</p>
-                        <p><strong>Customer:</strong> <a href="{{ url_for('dashboard.view_customer', customer_id=order.customer.id) }}">{{ order.customer.name }}</a></p>
-                        <p><strong>Store:</strong> {{ order.store.name }}</p>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Order Code:</dt>
+                            <dd class="col-sm-7">{{ order.order_code }}</dd>
+                            <dt class="col-sm-5">Customer:</dt>
+                            <dd class="col-sm-7"><a href="{{ url_for('dashboard.view_customer', customer_id=order.customer.id) }}">{{ order.customer.name }}</a></dd>
+                            <dt class="col-sm-5">Store:</dt>
+                            <dd class="col-sm-7">{{ order.store.name }}</dd>
+                        </dl>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Total Amount:</strong> ${{ order.total_amount|default('0') }}</p>
-                        <p><strong>Advance Amount:</strong> ${{ order.advance_amount|default('0') }}</p>
-                        <p><strong>Final Amount:</strong> ${{ order.final_amount|default('0') }}</p>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Total Amount:</dt>
+                            <dd class="col-sm-7"><strong>${{ "%.2f"|format(order.total_amount|default(0)|float) }}</strong></dd>
+                            <dt class="col-sm-5">Advance:</dt>
+                            <dd class="col-sm-7">${{ "%.2f"|format(order.advance_amount|default(0)|float) }}</dd>
+                            <dt class="col-sm-5">Final:</dt>
+                            <dd class="col-sm-7">${{ "%.2f"|format(order.final_amount|default(0)|float) }}</dd>
+                        </dl>
                     </div>
                 </div>
                 {% if order.description %}
-                <p><strong>Description:</strong> {{ order.description }}</p>
+                <hr>
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Description:</dt>
+                    <dd class="col-sm-9">{{ order.description }}</dd>
+                </dl>
                 {% endif %}
                 {% if order.notes %}
-                <p><strong>Notes:</strong> {{ order.notes }}</p>
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Notes:</dt>
+                    <dd class="col-sm-9">{{ order.notes }}</dd>
+                </dl>
                 {% endif %}
             </div>
         </div>
@@ -141,18 +158,23 @@
                                             <span class="badge bg-warning ms-2">Pending</span>
                                             {% endif %}
                                         </div>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-outline-primary" title="View">
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
                                                 <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if not quotation.is_approved %}
+                                            <a href="{{ url_for('dashboard.edit_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
+                                                <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if quotation.can_approve() %}
                                             <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;">
-                                                <button type="submit" class="btn btn-outline-success" title="Approve" onclick="return confirm('Approve this quotation?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" onclick="return confirm('Approve this quotation?')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
-                                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModal{{ quotation.id }}" title="Generate">
+                                            {% endif %}
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ quotation.id }}" title="Generate">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -219,23 +241,23 @@
                                             <span class="badge bg-warning ms-2">Unsigned</span>
                                             {% endif %}
                                         </div>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-outline-primary" title="View">
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            {% if contract.can_edit() %}
-                                            <a href="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}" class="btn btn-outline-info" title="Edit">
+                                            {% if not contract.is_signed %}
+                                            <a href="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            {% endif %}
                                             {% if contract.can_sign() %}
                                             <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;">
-                                                <button type="submit" class="btn btn-outline-success" title="Sign" onclick="return confirm('Sign this contract?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" onclick="return confirm('Sign this contract?')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
-                                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModal{{ contract.id }}" title="Generate">
+                                            {% endif %}
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ contract.id }}" title="Generate">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -292,58 +314,56 @@
                                     <div class="alert {% if payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
-                                                <strong>{{ payment.report_number }}</strong> - ${{ payment.amount }}
+                                                <strong>{{ payment.report_number }}</strong> - ${{ "%.2f"|format(payment.amount|float) }}
                                                 {% if payment.is_confirmed %}
                                                     <span class="badge bg-success ms-2">Confirmed</span>
                                                 {% else %}
                                                     <span class="badge bg-warning ms-2">Pending Confirmation</span>
                                                 {% endif %}
                                             </div>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-outline-primary" title="View Payment">
+                                            <div class="d-flex gap-1">
+                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                {% if payment.can_edit() %}
-                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                                {% if not payment.is_confirmed %}
+                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
+                                                <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('Confirm this payment?')">
+                                                        <i class="bi bi-check2"></i>
+                                                    </button>
+                                                </form>
                                                 {% endif %}
-                                                <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="Generate Document">
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="Generate">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
-                                                {% if not payment.is_confirmed %}
-                                                    <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
-                                                        <button type="submit" class="btn btn-outline-success" title="Confirm">
-                                                            <i class="bi bi-check2"></i>
-                                                        </button>
-                                                    </form>
-                                                {% endif %}
                                             </div>
-                                            <!-- Generate Document Modal -->
-                                            <div class="modal fade" id="generateModalAdv{{ payment.id }}" tabindex="-1">
-                                                <div class="modal-dialog modal-sm">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Generate Document</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
-                                                        <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
-                                                            <div class="modal-body">
-                                                                <div class="mb-3">
-                                                                    <label for="format" class="form-label">Format</label>
-                                                                    <select class="form-select" name="format" required>
-                                                                        <option value="pdf">PDF</option>
-                                                                        <option value="docx">DOCX</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                                <button type="submit" class="btn btn-primary btn-sm">Generate</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
+                                        </div>
+                                    </div>
+                                    <!-- Generate Document Modal (moved outside alert) -->
+                                    <div class="modal fade" id="generateModalAdv{{ payment.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-sm">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Generate Document</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
+                                                <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label for="format" class="form-label">Format</label>
+                                                            <select class="form-select" name="format" required>
+                                                                <option value="pdf">PDF</option>
+                                                                <option value="docx">DOCX</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                    </div>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -382,51 +402,49 @@
                                                 <span class="badge bg-warning ms-2">Pending Confirmation</span>
                                             {% endif %}
                                         </div>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-outline-primary" title="View Handover">
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            {% if handover.can_edit() %}
-                                            <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                            {% if not handover.is_confirmed %}
+                                            <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
+                                            <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('Confirm this handover?')">
+                                                    <i class="bi bi-check2"></i>
+                                                </button>
+                                            </form>
                                             {% endif %}
-                                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModal{{ handover.id }}" title="Generate Document">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalHO{{ handover.id }}" title="Generate">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
-                                            {% if not handover.is_confirmed %}
-                                                <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;">
-                                                    <button type="submit" class="btn btn-outline-success" title="Confirm">
-                                                        <i class="bi bi-check2"></i>
-                                                    </button>
-                                                </form>
-                                            {% endif %}
                                         </div>
-                                        <!-- Generate Document Modal -->
-                                        <div class="modal fade" id="generateModal{{ handover.id }}" tabindex="-1">
-                                            <div class="modal-dialog modal-sm">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Generate Document</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
-                                                        <div class="modal-body">
-                                                            <div class="mb-3">
-                                                                <label for="format" class="form-label">Format</label>
-                                                                <select class="form-select" name="format" required>
-                                                                    <option value="pdf">PDF</option>
-                                                                    <option value="docx">DOCX</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                            <button type="submit" class="btn btn-primary btn-sm">Generate</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
+                                    </div>
+                                </div>
+                                <!-- Generate Document Modal (moved outside alert) -->
+                                <div class="modal fade" id="generateModalHO{{ handover.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-sm">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Generate Document</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
+                                            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label for="format" class="form-label">Format</label>
+                                                        <select class="form-select" name="format" required>
+                                                            <option value="pdf">PDF</option>
+                                                            <option value="docx">DOCX</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                    <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
@@ -459,58 +477,56 @@
                                     <div class="alert {% if payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
-                                                <strong>{{ payment.report_number }}</strong> - ${{ payment.amount }}
+                                                <strong>{{ payment.report_number }}</strong> - ${{ "%.2f"|format(payment.amount|float) }}
                                                 {% if payment.is_confirmed %}
                                                     <span class="badge bg-success ms-2">Confirmed</span>
                                                 {% else %}
                                                     <span class="badge bg-warning ms-2">Pending Confirmation</span>
                                                 {% endif %}
                                             </div>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-outline-primary" title="View Payment">
+                                            <div class="d-flex gap-1">
+                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                {% if payment.can_edit() %}
-                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                                {% if not payment.is_confirmed %}
+                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
+                                                <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('Confirm this payment?')">
+                                                        <i class="bi bi-check2"></i>
+                                                    </button>
+                                                </form>
                                                 {% endif %}
-                                                <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate Document">
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
-                                                {% if not payment.is_confirmed %}
-                                                    <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
-                                                        <button type="submit" class="btn btn-outline-success" title="Confirm">
-                                                            <i class="bi bi-check2"></i>
-                                                        </button>
-                                                    </form>
-                                                {% endif %}
                                             </div>
-                                            <!-- Generate Document Modal -->
-                                            <div class="modal fade" id="generateModalFinal{{ payment.id }}" tabindex="-1">
-                                                <div class="modal-dialog modal-sm">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Generate Document</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
-                                                        <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
-                                                            <div class="modal-body">
-                                                                <div class="mb-3">
-                                                                    <label for="format" class="form-label">Format</label>
-                                                                    <select class="form-select" name="format" required>
-                                                                        <option value="pdf">PDF</option>
-                                                                        <option value="docx">DOCX</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                                <button type="submit" class="btn btn-primary btn-sm">Generate</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
+                                        </div>
+                                    </div>
+                                    <!-- Generate Document Modal (moved outside alert) -->
+                                    <div class="modal fade" id="generateModalFinal{{ payment.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-sm">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Generate Document</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
+                                                <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label for="format" class="form-label">Format</label>
+                                                            <select class="form-select" name="format" required>
+                                                                <option value="pdf">PDF</option>
+                                                                <option value="docx">DOCX</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                    </div>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -557,7 +573,7 @@
                     </a>
                     {% endif %}
                     
-                    {% if lifecycle.advance_paid and not lifecycle.handover_confirmed %}
+                    {% if lifecycle.advance_paid and not lifecycle.handover_confirmed and not handover_records %}
                     <a href="{{ url_for('dashboard.create_handover', order_id=order.id) }}" class="btn btn-primary">
                         <i class="bi bi-plus"></i> Create Handover Record
                     </a>
@@ -572,6 +588,12 @@
                     <a href="{{ url_for('dashboard.list_documents', order_id=order.id) }}" class="btn btn-info">
                         <i class="bi bi-file-pdf"></i> Documents
                     </a>
+                    
+                    {% if order.can_cancel() %}
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelOrderModal">
+                        <i class="bi bi-x-circle"></i> Cancel Order
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -582,6 +604,21 @@
                 <h5 class="mb-0"><i class="bi bi-graph-up"></i> Status</h5>
             </div>
             <div class="card-body">
+                {% if order.is_canceled %}
+                <div class="alert alert-danger mb-3">
+                    <strong><i class="bi bi-x-circle"></i> Order Cancelled</strong>
+                    <div class="mt-2">
+                        <small class="text-muted">Cancelled at:</small><br>
+                        <small>{{ order.canceled_at.strftime('%Y-%m-%d %H:%M') if order.canceled_at else 'N/A' }}</small>
+                    </div>
+                    {% if order.canceled_reason %}
+                    <div class="mt-2">
+                        <small class="text-muted">Reason:</small><br>
+                        <small>{{ order.canceled_reason }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
                 <div class="mb-2">
                     <small class="text-muted">Quotation</small>
                     <div>
@@ -635,4 +672,41 @@
         </div>
     </div>
 </div>
+
+<!-- Cancel Order Modal -->
+{% if order.can_cancel() %}
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Cancel Order</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.cancel_order', order_id=order.id) }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action cannot be undone. The order will be marked as canceled.
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Order Code:</strong> {{ order.order_code }}<br>
+                        <strong>Customer:</strong> {{ order.customer.name }}<br>
+                        <strong>Amount:</strong> ${{ "%.2f"|format(order.total_amount|default(0)|float) }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="canceled_reason" class="form-label">Cancellation Reason *</label>
+                        <textarea class="form-control" id="canceled_reason" name="canceled_reason" rows="3" required placeholder="Please provide a reason for canceling this order..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Cancel Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

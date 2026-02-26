@@ -5,8 +5,8 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
-        <h1><i class="bi bi-file-earmark-check"></i> Create Handover Record (Biên Bản Bàn Giao)</h1>
-        <p class="text-muted">Document confirming customer acceptance of product/service</p>
+        <h1><i class="bi bi-file-earmark-check"></i> Create Handover Record</h1>
+        <p class="text-muted">Biên Bản Bàn Giao - Customer Acceptance Document</p>
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-outline-secondary">
@@ -24,7 +24,10 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="report_number" class="form-label">Record Number *</label>
-                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="e.g., HR-001">
+                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="Loading...">
+                                <div id="code-warning" class="text-danger small mt-1" style="display:none;">
+                                    <i class="bi bi-exclamation-triangle"></i> This code is already taken!
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -59,9 +62,71 @@
                         </div>
                     </div>
 
+                    <!-- Items Acceptance Section -->
+                    {% if contract_items and contract_items|length > 0 %}
+                    <div class="mb-4">
+                        <h6 class="mb-3"><i class="bi bi-list-check"></i> Items Acceptance</h6>
+                        <p class="text-muted small mb-2">Review each item delivered. Set accepted quantity and status for each.</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered item-acceptance-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 25%">Item Name</th>
+                                        <th style="width: 10%" class="text-center">Unit Price</th>
+                                        <th style="width: 10%" class="text-center">Delivered Qty</th>
+                                        <th style="width: 10%" class="text-center">Accepted Qty</th>
+                                        <th style="width: 15%" class="text-center">Status</th>
+                                        <th style="width: 30%">Rejection Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-body">
+                                    {% for item in contract_items %}
+                                    <tr class="item-row">
+                                        <td>
+                                            <input type="hidden" name="item_name[]" value="{{ item.name }}">
+                                            <input type="hidden" name="item_price[]" value="{{ item.unit_price }}">
+                                            <strong>{{ item.name }}</strong>
+                                        </td>
+                                        <td class="text-end">${{ "%.2f"|format(item.unit_price|float) }}</td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm text-center delivered-qty" 
+                                                   name="item_delivered_qty[]" value="{{ item.quantity }}" step="0.01" min="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm text-center accepted-qty" 
+                                                   name="item_accepted_qty[]" value="{{ item.quantity }}" step="0.01" min="0"
+                                                   max="{{ item.quantity }}">
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm status-select" name="item_status[]">
+                                                <option value="accepted" selected>Accepted</option>
+                                                <option value="partial">Partial</option>
+                                                <option value="rejected">Rejected</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm reason-input" 
+                                                   name="item_reason[]" placeholder="Reason if not fully accepted" disabled>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="2" class="text-end"><strong>Totals:</strong></td>
+                                        <td class="text-center"><strong id="total-delivered">{{ contract_items|sum(attribute='quantity') }}</strong></td>
+                                        <td class="text-center"><strong id="total-accepted">{{ contract_items|sum(attribute='quantity') }}</strong></td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <div class="mb-3">
-                        <label for="product_condition" class="form-label">Product Condition Description *</label>
-                        <textarea class="form-control" id="product_condition" name="product_condition" rows="4" required placeholder="Describe the condition of product/service at handover"></textarea>
+                        <label for="product_condition" class="form-label">Overall Product Condition *</label>
+                        <textarea class="form-control" id="product_condition" name="product_condition" rows="3" required placeholder="Describe the overall condition of products at handover"></textarea>
                     </div>
 
                     <div class="mb-3">
@@ -69,29 +134,31 @@
                         <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Any additional information..."></textarea>
                     </div>
 
-                    <div class="alert alert-info">
+                    <div class="alert alert-info py-2">
                         <i class="bi bi-info-circle"></i> 
                         <strong>Note:</strong> This handover record can only be created after advance payment has been confirmed.
                     </div>
 
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Create Handover Record
-                    </button>
-                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </a>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Create Handover Record
+                        </button>
+                        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
-        <div class="card bg-light">
+        <div class="card">
             <div class="card-header">
-                <h6>Order Summary</h6>
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Order Summary</h5>
             </div>
             <div class="card-body">
-                <dl class="row">
+                <dl class="row mb-0">
                     <dt class="col-sm-5">Order:</dt>
                     <dd class="col-sm-7">{{ order.order_code }}</dd>
                     <dt class="col-sm-5">Customer:</dt>
@@ -103,4 +170,117 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle status changes
+    document.querySelectorAll('.status-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const reasonInput = row.querySelector('.reason-input');
+            const acceptedQty = row.querySelector('.accepted-qty');
+            const deliveredQty = row.querySelector('.delivered-qty');
+            
+            if (this.value === 'accepted') {
+                reasonInput.disabled = true;
+                reasonInput.value = '';
+                acceptedQty.value = deliveredQty.value;
+            } else if (this.value === 'rejected') {
+                reasonInput.disabled = false;
+                acceptedQty.value = '0';
+            } else {
+                reasonInput.disabled = false;
+            }
+            updateTotals();
+        });
+    });
+
+    // Handle quantity changes
+    document.querySelectorAll('.accepted-qty').forEach(function(input) {
+        input.addEventListener('input', function() {
+            const row = this.closest('tr');
+            const deliveredQty = parseFloat(row.querySelector('.delivered-qty').value) || 0;
+            const acceptedQty = parseFloat(this.value) || 0;
+            const statusSelect = row.querySelector('.status-select');
+            
+            if (acceptedQty <= 0) {
+                statusSelect.value = 'rejected';
+                row.querySelector('.reason-input').disabled = false;
+            } else if (acceptedQty < deliveredQty) {
+                statusSelect.value = 'partial';
+                row.querySelector('.reason-input').disabled = false;
+            } else {
+                statusSelect.value = 'accepted';
+                row.querySelector('.reason-input').disabled = true;
+                row.querySelector('.reason-input').value = '';
+            }
+            updateTotals();
+        });
+    });
+
+    function updateTotals() {
+        let totalDelivered = 0;
+        let totalAccepted = 0;
+        document.querySelectorAll('.item-row').forEach(function(row) {
+            totalDelivered += parseFloat(row.querySelector('.delivered-qty').value) || 0;
+            totalAccepted += parseFloat(row.querySelector('.accepted-qty').value) || 0;
+        });
+        document.getElementById('total-delivered').textContent = totalDelivered;
+        document.getElementById('total-accepted').textContent = totalAccepted;
+    }
+    
+    // Auto-fill handover report number on page load
+    (async function() {
+        try {
+            const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="handover") }}');
+            const data = await response.json();
+            if (data.next_code) {
+                document.getElementById('report_number').value = data.next_code;
+                document.getElementById('report_number').placeholder = 'e.g., HR-001';
+            }
+        } catch (error) {
+            console.error('Error loading next code:', error);
+            document.getElementById('report_number').placeholder = 'e.g., HR-001';
+        }
+    })();
+
+    // Check for duplicate code when user changes it
+    let checkTimeout;
+    document.getElementById('report_number').addEventListener('input', function() {
+        clearTimeout(checkTimeout);
+        const code = this.value.trim();
+        const warning = document.getElementById('code-warning');
+        const submitBtn = document.querySelector('button[type="submit"]');
+        
+        if (!code) {
+            warning.style.display = 'none';
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        checkTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch('{{ url_for("dashboard.check_code", doc_type="handover") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await response.json();
+                
+                if (data.exists) {
+                    warning.style.display = 'block';
+                    submitBtn.disabled = true;
+                } else {
+                    warning.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error checking code:', error);
+            }
+        }, 500);
+    });
+});
+</script>
 {% endblock %}

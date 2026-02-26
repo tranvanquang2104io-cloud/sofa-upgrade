@@ -15,6 +15,7 @@ from app.config.database import db
 from datetime import datetime, date
 import logging
 import os
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -101,13 +102,31 @@ def create_customer():
     
     stores = store_repo.get_stores_for_company(company_id)
     
-    if not store_id and stores:
+    # Check if company has any stores
+    if not stores:
+        flash('No stores found. Please create a store first before adding customers.', 'error')
+        return redirect(url_for('dashboard.index'))
+    
+    # Set default store_id if not provided, convert string to UUID if needed
+    if not store_id:
         store_id = stores[0].id
+    elif isinstance(store_id, str):
+        try:
+            store_id = uuid.UUID(store_id)
+        except ValueError:
+            flash('Invalid store ID', 'error')
+            return redirect(url_for('dashboard.index'))
     
     if request.method == 'POST':
         try:
+            # Validate store_id is provided
+            if not store_id:
+                flash('Store selection is required', 'error')
+                return render_template('customers/create.html', stores=stores, selected_store_id=store_id)
+            
             store_customer = CustomerService()
             customer = store_customer.create_customer(
+                company_id=company_id,
                 store_id=store_id,
                 customer_code=request.form.get('customer_code', '').strip(),
                 name=request.form.get('name', '').strip(),
@@ -124,7 +143,7 @@ def create_customer():
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
-            logger.error(f"Error creating customer: {str(e)}")
+            logger.error(f"Error creating customer: {str(e)}", exc_info=True)
             flash('Error creating customer', 'error')
     
     return render_template('customers/create.html', stores=stores, selected_store_id=store_id)
@@ -251,6 +270,16 @@ def create_quotation(order_id):
     
     if request.method == 'POST':
         try:
+            # Check for duplicate quotation number
+            quotation_number = request.form.get('quotation_number', '').strip()
+            from app.repositories.repository import QuotationRepository
+            quotation_repo = QuotationRepository()
+            from app.models.models import Quotation
+            existing = db.session.query(Quotation).filter_by(quotation_number=quotation_number).first()
+            if existing:
+                flash(f'Quotation number "{quotation_number}" is already taken. Please use a different number.', 'error')
+                return render_template('quotations/create.html', order=order)
+            
             # Parse items from request
             items = []
             item_names = request.form.getlist('item_name[]')
@@ -439,15 +468,64 @@ def create_contract(order_id):
     
     if request.method == 'POST':
         try:
+            # Check for duplicate contract number
+            contract_number = request.form.get('contract_number', '').strip()
+            from app.models.models import Contract
+            existing = db.session.query(Contract).filter_by(contract_number=contract_number).first()
+            if existing:
+                flash(f'Contract number "{contract_number}" is already taken. Please use a different number.', 'error')
+                return render_template('contracts/create.html', order=order, quotations=quotations)
+            
+            # Parse items from form
+            items = []
+            item_names = request.form.getlist('item_name[]')
+            item_quantities = request.form.getlist('item_quantity[]')
+            item_prices = request.form.getlist('item_price[]')
+            
+            for i, name in enumerate(item_names):
+                if name.strip():  # Only add non-empty items
+                    qty = float(item_quantities[i] or 0)
+                    price = float(item_prices[i] or 0)
+                    item_total = qty * price
+                    items.append({
+                        'name': name.strip(),
+                        'quantity': qty,
+                        'unit_price': price,
+                        'total': item_total
+                    })
+            
             contract_service = ContractService()
-            contract = contract_service.create_contract(
+            
+            # Create contract with items
+            from app.repositories.repository import ContractRepository
+            contract_repo = ContractRepository()
+            
+            quotation_id = request.form.get('quotation_id') or None
+            
+            # If items are provided from form, use them; otherwise try to copy from quotation
+            if not items and quotation_id:
+                from app.repositories.repository import QuotationRepository
+                quotation = QuotationRepository().get_by_id(quotation_id)
+                if quotation and quotation.items:
+                    items = list(quotation.items)
+            
+            contract = contract_repo.create(
                 order_id=order_id,
-                quotation_id=request.form.get('quotation_id') or None,
+                quotation_id=quotation_id,
                 contract_number=request.form.get('contract_number', '').strip(),
                 contract_date=datetime.strptime(request.form.get('contract_date'), '%Y-%m-%d').date(),
                 contract_value=float(request.form.get('contract_value') or 0),
+                items=items,
                 terms_and_conditions=request.form.get('terms_and_conditions', '').strip() or None
             )
+            
+            # Update lifecycle
+            from app.repositories.repository import LifecycleStatusRepository
+            lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
+            lifecycle.contract_created = True
+            lifecycle.contract_created_at = datetime.utcnow()
+            db.session.add(lifecycle)
+            db.session.commit()
             
             flash('Contract created successfully', 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
@@ -563,6 +641,87 @@ def sign_contract(contract_id):
     return redirect(url_for('dashboard.view_order', order_id=contract.order_id))
 
 
+@dashboard_bp.route('/contracts/<contract_id>/cancel', methods=['POST'])
+@login_required
+def cancel_contract(contract_id):
+    """Cancel contract"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import ContractRepository
+    contract_repo = ContractRepository()
+    contract = contract_repo.get_by_id(contract_id)
+    
+    if not contract or str(contract.order.company_id) != str(company_id):
+        flash('Contract not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    if not contract.can_cancel():
+        flash('Contract cannot be canceled', 'error')
+        return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
+    
+    try:
+        canceled_reason = request.form.get('canceled_reason', '').strip()
+        if not canceled_reason:
+            flash('Cancellation reason is required', 'error')
+            return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
+        
+        # Cancel the contract
+        contract.is_canceled = True
+        contract.canceled_at = datetime.utcnow()
+        contract.canceled_reason = canceled_reason
+        contract.is_active = False
+        db.session.commit()
+        
+        flash('Contract has been canceled successfully', 'success')
+        logger.info(f"Contract {contract.contract_number} canceled by user. Reason: {canceled_reason}")
+    except Exception as e:
+        logger.error(f"Error canceling contract: {str(e)}")
+        db.session.rollback()
+        flash('Error canceling contract', 'error')
+    
+    return redirect(url_for('dashboard.view_order', order_id=contract.order_id))
+
+
+@dashboard_bp.route('/orders/<order_id>/cancel', methods=['POST'])
+@login_required
+def cancel_order(order_id):
+    """Cancel order"""
+    company_id = get_current_company_id()
+    
+    from app.repositories.repository import OrderRepository
+    order_repo = OrderRepository()
+    order = order_repo.get_by_id(order_id)
+    
+    if not order or str(order.company_id) != str(company_id):
+        flash('Order not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    
+    if not order.can_cancel():
+        flash('Order cannot be canceled', 'error')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
+    
+    try:
+        canceled_reason = request.form.get('canceled_reason', '').strip()
+        if not canceled_reason:
+            flash('Cancellation reason is required', 'error')
+            return redirect(url_for('dashboard.view_order', order_id=order_id))
+        
+        # Cancel the order
+        order.is_canceled = True
+        order.canceled_at = datetime.utcnow()
+        order.canceled_reason = canceled_reason
+        db.session.commit()
+        
+        flash('Order has been canceled successfully', 'success')
+        logger.info(f"Order {order.order_code} canceled by user. Reason: {canceled_reason}")
+    except Exception as e:
+        logger.error(f"Error canceling order: {str(e)}")
+        db.session.rollback()
+        flash('Error canceling order', 'error')
+    
+    return redirect(url_for('dashboard.list_orders'))
+
+
 # ===== DELIVERY REPORTS =====
 
 @dashboard_bp.route('/handover/<order_id>/create', methods=['GET', 'POST'])
@@ -579,6 +738,49 @@ def create_handover(order_id):
     
     if request.method == 'POST':
         try:
+            # Check for duplicate report number
+            report_number = request.form.get('report_number', '').strip()
+            from app.models.models import HandoverRecord
+            existing = db.session.query(HandoverRecord).filter_by(report_number=report_number).first()
+            if existing:
+                flash(f'Handover record number "{report_number}" is already taken. Please use a different number.', 'error')
+                # Get contract items for re-render
+                contract_items = []
+                active_contracts = [c for c in order.contracts if c.is_active and not c.is_canceled]
+                if active_contracts:
+                    contract_items = active_contracts[0].items or []
+                elif order.quotations:
+                    approved_quotations = [q for q in order.quotations if q.is_approved and q.is_active]
+                    if approved_quotations:
+                        contract_items = approved_quotations[0].items or []
+                return render_template('handover/create.html', order=order, contract_items=contract_items)
+            
+            # Parse items acceptance from form
+            items = []
+            item_names = request.form.getlist('item_name[]')
+            item_delivered = request.form.getlist('item_delivered_qty[]')
+            item_accepted = request.form.getlist('item_accepted_qty[]')
+            item_statuses = request.form.getlist('item_status[]')
+            item_reasons = request.form.getlist('item_reason[]')
+            item_prices = request.form.getlist('item_price[]')
+            
+            for i, name in enumerate(item_names):
+                if name:
+                    delivered_qty = float(item_delivered[i] or 0) if i < len(item_delivered) else 0
+                    accepted_qty = float(item_accepted[i] or 0) if i < len(item_accepted) else 0
+                    unit_price = float(item_prices[i] or 0) if i < len(item_prices) else 0
+                    status = item_statuses[i] if i < len(item_statuses) else 'accepted'
+                    reason = item_reasons[i].strip() if i < len(item_reasons) else ''
+                    items.append({
+                        'name': name,
+                        'delivered_qty': delivered_qty,
+                        'accepted_qty': accepted_qty,
+                        'unit_price': unit_price,
+                        'total': accepted_qty * unit_price,
+                        'status': status,
+                        'rejection_reason': reason if status != 'accepted' else ''
+                    })
+            
             handover_service = HandoverRecordService()
             handover = handover_service.create_handover_record(
                 order_id=order_id,
@@ -588,6 +790,7 @@ def create_handover(order_id):
                 customer_representative=request.form.get('customer_representative', '').strip() or None,
                 company_representative=request.form.get('company_representative', '').strip() or None,
                 product_condition=request.form.get('product_condition', '').strip() or None,
+                items=items,
                 notes=request.form.get('notes', '').strip() or None
             )
             
@@ -598,7 +801,17 @@ def create_handover(order_id):
             logger.error(f"Error creating handover record: {str(e)}")
             flash('Error creating handover record', 'error')
     
-    return render_template('handover/create.html', order=order)
+    # Get contract items for handover item acceptance
+    contract_items = []
+    active_contracts = [c for c in order.contracts if c.is_active and not c.is_canceled]
+    if active_contracts:
+        contract_items = active_contracts[0].items or []
+    elif order.quotations:
+        approved_quotations = [q for q in order.quotations if q.is_approved and q.is_active]
+        if approved_quotations:
+            contract_items = approved_quotations[0].items or []
+    
+    return render_template('handover/create.html', order=order, contract_items=contract_items)
 
 
 @dashboard_bp.route('/handover/<handover_id>/confirm', methods=['POST'])
@@ -674,6 +887,34 @@ def edit_handover(handover_id):
             handover.notes = request.form.get('notes', '').strip() or None
             handover.updated_at = datetime.utcnow()
             
+            # Parse items acceptance data
+            item_names = request.form.getlist('item_name[]')
+            if item_names:
+                item_prices = request.form.getlist('item_price[]')
+                item_delivered = request.form.getlist('item_delivered_qty[]')
+                item_accepted = request.form.getlist('item_accepted_qty[]')
+                item_statuses = request.form.getlist('item_status[]')
+                item_reasons = request.form.getlist('item_reason[]')
+                
+                items = []
+                for i, name in enumerate(item_names):
+                    if name.strip():
+                        delivered_qty = int(item_delivered[i]) if i < len(item_delivered) else 0
+                        accepted_qty = int(item_accepted[i]) if i < len(item_accepted) else 0
+                        unit_price = float(item_prices[i]) if i < len(item_prices) else 0
+                        items.append({
+                            'name': name.strip(),
+                            'unit_price': unit_price,
+                            'quantity': delivered_qty,
+                            'total': unit_price * delivered_qty,
+                            'delivered_qty': delivered_qty,
+                            'accepted_qty': accepted_qty,
+                            'accepted': item_statuses[i] == 'accepted' if i < len(item_statuses) else True,
+                            'status': item_statuses[i] if i < len(item_statuses) else 'accepted',
+                            'rejection_reason': item_reasons[i].strip() if i < len(item_reasons) and item_reasons[i].strip() else None
+                        })
+                handover.items = items
+            
             db.session.add(handover)
             db.session.commit()
             
@@ -734,6 +975,14 @@ def create_payment(order_id):
     
     if request.method == 'POST':
         try:
+            # Check for duplicate report number
+            report_number = request.form.get('report_number', '').strip()
+            from app.models.models import PaymentReport
+            existing = db.session.query(PaymentReport).filter_by(report_number=report_number).first()
+            if existing:
+                flash(f'Payment report number "{report_number}" is already taken. Please use a different number.', 'error')
+                return render_template('payment/create.html', order=order, default_type=default_type)
+            
             payment_service = PaymentReportService()
             payment_type = request.form.get('payment_type')
             
@@ -1033,5 +1282,127 @@ def get_quotation_detail(quotation_id):
         
     except Exception as e:
         logger.error(f"Error getting quotation detail for {quotation_id}: {str(e)}", exc_info=True)
+        return {'error': f'Error: {str(e)}'}, 500
+
+
+@dashboard_bp.route('/api/next-code/<doc_type>')
+@login_required
+def get_next_code(doc_type):
+    """Get next available code for document type"""
+    company_id = get_current_company_id()
+    
+    try:
+        from app.repositories.repository import (
+            QuotationRepository, ContractRepository, PaymentReportRepository, HandoverRecordRepository
+        )
+        from sqlalchemy import func
+        
+        # Map document type to repository and field
+        type_config = {
+            'quotation': {
+                'repo': QuotationRepository(),
+                'field': 'quotation_number',
+                'prefix': 'QT-'
+            },
+            'contract': {
+                'repo': ContractRepository(),
+                'field': 'contract_number',
+                'prefix': 'CT-'
+            },
+            'payment': {
+                'repo': PaymentReportRepository(),
+                'field': 'report_number',
+                'prefix': 'PR-'
+            },
+            'handover': {
+                'repo': HandoverRecordRepository(),
+                'field': 'report_number',
+                'prefix': 'HR-'
+            }
+        }
+        
+        if doc_type not in type_config:
+            return {'error': 'Invalid document type'}, 400
+        
+        config = type_config[doc_type]
+        model_class = config['repo'].model
+        field_name = config['field']
+        prefix = config['prefix']
+        
+        # Get the highest number for this type
+        result = db.session.query(
+            func.max(func.cast(
+                func.regexp_replace(
+                    getattr(model_class, field_name),
+                    f'^{prefix}',
+                    ''
+                ),
+                db.Integer
+            ))
+        ).filter(
+            getattr(model_class, field_name).like(f'{prefix}%')
+        ).scalar()
+        
+        next_number = (result or 0) + 1
+        next_code = f'{prefix}{next_number:03d}'
+        
+        return {'next_code': next_code}, 200
+        
+    except Exception as e:
+        logger.error(f"Error getting next code for {doc_type}: {str(e)}", exc_info=True)
+        return {'error': f'Error: {str(e)}'}, 500
+
+
+@dashboard_bp.route('/api/check-code/<doc_type>', methods=['POST'])
+@login_required
+def check_code(doc_type):
+    """Check if code already exists"""
+    company_id = get_current_company_id()
+    
+    try:
+        code = request.json.get('code', '').strip()
+        if not code:
+            return {'exists': False}, 200
+        
+        from app.repositories.repository import (
+            QuotationRepository, ContractRepository, PaymentReportRepository, HandoverRecordRepository
+        )
+        
+        # Map document type to repository and field
+        type_config = {
+            'quotation': {
+                'repo': QuotationRepository(),
+                'field': 'quotation_number'
+            },
+            'contract': {
+                'repo': ContractRepository(),
+                'field': 'contract_number'
+            },
+            'payment': {
+                'repo': PaymentReportRepository(),
+                'field': 'report_number'
+            },
+            'handover': {
+                'repo': HandoverRecordRepository(),
+                'field': 'report_number'
+            }
+        }
+        
+        if doc_type not in type_config:
+            return {'error': 'Invalid document type'}, 400
+        
+        config = type_config[doc_type]
+        model_class = config['repo'].model
+        field_name = config['field']
+        
+        # Check if code exists
+        exists = db.session.query(model_class).filter(
+            getattr(model_class, field_name) == code
+        ).first() is not None
+        
+        return {'exists': exists}, 200
+        
+    except Exception as e:
+        logger.error(f"Error checking code for {doc_type}: {str(e)}", exc_info=True)
         return {'error': f'Error: {str(e)}'}, 500
 

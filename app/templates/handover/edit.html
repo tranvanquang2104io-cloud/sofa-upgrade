@@ -71,16 +71,109 @@
                         <textarea class="form-control" id="notes" name="notes" rows="2">{{ handover.notes or '' }}</textarea>
                     </div>
 
+                    <!-- Items Acceptance -->
+                    {% if handover.items %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Items Acceptance</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered mb-0" id="itemsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th class="text-end">Unit Price</th>
+                                            <th class="text-center">Delivered Qty</th>
+                                            <th class="text-center">Accepted Qty</th>
+                                            <th class="text-center">Status</th>
+                                            <th>Rejection Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in handover.items %}
+                                        <tr>
+                                            <td>
+                                                {{ item.name }}
+                                                <input type="hidden" name="item_name[]" value="{{ item.name }}">
+                                                <input type="hidden" name="item_price[]" value="{{ item.unit_price|default(0) }}">
+                                            </td>
+                                            <td class="text-end">${{ "%.2f"|format(item.unit_price|default(0)|float) }}</td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm text-center" 
+                                                       name="item_delivered_qty[]" value="{{ item.delivered_qty|default(item.quantity|default(0)) }}" 
+                                                       min="0" onchange="updateStatus(this)">
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm text-center" 
+                                                       name="item_accepted_qty[]" value="{{ item.accepted_qty|default(item.delivered_qty|default(item.quantity|default(0))) }}" 
+                                                       min="0" onchange="updateStatus(this)">
+                                            </td>
+                                            <td>
+                                                <select class="form-select form-select-sm" name="item_status[]" onchange="toggleReason(this)">
+                                                    <option value="accepted" {% if item.accepted|default(true) and item.status|default('accepted') == 'accepted' %}selected{% endif %}>Accepted</option>
+                                                    <option value="partial" {% if item.status|default('') == 'partial' %}selected{% endif %}>Partial</option>
+                                                    <option value="rejected" {% if item.status|default('') == 'rejected' %}selected{% endif %}>Rejected</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" 
+                                                       name="item_reason[]" value="{{ item.rejection_reason|default('') }}" 
+                                                       placeholder="Reason..."
+                                                       {% if item.status|default('accepted') == 'accepted' %}disabled{% endif %}>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save"></i> Save Changes
                     </button>
                     <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-secondary">
                         <i class="bi bi-x-circle"></i> Cancel
                     </a>
+                    </div>
                 </form>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+function updateStatus(input) {
+    const row = input.closest('tr');
+    const delivered = parseInt(row.querySelector('[name="item_delivered_qty[]"]').value) || 0;
+    const accepted = parseInt(row.querySelector('[name="item_accepted_qty[]"]').value) || 0;
+    const statusSelect = row.querySelector('[name="item_status[]"]');
+    
+    if (accepted === 0) {
+        statusSelect.value = 'rejected';
+    } else if (accepted < delivered) {
+        statusSelect.value = 'partial';
+    } else {
+        statusSelect.value = 'accepted';
+    }
+    toggleReason(statusSelect);
+}
+
+function toggleReason(select) {
+    const row = select.closest('tr');
+    const reasonInput = row.querySelector('[name="item_reason[]"]');
+    if (select.value === 'accepted') {
+        reasonInput.disabled = true;
+        reasonInput.value = '';
+    } else {
+        reasonInput.disabled = false;
+    }
+}
+</script>
+{% endblock %}
 {% endblock %}

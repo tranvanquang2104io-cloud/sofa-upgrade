@@ -18,7 +18,10 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="report_number" class="form-label">Report Number *</label>
-                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="e.g., PR-001">
+                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="Loading...">
+                                <div id="code-warning" class="text-danger small mt-1" style="display:none;">
+                                    <i class="bi bi-exclamation-triangle"></i> This code is already taken!
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -73,15 +76,72 @@
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                     </div>
 
+                    <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-circle"></i> Create Payment Report
                     </button>
                     <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
                         <i class="bi bi-x-circle"></i> Cancel
                     </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Auto-fill payment report number on page load
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="payment") }}');
+        const data = await response.json();
+        if (data.next_code) {
+            document.getElementById('report_number').value = data.next_code;
+            document.getElementById('report_number').placeholder = 'e.g., PR-001';
+        }
+    } catch (error) {
+        console.error('Error loading next code:', error);
+        document.getElementById('report_number').placeholder = 'e.g., PR-001';
+    }
+
+    // Check for duplicate code when user changes it
+    let checkTimeout;
+    document.getElementById('report_number').addEventListener('input', function() {
+        clearTimeout(checkTimeout);
+        const code = this.value.trim();
+        const warning = document.getElementById('code-warning');
+        const submitBtn = document.querySelector('button[type="submit"]');
+        
+        if (!code) {
+            warning.style.display = 'none';
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        checkTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch('{{ url_for("dashboard.check_code", doc_type="payment") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await response.json();
+                
+                if (data.exists) {
+                    warning.style.display = 'block';
+                    submitBtn.disabled = true;
+                } else {
+                    warning.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error checking code:', error);
+            }
+        }, 500);
+    });
+});
+</script>
 {% endblock %}

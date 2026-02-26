@@ -25,31 +25,40 @@
                 <h5 class="mb-0"><i class="bi bi-info-circle"></i> Quotation Details</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Quotation Number:</strong> {{ quotation.quotation_number }}</p>
-                        <p><strong>Date:</strong> {{ quotation.quotation_date.strftime('%Y-%m-%d') }}</p>
-                        <p><strong>Validity Days:</strong> {{ quotation.validity_days }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Total Amount:</strong> ${{ quotation.total_amount|default('0') }}</p>
-                        <p><strong>Status:</strong>
-                            {% if quotation.is_canceled %}
-                                <span class="badge bg-danger">Canceled</span>
-                            {% elif quotation.is_approved %}
-                                <span class="badge bg-success">Approved</span>
-                            {% else %}
-                                <span class="badge bg-warning">Pending Approval</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
-                {% if quotation.notes %}
-                <p><strong>Notes:</strong> {{ quotation.notes }}</p>
-                {% endif %}
-                {% if quotation.is_canceled and quotation.canceled_reason %}
-                <p><strong>Cancellation Reason:</strong> {{ quotation.canceled_reason }}</p>
-                {% endif %}
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Quotation Number:</dt>
+                    <dd class="col-sm-8">{{ quotation.quotation_number }}</dd>
+                    
+                    <dt class="col-sm-4">Date:</dt>
+                    <dd class="col-sm-8">{{ quotation.quotation_date.strftime('%Y-%m-%d') }}</dd>
+                    
+                    <dt class="col-sm-4">Validity Days:</dt>
+                    <dd class="col-sm-8">{{ quotation.validity_days }}</dd>
+                    
+                    <dt class="col-sm-4">Total Amount:</dt>
+                    <dd class="col-sm-8"><strong>${{ "%.2f"|format(quotation.total_amount|default(0)|float) }}</strong></dd>
+                    
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                        {% if quotation.is_canceled %}
+                            <span class="badge bg-danger">Canceled</span>
+                        {% elif quotation.is_approved %}
+                            <span class="badge bg-success">Approved</span>
+                        {% else %}
+                            <span class="badge bg-warning">Pending Approval</span>
+                        {% endif %}
+                    </dd>
+                    
+                    {% if quotation.notes %}
+                    <dt class="col-sm-4">Notes:</dt>
+                    <dd class="col-sm-8">{{ quotation.notes }}</dd>
+                    {% endif %}
+                    
+                    {% if quotation.is_canceled and quotation.canceled_reason %}
+                    <dt class="col-sm-4">Cancellation Reason:</dt>
+                    <dd class="col-sm-8">{{ quotation.canceled_reason }}</dd>
+                    {% endif %}
+                </dl>
             </div>
         </div>
 
@@ -100,7 +109,9 @@
                         <div class="list-group-item">
                             <h6 class="mb-1">{{ doc.document_name }}</h6>
                             <p class="mb-1 small text-muted">{{ doc.document_format.upper() }} - {{ doc.generated_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                            <a href="#" class="btn btn-sm btn-outline-primary">Download</a>
+                            <a href="{{ url_for('dashboard.download_document', document_id=doc.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> Download
+                            </a>
                         </div>
                         {% endfor %}
                     </div>
@@ -118,14 +129,15 @@
                 <h5 class="mb-0"><i class="bi bi-lightning"></i> Actions</h5>
             </div>
             <div class="card-body">
+                <div class="d-grid gap-2">
                 {% if quotation.can_edit() %}
-                <a href="{{ url_for('dashboard.edit_quotation', quotation_id=quotation.id) }}" class="btn btn-primary w-100 mb-2">
+                <a href="{{ url_for('dashboard.edit_quotation', quotation_id=quotation.id) }}" class="btn btn-warning">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
                 {% endif %}
 
                 {% if quotation.can_approve() %}
-                <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" class="mb-2">
+                <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}">
                     <button type="submit" class="btn btn-success w-100" onclick="return confirm('Approve this quotation?')">
                         <i class="bi bi-check-circle"></i> Approve
                     </button>
@@ -133,14 +145,15 @@
                 {% endif %}
 
                 {% if quotation.can_cancel() %}
-                <button class="btn btn-danger w-100 mb-2" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
                     <i class="bi bi-x-circle"></i> Cancel
                 </button>
                 {% endif %}
 
-                <a href="#" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#generateModal">
+                <a href="#" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#generateModal">
                     <i class="bi bi-file-earmark-pdf"></i> Generate Document
                 </a>
+                </div>
             </div>
         </div>
     </div>

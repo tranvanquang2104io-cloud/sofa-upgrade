@@ -9,12 +9,31 @@
     </div>
 </div>
 
+{% if not stores or stores|length == 0 %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> 
+    <strong>No stores available.</strong> 
+    You need to create a store first before adding customers.
+    <a href="{{ url_for('dashboard.index') }}" class="alert-link">Return to Dashboard</a>
+</div>
+{% else %}
 <div class="row">
     <div class="col-md-8">
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="{{ url_for('dashboard.create_customer') }}">
+                    {% if stores and stores|length > 1 %}
+                    <div class="mb-3">
+                        <label for="store_id" class="form-label">Store *</label>
+                        <select class="form-select" id="store_id" name="store_id" required>
+                            {% for store in stores %}
+                            <option value="{{ store.id }}" {% if store.id == selected_store_id %}selected{% endif %}>{{ store.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
                     <input type="hidden" name="store_id" value="{{ selected_store_id }}">
+                    {% endif %}
 
                     <div class="mb-3">
                         <label for="customer_code" class="form-label">Customer Code *</label>
@@ -66,15 +85,18 @@
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                     </div>
 
+                    <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-circle"></i> Create Customer
                     </button>
                     <a href="{{ url_for('dashboard.list_customers') }}" class="btn btn-secondary">
                         <i class="bi bi-x-circle"></i> Cancel
                     </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

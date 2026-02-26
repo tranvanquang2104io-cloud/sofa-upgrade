@@ -25,28 +25,44 @@
                 <h5 class="mb-0"><i class="bi bi-info-circle"></i> Contract Details</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Contract Number:</strong> {{ contract.contract_number }}</p>
-                        <p><strong>Date:</strong> {{ contract.contract_date.strftime('%Y-%m-%d') }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Contract Value:</strong> ${{ contract.contract_value|default('0') }}</p>
-                        <p><strong>Status:</strong>
-                            {% if contract.is_signed %}
-                                <span class="badge bg-success">Signed</span>
-                            {% else %}
-                                <span class="badge bg-warning">Unsigned</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Contract Number:</dt>
+                    <dd class="col-sm-8">{{ contract.contract_number }}</dd>
+                    
+                    <dt class="col-sm-4">Date:</dt>
+                    <dd class="col-sm-8">{{ contract.contract_date.strftime('%Y-%m-%d') }}</dd>
+                    
+                    <dt class="col-sm-4">Contract Value:</dt>
+                    <dd class="col-sm-8"><strong>${{ "%.2f"|format(contract.contract_value|default(0)|float) }}</strong></dd>
+                    
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                        {% if contract.is_canceled %}
+                            <span class="badge bg-danger">Canceled</span>
+                        {% elif contract.is_signed %}
+                            <span class="badge bg-success">Signed</span>
+                        {% else %}
+                            <span class="badge bg-warning">Unsigned</span>
+                        {% endif %}
+                    </dd>
+                    
+                    {% if contract.is_signed %}
+                    <dt class="col-sm-4">Signed Date:</dt>
+                    <dd class="col-sm-8">{{ contract.signed_date.strftime('%Y-%m-%d %H:%M') if contract.signed_date else 'N/A' }}</dd>
+                    {% endif %}
+                    
+                    {% if contract.is_canceled %}
+                    <dt class="col-sm-4">Canceled At:</dt>
+                    <dd class="col-sm-8">{{ contract.canceled_at.strftime('%Y-%m-%d %H:%M') if contract.canceled_at else 'N/A' }}</dd>
+                    
+                    <dt class="col-sm-4">Cancellation Reason:</dt>
+                    <dd class="col-sm-8">{{ contract.canceled_reason or 'N/A' }}</dd>
+                    {% endif %}
+                </dl>
                 {% if contract.terms_and_conditions %}
-                <p><strong>Terms & Conditions:</strong></p>
-                <div class="alert alert-light" style="white-space: pre-wrap;">{{ contract.terms_and_conditions }}</div>
-                {% endif %}
-                {% if contract.is_signed %}
-                <p><strong>Signed Date:</strong> {{ contract.signed_date.strftime('%Y-%m-%d %H:%M') if contract.signed_date else 'N/A' }}</p>
+                <hr>
+                <h6 class="text-muted mb-2">Terms & Conditions</h6>
+                <div class="alert alert-light mb-0" style="white-space: pre-wrap;">{{ contract.terms_and_conditions }}</div>
                 {% endif %}
             </div>
         </div>
@@ -138,6 +154,12 @@
                     <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#generateModal">
                         <i class="bi bi-file-earmark-pdf"></i> Generate Document
                     </button>
+
+                    {% if contract.can_cancel() %}
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="bi bi-x-circle"></i> Cancel Contract
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -209,6 +231,39 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-file-earmark-pdf"></i> Generate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Contract Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Cancel Contract</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.cancel_contract', contract_id=contract.id) }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action cannot be undone. The contract will be marked as canceled.
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Contract Number:</strong> {{ contract.contract_number }}<br>
+                        <strong>Amount:</strong> ${{ "%.2f"|format(contract.contract_value|default(0)|float) }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="canceled_reason" class="form-label">Cancellation Reason *</label>
+                        <textarea class="form-control" id="canceled_reason" name="canceled_reason" rows="3" required placeholder="Please provide a reason for canceling this contract..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Cancel Contract
                     </button>
                 </div>
             </form>

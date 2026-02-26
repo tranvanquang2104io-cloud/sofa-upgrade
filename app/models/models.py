@@ -181,6 +181,9 @@ class Order(db.Model):
     
     notes = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True, index=True)
+    is_canceled = db.Column(db.Boolean, default=False, index=True)
+    canceled_at = db.Column(db.DateTime)
+    canceled_reason = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -197,6 +200,17 @@ class Order(db.Model):
     
     def __repr__(self):
         return f'<Order {self.order_code}>'
+    
+    def can_cancel(self):
+        """Check if order can be canceled - cannot cancel if already canceled or completed"""
+        if not self.is_active or self.is_canceled:
+            return False
+        
+        # Cannot cancel completed orders
+        if self.lifecycle and self.lifecycle.completed:
+            return False
+        
+        return True
 
 
 class Quotation(db.Model):
@@ -298,6 +312,10 @@ class HandoverRecord(db.Model):
     report_number = db.Column(db.String(50), nullable=False, unique=True)
     report_date = db.Column(db.Date, nullable=False)
     handover_date = db.Column(db.Date, nullable=False)
+    
+    # Items acceptance - tracks which items the customer accepts
+    # [{name, quantity, unit_price, total, delivered_qty, accepted_qty, accepted, rejection_reason}]
+    items = db.Column(db.JSON, default=list)
     
     customer_representative = db.Column(db.String(200))  # Customer's representative name
     company_representative = db.Column(db.String(200))  # Company's representative name

@@ -35,15 +35,17 @@
                         <td><strong>{{ order.order_code }}</strong></td>
                         <td>{{ order.customer.name }}</td>
                         <td>{{ order.title }}</td>
-                        <td>${{ order.total_amount|default('0') }}</td>
+                        <td>${{ "%.2f"|format(order.total_amount|default(0)|float) }}</td>
                         <td>
-                            {% if order.lifecycle.completed %}
+                            {% if order.is_canceled %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% elif order.lifecycle.completed %}
                                 <span class="badge bg-success">Completed</span>
                             {% elif order.lifecycle.fully_paid %}
                                 <span class="badge bg-info">Fully Paid</span>
                             {% elif order.lifecycle.advance_paid %}
                                 <span class="badge bg-info">Advance Paid</span>
-                            {% elif order.lifecycle.delivery_confirmed %}
+                            {% elif order.lifecycle.handover_confirmed %}
                                 <span class="badge bg-warning">Delivered</span>
                             {% elif order.lifecycle.contract_signed %}
                                 <span class="badge bg-warning">Contract Signed</span>
@@ -58,6 +60,11 @@
                             <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-info">
                                 <i class="bi bi-eye"></i> View
                             </a>
+                            {% if order.can_cancel() %}
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ order.id }}">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -68,4 +75,45 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Cancel Order Modals -->
+{% if orders %}
+{% for order in orders %}
+{% if order.can_cancel() %}
+<div class="modal fade" id="cancelModal{{ order.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Cancel Order</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.cancel_order', order_id=order.id) }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action cannot be undone. The order will be marked as canceled.
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Order Code:</strong> {{ order.order_code }}<br>
+                        <strong>Customer:</strong> {{ order.customer.name }}<br>
+                        <strong>Amount:</strong> ${{ "%.2f"|format(order.total_amount|default(0)|float) }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="canceled_reason{{ order.id }}" class="form-label">Cancellation Reason *</label>
+                        <textarea class="form-control" id="canceled_reason{{ order.id }}" name="canceled_reason" rows="3" required placeholder="Please provide a reason for canceling this order..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Cancel Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% endblock %}

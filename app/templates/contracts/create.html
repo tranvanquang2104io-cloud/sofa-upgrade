@@ -18,7 +18,10 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="contract_number" class="form-label">Contract Number *</label>
-                                <input type="text" class="form-control" id="contract_number" name="contract_number" required placeholder="e.g., CT-001">
+                                <input type="text" class="form-control" id="contract_number" name="contract_number" required placeholder="Loading...">
+                                <div id="code-warning" class="text-danger small mt-1" style="display:none;">
+                                    <i class="bi bi-exclamation-triangle"></i> This code is already taken!
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -70,17 +73,43 @@
                         </div>
                     </div>
 
+                    <!-- Editable Line Items Section -->
+                    <div class="mb-4">
+                        <h6 class="mb-3"><i class="bi bi-list-ul"></i> Contract Items</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40%">Item Name</th>
+                                        <th style="width: 15%" class="text-end">Qty</th>
+                                        <th style="width: 20%" class="text-end">Unit Price</th>
+                                        <th style="width: 15%" class="text-end">Total</th>
+                                        <th style="width: 10%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-body">
+                                    <!-- Items will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="add-item-btn">
+                            <i class="bi bi-plus"></i> Add Item
+                        </button>
+                    </div>
+
                     <div class="mb-3">
                         <label for="terms_and_conditions" class="form-label">Terms & Conditions</label>
                         <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5"></textarea>
                     </div>
 
+                    <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-circle"></i> Create Contract
                     </button>
                     <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
                         <i class="bi bi-x-circle"></i> Cancel
                     </a>
+                    </div>
                 </form>
             </div>
         </div>
@@ -88,23 +117,154 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Auto-fill contract number on page load
+    try {
+        const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="contract") }}');
+        const data = await response.json();
+        if (data.next_code) {
+            document.getElementById('contract_number').value = data.next_code;
+            document.getElementById('contract_number').placeholder = 'e.g., CT-001';
+        }
+    } catch (error) {
+        console.error('Error loading next code:', error);
+        document.getElementById('contract_number').placeholder = 'e.g., CT-001';
+    }
+
+    // Check for duplicate code when user changes it
+    let checkTimeout;
+    document.getElementById('contract_number').addEventListener('input', function() {
+        clearTimeout(checkTimeout);
+        const code = this.value.trim();
+        const warning = document.getElementById('code-warning');
+        const submitBtn = document.querySelector('button[type="submit"]');
+        
+        if (!code) {
+            warning.style.display = 'none';
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        checkTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch('{{ url_for("dashboard.check_code", doc_type="contract") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await response.json();
+                
+                if (data.exists) {
+                    warning.style.display = 'block';
+                    submitBtn.disabled = true;
+                } else {
+                    warning.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error checking code:', error);
+            }
+        }, 500);
+    });
+
     const quotationSelect = document.getElementById('quotation_id');
     const contractValueInput = document.getElementById('contract_value');
     const itemsSection = document.getElementById('quotation-items-section');
-    const itemsBody = document.getElementById('quotation-items-body');
+    const quotationItemsBody = document.getElementById('quotation-items-body');
+    const editableItemsBody = document.getElementById('items-body');
+    const addItemBtn = document.getElementById('add-item-btn');
 
+    // Function to calculate item total
+    function calculateItemTotal(row) {
+        const qtyInput = row.querySelector('.item-qty');
+        const priceInput = row.querySelector('.item-price');
+        const totalInput = row.querySelector('.item-total');
+        
+        const qty = parseFloat(qtyInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        const total = qty * price;
+        
+        totalInput.value = '$' + total.toFixed(2);
+        updateContractValue();
+    }
+
+    // Function to update contract value from all items
+    function updateContractValue() {
+        let total = 0;
+        document.querySelectorAll('#items-body .item-row').forEach(row => {
+            const qtyInput = row.querySelector('.item-qty');
+            const priceInput = row.querySelector('.item-price');
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            total += qty * price;
+        });
+        contractValueInput.value = total.toFixed(2);
+    }
+
+    // Function to add a new item row
+    function addItemRow(name = '', quantity = '', unitPrice = '') {
+        const row = document.createElement('tr');
+        row.className = 'item-row';
+        
+        const total = (parseFloat(quantity) || 0) * (parseFloat(unitPrice) || 0);
+        
+        row.innerHTML = `
+            <td>
+                <input type="text" class="form-control form-control-sm item-name" name="item_name[]" value="${name}" placeholder="Item name" required>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm item-qty text-end" name="item_quantity[]" value="${quantity}" step="0.01" placeholder="0" required>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm item-price text-end" name="item_price[]" value="${unitPrice}" step="0.01" placeholder="0.00" required>
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm item-total text-end" value="$${total.toFixed(2)}" readonly style="background-color: #f8f9fa;">
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-item" title="Remove item">
+                    <i class="bi bi-x"></i>
+                </button>
+            </td>
+        `;
+        
+        editableItemsBody.appendChild(row);
+        
+        // Add event listeners
+        row.querySelector('.item-qty').addEventListener('input', function() {
+            calculateItemTotal(row);
+        });
+        row.querySelector('.item-price').addEventListener('input', function() {
+            calculateItemTotal(row);
+        });
+        row.querySelector('.remove-item').addEventListener('click', function() {
+            row.remove();
+            updateContractValue();
+        });
+        
+        updateContractValue();
+    }
+
+    // Add item button handler
+    addItemBtn.addEventListener('click', function() {
+        addItemRow();
+    });
+
+    // Quotation selection handler
     quotationSelect.addEventListener('change', async function() {
         console.log('Quotation selected:', this.value);
         if (!this.value) {
             itemsSection.style.display = 'none';
-            contractValueInput.value = '';
+            quotationItemsBody.innerHTML = '';
+            // Don't clear editable items - user might have manually added them
             return;
         }
 
         try {
             // Fetch quotation details via AJAX
-            const url = `/dashboard/api/quotations/${this.value}`;
+            const url = `/api/quotations/${this.value}`;
             console.log('Fetching from:', url);
             const response = await fetch(url);
             const data = await response.json();
@@ -112,15 +272,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Response:', response.status, data);
 
             if (response.ok) {
-                // Auto-populate contract value
-                contractValueInput.value = data.total_amount;
-                console.log('Contract value populated:', data.total_amount);
-
-                // Display items from quotation
-                itemsBody.innerHTML = '';
-                console.log('Items array:', data.items, 'Length:', data.items ? data.items.length : 0);
+                // Clear editable items first
+                editableItemsBody.innerHTML = '';
+                
+                // Display items from quotation (readonly preview)
+                quotationItemsBody.innerHTML = '';
                 
                 if (data.items && data.items.length > 0) {
+                    // Show quotation items preview
                     data.items.forEach((item, index) => {
                         console.log(`Item ${index}:`, item);
                         const row = document.createElement('tr');
@@ -133,14 +292,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td class="text-end">$${price.toFixed(2)}</td>
                             <td class="text-end">$${total}</td>
                         `;
-                        itemsBody.appendChild(row);
+                        quotationItemsBody.appendChild(row);
                     });
                     itemsSection.style.display = 'block';
-                    console.log('Items table displayed');
+                    
+                    // Populate editable items
+                    data.items.forEach(item => {
+                        addItemRow(item.name, item.quantity, item.unit_price);
+                    });
+                    
+                    console.log('Items table displayed and populated');
                 } else {
                     console.log('No items to display');
                     itemsSection.style.display = 'none';
                 }
+                
+                // Auto-populate contract value
+                contractValueInput.value = data.total_amount.toFixed(2);
+                console.log('Contract value populated:', data.total_amount);
             } else {
                 console.error('API Error:', data.error);
                 itemsSection.style.display = 'none';

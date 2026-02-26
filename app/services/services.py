@@ -11,7 +11,7 @@ from app.repositories.repository import (
     HandoverRecordRepository, PaymentReportRepository, DocumentRepository,
     DocumentTemplateRepository, LifecycleStatusRepository
 )
-from app.utils.template_engine import TemplateEngine, DocumentVariableCollector
+from app.utils.template_engine import TemplateEngine, DocxTemplateEngine, DocumentVariableCollector
 from app.models import Document, Order, Quotation, Contract, HandoverRecord
 import logging
 
@@ -130,7 +130,7 @@ class CustomerService:
     def __init__(self):
         self.repo = CustomerRepository()
     
-    def create_customer(self, store_id, customer_code, name, phone=None, email=None, 
+    def create_customer(self, company_id, store_id, customer_code, name, phone=None, email=None, 
                        address=None, city=None, postal_code=None, country=None, notes=None):
         """Create new customer"""
         existing = self.repo.get_by_store_and_code(store_id, customer_code)
@@ -138,6 +138,7 @@ class CustomerService:
             raise ValueError(f"Customer with code {customer_code} already exists in store")
         
         customer = self.repo.create(
+            company_id=company_id,
             store_id=store_id,
             customer_code=customer_code,
             name=name,
@@ -401,6 +402,14 @@ class ContractService:
             old_contract.is_active = False
             logger.info(f"Deactivated previous contract: {old_contract.contract_number}")
         
+        # Copy items from quotation if available
+        items = []
+        if quotation_id:
+            from app.repositories.repository import QuotationRepository
+            quotation = QuotationRepository().get_by_id(quotation_id)
+            if quotation and quotation.items:
+                items = list(quotation.items)  # Deep copy of items list
+        
         # Create new contract
         contract = self.repo.create(
             order_id=order_id,
@@ -408,6 +417,7 @@ class ContractService:
             contract_number=contract_number,
             contract_date=contract_date,
             contract_value=contract_value,
+            items=items,
             terms_and_conditions=terms_and_conditions
         )
         
@@ -512,7 +522,7 @@ class HandoverRecordService:
     
     def create_handover_record(self, order_id, report_number, report_date, handover_date,
                               customer_representative=None, company_representative=None,
-                              product_condition=None, notes=None):
+                              product_condition=None, items=None, notes=None):
         """Create handover record"""
         existing = self.repo.get_by_number(report_number)
         if existing:
@@ -531,6 +541,7 @@ class HandoverRecordService:
             customer_representative=customer_representative,
             company_representative=company_representative,
             product_condition=product_condition,
+            items=items or [],
             notes=notes
         )
         
@@ -732,231 +743,250 @@ class DocumentService:
     def __init__(self):
         self.repo = DocumentRepository()
         self.template_repo = DocumentTemplateRepository()
-    
-    def generate_quotation_document(self, quotation_id, order_id, company_id, format='pdf'):
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _get_company(self, company_id):
+        """Load Company object (silently returns None if not found)."""
+        try:
+            from app.repositories.repository import CompanyRepository
+            return CompanyRepository().get_by_id(company_id)
+        except Exception:
+            return None
+
+    def _get_template_file_path(self, template) -> str:
+        """Build absolute path to the template file."""
+        templates_dir = current_app.config['TEMPLATES_FOLDER']
+        return os.path.join(templates_dir, template.template_file)
+
+    def _save_document(self, *, company_id, order_id, template, document_type,
+                       document_format, context,
+                       quotation_id=None, contract_id=None,
+                       handover_record_id=None, payment_report_id=None):
+        """
+        Render & persist a document record.
+
+        Chooses docxtpl (DOCX template) or legacy text-substitution based on
+        the template file extension.
+        """
+        from io import BytesIO as _BytesIO
+
+        timestamp  = datetime.now().strftime('%Y%m%d_%H%M%S')
+        doc_name   = f"{document_type}_{timestamp}"
+        docs_dir   = current_app.config['DOCUMENTS_FOLDER']
+        os.makedirs(docs_dir, exist_ok=True)
+
+        template_file_path = self._get_template_file_path(template)
+        output_ext         = document_format.lower()
+
+        # ---- DOCX-template path (docxtpl) --------------------------------
+        if DocxTemplateEngine.is_docx_template(template.template_file):
+            if output_ext == 'pdf':
+                # Render to DOCX first, then attempt PDF conversion
+                docx_path = os.path.join(docs_dir, f"{doc_name}.docx")
+                DocxTemplateEngine.render_to_file(template_file_path, context, docx_path)
+                pdf_path  = os.path.join(docs_dir, f"{doc_name}.pdf")
+                with open(docx_path, 'rb') as fh:
+                    docx_bytes = _BytesIO(fh.read())
+                if TemplateEngine.generate_pdf_from_docx(docx_bytes, pdf_path):
+                    os.remove(docx_path)
+                    file_path  = pdf_path
+                else:
+                    # PDF conversion failed → keep DOCX and fix extension
+                    logger.warning("PDF conversion failed – keeping DOCX output")
+                    file_path  = docx_path
+                    output_ext = 'docx'
+            else:
+                file_path = os.path.join(docs_dir, f"{doc_name}.docx")
+                DocxTemplateEngine.render_to_file(template_file_path, context, file_path)
+                output_ext = 'docx'
+
+        # ---- Legacy text-substitution path --------------------------------
+        else:
+            rendered_content = TemplateEngine.render_template(
+                template.template_content or '', context
+            )
+            if output_ext == 'docx':
+                file_path = os.path.join(docs_dir, f"{doc_name}.docx")
+                buf = TemplateEngine.create_docx_document(
+                    rendered_content, f"{document_type.title()} Document"
+                )
+                with open(file_path, 'wb') as fh:
+                    fh.write(buf.getvalue())
+            else:
+                file_path = os.path.join(docs_dir, f"{doc_name}.pdf")
+                buf = TemplateEngine.create_docx_document(
+                    rendered_content, f"{document_type.title()} Document"
+                )
+                if not TemplateEngine.generate_pdf_from_docx(buf, file_path):
+                    TemplateEngine.fallback_pdf_generation(rendered_content, file_path)
+
+        file_size = os.path.getsize(file_path)
+
+        document = self.repo.create(
+            company_id          = company_id,
+            order_id            = order_id,
+            template_id         = template.id,
+            quotation_id        = quotation_id,
+            contract_id         = contract_id,
+            handover_record_id  = handover_record_id,
+            payment_report_id   = payment_report_id,
+            document_name       = doc_name,
+            document_type       = document_type,
+            document_format     = output_ext,
+            file_path           = file_path,
+            file_size           = file_size,
+            variables_used      = {k: str(v) if not isinstance(v, (list, dict)) else v
+                                   for k, v in context.items()},
+        )
+        logger.info(f"Document generated: {os.path.basename(file_path)}")
+        return document
+
+    # ------------------------------------------------------------------
+    # Public generators
+    # ------------------------------------------------------------------
+
+    def generate_quotation_document(self, quotation_id, order_id, company_id, format='docx'):
         """Generate quotation document"""
         from app.repositories.repository import QuotationRepository, OrderRepository, CustomerRepository
-        
+
         quotation = QuotationRepository().get_by_id(quotation_id)
-        order = OrderRepository().get_by_id(order_id)
-        customer = CustomerRepository().get_by_id(order.customer_id)
-        
+        order     = OrderRepository().get_by_id(order_id)
+        customer  = CustomerRepository().get_by_id(order.customer_id)
+
         if not all([quotation, order, customer]):
             raise ValueError("Quotation, Order, or Customer not found")
-        
-        # Get template
+
         template = self.template_repo.get_default_for_type(company_id, 'quotation')
         if not template:
             raise ValueError("No quotation template found for company")
-        
-        # Collect variables
-        variables = DocumentVariableCollector.collect_quotation_variables(quotation, customer, order)
-        
-        # Render template
-        rendered_content = TemplateEngine.render_template(template.template_content, variables)
-        
-        # Generate document
-        return self._save_document(
-            company_id=company_id,
-            order_id=order_id,
-            quotation_id=quotation_id,
-            template_id=template.id,
-            document_type='quotation',
-            document_format=format,
-            rendered_content=rendered_content,
-            variables_used=variables
+
+        company = self._get_company(company_id)
+        context = DocumentVariableCollector.collect_quotation_variables(
+            quotation, customer, order, company=company
         )
-    
-    def generate_contract_document(self, contract_id, order_id, company_id, quotation_id=None, format='pdf'):
+
+        return self._save_document(
+            company_id   = company_id,
+            order_id     = order_id,
+            quotation_id = quotation_id,
+            template     = template,
+            document_type   = 'quotation',
+            document_format = format,
+            context         = context,
+        )
+
+    def generate_contract_document(self, contract_id, order_id, company_id,
+                                   quotation_id=None, format='docx'):
         """Generate contract document"""
         from app.repositories.repository import (
             ContractRepository, OrderRepository, CustomerRepository, QuotationRepository
         )
-        
-        contract = ContractRepository().get_by_id(contract_id)
-        order = OrderRepository().get_by_id(order_id)
-        customer = CustomerRepository().get_by_id(order.customer_id)
+
+        contract  = ContractRepository().get_by_id(contract_id)
+        order     = OrderRepository().get_by_id(order_id)
+        customer  = CustomerRepository().get_by_id(order.customer_id)
         quotation = QuotationRepository().get_by_id(quotation_id) if quotation_id else None
-        
+
         if not all([contract, order, customer]):
             raise ValueError("Contract, Order, or Customer not found")
-        
-        # Get template
+
         template = self.template_repo.get_default_for_type(company_id, 'contract')
         if not template:
             raise ValueError("No contract template found for company")
-        
-        # Collect variables
-        variables = DocumentVariableCollector.collect_contract_variables(
-            contract, quotation, customer, order
+
+        company = self._get_company(company_id)
+        context = DocumentVariableCollector.collect_contract_variables(
+            contract, quotation, customer, order, company=company
         )
-        
-        # Render template
-        rendered_content = TemplateEngine.render_template(template.template_content, variables)
-        
-        # Generate document
+
         return self._save_document(
-            company_id=company_id,
-            order_id=order_id,
-            contract_id=contract_id,
-            template_id=template.id,
-            document_type='contract',
-            document_format=format,
-            rendered_content=rendered_content,
-            variables_used=variables
+            company_id  = company_id,
+            order_id    = order_id,
+            contract_id = contract_id,
+            template    = template,
+            document_type   = 'contract',
+            document_format = format,
+            context         = context,
         )
-    
-    def generate_delivery_document(self, delivery_report_id, order_id, company_id, format='pdf'):
-        """Generate delivery document"""
+
+    def generate_delivery_document(self, delivery_report_id, order_id, company_id, format='docx'):
+        """Generate handover / delivery record document"""
         from app.repositories.repository import (
             HandoverRecordRepository, OrderRepository, CustomerRepository
         )
-        
+
         delivery_report = HandoverRecordRepository().get_by_id(delivery_report_id)
-        order = OrderRepository().get_by_id(order_id)
-        customer = CustomerRepository().get_by_id(order.customer_id)
-        
+        order           = OrderRepository().get_by_id(order_id)
+        customer        = CustomerRepository().get_by_id(order.customer_id)
+
         if not all([delivery_report, order, customer]):
             raise ValueError("Delivery Report, Order, or Customer not found")
-        
-        # Get template
+
         template = self.template_repo.get_default_for_type(company_id, 'delivery')
         if not template:
             raise ValueError("No delivery template found for company")
-        
-        # Collect variables
-        variables = DocumentVariableCollector.collect_delivery_variables(
-            delivery_report, customer, order
+
+        company = self._get_company(company_id)
+        context = DocumentVariableCollector.collect_delivery_variables(
+            delivery_report, customer, order, company=company
         )
-        
-        # Render template
-        rendered_content = TemplateEngine.render_template(template.template_content, variables)
-        
-        # Generate document
+
         return self._save_document(
-            company_id=company_id,
-            order_id=order_id,
-            delivery_report_id=delivery_report_id,
-            template_id=template.id,
-            document_type='delivery',
-            document_format=format,
-            rendered_content=rendered_content,
-            variables_used=variables
+            company_id         = company_id,
+            order_id           = order_id,
+            handover_record_id = delivery_report_id,
+            template           = template,
+            document_type      = 'delivery',
+            document_format    = format,
+            context            = context,
         )
-    
-    def generate_payment_document(self, payment_report_id, order_id, company_id, format='pdf'):
-        """Generate payment document"""
+
+    def generate_payment_document(self, payment_report_id, order_id, company_id, format='docx'):
+        """Generate payment report document"""
         from app.repositories.repository import (
             PaymentReportRepository, OrderRepository, CustomerRepository
         )
-        
+
         payment_report = PaymentReportRepository().get_by_id(payment_report_id)
-        order = OrderRepository().get_by_id(order_id)
-        customer = CustomerRepository().get_by_id(order.customer_id)
-        
+        order          = OrderRepository().get_by_id(order_id)
+        customer       = CustomerRepository().get_by_id(order.customer_id)
+
         if not all([payment_report, order, customer]):
             raise ValueError("Payment Report, Order, or Customer not found")
-        
-        # Get template
+
         doc_type = 'payment_' + payment_report.payment_type
         template = self.template_repo.get_default_for_type(company_id, doc_type)
         if not template:
             template = self.template_repo.get_default_for_type(company_id, 'payment')
         if not template:
             raise ValueError("No payment template found for company")
-        
-        # Collect variables
-        variables = DocumentVariableCollector.collect_payment_variables(
-            payment_report, customer, order
+
+        company = self._get_company(company_id)
+        context = DocumentVariableCollector.collect_payment_variables(
+            payment_report, customer, order, company=company
         )
-        
-        # Render template
-        rendered_content = TemplateEngine.render_template(template.template_content, variables)
-        
-        # Generate document
+
         return self._save_document(
-            company_id=company_id,
-            order_id=order_id,
-            payment_report_id=payment_report_id,
-            template_id=template.id,
-            document_type='payment',
-            document_format=format,
-            rendered_content=rendered_content,
-            variables_used=variables
+            company_id        = company_id,
+            order_id          = order_id,
+            payment_report_id = payment_report_id,
+            template          = template,
+            document_type     = 'payment',
+            document_format   = format,
+            context           = context,
         )
-    
-    def _save_document(self, company_id, order_id, template_id, document_type, 
-                      document_format, rendered_content, variables_used,
-                      quotation_id=None, contract_id=None, delivery_report_id=None, payment_report_id=None):
-        """Save generated document"""
-        
-        # Create filename
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        doc_name = f"{document_type}_{timestamp}"
-        
-        if document_format.lower() == 'pdf':
-            filename = f"{doc_name}.pdf"
-        else:
-            filename = f"{doc_name}.docx"
-        
-        # Ensure documents directory exists
-        docs_dir = os.path.join(current_app.config['DOCUMENTS_FOLDER'])
-        os.makedirs(docs_dir, exist_ok=True)
-        
-        file_path = os.path.join(docs_dir, filename)
-        
-        try:
-            if document_format.lower() == 'docx':
-                # Generate DOCX
-                docx_bytes = TemplateEngine.create_docx_document(
-                    rendered_content,
-                    f"{document_type.title()} Document"
-                )
-                with open(file_path, 'wb') as f:
-                    f.write(docx_bytes.getvalue())
-            else:
-                # Try to generate PDF
-                docx_bytes = TemplateEngine.create_docx_document(
-                    rendered_content,
-                    f"{document_type.title()} Document"
-                )
-                
-                # Try LibreOffice first
-                if not TemplateEngine.generate_pdf_from_docx(docx_bytes, file_path):
-                    # Fallback to reportlab
-                    TemplateEngine.fallback_pdf_generation(rendered_content, file_path)
-            
-            # Get file size
-            file_size = os.path.getsize(file_path)
-            
-            # Save document record
-            document = self.repo.create(
-                company_id=company_id,
-                order_id=order_id,
-                template_id=template_id,
-                quotation_id=quotation_id,
-                contract_id=contract_id,
-                delivery_report_id=delivery_report_id,
-                payment_report_id=payment_report_id,
-                document_name=doc_name,
-                document_type=document_type,
-                document_format=document_format,
-                file_path=file_path,
-                file_size=file_size,
-                variables_used=variables_used
-            )
-            
-            logger.info(f"Document generated: {filename}")
-            return document
-            
-        except Exception as e:
-            logger.error(f"Error generating document: {str(e)}")
-            raise
-    
+
+    # ------------------------------------------------------------------
+    # Query helpers
+    # ------------------------------------------------------------------
+
     def get_document(self, document_id):
         """Get document"""
         return self.repo.get_by_id(document_id)
-    
+
     def list_documents_for_order(self, order_id):
         """List documents for order"""
         return self.repo.get_for_order(order_id)

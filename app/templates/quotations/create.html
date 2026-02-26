@@ -18,7 +18,10 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="quotation_number" class="form-label">Quotation Number *</label>
-                                <input type="text" class="form-control" id="quotation_number" name="quotation_number" required placeholder="e.g., QT-001">
+                                <input type="text" class="form-control" id="quotation_number" name="quotation_number" required placeholder="Loading...">
+                                <div id="code-warning" class="text-danger small mt-1" style="display:none;">
+                                    <i class="bi bi-exclamation-triangle"></i> This code is already taken!
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -93,6 +96,59 @@
 </div>
 
 <script>
+    // Auto-fill quotation number on page load
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="quotation") }}');
+            const data = await response.json();
+            if (data.next_code) {
+                document.getElementById('quotation_number').value = data.next_code;
+                document.getElementById('quotation_number').placeholder = 'e.g., QT-001';
+            }
+        } catch (error) {
+            console.error('Error loading next code:', error);
+            document.getElementById('quotation_number').placeholder = 'e.g., QT-001';
+        }
+    });
+
+    // Check for duplicate code when user changes it
+    let checkTimeout;
+    document.getElementById('quotation_number').addEventListener('input', function() {
+        clearTimeout(checkTimeout);
+        const code = this.value.trim();
+        const warning = document.getElementById('code-warning');
+        const submitBtn = document.querySelector('button[type="submit"]');
+        
+        if (!code) {
+            warning.style.display = 'none';
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        checkTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch('{{ url_for("dashboard.check_code", doc_type="quotation") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await response.json();
+                
+                if (data.exists) {
+                    warning.style.display = 'block';
+                    submitBtn.disabled = true;
+                } else {
+                    warning.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error checking code:', error);
+            }
+        }, 500);
+    });
+
     function addRow() {
         const tbody = document.getElementById('items-tbody');
         const row = document.createElement('tr');
