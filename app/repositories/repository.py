@@ -124,14 +124,18 @@ class UserRepository(BaseRepository):
         ).first()
     
     def get_users_for_company(self, company_id):
-        """Get all users for a company"""
+        """Get all active users for a company"""
         return self.model.query.filter_by(company_id=company_id, is_active=True).all()
-    
+
+    def get_users_for_store(self, store_id):
+        """Get all active users assigned to a specific store"""
+        return self.model.query.filter_by(store_id=store_id, is_active=True).all()
+
     def get_admins_for_company(self, company_id):
-        """Get admin users for company"""
+        """Get company_admin users for a company"""
         return self.model.query.filter_by(
             company_id=company_id,
-            role='admin',
+            role='company_admin',
             is_active=True
         ).all()
 
@@ -142,6 +146,14 @@ class CustomerRepository(BaseRepository):
     def __init__(self):
         super().__init__(Customer)
     
+    def get_by_company_and_code(self, company_id, customer_code):
+        """Get customer by company and code (company-wide uniqueness check)"""
+        return self.model.query.filter_by(
+            company_id=company_id,
+            customer_code=customer_code,
+            is_active=True
+        ).first()
+
     def get_by_store_and_code(self, store_id, customer_code):
         """Get customer by store and code"""
         return self.model.query.filter_by(
@@ -158,7 +170,36 @@ class CustomerRepository(BaseRepository):
         if offset:
             query = query.offset(offset)
         return query.all()
-    
+
+    def get_customers_for_stores(self, store_ids, limit=None, offset=None):
+        """Get all customers across multiple stores"""
+        query = self.model.query.filter(
+            self.model.store_id.in_(store_ids), self.model.is_active == True
+        ).order_by(self.model.customer_code)
+        if offset:
+            query = query.offset(offset)
+        if limit:
+            query = query.limit(limit)
+        return query.all()
+
+    def search_customers_for_stores(self, store_ids, search_term, limit=20):
+        """Search customers across multiple stores"""
+        return self.model.query.filter(
+            self.model.store_id.in_(store_ids), self.model.is_active == True
+        ).filter(
+            db.or_(
+                self.model.name.ilike(f'%{search_term}%'),
+                self.model.customer_code.ilike(f'%{search_term}%'),
+                self.model.phone.ilike(f'%{search_term}%')
+            )
+        ).order_by(self.model.customer_code).limit(limit).all()
+
+    def count_for_stores(self, store_ids):
+        """Count customers across multiple stores"""
+        return self.model.query.filter(
+            self.model.store_id.in_(store_ids), self.model.is_active == True
+        ).count()
+
     def search_customers(self, store_id, search_term, limit=20):
         """Search customers by name or code"""
         return self.model.query.filter_by(store_id=store_id, is_active=True).filter(
@@ -180,6 +221,14 @@ class OrderRepository(BaseRepository):
     def __init__(self):
         super().__init__(Order)
     
+    def get_by_company_and_code(self, company_id, order_code):
+        """Get order by company and code (company-wide uniqueness check)"""
+        return self.model.query.filter_by(
+            company_id=company_id,
+            order_code=order_code,
+            is_active=True
+        ).first()
+
     def get_by_store_and_code(self, store_id, order_code):
         """Get order by store and code"""
         return self.model.query.filter_by(

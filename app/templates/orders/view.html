@@ -74,7 +74,7 @@
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back
+            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
         </a>
     </div>
 </div>
@@ -84,27 +84,27 @@
         <!-- Order Information -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Order Information</h5>
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Order Information') }}</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <dl class="row mb-0">
-                            <dt class="col-sm-5">Order Code:</dt>
+                            <dt class="col-sm-5">{{ t('Order Code:') }}</dt>
                             <dd class="col-sm-7">{{ order.order_code }}</dd>
-                            <dt class="col-sm-5">Customer:</dt>
+                            <dt class="col-sm-5">{{ t('Customer:') }}</dt>
                             <dd class="col-sm-7"><a href="{{ url_for('dashboard.view_customer', customer_id=order.customer.id) }}">{{ order.customer.name }}</a></dd>
-                            <dt class="col-sm-5">Store:</dt>
+                            <dt class="col-sm-5">{{ t('Store:') }}</dt>
                             <dd class="col-sm-7">{{ order.store.name }}</dd>
                         </dl>
                     </div>
                     <div class="col-md-6">
                         <dl class="row mb-0">
-                            <dt class="col-sm-5">Total Amount:</dt>
+                            <dt class="col-sm-5">{{ t('Total Amount:') }}</dt>
                             <dd class="col-sm-7"><strong>${{ "%.2f"|format(order.total_amount|default(0)|float) }}</strong></dd>
-                            <dt class="col-sm-5">Advance:</dt>
+                            <dt class="col-sm-5">{{ t('Advance:') }}</dt>
                             <dd class="col-sm-7">${{ "%.2f"|format(order.advance_amount|default(0)|float) }}</dd>
-                            <dt class="col-sm-5">Final:</dt>
+                            <dt class="col-sm-5">{{ t('Final:') }}</dt>
                             <dd class="col-sm-7">${{ "%.2f"|format(order.final_amount|default(0)|float) }}</dd>
                         </dl>
                     </div>
@@ -112,13 +112,13 @@
                 {% if order.description %}
                 <hr>
                 <dl class="row mb-0">
-                    <dt class="col-sm-3">Description:</dt>
+                    <dt class="col-sm-3">{{ t('Description:') }}</dt>
                     <dd class="col-sm-9">{{ order.description }}</dd>
                 </dl>
                 {% endif %}
                 {% if order.notes %}
                 <dl class="row mb-0">
-                    <dt class="col-sm-3">Notes:</dt>
+                    <dt class="col-sm-3">{{ t('Notes:') }}</dt>
                     <dd class="col-sm-9">{{ order.notes }}</dd>
                 </dl>
                 {% endif %}
@@ -128,7 +128,7 @@
         <!-- Lifecycle Timeline -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-hourglass"></i> Order Lifecycle</h5>
+                <h5 class="mb-0"><i class="bi bi-hourglass"></i> {{ t('Order Lifecycle') }}</h5>
             </div>
             <div class="card-body">
                 <div class="timeline">
@@ -140,7 +140,7 @@
                             {% if lifecycle.quotation_approved %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
                         </div>
                         <div class="timeline-content">
-                            <h6>Quotation</h6>
+                            {{ t('Quotation') }}
                             {% if lifecycle.quotation_created %}
                                 <p class="text-muted small">Created: {{ lifecycle.quotation_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.quotation_created_at else 'N/A' }}</p>
                                 {% if lifecycle.quotation_approved %}
@@ -153,9 +153,9 @@
                                         <div>
                                             <strong>{{ quotation.quotation_number }}</strong> - ${{ quotation.total_amount }} ({{ quotation.items|length }} items)
                                             {% if quotation.is_approved %}
-                                            <span class="badge bg-success ms-2">Approved</span>
+                                            <span class="badge bg-success ms-2">{{ t('Approved') }}</span>
                                             {% else %}
-                                            <span class="badge bg-warning ms-2">Pending</span>
+                                            <span class="badge bg-warning ms-2">{{ t('Pending') }}</span>
                                             {% endif %}
                                         </div>
                                         <div class="d-flex gap-1">
@@ -168,7 +168,7 @@
                                             </a>
                                             {% if quotation.can_approve() %}
                                             <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" onclick="return confirm('Approve this quotation?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" onclick="return confirm('{{ t("Approve this quotation?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
@@ -185,13 +185,13 @@
                                     <div class="modal-dialog modal-sm">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title">Generate Document</h5>
+                                                <h5 class="modal-title">{{ t('Generate Document') }}</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='quotation', ref_id=quotation.id) }}">
                                                 <div class="modal-body">
                                                     <div class="mb-3">
-                                                        <label for="format" class="form-label">Format</label>
+                                                        <label for="format" class="form-label">{{ t('Format') }}</label>
                                                         <select class="form-select" name="format" required>
                                                             <option value="pdf">PDF</option>
                                                             <option value="docx">DOCX</option>
@@ -199,8 +199,8 @@
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                                                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -209,7 +209,7 @@
                                 {% endif %}
                                 {% endfor %}
                             {% else %}
-                                <p class="text-muted">Pending</p>
+                                <p class="text-muted">{{ t('Pending') }}</p>
                                 <a href="{{ url_for('dashboard.create_quotation', order_id=order.id) }}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-plus"></i> Create Quotation
                                 </a>
@@ -223,7 +223,7 @@
                             {% if lifecycle.contract_signed %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
                         </div>
                         <div class="timeline-content">
-                            <h6>Contract</h6>
+                            {{ t('Contract') }}
                             {% if lifecycle.contract_created %}
                                 <p class="text-muted small">Created: {{ lifecycle.contract_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.contract_created_at else 'N/A' }}</p>
                                 {% if lifecycle.contract_signed %}
@@ -236,9 +236,9 @@
                                         <div>
                                             <strong>{{ contract.contract_number }}</strong> - ${{ contract.contract_value }}
                                             {% if contract.is_signed %}
-                                            <span class="badge bg-success ms-2">Signed</span>
+                                            <span class="badge bg-success ms-2">{{ t('Signed') }}</span>
                                             {% else %}
-                                            <span class="badge bg-warning ms-2">Unsigned</span>
+                                            <span class="badge bg-warning ms-2">{{ t('Unsigned') }}</span>
                                             {% endif %}
                                         </div>
                                         <div class="d-flex gap-1">
@@ -251,7 +251,7 @@
                                             </a>
                                             {% if contract.can_sign() %}
                                             <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" onclick="return confirm('Sign this contract?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" onclick="return confirm('{{ t("Sign this contract?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
@@ -268,13 +268,13 @@
                                     <div class="modal-dialog modal-sm">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title">Generate Document</h5>
+                                                <h5 class="modal-title">{{ t('Generate Document') }}</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}">
                                                 <div class="modal-body">
                                                     <div class="mb-3">
-                                                        <label for="format" class="form-label">Format</label>
+                                                        <label for="format" class="form-label">{{ t('Format') }}</label>
                                                         <select class="form-select" name="format" required>
                                                             <option value="pdf">PDF</option>
                                                             <option value="docx">DOCX</option>
@@ -282,8 +282,8 @@
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                                                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -291,7 +291,7 @@
                                 </div>
                                 {% endfor %}
                             {% else %}
-                                <p class="text-muted">Pending</p>
+                                <p class="text-muted">{{ t('Pending') }}</p>
                                 {% if lifecycle.quotation_approved %}
                                 <a href="{{ url_for('dashboard.create_contract', order_id=order.id) }}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-plus"></i> Create Contract
@@ -307,7 +307,7 @@
                             {% if lifecycle.advance_paid %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
                         </div>
                         <div class="timeline-content">
-                            <h6>Advance Payment</h6>
+                            {{ t('Advance Payment') }}
                             {% set advance_payments = payment_reports|selectattr('payment_type', 'equalto', 'advance')|list %}
                             {% if advance_payments %}
                                 {% for payment in advance_payments %}
@@ -316,9 +316,9 @@
                                             <div>
                                                 <strong>{{ payment.report_number }}</strong> - ${{ "%.2f"|format(payment.amount|float) }}
                                                 {% if payment.is_confirmed %}
-                                                    <span class="badge bg-success ms-2">Confirmed</span>
+                                                    <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
                                                 {% else %}
-                                                    <span class="badge bg-warning ms-2">Pending Confirmation</span>
+                                                    <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
                                                 {% endif %}
                                             </div>
                                             <div class="d-flex gap-1">
@@ -330,7 +330,7 @@
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
-                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('Confirm this payment?')">
+                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this payment?") }}')">
                                                         <i class="bi bi-check2"></i>
                                                     </button>
                                                 </form>
@@ -346,13 +346,13 @@
                                         <div class="modal-dialog modal-sm">
                                             <div class="modal-content">
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title">Generate Document</h5>
+                                                    <h5 class="modal-title">{{ t('Generate Document') }}</h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
                                                     <div class="modal-body">
                                                         <div class="mb-3">
-                                                            <label for="format" class="form-label">Format</label>
+                                                            <label for="format" class="form-label">{{ t('Format') }}</label>
                                                             <select class="form-select" name="format" required>
                                                                 <option value="pdf">PDF</option>
                                                                 <option value="docx">DOCX</option>
@@ -360,8 +360,8 @@
                                                         </div>
                                                     </div>
                                                     <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                        <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
                                                     </div>
                                                 </form>
                                             </div>
@@ -369,7 +369,7 @@
                                     </div>
                                 {% endfor %}
                             {% else %}
-                                <p class="text-muted">Pending</p>
+                                <p class="text-muted">{{ t('Pending') }}</p>
                                 {% if lifecycle.contract_signed %}
                                 <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-plus"></i> Record Advance Payment
@@ -385,7 +385,7 @@
                             {% if lifecycle.handover_confirmed %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
                         </div>
                         <div class="timeline-content">
-                            <h6>Handover Record</h6>
+                            {{ t('Handover Record') }}
                             {% if handover_records %}
                                 {% for handover in handover_records %}
                                 <p class="text-muted small">Created: {{ handover.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
@@ -397,9 +397,9 @@
                                         <div>
                                             <strong>{{ handover.report_number }}</strong> - {{ handover.handover_date.strftime('%Y-%m-%d') }}
                                             {% if handover.is_confirmed %}
-                                                <span class="badge bg-success ms-2">Confirmed</span>
+                                                <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
                                             {% else %}
-                                                <span class="badge bg-warning ms-2">Pending Confirmation</span>
+                                                <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
                                             {% endif %}
                                         </div>
                                         <div class="d-flex gap-1">
@@ -411,7 +411,7 @@
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('Confirm this handover?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this handover?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
@@ -427,13 +427,13 @@
                                     <div class="modal-dialog modal-sm">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title">Generate Document</h5>
+                                                <h5 class="modal-title">{{ t('Generate Document') }}</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
                                                 <div class="modal-body">
                                                     <div class="mb-3">
-                                                        <label for="format" class="form-label">Format</label>
+                                                        <label for="format" class="form-label">{{ t('Format') }}</label>
                                                         <select class="form-select" name="format" required>
                                                             <option value="pdf">PDF</option>
                                                             <option value="docx">DOCX</option>
@@ -441,8 +441,8 @@
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                                                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -450,7 +450,7 @@
                                 </div>
                                 {% endfor %}
                             {% else %}
-                                <p class="text-muted">Pending</p>
+                                <p class="text-muted">{{ t('Pending') }}</p>
                                 {% if lifecycle.advance_paid %}
                                 <a href="{{ url_for('dashboard.create_handover', order_id=order.id) }}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-plus"></i> Create Handover Record
@@ -466,7 +466,7 @@
                             {% if lifecycle.fully_paid %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
                         </div>
                         <div class="timeline-content">
-                            <h6>Final Payment</h6>
+                            {{ t('Final Payment') }}
                             {% set final_payments = payment_reports|selectattr('payment_type', 'equalto', 'final')|list %}
                             {% if final_payments %}
                                 {% for payment in final_payments %}
@@ -479,9 +479,9 @@
                                             <div>
                                                 <strong>{{ payment.report_number }}</strong> - ${{ "%.2f"|format(payment.amount|float) }}
                                                 {% if payment.is_confirmed %}
-                                                    <span class="badge bg-success ms-2">Confirmed</span>
+                                                    <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
                                                 {% else %}
-                                                    <span class="badge bg-warning ms-2">Pending Confirmation</span>
+                                                    <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
                                                 {% endif %}
                                             </div>
                                             <div class="d-flex gap-1">
@@ -493,7 +493,7 @@
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
-                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('Confirm this payment?')">
+                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this payment?") }}')">
                                                         <i class="bi bi-check2"></i>
                                                     </button>
                                                 </form>
@@ -509,13 +509,13 @@
                                         <div class="modal-dialog modal-sm">
                                             <div class="modal-content">
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title">Generate Document</h5>
+                                                    <h5 class="modal-title">{{ t('Generate Document') }}</h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
                                                     <div class="modal-body">
                                                         <div class="mb-3">
-                                                            <label for="format" class="form-label">Format</label>
+                                                            <label for="format" class="form-label">{{ t('Format') }}</label>
                                                             <select class="form-select" name="format" required>
                                                                 <option value="pdf">PDF</option>
                                                                 <option value="docx">DOCX</option>
@@ -523,8 +523,8 @@
                                                         </div>
                                                     </div>
                                                     <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                        <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
                                                     </div>
                                                 </form>
                                             </div>
@@ -532,7 +532,7 @@
                                     </div>
                                 {% endfor %}
                             {% else %}
-                                <p class="text-muted">Pending</p>
+                                <p class="text-muted">{{ t('Pending') }}</p>
                                 {% if lifecycle.handover_confirmed %}
                                 <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}?type=final" class="btn btn-sm btn-primary">
                                     <i class="bi bi-plus"></i> Record Final Payment
@@ -550,7 +550,7 @@
         <!-- Quick Actions -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> {{ t('Quick Actions') }}</h5>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
@@ -586,12 +586,12 @@
                     {% endif %}
                     
                     <a href="{{ url_for('dashboard.list_documents', order_id=order.id) }}" class="btn btn-info">
-                        <i class="bi bi-file-pdf"></i> Documents
+                        <i class="bi bi-file-pdf"></i> {{ t('Documents') }}
                     </a>
                     
                     {% if order.can_cancel() %}
                     <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelOrderModal">
-                        <i class="bi bi-x-circle"></i> Cancel Order
+                        <i class="bi bi-x-circle"></i> {{ t('Cancel Order') }}
                     </button>
                     {% endif %}
                 </div>
@@ -601,70 +601,70 @@
         <!-- Status Summary -->
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Status</h5>
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> {{ t('Status') }}</h5>
             </div>
             <div class="card-body">
                 {% if order.is_canceled %}
                 <div class="alert alert-danger mb-3">
-                    <strong><i class="bi bi-x-circle"></i> Order Cancelled</strong>
+                    <strong><i class="bi bi-x-circle"></i> {{ t('Order Cancelled') }}</strong>
                     <div class="mt-2">
-                        <small class="text-muted">Cancelled at:</small><br>
+                        <small class="text-muted">{{ t('Cancelled at:') }}</small><br>
                         <small>{{ order.canceled_at.strftime('%Y-%m-%d %H:%M') if order.canceled_at else 'N/A' }}</small>
                     </div>
                     {% if order.canceled_reason %}
                     <div class="mt-2">
-                        <small class="text-muted">Reason:</small><br>
+                        <small class="text-muted">{{ t('Reason:') }}</small><br>
                         <small>{{ order.canceled_reason }}</small>
                     </div>
                     {% endif %}
                 </div>
                 {% endif %}
                 <div class="mb-2">
-                    <small class="text-muted">Quotation</small>
+                    <small class="text-muted">{{ t('Quotation') }}</small>
                     <div>
                         {% if lifecycle.quotation_created %}
-                        <span class="badge bg-success">✓ Created</span>
+                        <span class="badge bg-success">{{ t('✓ Created') }}</span>
                         {% else %}
-                        <span class="badge bg-secondary">Pending</span>
+                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
                         {% endif %}
                     </div>
                 </div>
                 <div class="mb-2">
-                    <small class="text-muted">Contract</small>
+                    <small class="text-muted">{{ t('Contract') }}</small>
                     <div>
                         {% if lifecycle.contract_created %}
                         {% set active_contract = order.contracts|selectattr('is_active')|list|first %}
                         {% if active_contract and active_contract.is_signed %}
-                        <span class="badge bg-success">✓ Signed</span>
+                        <span class="badge bg-success">{{ t('✓ Signed') }}</span>
                         {% elif active_contract %}
-                        <span class="badge bg-info">✓ Created</span>
+                        <span class="badge bg-info">{{ t('✓ Created') }}</span>
                         {% else %}
-                        <span class="badge bg-secondary">Pending</span>
+                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
                         {% endif %}
                         {% else %}
-                        <span class="badge bg-secondary">Pending</span>
+                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
                         {% endif %}
                     </div>
                 </div>
                 <div class="mb-2">
-                    <small class="text-muted">Handover</small>
+                    <small class="text-muted">{{ t('Handover') }}</small>
                     <div>
                         {% if lifecycle.handover_confirmed %}
-                        <span class="badge bg-success">✓ Confirmed</span>
+                        <span class="badge bg-success">{{ t('✓ Confirmed') }}</span>
                         {% else %}
-                        <span class="badge bg-secondary">Pending</span>
+                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
                         {% endif %}
                     </div>
                 </div>
                 <div class="mb-2">
-                    <small class="text-muted">Payment</small>
+                    <small class="text-muted">{{ t('Payment') }}</small>
                     <div>
                         {% if lifecycle.fully_paid %}
-                        <span class="badge bg-success">✓ Completed</span>
+                        <span class="badge bg-success">{{ t('✓ Completed') }}</span>
                         {% elif lifecycle.advance_paid %}
-                        <span class="badge bg-warning">Advance Paid</span>
+                        <span class="badge bg-warning">{{ t('Advance Paid') }}</span>
                         {% else %}
-                        <span class="badge bg-secondary">Pending</span>
+                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -679,13 +679,13 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Cancel Order</h5>
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> {{ t('Cancel Order') }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_order', order_id=order.id) }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        <strong>Warning:</strong> This action cannot be undone. The order will be marked as canceled.
+                        {{ t('Warning:') }} {{ t('This action cannot be undone. The order will be marked as canceled.') }}
                     </div>
                     <div class="alert alert-info">
                         <strong>Order Code:</strong> {{ order.order_code }}<br>
@@ -693,14 +693,14 @@
                         <strong>Amount:</strong> ${{ "%.2f"|format(order.total_amount|default(0)|float) }}
                     </div>
                     <div class="mb-3">
-                        <label for="canceled_reason" class="form-label">Cancellation Reason *</label>
+                        <label for="canceled_reason" class="form-label">{{ t('Cancellation Reason *') }}</label>
                         <textarea class="form-control" id="canceled_reason" name="canceled_reason" rows="3" required placeholder="Please provide a reason for canceling this order..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
                     <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-x-circle"></i> Cancel Order
+                        <i class="bi bi-x-circle"></i> {{ t('Cancel Order') }}
                     </button>
                 </div>
             </form>

@@ -1,0 +1,42 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Master Admin Login – SofaFlow{% endblock %}
+
+{% block auth_content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height:100vh;margin:-1.5rem">
+    <div class="card shadow" style="width:380px">
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <i class="bi bi-shield-lock-fill text-warning" style="font-size:2.5rem"></i>
+                <h4 class="mt-2 mb-0">Master Admin</h4>
+                <p class="text-muted small">SofaFlow System Administration</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('admin.login') }}">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Username</label>
+                    <input type="text" name="username" class="form-control" required autofocus>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-warning w-100 fw-bold">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>Log In
+                </button>
+            </form>
+            <div class="text-center mt-3">
+                <a href="{{ url_for('auth.login') }}" class="text-muted small">← Back to regular login</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

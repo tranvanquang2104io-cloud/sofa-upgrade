@@ -8,6 +8,7 @@ from flask import Flask, render_template, session, g
 from app.config import init_db, config
 from app.routes.auth_routes import auth_bp
 from app.routes.dashboard_routes import dashboard_bp
+from app.routes.admin_routes import admin_bp
 
 # Configure logging
 logging.basicConfig(
@@ -43,6 +44,7 @@ def create_app(config_name=None):
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(admin_bp)
     
     # Error handlers
     @app.errorhandler(404)
@@ -65,6 +67,17 @@ def create_app(config_name=None):
             current_user=g.get('user'),
             company_id=g.get('company_id'),
             now=datetime.now
+        )
+
+    @app.context_processor
+    def inject_i18n():
+        """Inject i18n translation helper and current language into all templates."""
+        from flask import session as _session
+        from app.utils.i18n import t as _t
+        lang = _session.get('lang', 'en')
+        return dict(
+            t=lambda key: _t(key, lang),
+            current_lang=lang
         )
     
     logger.info(f"Flask app created with config: {config_name}")

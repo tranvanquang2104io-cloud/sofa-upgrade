@@ -5,11 +5,11 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
-        <h1><i class="bi bi-people"></i> Customers</h1>
+        <h1><i class="bi bi-people"></i> {{ t('Customers') }}</h1>
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('dashboard.create_customer') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Add Customer
+            <i class="bi bi-plus-circle"></i> {{ t('Add Customer') }}
         </a>
     </div>
 </div>
@@ -20,14 +20,14 @@
         <form method="GET" action="{{ url_for('dashboard.list_customers') }}" class="row g-2">
             <div class="col-md-4">
                 <select class="form-select" name="store_id" onchange="this.form.submit()">
-                    <option value="">All Stores</option>
+                    <option value="">{{ t('All Stores') }}</option>
                     {% for store in stores %}
                     <option value="{{ store.id }}" {% if selected_store_id == store.id|string %}selected{% endif %}>{{ store.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="col-md-5">
-                <input type="text" class="form-control" name="search" placeholder="Search by name or code..." value="{{ search }}">
+                <input type="text" class="form-control" name="search" placeholder="{{ t('Search by name or code...') }}" value="{{ search }}">
             </div>
             <div class="col-md-3">
                 <button type="submit" class="btn btn-primary w-100">
@@ -45,12 +45,12 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Customer Code</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>City</th>
-                        <th>Action</th>
+                        <th>{{ t('Customer Code') }}</th>
+                        <th>{{ t('Name') }}</th>
+                        <th>{{ t('Phone') }}</th>
+                        <th>{{ t('Email') }}</th>
+                        <th>{{ t('City') }}</th>
+                        <th>{{ t('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -63,7 +63,10 @@
                         <td>{{ customer.city or '-' }}</td>
                         <td>
                             <a href="{{ url_for('dashboard.view_customer', customer_id=customer.id) }}" class="btn btn-sm btn-info">
-                                <i class="bi bi-eye"></i> View
+                                <i class="bi bi-eye"></i> {{ t('View') }}
+                            </a>
+                            <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i> {{ t('Edit') }}
                             </a>
                         </td>
                     </tr>
@@ -71,7 +74,7 @@
                 </tbody>
             </table>
         {% else %}
-            <p class="text-muted">No customers found. <a href="{{ url_for('dashboard.create_customer') }}">Add one</a></p>
+            <p class="text-muted">{{ t('No customers found.') }} <a href="{{ url_for('dashboard.create_customer') }}">{{ t('Add one') }}</a></p>
         {% endif %}
     </div>
 </div>

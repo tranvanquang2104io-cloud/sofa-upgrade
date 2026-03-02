@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Edit User - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="d-flex align-items-center mb-4 gap-2">
+            <a href="{{ url_for('dashboard.list_users') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0"><i class="bi bi-person-gear"></i> {{ t('Edit User') }}</h2>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-light d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                     style="width:36px;height:36px;font-size:0.85rem">{{ target.full_name[0]|upper }}</div>
+                <div>
+                    <span class="fw-bold">{{ target.full_name }}</span>
+                    <span class="text-muted small ms-2">@{{ target.username }}</span>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" id="editUserForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Full Name') }}</label>
+                            <input type="text" class="form-control" name="full_name"
+                                   value="{{ target.full_name }}" maxlength="255">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Email') }}</label>
+                            <input type="email" class="form-control" name="email"
+                                   value="{{ target.email }}" maxlength="255">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Phone') }}</label>
+                            <input type="text" class="form-control" name="phone"
+                                   value="{{ target.phone or '' }}" maxlength="20">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Position') }}</label>
+                            <input type="text" class="form-control" name="position"
+                                   value="{{ target.position or '' }}" maxlength="100">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('New Password') }}</label>
+                            <input type="password" class="form-control" name="password"
+                                   placeholder="{{ t('Leave blank to keep current password') }}" minlength="6">
+                        </div>
+
+                        <div class="col-12"><hr class="my-1"></div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Role') }}</label>
+                            <select class="form-select" name="role" id="roleSelect" onchange="toggleStoreField()">
+                                <option value="user" {% if target.role == 'user' %}selected{% endif %}>{{ t('Employee') }}</option>
+                                <option value="store_admin" {% if target.role == 'store_admin' %}selected{% endif %}>{{ t('Store Manager') }}</option>
+                                {% if session.role == 'company_admin' %}
+                                <option value="company_admin" {% if target.role == 'company_admin' %}selected{% endif %}>{{ t('Company Manager') }}</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="storeFieldGroup">
+                            <label class="form-label fw-semibold">{{ t('Store') }}</label>
+                            <select class="form-select" name="store_id" id="storeSelect">
+                                <option value="">{{ t('— Select store —') }}</option>
+                                {% for store in stores %}
+                                <option value="{{ store.id }}"
+                                    {% if target.store_id and target.store_id|string == store.id|string %}selected{% endif %}>
+                                    {{ store.store_code }} — {{ store.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('dashboard.list_users') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save"></i> {{ t('Save Changes') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleStoreField() {
+    const role = document.getElementById('roleSelect').value;
+    const grp  = document.getElementById('storeFieldGroup');
+    const sel  = document.getElementById('storeSelect');
+    if (role === 'company_admin') {
+        grp.style.opacity = '0.4';
+        sel.value = '';
+    } else {
+        grp.style.opacity = '1';
+    }
+}
+toggleStoreField();
+</script>
+{% endblock %}

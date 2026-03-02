@@ -5,16 +5,16 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
-        <h1><i class="bi bi-person-plus"></i> Create Customer</h1>
+        <h1><i class="bi bi-person-plus"></i> {{ t('Create Customer') }}</h1>
     </div>
 </div>
 
 {% if not stores or stores|length == 0 %}
 <div class="alert alert-warning">
     <i class="bi bi-exclamation-triangle"></i> 
-    <strong>No stores available.</strong> 
-    You need to create a store first before adding customers.
-    <a href="{{ url_for('dashboard.index') }}" class="alert-link">Return to Dashboard</a>
+    <strong>{{ t('No stores available.') }}</strong> 
+    {{ t('You need to create a store first before adding customers.') }}
+    <a href="{{ url_for('dashboard.index') }}" class="alert-link">{{ t('Return to Dashboard') }}</a>
 </div>
 {% else %}
 <div class="row">
@@ -24,7 +24,7 @@
                 <form method="POST" action="{{ url_for('dashboard.create_customer') }}">
                     {% if stores and stores|length > 1 %}
                     <div class="mb-3">
-                        <label for="store_id" class="form-label">Store *</label>
+                        <label for="store_id" class="form-label">{{ t('Store *') }}</label>
                         <select class="form-select" id="store_id" name="store_id" required>
                             {% for store in stores %}
                             <option value="{{ store.id }}" {% if store.id == selected_store_id %}selected{% endif %}>{{ store.name }}</option>
@@ -36,52 +36,85 @@
                     {% endif %}
 
                     <div class="mb-3">
-                        <label for="customer_code" class="form-label">Customer Code *</label>
-                        <input type="text" class="form-control" id="customer_code" name="customer_code" required placeholder="e.g., CUST-001">
+                        <label for="customer_code" class="form-label">{{ t('Customer Code *') }}</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="customer_code" name="customer_code" required placeholder="{{ t('Loading...') }}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="refreshCode()" title="{{ t('Get New Code') }}">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                        <div id="code-warning" class="text-danger small mt-1" style="display:none;">
+                            <i class="bi bi-exclamation-triangle"></i> {{ t('This code is already in use!') }}
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="name" class="form-label">Full Name *</label>
+                        <label for="name" class="form-label">{{ t('Full Name / Company Name *') }}</label>
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control" id="phone" name="phone">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">{{ t('Phone') }}</label>
+                                <input type="tel" class="form-control" id="phone" name="phone">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">{{ t('Email') }}</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tax_code" class="form-label">{{ t('Tax Code') }}</label>
+                                <input type="text" class="form-control" id="tax_code" name="tax_code" placeholder="e.g., 0312742744">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="representative_name" class="form-label">{{ t('Representative Name') }}</label>
+                                <input type="text" class="form-control" id="representative_name" name="representative_name" placeholder="e.g., Nguyễn Văn A">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email">
+                        <label for="representative_title" class="form-label">{{ t('Representative Title / Position') }}</label>
+                        <input type="text" class="form-control" id="representative_title" name="representative_title" placeholder="e.g., Giám Đốc">
                     </div>
 
                     <div class="mb-3">
-                        <label for="address" class="form-label">Address</label>
+                        <label for="address" class="form-label">{{ t('Address') }}</label>
                         <textarea class="form-control" id="address" name="address" rows="2"></textarea>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="city" class="form-label">City</label>
+                                <label for="city" class="form-label">{{ t('City') }}</label>
                                 <input type="text" class="form-control" id="city" name="city">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="postal_code" class="form-label">Postal Code</label>
+                                <label for="postal_code" class="form-label">{{ t('Postal Code') }}</label>
                                 <input type="text" class="form-control" id="postal_code" name="postal_code">
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="country" class="form-label">Country</label>
+                        <label for="country" class="form-label">{{ t('Country') }}</label>
                         <input type="text" class="form-control" id="country" name="country">
                     </div>
 
                     <div class="mb-3">
-                        <label for="notes" class="form-label">Notes</label>
+                        <label for="notes" class="form-label">{{ t('Notes') }}</label>
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                     </div>
 
@@ -99,4 +132,41 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+async function loadNextCode() {
+    try {
+        const res = await fetch('{{ url_for("dashboard.get_next_code", doc_type="customer") }}');
+        const data = await res.json();
+        if (data.next_code) {
+            document.getElementById('customer_code').value = data.next_code;
+            document.getElementById('customer_code').placeholder = 'e.g., CUST-001';
+        }
+    } catch { document.getElementById('customer_code').placeholder = 'e.g., CUST-001'; }
+}
+
+function refreshCode() { loadNextCode(); }
+
+document.addEventListener('DOMContentLoaded', loadNextCode);
+
+let _ckTimer;
+document.getElementById('customer_code').addEventListener('input', function () {
+    clearTimeout(_ckTimer);
+    const code = this.value.trim();
+    const warn = document.getElementById('code-warning');
+    const btn  = document.querySelector('button[type="submit"]');
+    if (!code) { warn.style.display = 'none'; btn.disabled = false; return; }
+    _ckTimer = setTimeout(async () => {
+        try {
+            const r = await fetch('{{ url_for("dashboard.check_code", doc_type="customer") }}', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ code })
+            });
+            const d = await r.json();
+            warn.style.display = d.exists ? 'block' : 'none';
+            btn.disabled = !!d.exists;
+        } catch {}
+    }, 400);
+});
+</script>
 {% endblock %}

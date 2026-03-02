@@ -9,17 +9,17 @@
             <i class="bi bi-credit-card"></i> 
             Payment Report #{{ payment.report_number }}
             {% if payment.is_confirmed %}
-                <span class="badge bg-success">CONFIRMED</span>
+                <span class="badge bg-success">{{ t('CONFIRMED') }}</span>
             {% elif payment.is_canceled %}
-                <span class="badge bg-danger">CANCELLED</span>
+                <span class="badge bg-danger">{{ t('CANCELLED') }}</span>
             {% else %}
-                <span class="badge bg-warning">DRAFT</span>
+                <span class="badge bg-warning">{{ t('DRAFT') }}</span>
             {% endif %}
         </h1>
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('dashboard.view_order', order_id=payment.order_id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Order
+            <i class="bi bi-arrow-left"></i> {{ t('Back to Order') }}
         </a>
     </div>
 </div>
@@ -28,53 +28,53 @@
     <div class="col-md-8">
         <div class="card mb-3">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Payment Details</h5>
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Payment Details') }}</h5>
             </div>
             <div class="card-body">
                 <dl class="row">
-                    <dt class="col-sm-4">Report Number:</dt>
+                    <dt class="col-sm-4">{{ t('Report Number:') }}</dt>
                     <dd class="col-sm-8">{{ payment.report_number }}</dd>
                     
-                    <dt class="col-sm-4">Payment Type:</dt>
+                    <dt class="col-sm-4">{{ t('Payment Type:') }}</dt>
                     <dd class="col-sm-8">
                         {% if payment.payment_type == 'advance' %}
-                            <span class="badge bg-primary">Advance Payment</span>
+                            <span class="badge bg-primary">{{ t('Advance Payment') }}</span>
                         {% else %}
-                            <span class="badge bg-success">Final Payment</span>
+                            <span class="badge bg-success">{{ t('Final Payment') }}</span>
                         {% endif %}
                     </dd>
                     
-                    <dt class="col-sm-4">Amount:</dt>
+                    <dt class="col-sm-4">{{ t('Amount:') }}</dt>
                     <dd class="col-sm-8"><strong>${{ "%.2f"|format(payment.amount) }}</strong></dd>
                     
-                    <dt class="col-sm-4">Report Date:</dt>
+                    <dt class="col-sm-4">{{ t('Report Date:') }}</dt>
                     <dd class="col-sm-8">{{ payment.report_date.strftime('%Y-%m-%d') }}</dd>
                     
-                    <dt class="col-sm-4">Payment Date:</dt>
+                    <dt class="col-sm-4">{{ t('Payment Date:') }}</dt>
                     <dd class="col-sm-8">{{ payment.payment_date.strftime('%Y-%m-%d') }}</dd>
                     
-                    <dt class="col-sm-4">Payment Method:</dt>
+                    <dt class="col-sm-4">{{ t('Payment Method:') }}</dt>
                     <dd class="col-sm-8">{{ payment.payment_method or 'N/A' }}</dd>
                     
-                    <dt class="col-sm-4">Transaction Ref:</dt>
+                    <dt class="col-sm-4">{{ t('Transaction Ref:') }}</dt>
                     <dd class="col-sm-8">{{ payment.transaction_reference or 'N/A' }}</dd>
                     
                     {% if payment.notes %}
-                    <dt class="col-sm-4">Notes:</dt>
+                    <dt class="col-sm-4">{{ t('Notes:') }}</dt>
                     <dd class="col-sm-8">{{ payment.notes }}</dd>
                     {% endif %}
                     
-                    <dt class="col-sm-4">Status:</dt>
+                    <dt class="col-sm-4">{{ t('Status:') }}</dt>
                     <dd class="col-sm-8">
                         {% if payment.is_confirmed %}
-                            Confirmed on {{ payment.confirmed_date.strftime('%Y-%m-%d %H:%M') }}
+                            {{ t('Confirmed on') }} {{ payment.confirmed_date.strftime('%Y-%m-%d %H:%M') }}
                         {% elif payment.is_canceled %}
-                            Cancelled on {{ payment.canceled_at.strftime('%Y-%m-%d %H:%M') }}
+                            {{ t('Cancelled on') }} {{ payment.canceled_at.strftime('%Y-%m-%d %H:%M') }}
                             {% if payment.canceled_reason %}
-                                <br><small class="text-muted">Reason: {{ payment.canceled_reason }}</small>
+                                <br><small class="text-muted">{{ t('Reason:') }} {{ payment.canceled_reason }}</small>
                             {% endif %}
                         {% else %}
-                            Draft (not yet confirmed)
+                            {{ t('Draft (not yet confirmed)') }}
                         {% endif %}
                     </dd>
                 </dl>
@@ -84,7 +84,7 @@
         {% if payment.documents %}
         <div class="card mb-3">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-file-pdf"></i> Generated Documents</h5>
+                <h5 class="mb-0"><i class="bi bi-file-pdf"></i> {{ t('Generated Documents') }}</h5>
             </div>
             <div class="card-body">
                 <div class="list-group">
@@ -103,7 +103,7 @@
                                 <small class="text-muted">Generated: {{ doc.generated_at.strftime('%Y-%m-%d %H:%M') }}</small>
                             </div>
                             <a href="{{ url_for('dashboard.download_document', document_id=doc.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download"></i> Download
+                                <i class="bi bi-download"></i> {{ t('Download') }}
                             </a>
                         </div>
                     </div>
@@ -117,42 +117,31 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-lightning"></i> Actions</h5>
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> {{ t('Actions') }}</h5>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
                 {% if payment.can_edit() %}
-                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-warning">
-                    <i class="bi bi-pencil"></i> Edit
+                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-warning w-100">
+                    <i class="bi bi-pencil"></i> {{ t('Edit') }}
                 </a>
                 {% endif %}
 
                 {% if payment.can_confirm() %}
-                <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}">
-                    <button type="submit" class="btn btn-success w-100" onclick="return confirm('Confirm this payment?')">
-                        <i class="bi bi-check-circle"></i> Confirm Payment
-                    </button>
-                </form>
-                {% endif %}
-
-                {% if payment.can_cancel() %}
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
-                    <i class="bi bi-x-circle"></i> Cancel
+                <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#confirmModal">
+                    <i class="bi bi-check-circle"></i> {{ t('Confirm') }}
                 </button>
                 {% endif %}
 
-                <!-- Generate Document -->
-                <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
-                    <div class="mb-2">
-                        <select name="format" class="form-select">
-                            <option value="pdf">Download as PDF</option>
-                            <option value="docx">Download as DOCX</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-info w-100">
-                        <i class="bi bi-download"></i> Generate Document
-                    </button>
-                </form>
+                <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#generateModal">
+                    <i class="bi bi-file-earmark-arrow-down"></i> {{ t('Generate Document') }}
+                </button>
+
+                {% if payment.can_cancel() %}
+                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                    <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
+                </button>
+                {% endif %}
                 </div>
             </div>
         </div>
@@ -160,22 +149,74 @@
         <!-- Order Summary -->
         <div class="card mt-3">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Order Information</h5>
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> {{ t('Order Information') }}</h5>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-6">Order:</dt>
+                    <dt class="col-sm-6">{{ t('Order:') }}</dt>
                     <dd class="col-sm-6">
                         <a href="{{ url_for('dashboard.view_order', order_id=payment.order_id) }}">
                             {{ payment.order.order_code }}
                         </a>
                     </dd>
-                    <dt class="col-sm-6">Customer:</dt>
+                    <dt class="col-sm-6">{{ t('Customer:') }}</dt>
                     <dd class="col-sm-6">{{ payment.order.customer.name }}</dd>
-                    <dt class="col-sm-6">Total:</dt>
+                    <dt class="col-sm-6">{{ t('Total:') }}</dt>
                     <dd class="col-sm-6">${{ "%.2f"|format(payment.order.total_amount) }}</dd>
                 </dl>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Payment Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-check-circle"></i> {{ t('Confirm Payment') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}">
+                <div class="modal-body">
+                    <p>{{ t('Are you sure you want to confirm this payment?') }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> {{ t('Confirm') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Document Modal -->
+<div class="modal fade" id="generateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-file-earmark-arrow-down"></i> {{ t('Generate Document') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ t('Document Format') }}</label>
+                        <select class="form-select" name="format" required>
+                            <option value="docx">DOCX (Word)</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-file-earmark-arrow-down"></i> {{ t('Generate') }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -185,20 +226,20 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Cancel Payment</h5>
+                <h5 class="modal-title">{{ t('Cancel Payment') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_payment', payment_id=payment.id) }}">
                 <div class="modal-body">
-                    <p>Are you sure you want to cancel this payment?</p>
+                    <p>{{ t('Are you sure you want to cancel this payment?') }}</p>
                     <div class="mb-3">
-                        <label for="reason" class="form-label">Reason for Cancellation</label>
-                        <textarea class="form-control" id="reason" name="reason" rows="3" required placeholder="Enter cancellation reason..."></textarea>
+                        <label for="reason" class="form-label">{{ t('Reason for Cancellation') }}</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" required placeholder="{{ t('Enter cancellation reason...') }}"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-danger">Cancel Payment</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                    <button type="submit" class="btn btn-danger">{{ t('Cancel Payment') }}</button>
                 </div>
             </form>
         </div>

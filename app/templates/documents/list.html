@@ -5,11 +5,11 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
-        <h1><i class="bi bi-file-pdf"></i> Documents for {{ order.order_code }}</h1>
+        <h1><i class="bi bi-file-pdf"></i> {{ t('Documents for') }} {{ order.order_code }}</h1>
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back
+            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
         </a>
     </div>
 </div>
@@ -20,12 +20,12 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Document Name</th>
-                        <th>Type</th>
-                        <th>Format</th>
-                        <th>Size</th>
-                        <th>Generated</th>
-                        <th>Action</th>
+                        <th>{{ t('Document Name') }}</th>
+                        <th>{{ t('Type') }}</th>
+                        <th>{{ t('Format') }}</th>
+                        <th>{{ t('Size') }}</th>
+                        <th>{{ t('Generated') }}</th>
+                        <th>{{ t('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,7 +38,7 @@
                         <td>{{ document.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
                             <a href="{{ url_for('dashboard.download_document', document_id=document.id) }}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-download"></i> Download
+                                <i class="bi bi-download"></i> {{ t('Download') }}
                             </a>
                         </td>
                     </tr>
@@ -46,7 +46,7 @@
                 </tbody>
             </table>
         {% else %}
-            <p class="text-muted">No documents generated yet.</p>
+            <p class="text-muted">{{ t('No documents generated yet.') }}</p>
         {% endif %}
     </div>
 </div>

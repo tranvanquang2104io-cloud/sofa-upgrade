@@ -1,0 +1,99 @@
+{% extends "admin/base.html" %}
+{% block title %}Edit Company – Master Admin{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('admin.companies') }}" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2 class="mb-0"><i class="bi bi-pencil me-2"></i>Edit Company: <code>{{ company.company_code }}</code></h2>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form method="POST" action="{{ url_for('admin.edit_company', company_id=company.id) }}">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-bold">Company Information</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Company Code</label>
+                            <input type="text" class="form-control" value="{{ company.company_code }}" disabled>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required value="{{ company.name }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" required value="{{ company.email }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Phone</label>
+                            <input type="text" name="phone" class="form-control" value="{{ company.phone or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tax Code</label>
+                            <input type="text" name="tax_code" class="form-control" value="{{ company.tax_code or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">VAT (%)</label>
+                            <input type="number" name="vat_rate" class="form-control" value="{{ company.vat_rate or 8 }}" step="0.1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">City</label>
+                            <input type="text" name="city" class="form-control" value="{{ company.city or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Address</label>
+                            <input type="text" name="address" class="form-control" value="{{ company.address or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Representative Name</label>
+                            <input type="text" name="representative_name" class="form-control" value="{{ company.representative_name or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Title</label>
+                            <input type="text" name="representative_title" class="form-control" value="{{ company.representative_title or 'Director' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-check-circle me-1"></i>Save Changes
+                </button>
+                <a href="{{ url_for('admin.companies') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Users of this company -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold"><i class="bi bi-people me-2"></i>Users ({{ users | length }})</div>
+            <div class="card-body p-0">
+                {% if users %}
+                <ul class="list-group list-group-flush">
+                    {% for u in users %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ u.full_name }}</strong>
+                            <br><small class="text-muted">{{ u.username }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge {{ 'bg-danger' if u.role == 'company_admin' else ('bg-warning text-dark' if u.role == 'store_admin' else 'bg-secondary') }}">
+                                {{ u.role_label }}
+                            </span>
+                            {% if not u.is_active %}<br><span class="badge bg-light text-muted">Inactive</span>{% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">No users found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

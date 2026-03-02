@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Document Templates - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-file-earmark-text"></i> {{ t('Document Templates') }}</h1>
+        <p class="text-muted">{{ t('Manage document templates (.docx) for each document type') }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="bi bi-upload"></i> {{ t('Upload New Template') }}
+        </button>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="card">
+    <div class="card-body">
+        {% if templates %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ t('Template Name') }}</th>
+                        <th>{{ t('Document Type') }}</th>
+                        <th>{{ t('Filename') }}</th>
+                        <th>{{ t('Status') }}</th>
+                        <th>{{ t('Date Created') }}</th>
+                        <th class="text-end">{{ t('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tpl in templates %}
+                    <tr>
+                        <td>
+                            <strong>{{ tpl.name }}</strong>
+                            {% if tpl.description %}
+                                <br><small class="text-muted">{{ tpl.description }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set type_labels = {
+                                'quotation': ('primary', 'Quotation'),
+                                'contract': ('success', 'Contract'),
+                                'handover': ('warning', 'Handover'),
+                                'payment': ('info', 'Payment'),
+                                'payment_advance': ('info', 'Advance Payment'),
+                                'payment_final': ('info', 'Final Payment'),
+                            } %}
+                            {% set lbl = type_labels.get(tpl.document_type, ('secondary', tpl.document_type)) %}
+                            <span class="badge bg-{{ lbl[0] }}">{{ lbl[1] }}</span>
+                        </td>
+                        <td><code>{{ tpl.template_file }}</code></td>
+                        <td>
+                            {% if tpl.is_active %}
+                                <span class="badge bg-success">{{ t('Active') }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ t('Inactive') }}</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ tpl.created_at.strftime('%d/%m/%Y') }}</small></td>
+                        <td class="text-end">
+                            {% if tpl.is_active %}
+                            <form method="POST" action="{{ url_for('dashboard.deactivate_template', template_id=tpl.id) }}"
+                                  onsubmit="return confirm('{{ t('Deactivate this template?') }}');" style="display:inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-x-circle"></i> {{ t('Deactivate') }}
+                                </button>
+                            </form>
+                            {% else %}
+                            <form method="POST" action="{{ url_for('dashboard.activate_template', template_id=tpl.id) }}"
+                                  style="display:inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-check-circle"></i> {{ t('Activate') }}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-file-earmark-x" style="font-size: 3rem;"></i>
+            <p class="mt-3">{{ t('No document templates yet. Upload the first one.') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-upload"></i> {{ t('Upload Document Template') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.upload_template') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ t('Template Name') }} <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="VD: Hợp Đồng Mua Bán Sofa 2024">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ t('Document Type') }} <span class="text-danger">*</span></label>
+                        <select name="document_type" class="form-select" required>
+                            <option value="">-- Select type --</option>
+                            <option value="quotation">Quotation</option>
+                            <option value="contract">Contract</option>
+                            <option value="handover">Handover Record</option>
+                            <option value="payment">Payment (general)</option>
+                            <option value="payment_advance">Advance Payment</option>
+                            <option value="payment_final">Final Payment</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Template File (.docx) <span class="text-danger">*</span></label>
+                        <input type="file" name="template_file" class="form-control" accept=".docx" required>
+                        <div class="form-text">Only Word (.docx) files are supported. Use <code>{{variable}}</code> syntax in the file.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -17,35 +17,35 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title text-white-50 mb-1">Total Orders</h6>
-                        <h2 class="card-text mb-0">{{ orders|length }}</h2>
+                        <h6 class="card-title text-white-50 mb-1">{{ t('Total Orders') }}</h6>
+                        <h2 class="card-text mb-0">{{ total_orders }}</h2>
                     </div>
                     <i class="bi bi-boxes" style="font-size: 2.5rem; opacity: 0.5;"></i>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card stats-card text-white bg-success">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title text-white-50 mb-1">Customers</h6>
-                        <h2 class="card-text mb-0">{{ customers|default([])|length }}</h2>
+                        <h6 class="card-title text-white-50 mb-1">{{ t('Customers') }}</h6>
+                        <h2 class="card-text mb-0">{{ total_customers }}</h2>
                     </div>
                     <i class="bi bi-people" style="font-size: 2.5rem; opacity: 0.5;"></i>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card stats-card text-white bg-info">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title text-white-50 mb-1">Stores</h6>
+                        <h6 class="card-title text-white-50 mb-1">{{ t('Stores') }}</h6>
                         <h2 class="card-text mb-0">{{ stores|length }}</h2>
                     </div>
                     <i class="bi bi-shop" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -53,14 +53,14 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card stats-card text-white bg-warning">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title text-white-50 mb-1">In Progress</h6>
-                        <h2 class="card-text mb-0">{{ orders|selectattr('lifecycle')|rejectattr('lifecycle.completed')|list|length }}</h2>
+                        <h6 class="card-title text-white-50 mb-1">{{ t('In Progress') }}</h6>
+                        <h2 class="card-text mb-0">{{ in_progress }}</h2>
                     </div>
                     <i class="bi bi-hourglass-split" style="font-size: 2.5rem; opacity: 0.5;"></i>
                 </div>
@@ -69,13 +69,43 @@
     </div>
 </div>
 
+<!-- Second row: completed + canceled -->
+<!-- <div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card text-white bg-secondary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50 mb-1">Hoàn Thành</h6>
+                        <h2 class="card-text mb-0">{{ completed }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card text-white bg-danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50 mb-1">Đã Hủy</h6>
+                        <h2 class="card-text mb-0">{{ canceled }}</h2>
+                    </div>
+                    <i class="bi bi-x-circle" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> -->
+
 <div class="row">
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-boxes"></i> Recent Orders
-                    <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-sm btn-primary float-end">View All</a>
+                    <i class="bi bi-boxes"></i> {{ t('Recent Orders') }}
+                    <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-sm btn-primary float-end">{{ t('View All') }}</a>
                 </h5>
             </div>
             <div class="card-body">
@@ -83,12 +113,12 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Order Code</th>
-                                <th>Customer</th>
-                                <th>Title</th>
-                                <th>Total Amount</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                                <th>{{ t('Order Code') }}</th>
+                                <th>{{ t('Customer') }}</th>
+                                <th>{{ t('Title') }}</th>
+                                <th>{{ t('Value') }}</th>
+                                <th>{{ t('Status') }}</th>
+                                <th>{{ t('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,19 +127,27 @@
                                 <td><strong>{{ order.order_code }}</strong></td>
                                 <td>{{ order.customer.name }}</td>
                                 <td>{{ order.title }}</td>
-                                <td>${{ "%.2f"|format(order.total_amount|default(0)|float) }}</td>
+                                <td>{{ "{:,.0f}".format(order.total_amount|default(0)|float) }} ₫</td>
                                 <td>
-                                    {% if order.lifecycle.completed %}
-                                        <span class="badge bg-success">Completed</span>
+                                    {% if order.is_canceled %}
+                                        <span class="badge bg-danger">{{ t('Cancelled') }}</span>
+                                    {% elif order.lifecycle.completed %}
+                                        <span class="badge bg-success">{{ t('Completed') }}</span>
                                     {% elif order.lifecycle.fully_paid %}
-                                        <span class="badge bg-info">Fully Paid</span>
+                                        <span class="badge bg-info text-dark">{{ t('Fully Paid') }}</span>
+                                    {% elif order.lifecycle.handover_confirmed %}
+                                        <span class="badge bg-warning text-dark">{{ t('Delivered') }}</span>
+                                    {% elif order.lifecycle.contract_signed %}
+                                        <span class="badge bg-warning text-dark">{{ t('Contract Signed') }}</span>
+                                    {% elif order.lifecycle.quotation_approved %}
+                                        <span class="badge bg-secondary">{{ t('Quotation Approved') }}</span>
                                     {% else %}
-                                        <span class="badge bg-warning">In Progress</span>
+                                        <span class="badge bg-secondary">{{ t('New') }}</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-info">
-                                        <i class="bi bi-eye"></i> View
+                                        <i class="bi bi-eye"></i> {{ t('View') }}
                                     </a>
                                 </td>
                             </tr>
@@ -117,7 +155,7 @@
                         </tbody>
                     </table>
                 {% else %}
-                    <p class="text-muted">No orders yet. <a href="{{ url_for('dashboard.create_order') }}">Create one</a></p>
+                    <p class="text-muted">{{ t('No orders yet.') }} <a href="{{ url_for('dashboard.create_order') }}">{{ t('Create new') }}</a></p>
                 {% endif %}
             </div>
         </div>

@@ -1,340 +1,175 @@
-# SofaFlow - Customer Lifecycle and Document Management SaaS
+﻿# SofaFlow
 
-A production-ready SaaS system for managing customer lifecycle and automated document generation for sofa repair and manufacturing businesses.
+SaaS system for managing the customer lifecycle and automating document generation for sofa repair and manufacturing businesses.
 
 ## Features
 
-### Core Features
-- **Multi-Tenant Architecture**: Complete data isolation between companies
-- **Customer Management**: Create, edit, and manage customer information
-- **Order Lifecycle Tracking**: Visual timeline of customer orders from quotation to final payment
-- **Quotation Management**: Create and manage quotations with automatic calculation
-- **Contract Management**: Generate contracts from approved quotations
-- **Delivery Reports**: Track work completion and delivery
-- **Payment Management**: Track advance and final payments
-- **Document Generation**: Automatic PDF/DOCX generation from configurable templates
-- **Role-Based Access**: Admin and user roles with appropriate permissions
+- **Multi-Tenant Architecture**  complete data isolation between companies
+- **Order Lifecycle Tracking**  visual timeline from quotation to final payment
+- **Customer & Store Management**  multi-store support per company
+- **Quotation / Contract / Handover / Payment**  full document workflow with Vietnamese templates
+- **Document Generation**  DOCX output via configurable per-company templates
+- **Role-Based Access**  `company_admin`, `store_admin`, and `user` roles
+- **Bilingual UI**  English / Vietnamese language switcher on every page
 
-### Technical Architecture
-- **Backend**: Python Flask with SQLAlchemy ORM
-- **Database**: PostgreSQL with multi-tenant design
-- **Frontend**: Bootstrap 5 responsive UI
-- **Document Engine**: Python-docx for DOCX generation, ReportLab for PDF
-- **Template System**: RTF-based template with variable substitution
-- **Authentication**: Session-based with password hashing
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.11, Flask 2.3, SQLAlchemy 2.0 |
+| Database | PostgreSQL 14+ |
+| Frontend | Bootstrap 5.3, Vanilla JS |
+| Documents | python-docx / docxtpl |
+| WSGI | Gunicorn |
 
 ## Project Structure
 
 ```
 sofa-flow/
-├── app/
-│   ├── config/              # Configuration management
-│   │   ├── config.py       # Flask configuration
-│   │   └── database.py     # Database initialization
-│   ├── models/              # SQLAlchemy models
-│   │   └── models.py       # All database models
-│   ├── repositories/        # Data access layer
-│   │   └── repository.py   # Repository pattern implementation
-│   ├── services/           # Business logic layer
-│   │   └── services.py     # Service layer for all features
-│   ├── routes/             # Flask blueprints
-│   │   ├── auth_routes.py     # Authentication routes
-│   │   └── dashboard_routes.py # Main application routes
-│   ├── utils/              # Utility functions
-│   │   ├── auth_utils.py       # Authentication helpers
-│   │   └── template_engine.py  # Document template engine
-│   ├── templates/          # Jinja2 templates
-│   ├── static/             # CSS, JavaScript, images
-│   ├── uploads/            # File storage
-│   │   ├── templates/      # RTF templates
-│   │   └── documents/      # Generated documents
-│   └── __init__.py        # Flask app factory
-├── migrations/             # Database migrations
-├── init_db.py             # Database initialization script
-├── wsgi.py                # WSGI entry point
-├── requirements.txt       # Python dependencies
-└── README.md             # This file
+ app/
+    __init__.py            # App factory, context processors
+    config/
+       config.py          # Flask config classes
+       database.py        # SQLAlchemy init
+    models/
+       models.py          # All ORM models
+    repositories/
+       repository.py      # Data access layer
+    services/
+       services.py        # Business logic
+    routes/
+       auth_routes.py     # /auth/* endpoints
+       dashboard_routes.py# All app endpoints
+    utils/
+       auth_utils.py      # Session / permission helpers
+       i18n.py            # EN  VI translation dictionary
+       template_engine.py # DOCX variable substitution
+    templates/             # Jinja2 HTML templates
+    static/                # CSS / JS
+    uploads/
+        templates/         # DOCX template files
+        documents/         # Generated output files
+ wsgi.py                    # WSGI entry point
+ requirements.txt
+ create_master_admin.py     # Bootstrap a master-admin account
+ create_sample_data.py      # Populate a full demo environment
+ create_docx_templates.py   # Generate starter DOCX template files
+ seed_docx_templates.py     # Register DOCX templates in the DB
 ```
 
-## Database Schema
+## Quick Start
 
-### Core Tables
-- **companies**: Multi-tenant companies/organizations
-- **stores**: Stores within each company
-- **users**: Application users
-- **customers**: Customer information
-- **orders**: Customer orders (lifecycle tracking)
-- **lifecycle_statuses**: Order status at each stage
+### 1. Prerequisites
 
-### Document Tables
-- **quotations**: Quotation information
-- **contracts**: Contract information
-- **delivery_reports**: Delivery/completion reports
-- **payment_reports**: Payment tracking (advance, final)
-- **documents**: Generated document records
-- **document_templates**: RTF templates for document generation
+- Python 3.11+
+- PostgreSQL 14+
 
-## Installation & Setup
-
-### Prerequisites
-- Python 3.8+
-- PostgreSQL 12+
-- LibreOffice (optional, for advanced PDF generation)
-
-### Step 1: Clone and Setup Virtual Environment
+### 2. Clone & Install
 
 ```bash
 cd sofa-flow
-python -m venv venv
 
 # Windows
+python -m venv venv
 venv\Scripts\activate
 
-# Linux/Mac
+# Linux / macOS
+python3 -m venv venv
 source venv/bin/activate
-```
 
-### Step 2: Install Dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-### Step 3: Configure Database
+### 3. Create the Database
 
-Create a PostgreSQL database:
+Connect to PostgreSQL as a superuser and run:
 
 ```sql
 CREATE DATABASE sofa_flow;
 CREATE USER sofa_user WITH PASSWORD 'sofa_password';
 GRANT ALL PRIVILEGES ON DATABASE sofa_flow TO sofa_user;
+
+-- PostgreSQL 15+ also requires:
+\c sofa_flow
+GRANT USAGE, CREATE ON SCHEMA public TO sofa_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO sofa_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO sofa_user;
 ```
 
-Set environment variable (Windows):
-```bash
-set DATABASE_URL=postgresql://sofa_user:sofa_password@localhost:5432/sofa_flow
-```
-
-Or Linux/Mac:
-```bash
-export DATABASE_URL=postgresql://sofa_user:sofa_password@localhost:5432/sofa_flow
-```
-
-### Step 4: Initialize Database
+### 4. Configure Environment
 
 ```bash
-python init_db.py
+# Windows
+set DATABASE_URL=postgresql+psycopg://sofa_user:sofa_password@localhost:5432/sofa_flow
+set SECRET_KEY=change-me-in-production
+
+# Linux / macOS
+export DATABASE_URL=postgresql+psycopg://sofa_user:sofa_password@localhost:5432/sofa_flow
+export SECRET_KEY=change-me-in-production
 ```
 
-This will:
-- Create all database tables
-- Create a demo company
-- Create a demo store
-- Create an admin user
-- Create default document templates
+### 5. Initialise & Seed
 
-### Step 5: Run Development Server
+```bash
+# Create tables + default document templates
+python create_docx_templates.py
+python seed_docx_templates.py
+
+# (Optional) load a full demo dataset
+python create_sample_data.py
+```
+
+`create_sample_data.py` outputs demo credentials printed to the console.
+
+### 6. Run
 
 ```bash
 python wsgi.py
+#  http://127.0.0.1:5000
 ```
 
-The application will be available at `http://localhost:5000`
+## Utility Scripts
 
-### Demo Credentials
-- **Company Code**: DEMO
-- **Username**: admin
-- **Password**: admin123
+| Script | Purpose | Run again? |
+|--------|---------|-----------|
+| `create_master_admin.py` | Create / reset a master-admin account | Yes, safe to re-run |
+| `create_sample_data.py` | Populate demo company, stores, users, orders | Yes, creates new records |
+| `create_docx_templates.py` | Regenerate starter `.docx` template files on disk | Yes, overwrites files |
+| `seed_docx_templates.py` | Register / update template records in the DB | Yes, upserts records |
 
-## Usage
+```bash
+# Example: create a master admin with custom credentials
+python create_master_admin.py --username myadmin --password "S3cur3!" --name "Admin"
+```
 
-### Creating a New Company
+## Environment Variables
 
-1. Go to `/auth/register`
-2. Fill in company details and admin user credentials
-3. Login with the new credentials
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` |  | PostgreSQL connection string (required) |
+| `SECRET_KEY` | `dev-secret-key` | Flask session key (change in production) |
+| `FLASK_ENV` | `development` | Set to `production` for prod |
+| `FLASK_DEBUG` | `True` | Set to `False` in production |
+| `FLASK_HOST` | `127.0.0.1` | Bind address |
+| `FLASK_PORT` | `5000` | Bind port |
 
-### Creating Orders
+## Order Lifecycle
 
-1. Dashboard → Create Order
-2. Select Store and Customer
-3. Fill order details
-4. Click Create Order
+```
+Order Created
+     Quotation (draft  approved)
+             Contract (draft  signed)
+                     Handover Record (draft  confirmed)
+                             Advance Payment
+                                     Final Payment  Order Complete
+```
 
-### Order Lifecycle
+Each stage generates a DOCX document from a per-company template.
 
-The order follows this workflow:
+## Language Support
 
-1. **Create Quotation**: From order details, create a quotation with items and pricing
-2. **Generate Quotation Document**: Generate PDF/DOCX from template
-3. **Approve Quotation**: Mark quotation as approved
-4. **Create Contract**: Create contract from approved quotation
-5. **Sign Contract**: Mark contract as signed
-6. **Create Delivery Report**: Record delivery/work completion
-7. **Confirm Delivery**: Mark delivery as confirmed
-8. **Record Advance Payment**: Record advance payment
-9. **Record Final Payment**: Mark order as fully paid and complete
-
-### Document Generation
-
-1. From Order View, click "Generate" button
-2. Select document format (PDF or DOCX)
-3. Document is automatically generated and saved
-4. Download from Documents list
-
-### Template System
-
-Templates are stored as plain text with variable substitution.
-
-**Available variables**:
-- ```{{customer_name}}```
-- ```{{customer_code}}```
-- ```{{quotation_number}}```
-- ```{{total_amount}}```
-- And many more specific to each document type
-
-Edit templates in the DocumentTemplate model to customize documents.
-
-## API Endpoints
-
-### Authentication
-- `GET/POST /auth/login` - Login
-- `GET/POST /auth/register` - Register new company
-- `GET /auth/logout` - Logout
-
-### Dashboard
-- `GET /` - Main dashboard
-- `GET /orders` - List all orders
-- `GET /orders/<order_id>` - View order
-- `GET /customers` - List customers
-- `POST /customers/create` - Create customer
-
-### Documents
-- `POST /documents/generate/<doc_type>/<ref_id>` - Generate document
-- `GET /documents/<document_id>/download` - Download document
-
-## Multi-Tenant Security
-
-### Data Isolation
-- Every query includes `company_id` filter
-- Users only see data for their company
-- Tenant verification on every operation
-
-### Authentication
-- Session-based authentication
-- Password hashing with Werkzeug
-- Automatic session timeout
-
-### Access Control
-- Role-based access (admin, user)
-- Company-level isolation
-- Store-level access control
+The UI supports English and Vietnamese. Switch via the flag icon in the top-right navbar. All static UI strings are wrapped in `{{ t('...') }}` (Jinja2) and resolved by `app/utils/i18n.py`.
 
 ## Production Deployment
 
-### Environment Variables
-
-```bash
-FLASK_ENV=production
-FLASK_DEBUG=False
-DATABASE_URL=postgresql://user:pass@host/dbname
-SECRET_KEY=your-secret-key-here
-FLASK_HOST=0.0.0.0
-FLASK_PORT=5000
-```
-
-### Docker Deployment
-
-Create `Dockerfile`:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y postgresql-client
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:app"]
-```
-
-Build and run:
-
-```bash
-docker build -t sofaflow:latest .
-docker run -p 5000:5000 -e DATABASE_URL=... sofaflow:latest
-```
-
-### Production Checklist
-
-- [ ] Set `FLASK_DEBUG=False`
-- [ ] Use strong `SECRET_KEY`
-- [ ] Configure proper logging
-- [ ] Set up database backups
-- [ ] Configure HTTPS/SSL
-- [ ] Set up monitoring and alerting
-- [ ] Configure rate limiting
-- [ ] Set up email integration (future feature)
-- [ ] Configure file upload restrictions
-- [ ] Regular security updates
-
-## Future Enhancements
-
-- [ ] Email integration for quotations and contracts
-- [ ] Online document signing
-- [ ] Dashboard analytics and reports
-- [ ] Workflow customization
-- [ ] User roles and permissions management
-- [ ] API for third-party integrations
-- [ ] Mobile app
-- [ ] Invoice generation
-- [ ] Inventory management
-- [ ] Payment gateway integration
-
-## Technology Stack
-
-### Backend
-- **Framework**: Flask 2.3.3
-- **ORM**: SQLAlchemy 2.0
-- **Database**: PostgreSQL
-- **Authentication**: Werkzeug (built-in)
-
-### Frontend
-- **Framework**: Bootstrap 5.3
-- **Icons**: Bootstrap Icons
-- **JavaScript**: Vanilla JS (no frameworks)
-
-### Document Generation
-- **DOCX**: python-docx
-- **PDF**: reportlab, LibreOffice (optional)
-
-### DevOps
-- **Containerization**: Docker
-- **WSGI**: Gunicorn
-- **Reverse Proxy**: Nginx
-
-## Code Quality
-
-- Clean Architecture with separation of concerns
-- Service layer for business logic
-- Repository pattern for data access
-- Comprehensive error handling
-- Security best practices
-- Type hints (partial)
-- Logging throughout
-
-## License
-
-This software is provided as-is for use by customers.
-
-## Support
-
-For issues, feature requests, or questions, please contact the development team.
-
----
-
-**SofaFlow** - Making sofa repair business management simple and scalable.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for a full guide covering Gunicorn, Nginx, Supervisor, SSL, and backups.
