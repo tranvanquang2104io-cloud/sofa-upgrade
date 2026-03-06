@@ -1548,56 +1548,25 @@ def edit_payment(payment_id):
                 return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
             
             import json as _json
-            # Parse work items
-            items = []
-            item_names = request.form.getlist('item_name[]')
-            item_units = request.form.getlist('item_unit[]')
-            item_quantities = request.form.getlist('item_quantity[]')
-            item_prices = request.form.getlist('item_price[]')
-            subtotal = 0
-            for i, name in enumerate(item_names):
-                if name.strip():
-                    qty = float(item_quantities[i] or 0)
-                    price = float(item_prices[i] or 0)
-                    unit = item_units[i].strip() if i < len(item_units) else ''
-                    item_total = qty * price
-                    items.append({'name': name.strip(), 'unit': unit, 'quantity': qty, 'unit_price': price, 'total': item_total})
-                    subtotal += item_total
-            
-            vat_rate = float(request.form.get('vat_rate') or 8)
-            vat_amount = round(subtotal * vat_rate / 100, 2)
-            amount = subtotal + vat_amount if items else float(request.form.get('amount') or 0)
-            advance_pct = request.form.get('advance_percentage')
-            advance_percentage = float(advance_pct) if advance_pct else None
-            advance_amount = float(request.form.get('advance_amount') or 0)
-            remaining_amount = amount - advance_amount
-            
+
             bank_json = request.form.get('bank_account_info', '[]')
             try:
                 bank_account_info = _json.loads(bank_json)
             except Exception:
                 bank_account_info = []
-            
+
             quot_ref_str = request.form.get('quotation_reference_date', '').strip()
             quot_ref_date = datetime.strptime(quot_ref_str, '%Y-%m-%d').date() if quot_ref_str else None
-            
-            # Update payment fields
+
+            # Update only editable fields; items/financials are locked to contract values
             payment.report_number = request.form.get('report_number', '').strip()
             payment.report_date = datetime.strptime(request.form.get('report_date'), '%Y-%m-%d').date()
             payment.payment_date = datetime.strptime(request.form.get('payment_date'), '%Y-%m-%d').date()
-            payment.items = items
-            payment.subtotal = subtotal
-            payment.vat_rate = vat_rate
-            payment.vat_amount = vat_amount
-            payment.amount = amount
-            payment.advance_percentage = advance_percentage
-            payment.advance_amount = advance_amount
-            payment.remaining_amount = remaining_amount
+            payment.quotation_reference_date = quot_ref_date
+            payment.payment_method = request.form.get('payment_method', '').strip() or None
             payment.amount_in_words = request.form.get('amount_in_words', '').strip() or None
             payment.work_completed_summary = request.form.get('work_completed_summary', '').strip() or None
-            payment.quotation_reference_date = quot_ref_date
             payment.bank_account_info = bank_account_info
-            payment.payment_method = request.form.get('payment_method', '').strip() or None
             payment.transaction_reference = request.form.get('transaction_reference', '').strip() or None
             payment.notes = request.form.get('notes', '').strip() or None
             payment.updated_at = datetime.utcnow()
