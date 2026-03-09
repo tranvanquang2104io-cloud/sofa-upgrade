@@ -16,7 +16,8 @@ kiểm thử trước khi release, và quy trình deploy/rollback lên server pr
 4. [Deploy lên server production](#4-deploy-lên-server-production)
 5. [Rollback khi có sự cố](#5-rollback-khi-có-sự-cố)
 6. [Kiểm tra sau deploy](#6-kiểm-tra-sau-deploy)
-7. [Các lệnh vận hành thường dùng](#7-các-lệnh-vận-hành-thường-dùng)
+7. [Docker — Chạy đa nền tảng](#7-docker--chạy-đa-nền-tảng-windows--linux--mac)
+8. [Các lệnh vận hành thường dùng](#8-các-lệnh-vận-hành-thường-dùng)
 
 ---
 
@@ -264,7 +265,107 @@ Nếu mọi thứ ổn, ghi nhận vào CHANGELOG. Nếu có vấn đề → th�
 
 ---
 
-## 7. Các lệnh vận hành thường dùng
+## 7. Docker — Chạy đa nền tảng (Windows / Linux / Mac)
+
+Docker đóng gói toàn bộ app + Python + dependencies vào một **container** — chạy giống hệt nhau trên mọi hệ điều hành, không cần cài Python hay PostgreSQL thủ công.
+
+### So sánh
+
+| | Không Docker | Có Docker |
+|---|---|---|
+| Windows local | ✅ | ✅ |
+| Deploy lên Ubuntu | ⚠️ cài lại tất cả | ✅ 1 lệnh |
+| Dev = Production | ❌ khác OS, khác lib | ✅ giống hệt |
+| Developer mới onboard | ❌ setup phức tạp | ✅ `docker compose up` |
+
+### Yêu cầu
+
+- **Windows/Mac**: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- **Ubuntu/Linux**: Docker Engine + Compose plugin
+
+```bash
+# Cài Docker trên Ubuntu (1 lần duy nhất)
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER && newgrp docker
+```
+
+### 7.1 Chạy local bằng Docker (thay thế `python wsgi.py`)
+
+```bash
+# Lần đầu — build image và khởi động
+docker compose up --build
+
+# Các lần sau
+docker compose up
+
+# Chạy nền
+docker compose up -d
+
+# Truy cập: http://localhost:5000
+# Code thay đổi → Flask tự reload (hot-reload được bật)
+```
+
+> **Không cần cài Python hay PostgreSQL** trên máy — Docker lo hết.
+
+### 7.2 Deploy lên Ubuntu server bằng Docker
+
+```bash
+# Trên server Ubuntu
+git clone https://github.com/tranquanguit/sofa-flow.git
+cd sofa-flow
+git checkout v1.0.0      # luôn checkout tag cụ thể, không dùng HEAD
+
+# Tạo file secret production
+cp .env.prod.example .env.prod
+nano .env.prod           # điền SECRET_KEY, POSTGRES_PASSWORD, APP_VERSION
+
+# Build và chạy toàn bộ stack: Nginx + Gunicorn + PostgreSQL
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+
+# Kiểm tra
+docker compose -f docker-compose.prod.yml ps
+curl -s -o /dev/null -w "%{http_code}" http://localhost
+# → 200
+```
+
+### 7.3 Update phiên bản mới lên server
+
+```bash
+git fetch --tags
+git checkout v1.0.1
+
+# Chỉ rebuild app (PostgreSQL không bị ảnh hưởng)
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build app
+```
+
+### 7.4 Backup & Restore database trong Docker
+
+```bash
+# Backup
+docker compose -f docker-compose.prod.yml exec db \
+    pg_dump -U sofa_user sofa_flow | gzip > backup_$(date +%Y%m%d).sql.gz
+
+# Restore
+gunzip -c backup_20260310.sql.gz | \
+    docker compose -f docker-compose.prod.yml exec -T db \
+    psql -U sofa_user sofa_flow
+```
+
+### 7.5 Các lệnh Docker hay dùng
+
+| Mục đích | Lệnh |
+|---|---|
+| Xem log app | `docker compose logs -f app` |
+| Xem log nginx | `docker compose -f docker-compose.prod.yml logs -f nginx` |
+| Vào shell container | `docker compose exec app bash` |
+| Vào psql | `docker compose exec db psql -U sofa_user sofa_flow` |
+| Xem CPU/RAM mỗi container | `docker stats` |
+| Dừng toàn bộ | `docker compose down` |
+| Dừng + xóa toàn bộ data | `docker compose down -v` |
+
+---
+
+## 8. Các lệnh vận hành thường dùng
 
 ### Server
 

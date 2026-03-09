@@ -18,7 +18,11 @@ ENV/
 
 # Environment / secrets
 .env
+.env.prod
 *.env.local
+
+# Docker runtime volumes (data lives outside repo)
+postgres_data/
 
 # IDE
 .vscode/
