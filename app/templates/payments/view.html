@@ -150,49 +150,45 @@
                                 <td>{{ item.name }}</td>
                                 <td>{{ item.get('unit', '') }}</td>
                                 <td class="text-end">{{ item.quantity }}</td>
-                                <td class="text-end">{{ "{:,.0f}".format(item.unit_price|float) }}</td>
-                                <td class="text-end">{{ "{:,.0f}".format(item.get('total', 0)|float) }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(item.unit_price|float) }} ₫</td>
+                                <td class="text-end">{{ "{:,.0f}".format(item.get('total', 0)|float) }} ₫</td>
                             </tr>
                             {% endfor %}
                         </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="5" class="text-end">{{ t('Subtotal:') }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(payment.subtotal|float if payment.subtotal else 0) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-end">VAT ({{ payment.vat_rate or 0 }}%):</td>
+                                <td class="text-end">{{ "{:,.0f}".format(payment.vat_amount|float if payment.vat_amount else 0) }} ₫</td>
+                            </tr>
+                            <tr class="table-primary fw-bold">
+                                <td colspan="5" class="text-end">{{ t('Payment Value:') }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(payment.amount|float) }} ₫</td>
+                            </tr>
+                            {% if payment.advance_percentage %}
+                            <tr>
+                                <td colspan="5" class="text-end">{{ t('Advance') }} ({{ payment.advance_percentage }}%):</td>
+                                <td class="text-end">{{ "{:,.0f}".format(payment.advance_amount|float if payment.advance_amount else 0) }} ₫</td>
+                            </tr>
+                            <tr class="table-warning fw-bold">
+                                <td colspan="5" class="text-end">{{ t('Remaining Balance:') }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(payment.remaining_amount|float if payment.remaining_amount else 0) }} ₫</td>
+                            </tr>
+                            {% endif %}
+                        </tfoot>
                     </table>
                 </div>
-                <div class="p-3">
-                    <div class="row justify-content-end">
-                        <div class="col-md-6">
-                            <table class="table table-sm table-bordered mb-2">
-                                <tr>
-                                    <th class="bg-light">{{ t('Subtotal:') }}</th>
-                                    <td class="text-end">{{ "{:,.0f}".format(payment.subtotal|float if payment.subtotal else 0) }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="bg-light">VAT ({{ payment.vat_rate or 0 }}%):</th>
-                                    <td class="text-end">{{ "{:,.0f}".format(payment.vat_amount|float if payment.vat_amount else 0) }}</td>
-                                </tr>
-                                <tr class="table-primary">
-                                    <th>{{ t('Payment Value:') }}</th>
-                                    <td class="text-end fw-bold">{{ "{:,.0f}".format(payment.amount|float) }}</td>
-                                </tr>
-                                {% if payment.advance_percentage %}
-                                <tr>
-                                    <th class="bg-light">{{ t('Advance') }} ({{ payment.advance_percentage }}%):</th>
-                                    <td class="text-end">{{ "{:,.0f}".format(payment.advance_amount|float if payment.advance_amount else 0) }}</td>
-                                </tr>
-                                <tr class="table-warning">
-                                    <th>{{ t('Remaining Balance:') }}</th>
-                                    <td class="text-end fw-bold">{{ "{:,.0f}".format(payment.remaining_amount|float if payment.remaining_amount else 0) }}</td>
-                                </tr>
-                                {% endif %}
-                            </table>
-                            {% if payment.amount_in_words %}
-                            <div class="alert alert-light border py-2 mb-0">
-                                <small class="text-muted">{{ t('Amount in Words:') }}</small><br>
-                                <em>{{ payment.amount_in_words }}</em>
-                            </div>
-                            {% endif %}
-                        </div>
+                {% if payment.amount_in_words %}
+                <div class="px-3 pb-3">
+                    <div class="alert alert-light border py-2 mb-0">
+                        <small class="text-muted">{{ t('Amount in Words:') }}</small><br>
+                        <em>{{ payment.amount_in_words }}</em>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}

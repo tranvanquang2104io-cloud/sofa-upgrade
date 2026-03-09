@@ -198,6 +198,9 @@ class LifecycleStatus(db.Model):
     
     advance_paid = db.Column(db.Boolean, default=False)
     advance_paid_at = db.Column(db.DateTime)
+
+    advance_skipped = db.Column(db.Boolean, default=False)
+    advance_skipped_at = db.Column(db.DateTime)
     
     fully_paid = db.Column(db.Boolean, default=False)
     fully_paid_at = db.Column(db.DateTime)
@@ -335,6 +338,12 @@ class Contract(db.Model):
     advance_percentage = db.Column(db.Numeric(5, 2), default=30.00)  # % tạm ứng
     advance_amount = db.Column(db.Numeric(15, 2), default=0)  # Advance amount
     
+    amount_in_words = db.Column(db.Text)               # Số tiền bằng chữ
+    contract_start_date = db.Column(db.Date)            # Ngày bắt đầu thực hiện
+    contract_days_complete = db.Column(db.Integer, default=30)  # Số ngày cam kết hoàn thiện
+    selected_bank_index = db.Column(db.Integer, default=0)  # Index trong company.bank_accounts
+    num_date_notice_cancel = db.Column(db.Integer, default=7)  # Số ngày báo trước khi hủy
+
     terms_and_conditions = db.Column(db.Text)
     is_signed = db.Column(db.Boolean, default=False, index=True)
     signed_date = db.Column(db.DateTime)

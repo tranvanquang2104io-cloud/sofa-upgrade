@@ -163,7 +163,7 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:55px" value="{{ active_contract.vat_rate if active_contract else 8 }}" min="0" max="100" step="0.1">%):
+                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" if active_contract else 8 }}" min="0" max="100" step="0.1">%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly></td>
                                 </tr>
@@ -179,37 +179,78 @@
                     </div>
 
                     <!-- Advance & Remaining -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label for="advance_percentage" class="form-label">Advance (%)</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="advance_percentage" name="advance_percentage"
-                                       value="{{ active_contract.advance_percentage if active_contract else 30 }}" min="0" max="100" step="1">
-                                <span class="input-group-text">%</span>
+                    <div id="advance-section" class="mb-3">
+
+                        <!-- Show when: payment_type == advance | OR | payment_type == final AND advance_skipped -->
+                        <div id="advance_pct_section" class="row mb-2">
+                            <div class="col-md-4">
+                                <label for="advance_percentage" class="form-label">Tạm ứng (%)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="advance_percentage" name="advance_percentage"
+                                           value="{{ 0 if advance_skipped else (active_contract.advance_percentage if active_contract else 30) }}"
+                                           min="0" max="100" step="1">
+                                    <span class="input-group-text">%</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Advance Amount</label>
-                            <input type="text" id="advance_display" class="form-control bg-light" readonly>
-                            <input type="hidden" id="advance_amount" name="advance_amount">
+
+                        <!-- Show when: payment_type == final AND NOT advance_skipped -->
+                        <div id="confirmed_adv_section" class="mb-2" style="display:none">
+                            <label class="form-label fw-bold">Tổng tạm ứng đã xác nhận</label>
+                            {% if confirmed_advance_payments %}
+                            <table class="table table-sm table-bordered mb-1">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Số chứng từ</th>
+                                        <th>Ngày</th>
+                                        <th class="text-end">Số tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in confirmed_advance_payments %}
+                                    <tr>
+                                        <td>{{ p.report_number }}</td>
+                                        <td>{{ p.payment_date.strftime('%d/%m/%Y') if p.payment_date else '-' }}</td>
+                                        <td class="text-end">{{ "{:,.0f}".format(p.advance_amount|float if p.advance_amount else 0) }} ₫</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr>
+                                        <td colspan="2" class="text-end">Tổng tạm ứng:</td>
+                                        <td class="text-end">{{ "{:,.0f}".format(confirmed_advance_total) }} ₫</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                            {% else %}
+                            <div class="alert alert-info py-2 mb-1">Không có chứng từ tạm ứng nào được xác nhận.</div>
+                            {% endif %}
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Remaining Balance</label>
-                            <input type="text" id="remaining_display" class="form-control bg-light fw-bold" readonly>
-                            <input type="hidden" id="remaining_amount" name="remaining_amount">
+
+                        <div class="row">
+                            <div class="col-md-6" id="advance_display_col">
+                                <label class="form-label">Số tiền tạm ứng</label>
+                                <input type="text" id="advance_display" class="form-control bg-light" readonly>
+                                <input type="hidden" id="advance_amount" name="advance_amount">
+                            </div>
+                            <div class="col-md-6" id="remaining_display_col">
+                                <label class="form-label">Số tiền còn lại</label>
+                                <input type="text" id="remaining_display" class="form-control bg-light fw-bold" readonly>
+                                <input type="hidden" id="remaining_amount" name="remaining_amount">
+                            </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="amount_in_words" class="form-label">Remaining Amount in Words</label>
+                        <label for="amount_in_words" class="form-label">Amount in Words</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="amount_in_words" name="amount_in_words"
-                                   placeholder="Auto-fill from remaining balance...">
+                                   placeholder="Auto-fill based on payment type...">
                             <button type="button" class="btn btn-outline-secondary" title="Auto-fill" onclick="autoFillWords()">
                                 <i class="bi bi-arrow-clockwise"></i>
                             </button>
                         </div>
-                        <div class="form-text">Auto-updated from &ldquo;Remaining Balance&rdquo;. Edit manually to override.</div>
+                        <div class="form-text">Tự động điền: tạm ứng nếu chọn Advance, số tiền còn lại nếu chọn Final Payment. Sửa trực tiếp để override.</div>
                     </div>
 
                     <div class="mb-3">
@@ -223,17 +264,19 @@
                         <h6><i class="bi bi-bank2"></i> Payment Bank Accounts</h6>
 
                         {% if company and company.bank_accounts %}
-                        <p class="text-muted small mb-2">Select registered accounts from
-                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Settings</a>:
+                        <p class="text-muted small mb-2">Chọn tài khoản thanh toán từ
+                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Cài đặt</a>:
                         </p>
-                        <div id="saved-banks-list" class="mb-3">
+                        <div id="saved-banks-list" class="mb-2">
                             {% for bank in company.bank_accounts %}
                             <div class="form-check mb-1">
-                                <input class="form-check-input saved-bank-check" type="checkbox"
+                                <input class="form-check-input saved-bank-check" type="radio"
+                                       name="saved_bank_radio"
                                        id="saved_bank_{{ loop.index }}"
                                        data-bank-name="{{ bank.bank_name }}"
                                        data-account-number="{{ bank.account_number }}"
-                                       data-account-holder="{{ bank.account_holder or '' }}">
+                                       data-account-holder="{{ bank.account_holder or '' }}"
+                                       {% if loop.first %}checked{% endif %}>
                                 <label class="form-check-label" for="saved_bank_{{ loop.index }}">
                                     <strong>{{ bank.bank_name }}</strong> —
                                     TK: <code>{{ bank.account_number }}</code>
@@ -242,16 +285,10 @@
                             </div>
                             {% endfor %}
                         </div>
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <small class="text-muted">Or add another account:</small>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addBankRow()">
-                                <i class="bi bi-plus"></i> Add account
-                            </button>
-                        </div>
                         {% else %}
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="text-muted small">No registered accounts.
-                                <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Add in Settings</a> or enter manually:
+                            <span class="text-muted small">Chưa có tài khoản ngân hàng.
+                                <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Thêm trong Cài đặt</a> hoặc nhập thủ công:
                             </span>
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addBankRow()">
                                 <i class="bi bi-plus"></i> Add account
@@ -316,6 +353,8 @@
 
 <script>
 const CONTRACT_ID = "{{ active_contract.id if active_contract else '' }}";
+const ADVANCE_SKIPPED = {{ 'true' if advance_skipped else 'false' }};
+const CONFIRMED_ADVANCE_TOTAL = {{ confirmed_advance_total }};
 
 document.addEventListener('DOMContentLoaded', async function() {
     try {
@@ -346,6 +385,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     document.getElementById('vat_rate').addEventListener('input', recalcAll);
     document.getElementById('advance_percentage').addEventListener('input', recalcAll);
+    document.getElementById('payment_type').addEventListener('change', function() {
+        updateAdvanceSection();
+        recalcAll();
+    });
     document.querySelectorAll('#items-body .item-row').forEach(row => {
         row.querySelector('.qty-input').addEventListener('input', recalcAll);
         row.querySelector('.price-input').addEventListener('input', recalcAll);
@@ -376,17 +419,39 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     recalcAll();
     updateRowNumbers();
+    updateAdvanceSection();
 
     // Track manual editing of amount_in_words
     const wordsInput = document.getElementById('amount_in_words');
     wordsInput.addEventListener('input', function() { this._userEdited = true; });
 });
 
+function updateAdvanceSection() {
+    const payType = document.getElementById('payment_type').value;
+    const showConfirmed = payType === 'final' && !ADVANCE_SKIPPED;
+    const showPct = payType === 'advance' || (payType === 'final' && ADVANCE_SKIPPED);
+    const pctSection = document.getElementById('advance_pct_section');
+    const confSection = document.getElementById('confirmed_adv_section');
+    const advDisplayCol = document.getElementById('advance_display_col');
+    if (pctSection) pctSection.style.display = showPct ? '' : 'none';
+    if (confSection) confSection.style.display = showConfirmed ? '' : 'none';
+    // When the confirmed list is shown, the advance display box is redundant
+    if (advDisplayCol) advDisplayCol.style.display = showConfirmed ? 'none' : '';
+    // Expand remaining to full width when advance box is hidden
+    const remCol = document.getElementById('remaining_display_col');
+    if (remCol) {
+        remCol.className = showConfirmed ? 'col-md-12' : 'col-md-6';
+    }
+}
+
 function autoFillWords() {
     const wordsEl = document.getElementById('amount_in_words');
     wordsEl._userEdited = false;
-    const remaining = parseInt(document.getElementById('remaining_amount').value || '0');
-    wordsEl.value = numberToWordsVi(remaining);
+    const payType = document.getElementById('payment_type').value;
+    const amt = payType === 'advance'
+        ? parseInt(document.getElementById('advance_amount').value || '0')
+        : parseInt(document.getElementById('remaining_amount').value || '0');
+    wordsEl.value = amt > 0 ? numberToWordsVi(amt) : '';
 }
 
 function numberToWordsVi(n) {
@@ -430,8 +495,16 @@ function recalcAll() {
     const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
     const grandTotal = subtotal + vatAmount;
-    const advPct = parseFloat(document.getElementById('advance_percentage').value) || 0;
-    const advAmount = Math.round(grandTotal * advPct / 100);
+
+    // Advance amount: use confirmed advance total for final type (not skipped)
+    const payType = document.getElementById('payment_type').value;
+    let advAmount;
+    if (payType === 'final' && !ADVANCE_SKIPPED) {
+        advAmount = Math.round(CONFIRMED_ADVANCE_TOTAL);
+    } else {
+        const advPct = parseFloat(document.getElementById('advance_percentage').value) || 0;
+        advAmount = Math.round(grandTotal * advPct / 100);
+    }
     const remaining = grandTotal - advAmount;
 
     document.getElementById('subtotal_display').value = fmtNum(subtotal);
@@ -446,9 +519,13 @@ function recalcAll() {
     document.getElementById('advance_amount').value = advAmount;
     document.getElementById('remaining_amount').value = remaining;
 
-    // Auto-fill amount in words from remaining unless user has overridden
+    // Auto-fill amount in words: advance amount if advance payment, remaining balance if final
     const wordsEl = document.getElementById('amount_in_words');
-    if (wordsEl && !wordsEl._userEdited) wordsEl.value = numberToWordsVi(remaining);
+    if (wordsEl && !wordsEl._userEdited) {
+        const payType = document.getElementById('payment_type').value;
+        const amtForWords = payType === 'advance' ? advAmount : remaining;
+        wordsEl.value = amtForWords > 0 ? numberToWordsVi(amtForWords) : '';
+    }
 }
 
 function updateRowNumbers() {
@@ -498,15 +575,16 @@ function addBankRow(bankName='', accountNumber='', accountHolder='') {
 
 function updateBankJson() {
     const banks = [];
-    // Collect checked company saved banks
-    document.querySelectorAll('.saved-bank-check:checked').forEach(cb => {
+    // Collect selected radio bank
+    const selected = document.querySelector('.saved-bank-check:checked');
+    if (selected) {
         banks.push({
-            bank_name: cb.dataset.bankName,
-            account_number: cb.dataset.accountNumber,
-            account_holder: cb.dataset.accountHolder
+            bank_name: selected.dataset.bankName,
+            account_number: selected.dataset.accountNumber,
+            account_holder: selected.dataset.accountHolder
         });
-    });
-    // Collect manually added banks
+    }
+    // Collect manually added banks (fallback when no company banks)
     document.querySelectorAll('.bank-row').forEach(row => {
         const name = row.querySelector('.bank-name').value.trim();
         const acct = row.querySelector('.bank-account').value.trim();

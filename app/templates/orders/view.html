@@ -311,11 +311,13 @@
                             {% set advance_payments = payment_reports|selectattr('payment_type', 'equalto', 'advance')|list %}
                             {% if advance_payments %}
                                 {% for payment in advance_payments %}
-                                    <div class="alert {% if payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
+                                    <div class="alert {% if payment.is_canceled %}alert-secondary{% elif payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
-                                                <strong>{{ payment.report_number }}</strong> - ${{ "%.2f"|format(payment.amount|float) }}
-                                                {% if payment.is_confirmed %}
+                                                <strong class="{% if payment.is_canceled %}text-decoration-line-through text-muted{% endif %}">{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
+                                                {% if payment.is_canceled %}
+                                                    <span class="badge bg-danger ms-2">Đã Hủy</span>
+                                                {% elif payment.is_confirmed %}
                                                     <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
                                                 {% else %}
                                                     <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
@@ -325,7 +327,7 @@
                                                 <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                {% if not payment.is_confirmed %}
+                                                {% if not payment.is_confirmed and not payment.is_canceled %}
                                                 <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
@@ -335,9 +337,11 @@
                                                     </button>
                                                 </form>
                                                 {% endif %}
+                                                {% if not payment.is_canceled %}
                                                 <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="Generate">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -370,10 +374,14 @@
                                 {% endfor %}
                             {% else %}
                                 <p class="text-muted">{{ t('Pending') }}</p>
-                                {% if lifecycle.contract_signed %}
+                                {% if lifecycle.contract_signed and not lifecycle.advance_skipped %}
                                 <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-plus"></i> Record Advance Payment
                                 </a>
+                                {% elif lifecycle.advance_skipped %}
+                                <div class="alert alert-secondary py-2 px-3 mb-0">
+                                    <i class="bi bi-skip-forward"></i> <em class="text-muted">Đã bỏ qua tạm ứng</em>
+                                </div>
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -474,11 +482,13 @@
                                     {% if payment.is_confirmed %}
                                     <p class="text-muted small">Confirmed: {{ payment.confirmed_date.strftime('%Y-%m-%d %H:%M') }}</p>
                                     {% endif %}
-                                    <div class="alert {% if payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
+                                    <div class="alert {% if payment.is_canceled %}alert-secondary{% elif payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
-                                                <strong>{{ payment.report_number }}</strong> - ${{ "%.2f"|format(payment.amount|float) }}
-                                                {% if payment.is_confirmed %}
+                                                <strong class="{% if payment.is_canceled %}text-decoration-line-through text-muted{% endif %}">{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
+                                                {% if payment.is_canceled %}
+                                                    <span class="badge bg-danger ms-2">Đã Hủy</span>
+                                                {% elif payment.is_confirmed %}
                                                     <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
                                                 {% else %}
                                                     <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
@@ -488,7 +498,7 @@
                                                 <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                {% if not payment.is_confirmed %}
+                                                {% if not payment.is_confirmed and not payment.is_canceled %}
                                                 <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
@@ -498,9 +508,11 @@
                                                     </button>
                                                 </form>
                                                 {% endif %}
+                                                {% if not payment.is_canceled %}
                                                 <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -571,6 +583,9 @@
                     <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-primary">
                         <i class="bi bi-plus"></i> Record Advance Payment
                     </a>
+                    <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#skipAdvanceModal">
+                        <i class="bi bi-skip-forward"></i> Bỏ qua tạm ứng
+                    </button>
                     {% endif %}
                     
                     {% if lifecycle.advance_paid and not lifecycle.handover_confirmed and not handover_records %}
@@ -672,6 +687,35 @@
         </div>
     </div>
 </div>
+
+<!-- Skip Advance Modal -->
+{% if lifecycle.contract_signed and not lifecycle.advance_paid %}
+<div class="modal fade" id="skipAdvanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-skip-forward"></i> Bỏ qua tạm ứng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Xác nhận bỏ qua bước tạm ứng?</strong><br>
+                    Hợp đồng này sẽ <strong>không có chứng từ tạm ứng</strong>. Quy trình sẽ chuyển thẳng sang bước tạo chứng từ bàn giao. Khi tạo thanh toán cuối cùng, số tiền tạm ứng sẽ mặc định là <strong>0₫</strong>.
+                </div>
+                <p class="mb-0">Hành động này không thể hoàn tác.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form method="POST" action="{{ url_for('dashboard.skip_advance_payment', order_id=order.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-skip-forward"></i> Xác nhận bỏ qua tạm ứng
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Cancel Order Modal -->
 {% if order.can_cancel() %}

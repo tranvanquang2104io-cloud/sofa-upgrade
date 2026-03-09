@@ -145,30 +145,55 @@
 
                     <!-- Bank Accounts -->
                     <div class="mb-3">
-                        <h6><i class="bi bi-bank2"></i> Payment Bank Account Info</h6>
+                        <h6><i class="bi bi-bank2"></i> Payment Bank Accounts</h6>
+                        {% set saved_bank_info = payment.bank_account_info if payment.bank_account_info else [] %}
+                        {% set saved_acct_nums = saved_bank_info | map(attribute='account_number') | list %}
+                        {% set first_saved_acct = saved_bank_info[0].account_number if saved_bank_info else '' %}
+                        {% if company and company.bank_accounts %}
+                        <p class="text-muted small mb-2">Chọn tài khoản thanh toán từ
+                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Cài đặt</a>:
+                        </p>
+                        <div id="saved-banks-list" class="mb-2">
+                            {% for bank in company.bank_accounts %}
+                            <div class="form-check mb-1">
+                                <input class="form-check-input saved-bank-check" type="radio"
+                                       name="saved_bank_radio"
+                                       id="saved_bank_{{ loop.index }}"
+                                       data-bank-name="{{ bank.bank_name }}"
+                                       data-account-number="{{ bank.account_number }}"
+                                       data-account-holder="{{ bank.account_holder or '' }}"
+                                       {% if bank.account_number == first_saved_acct or (loop.first and not first_saved_acct) %}checked{% endif %}>
+                                <label class="form-check-label" for="saved_bank_{{ loop.index }}">
+                                    <strong>{{ bank.bank_name }}</strong> —
+                                    TK: <code>{{ bank.account_number }}</code>
+                                    {% if bank.account_holder %} ({{ bank.account_holder }}){% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="text-muted small">Chưa có tài khoản ngân hàng.
+                                <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Thêm trong Cài đặt</a> hoặc nhập thủ công:
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addBankRow()">
+                                <i class="bi bi-plus"></i> Add account
+                            </button>
+                        </div>
+                        {% endif %}
                         <div id="bank-accounts">
-                            {% set bank_info = payment.bank_account_info if payment.bank_account_info else [] %}
-                            {% if bank_info %}
-                            {% for bank in bank_info %}
+                            {% set company_acct_nums = (company.bank_accounts | map(attribute='account_number') | list) if (company and company.bank_accounts) else [] %}
+                            {% for bank in saved_bank_info %}
+                            {% if bank.account_number not in company_acct_nums %}
                             <div class="row mb-2 bank-row">
                                 <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="Bank name" value="{{ bank.bank_name or '' }}"></div>
                                 <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="Account number" value="{{ bank.account_number or '' }}"></div>
                                 <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="Account holder" value="{{ bank.account_holder or '' }}"></div>
-                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)"><i class="bi bi-trash"></i></button></div>
-                            </div>
-                            {% endfor %}
-                            {% else %}
-                            <div class="row mb-2 bank-row">
-                                <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="Bank name" value=""></div>
-                                <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="Account number" value=""></div>
-                                <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="Account holder" value=""></div>
-                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)"><i class="bi bi-trash"></i></button></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.bank-row').remove()"><i class="bi bi-trash"></i></button></div>
                             </div>
                             {% endif %}
+                            {% endfor %}
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addBankRow()">
-                            <i class="bi bi-plus"></i> Add Account
-                        </button>
                         <input type="hidden" id="bank_account_info" name="bank_account_info" value="{{ payment.bank_account_info | tojson if payment.bank_account_info else '[]' }}">
                     </div>
 
@@ -257,6 +282,16 @@ function removeBankRow(btn) { btn.closest('.bank-row').remove(); }
 
 function updateBankJson() {
     const banks = [];
+    // Collect selected radio bank
+    const selected = document.querySelector('.saved-bank-check:checked');
+    if (selected) {
+        banks.push({
+            bank_name: selected.dataset.bankName,
+            account_number: selected.dataset.accountNumber,
+            account_holder: selected.dataset.accountHolder
+        });
+    }
+    // Collect manually added banks (fallback when no company banks)
     document.querySelectorAll('.bank-row').forEach(row => {
         const name = row.querySelector('.bank-name').value.trim();
         const acct = row.querySelector('.bank-account').value.trim();

@@ -906,8 +906,23 @@ class PaymentReportService:
             payment.is_canceled = True
             payment.canceled_at = datetime.utcnow()
             payment.canceled_reason = reason
-            
-            # Lifecycle does not revert - payment can be recreated after cancellation
+
+            # If this was a confirmed advance payment, check if lifecycle should revert
+            if payment.payment_type == 'advance' and payment.is_confirmed:
+                from app.repositories.repository import LifecycleStatusRepository, PaymentReportRepository as _PRRepo
+                from app.models.models import PaymentReport as _PR
+                remaining_confirmed = db.session.query(_PR).filter(
+                    _PR.order_id == payment.order_id,
+                    _PR.payment_type == 'advance',
+                    _PR.is_confirmed == True,
+                    _PR.is_canceled == False,
+                    _PR.id != payment.id
+                ).count()
+                lifecycle = LifecycleStatusRepository().get_or_create_for_order(str(payment.order_id))
+                if remaining_confirmed == 0 and not getattr(lifecycle, 'advance_skipped', False):
+                    lifecycle.advance_paid = False
+                    lifecycle.advance_paid_at = None
+                    db.session.add(lifecycle)
             
             # Make update atomic
             db.session.add(payment)
@@ -1042,6 +1057,16 @@ class DocumentService:
 
         file_size = os.path.getsize(file_path)
 
+        def _sanitize(v):
+            """Recursively convert context values to JSON-safe types."""
+            if isinstance(v, dict):
+                return {k2: _sanitize(v2) for k2, v2 in v.items()}
+            if isinstance(v, list):
+                return [_sanitize(i) for i in v]
+            if isinstance(v, (str, int, float, bool)) or v is None:
+                return v
+            return ''   # InlineImage and any other non-serializable object
+
         document = self.repo.create(
             company_id          = company_id,
             order_id            = order_id,
@@ -1055,8 +1080,7 @@ class DocumentService:
             document_format     = output_ext,
             file_path           = file_path,
             file_size           = file_size,
-            variables_used      = {k: str(v) if not isinstance(v, (list, dict)) else v
-                                   for k, v in context.items()},
+            variables_used      = _sanitize(context),
         )
         logger.info(f"Document generated: {os.path.basename(file_path)}")
         return document

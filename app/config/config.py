@@ -28,6 +28,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'uploads')
     TEMPLATES_FOLDER = os.path.join(UPLOAD_FOLDER, 'templates')
     DOCUMENTS_FOLDER = os.path.join(UPLOAD_FOLDER, 'documents')
+    ITEMS_FOLDER = os.path.join(UPLOAD_FOLDER, 'items')
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
     
     # Pagination

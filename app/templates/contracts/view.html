@@ -29,11 +29,40 @@
                     <dt class="col-sm-4">{{ t('Contract Number:') }}</dt>
                     <dd class="col-sm-8">{{ contract.contract_number }}</dd>
                     
-                    <dt class="col-sm-4">{{ t('Date:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.contract_date.strftime('%Y-%m-%d') }}</dd>
+                    <dt class="col-sm-4">{{ t('Signing Date:') }}</dt>
+                    <dd class="col-sm-8">{{ contract.contract_date.strftime('%d/%m/%Y') }}</dd>
+
+                    {% if contract.contract_start_date %}
+                    <dt class="col-sm-4">{{ t('Start Date:') }}</dt>
+                    <dd class="col-sm-8">{{ contract.contract_start_date.strftime('%d/%m/%Y') }}</dd>
+                    {% endif %}
+
+                    {% if contract.contract_days_complete %}
+                    <dt class="col-sm-4">{{ t('Days to Complete:') }}</dt>
+                    <dd class="col-sm-8">{{ contract.contract_days_complete }} {{ t('days') }}</dd>
+                    {% endif %}
                     
                     <dt class="col-sm-4">{{ t('Contract Value:') }}</dt>
-                    <dd class="col-sm-8"><strong>${{ "%.2f"|format(contract.contract_value|default(0)|float) }}</strong></dd>
+                    <dd class="col-sm-8"><strong>{{ "{:,.0f}".format(contract.contract_value|default(0)|float) }} đ</strong></dd>
+
+                    {% if contract.amount_in_words %}
+                    <dt class="col-sm-4">{{ t('Amount in Words:') }}</dt>
+                    <dd class="col-sm-8"><em>{{ contract.amount_in_words }}</em></dd>
+                    {% endif %}
+
+                    {% if contract.num_date_notice_cancel %}
+                    <dt class="col-sm-4">{{ t('Cancellation Notice:') }}</dt>
+                    <dd class="col-sm-8">{{ contract.num_date_notice_cancel }} {{ t('days') }}</dd>
+                    {% endif %}
+
+                    {% if company and company.bank_accounts %}
+                    {% set bank_idx = (contract.selected_bank_index or 0)|int %}
+                    {% if bank_idx < company.bank_accounts|length %}
+                    {% set bank = company.bank_accounts[bank_idx] %}
+                    <dt class="col-sm-4">{{ t('Payment Bank:') }}</dt>
+                    <dd class="col-sm-8">{{ bank.bank_name }} – {{ bank.account_number }} ({{ bank.account_holder }})</dd>
+                    {% endif %}
+                    {% endif %}
                     
                     <dt class="col-sm-4">{{ t('Status:') }}</dt>
                     <dd class="col-sm-8">
@@ -64,6 +93,12 @@
                 <h6 class="text-muted mb-2">{{ t('Terms & Conditions') }}</h6>
                 <div class="alert alert-light mb-0" style="white-space: pre-wrap;">{{ contract.terms_and_conditions }}</div>
                 {% endif %}
+
+                {% if order.description %}
+                <hr>
+                <h6 class="text-muted mb-2">{{ t('Contract Content') }}</h6>
+                <div class="alert alert-light mb-0" style="white-space: pre-wrap;">{{ order.description }}</div>
+                {% endif %}
             </div>
         </div>
 
@@ -73,31 +108,45 @@
             <div class="card-header">
                 <h5 class="mb-0"><i class="bi bi-list-ul"></i> {{ t('Contract Items') }}</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
                             <tr>
+                                <th class="text-center" style="width:5%">No.</th>
                                 <th>{{ t('Item Name') }}</th>
-                                <th class="text-end">{{ t('Quantity') }}</th>
-                                <th class="text-end">{{ t('Unit Price') }}</th>
-                                <th class="text-end">{{ t('Total') }}</th>
+                                <th style="width:8%">{{ t('Unit') }}</th>
+                                <th class="text-end" style="width:8%">{{ t('Qty') }}</th>
+                                <th class="text-end" style="width:17%">{{ t('Unit Price') }}</th>
+                                <th class="text-end" style="width:17%">{{ t('Amount') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in contract.items %}
                             <tr>
+                                <td class="text-center">{{ loop.index }}</td>
                                 <td>{{ item.name }}</td>
+                                <td>{{ item.get('unit','') }}</td>
                                 <td class="text-end">{{ item.quantity }}</td>
-                                <td class="text-end">${{ item.unit_price }}</td>
-                                <td class="text-end"><strong>${{ item.total }}</strong></td>
+                                <td class="text-end">{{ "{:,.0f}".format(item.unit_price|float) }} ₫</td>
+                                <td class="text-end">{{ "{:,.0f}".format(item.get('total',0)|float) }} ₫</td>
                             </tr>
                             {% endfor %}
-                            <tr>
-                                <td colspan="3" class="text-end"><strong>{{ t('TOTAL:') }}</strong></td>
-                                <td class="text-end"><strong>${{ contract.contract_value }}</strong></td>
-                            </tr>
                         </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="5" class="text-end">{{ t('Subtotal:') }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(contract.subtotal|float if contract.subtotal else 0) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-end">VAT ({{ contract.vat_rate or 0 }}%):</td>
+                                <td class="text-end">{{ "{:,.0f}".format(contract.vat_amount|float if contract.vat_amount else 0) }} ₫</td>
+                            </tr>
+                            <tr class="table-primary fw-bold">
+                                <td colspan="5" class="text-end">{{ t('Total Contract Value:') }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(contract.contract_value|float if contract.contract_value else 0) }} ₫</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

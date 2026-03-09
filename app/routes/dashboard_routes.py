@@ -1,7 +1,7 @@
 """
 Dashboard and main application routes
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, send_file, current_app, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, send_file, current_app, session, abort
 from app.utils.auth_utils import (
     login_required, company_admin_required, store_admin_required,
     ensure_tenant_access, ensure_store_access,
@@ -25,6 +25,25 @@ import uuid
 logger = logging.getLogger(__name__)
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/')
+
+
+def _save_item_image(file_storage, existing_path: str = None) -> str | None:
+    """
+    Save an uploaded item image to uploads/items/ and return its relative path.
+
+    - If ``file_storage`` has a filename, save it and return the new relative path.
+    - Otherwise return ``existing_path`` (preserves existing image on edit).
+    Returns ``None`` if neither is provided.
+    """
+    if file_storage and getattr(file_storage, 'filename', ''):
+        from werkzeug.utils import secure_filename
+        items_folder = current_app.config['ITEMS_FOLDER']
+        os.makedirs(items_folder, exist_ok=True)
+        ext = os.path.splitext(secure_filename(file_storage.filename))[1].lower()
+        filename = f"{uuid.uuid4()}{ext}"
+        file_storage.save(os.path.join(items_folder, filename))
+        return f"items/{filename}"
+    return existing_path or None
 
 
 # ===== LANGUAGE SWITCHER =====
@@ -578,6 +597,7 @@ def create_quotation(order_id):
             item_units = request.form.getlist('item_unit[]')
             item_quantities = request.form.getlist('item_quantity[]')
             item_prices = request.form.getlist('item_price[]')
+            item_images = request.files.getlist('item_image[]')
             
             subtotal = 0
             for i, name in enumerate(item_names):
@@ -586,12 +606,14 @@ def create_quotation(order_id):
                     price = float(item_prices[i] or 0)
                     unit = item_units[i].strip() if i < len(item_units) else ''
                     item_total = qty * price
+                    image_path = _save_item_image(item_images[i] if i < len(item_images) else None)
                     items.append({
                         'name': name,
                         'unit': unit,
                         'quantity': qty,
                         'unit_price': price,
-                        'total': item_total
+                        'total': item_total,
+                        'image_path': image_path
                     })
                     subtotal += item_total
             
@@ -672,6 +694,8 @@ def edit_quotation(quotation_id):
             item_units = request.form.getlist('item_unit[]')
             item_quantities = request.form.getlist('item_quantity[]')
             item_prices = request.form.getlist('item_price[]')
+            item_images = request.files.getlist('item_image[]')
+            item_existing_images = request.form.getlist('item_existing_image[]')
             
             subtotal = 0
             for i, name in enumerate(item_names):
@@ -680,12 +704,15 @@ def edit_quotation(quotation_id):
                     price = float(item_prices[i] or 0)
                     unit = item_units[i].strip() if i < len(item_units) else ''
                     item_total = qty * price
+                    existing = item_existing_images[i] if i < len(item_existing_images) else None
+                    image_path = _save_item_image(item_images[i] if i < len(item_images) else None, existing)
                     items.append({
                         'name': name,
                         'unit': unit,
                         'quantity': qty,
                         'unit_price': price,
-                        'total': item_total
+                        'total': item_total,
+                        'image_path': image_path
                     })
                     subtotal += item_total
             
@@ -734,14 +761,15 @@ def approve_quotation(quotation_id):
         
         quotation_service.approve_quotation(quotation_id, quotation.order_id)
         flash('Quotation approved successfully', 'success')
-        
+        return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
+
     except ValueError as e:
         flash(f'Error: {str(e)}', 'error')
     except Exception as e:
         logger.error(f"Error approving quotation: {str(e)}")
         flash('Error approving quotation', 'error')
-    
-    return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
+
+    return redirect(url_for('dashboard.list_orders'))
 
 
 @dashboard_bp.route('/quotations/<quotation_id>/cancel', methods=['POST'])
@@ -760,14 +788,15 @@ def cancel_quotation(quotation_id):
         reason = request.form.get('reason', '').strip() or 'No reason provided'
         quotation_service.cancel_quotation(quotation_id, reason)
         flash('Quotation canceled successfully', 'success')
-        
+        return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
+
     except ValueError as e:
         flash(f'Error: {str(e)}', 'error')
     except Exception as e:
         logger.error(f"Error canceling quotation: {str(e)}")
         flash('Error canceling quotation', 'error')
-    
-    return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
+
+    return redirect(url_for('dashboard.list_orders'))
 
 
 # ===== CONTRACTS =====
@@ -795,7 +824,9 @@ def create_contract(order_id):
             existing = db.session.query(Contract).filter_by(contract_number=contract_number).first()
             if existing:
                 flash(f'Contract number "{contract_number}" is already taken. Please use a different number.', 'error')
-                return render_template('contracts/create.html', order=order, quotations=quotations)
+                from app.models.models import Company as _CompanyC
+                _co = db.session.get(_CompanyC, order.company_id)
+                return render_template('contracts/create.html', order=order, quotations=quotations, company=_co)
             
             # Parse items from form
             items = []
@@ -827,7 +858,15 @@ def create_contract(order_id):
             advance_percentage = float(request.form.get('advance_percentage') or 30)
             advance_amount = round(contract_value * advance_percentage / 100, 2)
             city = request.form.get('city', '').strip() or None
-            
+
+            # New fields
+            amount_in_words = request.form.get('amount_in_words', '').strip() or None
+            contract_start_date_str = request.form.get('contract_start_date', '').strip()
+            contract_start_date = datetime.strptime(contract_start_date_str, '%Y-%m-%d').date() if contract_start_date_str else None
+            selected_bank_index = int(request.form.get('selected_bank_index') or 0)
+            num_date_notice_cancel = int(request.form.get('num_date_notice_cancel') or 7)
+            contract_days_complete = int(request.form.get('contract_days_complete') or 30)
+
             contract_service = ContractService()
             
             # Create contract with items
@@ -856,7 +895,12 @@ def create_contract(order_id):
                 contract_value=contract_value,
                 advance_percentage=advance_percentage,
                 advance_amount=advance_amount,
-                terms_and_conditions=request.form.get('terms_and_conditions', '').strip() or None
+                terms_and_conditions=request.form.get('terms_and_conditions', '').strip() or None,
+                amount_in_words=amount_in_words,
+                contract_start_date=contract_start_date,
+                selected_bank_index=selected_bank_index,
+                num_date_notice_cancel=num_date_notice_cancel,
+                contract_days_complete=contract_days_complete,
             )
             
             # Update lifecycle
@@ -882,8 +926,11 @@ def create_contract(order_id):
     elif quotations:
         selected_quotation = quotations[0]
 
+    from app.models.models import Company
+    company = db.session.get(Company, order.company_id)
+
     return render_template('contracts/create.html', order=order, quotations=quotations,
-                           selected_quotation=selected_quotation)
+                           selected_quotation=selected_quotation, company=company)
 
 
 @dashboard_bp.route('/contracts/<contract_id>/view', methods=['GET'])
@@ -899,8 +946,11 @@ def view_contract(contract_id):
     if not contract or str(contract.order.company_id) != str(company_id):
         flash('Contract not found or access denied', 'error')
         return redirect(url_for('dashboard.list_orders'))
-    
-    return render_template('contracts/view.html', contract=contract, order=contract.order)
+
+    from app.models.models import Company
+    company = db.session.get(Company, contract.order.company_id)
+
+    return render_template('contracts/view.html', contract=contract, order=contract.order, company=company)
 
 
 @dashboard_bp.route('/contracts/<contract_id>/edit', methods=['GET', 'POST'])
@@ -958,6 +1008,14 @@ def edit_contract(contract_id):
             advance_percentage = float(request.form.get('advance_percentage') or 30)
             advance_amount = round(contract_value * advance_percentage / 100, 2)
             
+            # New fields
+            amount_in_words = request.form.get('amount_in_words', '').strip() or None
+            contract_start_date_str = request.form.get('contract_start_date', '').strip()
+            contract_start_date = datetime.strptime(contract_start_date_str, '%Y-%m-%d').date() if contract_start_date_str else None
+            selected_bank_index = int(request.form.get('selected_bank_index') or 0)
+            num_date_notice_cancel = int(request.form.get('num_date_notice_cancel') or 7)
+            contract_days_complete = int(request.form.get('contract_days_complete') or 30)
+
             # Update contract
             contract.city = request.form.get('city', '').strip() or None
             contract.contract_value = contract_value
@@ -968,6 +1026,11 @@ def edit_contract(contract_id):
             contract.advance_amount = advance_amount
             contract.terms_and_conditions = terms_and_conditions
             contract.items = items
+            contract.amount_in_words = amount_in_words
+            contract.contract_start_date = contract_start_date
+            contract.selected_bank_index = selected_bank_index
+            contract.num_date_notice_cancel = num_date_notice_cancel
+            contract.contract_days_complete = contract_days_complete
             contract.updated_at = datetime.utcnow()
             db.session.commit()
             
@@ -978,7 +1041,10 @@ def edit_contract(contract_id):
             logger.error(f"Error updating contract: {str(e)}")
             flash('Error updating contract', 'error')
     
-    return render_template('contracts/edit.html', contract=contract, order=contract.order)
+    from app.models.models import Company
+    company = db.session.get(Company, contract.order.company_id)
+
+    return render_template('contracts/edit.html', contract=contract, order=contract.order, company=company)
 
 
 @dashboard_bp.route('/contracts/<contract_id>/sign', methods=['POST'])
@@ -1045,6 +1111,30 @@ def cancel_contract(contract_id):
         flash('Error canceling contract', 'error')
     
     return redirect(url_for('dashboard.view_order', order_id=contract.order_id))
+
+
+@dashboard_bp.route('/api/contracts/<contract_id>', methods=['GET'])
+@login_required
+def get_contract_api(contract_id):
+    """Return contract data as JSON (used by payment form to load items)"""
+    company_id = get_current_company_id()
+
+    from app.repositories.repository import ContractRepository
+    contract_repo = ContractRepository()
+    contract = contract_repo.get_by_id(contract_id)
+
+    if not contract or str(contract.order.company_id) != str(company_id):
+        return jsonify({'error': 'Contract not found or access denied'}), 404
+
+    items = contract.items or []
+    return jsonify({
+        'id': str(contract.id),
+        'contract_number': contract.contract_number,
+        'items': items,
+        'vat_rate': float(contract.vat_rate or 0),
+        'advance_percentage': float(contract.advance_percentage or 0),
+        'contract_value': float(contract.contract_value or 0),
+    })
 
 
 @dashboard_bp.route('/orders/<order_id>/cancel', methods=['POST'])
@@ -1131,6 +1221,7 @@ def create_handover(order_id):
             item_statuses = request.form.getlist('item_status[]')
             item_reasons = request.form.getlist('item_reason[]')
             item_prices = request.form.getlist('item_price[]')
+            item_images = request.files.getlist('item_image[]')
             
             subtotal = 0
             for i, name in enumerate(item_names):
@@ -1142,6 +1233,7 @@ def create_handover(order_id):
                     status = item_statuses[i] if i < len(item_statuses) else 'accepted'
                     reason = item_reasons[i].strip() if i < len(item_reasons) else ''
                     item_total = accepted_qty * unit_price
+                    image_path = _save_item_image(item_images[i] if i < len(item_images) else None)
                     items.append({
                         'name': name,
                         'unit': unit,
@@ -1151,7 +1243,8 @@ def create_handover(order_id):
                         'accepted_qty': accepted_qty,
                         'total': item_total,
                         'status': status,
-                        'rejection_reason': reason if status != 'accepted' else ''
+                        'rejection_reason': reason if status != 'accepted' else '',
+                        'image_path': image_path
                     })
                     subtotal += item_total
             
@@ -1292,6 +1385,8 @@ def edit_handover(handover_id):
                 item_accepted = request.form.getlist('item_accepted_qty[]')
                 item_statuses = request.form.getlist('item_status[]')
                 item_reasons = request.form.getlist('item_reason[]')
+                item_images = request.files.getlist('item_image[]')
+                item_existing_images = request.form.getlist('item_existing_image[]')
                 
                 items = []
                 subtotal = 0
@@ -1302,6 +1397,8 @@ def edit_handover(handover_id):
                         unit_price = float(item_prices[i]) if i < len(item_prices) and item_prices[i] else 0
                         unit = item_units[i].strip() if i < len(item_units) else ''
                         item_total = unit_price * accepted_qty
+                        existing = item_existing_images[i] if i < len(item_existing_images) else None
+                        image_path = _save_item_image(item_images[i] if i < len(item_images) else None, existing)
                         items.append({
                             'name': name.strip(),
                             'unit': unit,
@@ -1312,7 +1409,8 @@ def edit_handover(handover_id):
                             'accepted_qty': accepted_qty,
                             'accepted': item_statuses[i] == 'accepted' if i < len(item_statuses) else True,
                             'status': item_statuses[i] if i < len(item_statuses) else 'accepted',
-                            'rejection_reason': item_reasons[i].strip() if i < len(item_reasons) and item_reasons[i].strip() else None
+                            'rejection_reason': item_reasons[i].strip() if i < len(item_reasons) and item_reasons[i].strip() else None,
+                            'image_path': image_path
                         })
                         subtotal += item_total
                 handover.items = items
@@ -1394,8 +1492,13 @@ def create_payment(order_id):
             existing = db.session.query(PaymentReport).filter_by(report_number=report_number).first()
             if existing:
                 flash(f'Payment report number "{report_number}" is already taken. Please use a different number.', 'error')
+                from app.models.models import PaymentReport as _PR
+                _adv = db.session.query(_PR).filter(_PR.order_id==order_id, _PR.payment_type=='advance', _PR.is_confirmed==True, _PR.is_canceled==False).all()
                 return render_template('payment/create.html', order=order, default_type=default_type,
-                                       active_contract=active_contract, company=company)
+                                       active_contract=active_contract, company=company,
+                                       confirmed_advance_payments=_adv,
+                                       confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv)),
+                                       advance_skipped=bool(order.lifecycle and order.lifecycle.advance_skipped))
 
             payment_service = PaymentReportService()
             payment_type = request.form.get('payment_type')
@@ -1403,13 +1506,23 @@ def create_payment(order_id):
             # Validate payment sequencing
             if payment_type == 'advance' and not order.lifecycle.contract_signed:
                 flash('Advance payment can only be recorded after contract is signed', 'error')
+                from app.models.models import PaymentReport as _PR2
+                _adv2 = db.session.query(_PR2).filter(_PR2.order_id==order_id, _PR2.payment_type=='advance', _PR2.is_confirmed==True, _PR2.is_canceled==False).all()
                 return render_template('payment/create.html', order=order, default_type=default_type,
-                                       active_contract=active_contract, company=company)
+                                       active_contract=active_contract, company=company,
+                                       confirmed_advance_payments=_adv2,
+                                       confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv2)),
+                                       advance_skipped=bool(order.lifecycle and order.lifecycle.advance_skipped))
 
             if payment_type == 'final' and not order.lifecycle.handover_confirmed:
                 flash('Final payment can only be recorded after handover is confirmed', 'error')
+                from app.models.models import PaymentReport as _PR3
+                _adv3 = db.session.query(_PR3).filter(_PR3.order_id==order_id, _PR3.payment_type=='advance', _PR3.is_confirmed==True, _PR3.is_canceled==False).all()
                 return render_template('payment/create.html', order=order, default_type=default_type,
-                                       active_contract=active_contract, company=company)
+                                       active_contract=active_contract, company=company,
+                                       confirmed_advance_payments=_adv3,
+                                       confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv3)),
+                                       advance_skipped=bool(order.lifecycle and order.lifecycle.advance_skipped))
             
             # Parse work items
             items = []
@@ -1480,8 +1593,61 @@ def create_payment(order_id):
             logger.error(f"Error creating payment report: {str(e)}")
             flash('Error creating payment report', 'error')
     
+    # Compute confirmed advance payments for final payment advance display
+    from app.models.models import PaymentReport as _PaymentReport
+    confirmed_advance_payments = db.session.query(_PaymentReport).filter(
+        _PaymentReport.order_id == order_id,
+        _PaymentReport.payment_type == 'advance',
+        _PaymentReport.is_confirmed == True,
+        _PaymentReport.is_canceled == False
+    ).all()
+    confirmed_advance_total = float(sum(p.advance_amount or 0 for p in confirmed_advance_payments))
+    advance_skipped = bool(order.lifecycle and order.lifecycle.advance_skipped)
+
     return render_template('payment/create.html', order=order, default_type=default_type,
-                             active_contract=active_contract, company=company)
+                           active_contract=active_contract, company=company,
+                           confirmed_advance_payments=confirmed_advance_payments,
+                           confirmed_advance_total=confirmed_advance_total,
+                           advance_skipped=advance_skipped)
+
+
+@dashboard_bp.route('/order/<order_id>/skip-advance', methods=['POST'])
+@login_required
+def skip_advance_payment(order_id):
+    """Skip advance payment step and go directly to handover"""
+    company_id = get_current_company_id()
+    order_service = OrderService()
+
+    order = order_service.get_order(order_id, company_id)
+    if not order:
+        flash('Order not found or access denied', 'error')
+        return redirect(url_for('dashboard.list_orders'))
+
+    if not order.lifecycle or not order.lifecycle.contract_signed:
+        flash('Contract must be signed before skipping advance payment', 'error')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
+
+    if order.lifecycle.advance_paid:
+        flash('Advance payment step already completed', 'warning')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
+
+    try:
+        from app.repositories.repository import LifecycleStatusRepository
+        lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
+        lifecycle.advance_skipped = True
+        lifecycle.advance_skipped_at = datetime.utcnow()
+        # Set advance_paid = True so the rest of the workflow (handover, final payment) unlocks
+        lifecycle.advance_paid = True
+        lifecycle.advance_paid_at = datetime.utcnow()
+        db.session.add(lifecycle)
+        db.session.commit()
+        flash('Đã bỏ qua bước tạm ứng. Bạn có thể tạo chứng từ bàn giao ngay bây giờ.', 'success')
+    except Exception as e:
+        logger.error(f'Error skipping advance payment: {e}')
+        db.session.rollback()
+        flash('Lỗi khi bỏ qua tạm ứng', 'error')
+
+    return redirect(url_for('dashboard.view_order', order_id=order_id))
 
 
 @dashboard_bp.route('/payment/<payment_id>/confirm', methods=['POST'])
@@ -1583,7 +1749,9 @@ def edit_payment(payment_id):
             logger.error(f"Error updating payment report: {str(e)}")
             flash('Error updating payment report', 'error')
     
-    return render_template('payments/edit.html', payment=payment)
+    from app.models.models import Company
+    company = db.session.get(Company, payment.order.company_id)
+    return render_template('payments/edit.html', payment=payment, company=company)
 
 
 @dashboard_bp.route('/payment/<payment_id>/cancel', methods=['POST'])
@@ -1703,6 +1871,20 @@ def download_document(document_id):
         return redirect(request.referrer)
 
 
+@dashboard_bp.route('/uploads/items/<path:filename>')
+@login_required
+def serve_item_image(filename):
+    """Serve uploaded item images."""
+    items_folder = current_app.config['ITEMS_FOLDER']
+    # Prevent path traversal: ensure the resolved path stays within items_folder
+    safe_path = os.path.realpath(os.path.join(items_folder, filename))
+    if not safe_path.startswith(os.path.realpath(items_folder) + os.sep):
+        abort(403)
+    if not os.path.exists(safe_path):
+        abort(404)
+    return send_file(safe_path)
+
+
 @dashboard_bp.route('/documents/<order_id>')
 @login_required
 def list_documents(order_id):
@@ -1721,7 +1903,34 @@ def list_documents(order_id):
     return render_template('documents/list.html', order=order, documents=documents)
 
 
-@dashboard_bp.route('/api/contracts/<contract_id>')
+@dashboard_bp.route('/documents/delete/<document_id>', methods=['POST'])
+@login_required
+def delete_document(document_id):
+    """Delete a generated document record and its file."""
+    company_id = get_current_company_id()
+
+    from app.repositories.repository import DocumentRepository as _DocRepo
+    doc_repo = _DocRepo()
+    document = doc_repo.get_by_id(document_id)
+
+    if not document or str(document.company_id) != str(company_id):
+        flash('Document not found or access denied', 'error')
+        return redirect(request.referrer or url_for('dashboard.list_orders'))
+
+    order_id = document.order_id
+    try:
+        # Remove file from disk if it still exists
+        if document.file_path and os.path.exists(document.file_path):
+            os.remove(document.file_path)
+        db.session.delete(document)
+        db.session.commit()
+        flash('Document deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting document {document_id}: {str(e)}")
+        flash('Error deleting document', 'error')
+
+    return redirect(url_for('dashboard.list_documents', order_id=order_id))
 @login_required
 def get_contract_detail(contract_id):
     """Get contract details as JSON - for AJAX calls"""

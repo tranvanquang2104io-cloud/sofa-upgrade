@@ -25,7 +25,7 @@
                 <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-secondary">{{ t('Back') }}</a>
                 {% else %}
 
-                <form method="POST" action="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}">
+                <form method="POST" action="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" enctype="multipart/form-data">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -111,13 +111,14 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:5%">No.</th>
-                                        <th style="width:28%">{{ t('Item Name') }}</th>
-                                        <th style="width:8%">{{ t('Unit') }}</th>
-                                        <th style="width:8%">{{ t('Delivered') }}</th>
-                                        <th style="width:8%">{{ t('Accepted') }}</th>
-                                        <th style="width:12%">{{ t('Unit Price') }}</th>
-                                        <th style="width:12%">{{ t('Amount') }}</th>
-                                        <th style="width:11%">{{ t('Condition') }}</th>
+                                        <th style="width:22%">{{ t('Item Name') }}</th>
+                                        <th style="width:7%">{{ t('Unit') }}</th>
+                                        <th style="width:7%">{{ t('Delivered') }}</th>
+                                        <th style="width:7%">{{ t('Accepted') }}</th>
+                                        <th style="width:10%">{{ t('Unit Price') }}</th>
+                                        <th style="width:10%">{{ t('Amount') }}</th>
+                                        <th style="width:9%">{{ t('Condition') }}</th>
+                                        <th style="width:15%">{{ t('Image') }}</th>
                                         <th style="width:8%"></th>
                                     </tr>
                                 </thead>
@@ -142,6 +143,13 @@
                                                 <option value="rejected" {% if item.status|default('') == 'rejected' %}selected{% endif %}>Fail</option>
                                             </select>
                                         </td>
+                                        <td>
+                                            {% if item.get('image_path') %}
+                                            <img src="{{ url_for('dashboard.serve_item_image', filename=item.image_path[6:]) }}" class="img-thumbnail mb-1" style="max-height:50px;" alt="">
+                                            {% endif %}
+                                            <input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*">
+                                            <input type="hidden" name="item_existing_image[]" value="{{ item.get('image_path', '') }}">
+                                        </td>
                                         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
                                     </tr>
                                     {% endfor %}
@@ -164,7 +172,7 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        {{ t('VAT Tax') }} (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:55px" value="{{ handover.vat_rate or 8 }}" min="0" max="100" step="0.1">%):
+                                        {{ t('VAT Tax') }} (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" or 8 }}" min="0" max="100" step="0.1">%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ handover.vat_amount|int if handover.vat_amount else '' }}"></td>
                                 </tr>
@@ -233,6 +241,7 @@ function addItemRow() {
         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" step="1" placeholder="0"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
         <td><select class="form-select form-select-sm" name="item_status[]"><option value="accepted">Pass</option><option value="partial">Partial</option><option value="rejected">Fail</option></select></td>
+        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"><input type="hidden" name="item_existing_image[]" value=""></td>
         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
     `;
     tbody.appendChild(row);
