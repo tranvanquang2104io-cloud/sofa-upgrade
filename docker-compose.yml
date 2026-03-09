@@ -47,8 +47,8 @@ services:
       - uploads_dev:/app/app/uploads
     ports:
       - "5000:5000"
-    # Ghi đè CMD của Dockerfile: dùng Flask dev server thay Gunicorn
-    command: python wsgi.py
+    # Khởi tạo master admin rồi mới chạy Flask dev server
+    command: sh -c "PYTHONPATH=/app python /app/scripts/create_master_admin.py && python wsgi.py"
 
   # Adminer: web UI để xem/query DB ngay trên browser
   # Truy cập: http://localhost:8080

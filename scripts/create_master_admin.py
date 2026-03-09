@@ -21,7 +21,9 @@ def main():
     parser.add_argument('--email',    default='admin@sofaflow.local')
     args = parser.parse_args()
 
-    app = create_app('development')
+    import os
+    env = os.environ.get('FLASK_ENV', 'development')
+    app = create_app(env)
     with app.app_context():
         # Create table if not exists
         db.create_all()
