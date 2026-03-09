@@ -5,7 +5,7 @@ from app.config.database import db
 from app.models import (
     Company, Store, User, Customer, Order, Quotation, Contract,
     HandoverRecord, PaymentReport, Document, DocumentTemplate, LifecycleStatus,
-    MaterialUnit, MaterialCategory, Material, MaterialStock,
+    MaterialUnit, MaterialCategory, Supplier, Material, MaterialStock,
 )
 from sqlalchemy import and_, desc
 from datetime import datetime
@@ -487,10 +487,10 @@ class MaterialRepository(BaseRepository):
             q = q.filter_by(category_id=category_id)
         if search:
             pattern = f'%{search}%'
-            q = q.filter(
+            q = q.outerjoin(Supplier, self.model.supplier_id == Supplier.id).filter(
                 (self.model.name.ilike(pattern)) |
                 (self.model.material_code.ilike(pattern)) |
-                (self.model.supplier_name.ilike(pattern))
+                (Supplier.name.ilike(pattern))
             )
         return q.order_by(self.model.material_code).all()
 
@@ -550,3 +550,28 @@ class MaterialStockRepository(BaseRepository):
         entry.last_updated = datetime.utcnow()
         _db.session.commit()
         return entry
+
+
+class SupplierRepository(BaseRepository):
+    """Repository for Supplier model"""
+
+    def __init__(self):
+        super().__init__(Supplier)
+
+    def get_for_company(self, company_id, active_only=True):
+        """All suppliers for a company ordered by name."""
+        q = self.model.query.filter_by(company_id=company_id)
+        if active_only:
+            q = q.filter_by(is_active=True)
+        return q.order_by(self.model.name).all()
+
+    def get_by_code(self, company_id, supplier_code):
+        """Get supplier by code within company."""
+        return self.model.query.filter_by(
+            company_id=company_id, supplier_code=supplier_code
+        ).first()
+
+    def get_next_code(self, company_id):
+        """Auto-generate next supplier code: NCC-001, NCC-002 ..."""
+        count = self.model.query.filter_by(company_id=company_id).count()
+        return f'NCC-{count + 1:03d}'

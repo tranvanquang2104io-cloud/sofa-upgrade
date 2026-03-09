@@ -65,26 +65,82 @@
         </div>
 
         <div class="card mb-3">
-            <div class="card-header fw-semibold"><i class="bi bi-truck"></i> {{ t('Supplier Information') }}</div>
+            <div class="card-header fw-semibold"><i class="bi bi-truck"></i> {{ t('Supplier') }}</div>
             <div class="card-body">
+                {% if material.supplier %}
                 <dl class="row mb-0">
-                    <dt class="col-sm-4">{{ t('Supplier Name') }}</dt>
-                    <dd class="col-sm-8">{{ material.supplier_name or '-' }}</dd>
-                    <dt class="col-sm-4">{{ t('Supplier Contact') }}</dt>
-                    <dd class="col-sm-8">{{ material.supplier_contact or '-' }}</dd>
+                    <dt class="col-sm-4">{{ t('Name') }}</dt>
+                    <dd class="col-sm-8"><strong>{{ material.supplier.name }}</strong> <span class="text-muted">({{ material.supplier.supplier_code }})</span></dd>
+                    {% if material.supplier.contact_person %}
+                    <dt class="col-sm-4">{{ t('Contact') }}</dt>
+                    <dd class="col-sm-8">{{ material.supplier.contact_person }}</dd>
+                    {% endif %}
+                    {% if material.supplier.phone %}
+                    <dt class="col-sm-4">{{ t('Phone') }}</dt>
+                    <dd class="col-sm-8">{{ material.supplier.phone }}</dd>
+                    {% endif %}
+                    {% if material.supplier.email %}
+                    <dt class="col-sm-4">{{ t('Email') }}</dt>
+                    <dd class="col-sm-8">{{ material.supplier.email }}</dd>
+                    {% endif %}
+                    <dt class="col-sm-4">{{ t('Payment Terms') }}</dt>
+                    <dd class="col-sm-8">{{ material.supplier.payment_terms }}</dd>
+                    {% if material.supplier_sku %}
+                    <dt class="col-sm-4">{{ t("Supplier's SKU") }}</dt>
+                    <dd class="col-sm-8"><code>{{ material.supplier_sku }}</code></dd>
+                    {% endif %}
                 </dl>
+                {% else %}
+                <p class="text-muted mb-0">{{ t('No supplier assigned.') }} <a href="{{ url_for('dashboard.edit_material', material_id=material.id) }}">{{ t('Edit') }}</a></p>
+                {% endif %}
             </div>
         </div>
 
-        {% if material.specifications %}
+        {% set has_specs = material.spec_width_cm or material.spec_thickness_mm or material.spec_roll_length_m
+                        or material.spec_weight_per_unit or material.spec_composition or material.spec_pattern
+                        or material.spec_finish or material.spec_durability_cycles or material.spec_density_kg_m3
+                        or material.spec_hardness or material.spec_fire_resistance or material.spec_water_resistance
+                        or material.spec_uv_resistance or material.spec_country_of_origin or material.spec_certifications %}
+        {% if has_specs %}
         <div class="card mb-3">
             <div class="card-header fw-semibold"><i class="bi bi-list-ul"></i> {{ t('Technical Specifications') }}</div>
             <div class="card-body">
-                <table class="table table-sm mb-0">
-                    {% for key, val in material.specifications.items() %}
-                    <tr><th class="ps-0 border-0" style="width:40%">{{ key }}</th><td class="border-0">{{ val }}</td></tr>
-                    {% endfor %}
-                </table>
+                {% if material.spec_width_cm or material.spec_thickness_mm or material.spec_roll_length_m or material.spec_weight_per_unit %}
+                <h6 class="text-muted small">{{ t('Dimensions & Weight') }}</h6>
+                <dl class="row mb-2">
+                    {% if material.spec_width_cm %}<dt class="col-sm-5">{{ t('Width') }}</dt><dd class="col-sm-7">{{ material.spec_width_cm }} cm</dd>{% endif %}
+                    {% if material.spec_thickness_mm %}<dt class="col-sm-5">{{ t('Thickness') }}</dt><dd class="col-sm-7">{{ material.spec_thickness_mm }} mm</dd>{% endif %}
+                    {% if material.spec_roll_length_m %}<dt class="col-sm-5">{{ t('Roll Length') }}</dt><dd class="col-sm-7">{{ material.spec_roll_length_m }} m</dd>{% endif %}
+                    {% if material.spec_weight_per_unit %}<dt class="col-sm-5">{{ t('Weight/Unit') }}</dt><dd class="col-sm-7">{{ material.spec_weight_per_unit }} {{ material.spec_weight_unit or '' }}</dd>{% endif %}
+                </dl>
+                {% endif %}
+                {% if material.spec_composition or material.spec_pattern or material.spec_finish %}
+                <h6 class="text-muted small">{{ t('Composition & Appearance') }}</h6>
+                <dl class="row mb-2">
+                    {% if material.spec_composition %}<dt class="col-sm-5">{{ t('Composition') }}</dt><dd class="col-sm-7">{{ material.spec_composition }}</dd>{% endif %}
+                    {% if material.spec_pattern %}<dt class="col-sm-5">{{ t('Pattern') }}</dt><dd class="col-sm-7">{{ material.spec_pattern }}</dd>{% endif %}
+                    {% if material.spec_finish %}<dt class="col-sm-5">{{ t('Finish') }}</dt><dd class="col-sm-7">{{ material.spec_finish }}</dd>{% endif %}
+                </dl>
+                {% endif %}
+                {% if material.spec_durability_cycles or material.spec_density_kg_m3 or material.spec_hardness
+                      or material.spec_fire_resistance or material.spec_water_resistance or material.spec_uv_resistance %}
+                <h6 class="text-muted small">{{ t('Quality & Performance') }}</h6>
+                <dl class="row mb-2">
+                    {% if material.spec_durability_cycles %}<dt class="col-sm-5">{{ t('Durability') }}</dt><dd class="col-sm-7">{{ '{:,}'.format(material.spec_durability_cycles) }} cycles (Martindale)</dd>{% endif %}
+                    {% if material.spec_density_kg_m3 %}<dt class="col-sm-5">{{ t('Foam Density') }}</dt><dd class="col-sm-7">{{ material.spec_density_kg_m3 }} kg/m³</dd>{% endif %}
+                    {% if material.spec_hardness %}<dt class="col-sm-5">{{ t('Hardness') }}</dt><dd class="col-sm-7">{{ material.spec_hardness }}</dd>{% endif %}
+                    {% if material.spec_fire_resistance %}<dt class="col-sm-5">{{ t('Fire Resistance') }}</dt><dd class="col-sm-7">{{ material.spec_fire_resistance }}</dd>{% endif %}
+                    {% if material.spec_water_resistance %}<dt class="col-sm-5">{{ t('Water Resistance') }}</dt><dd class="col-sm-7">{{ material.spec_water_resistance }}</dd>{% endif %}
+                    {% if material.spec_uv_resistance %}<dt class="col-sm-5">{{ t('UV Resistance') }}</dt><dd class="col-sm-7">{{ material.spec_uv_resistance }}</dd>{% endif %}
+                </dl>
+                {% endif %}
+                {% if material.spec_country_of_origin or material.spec_certifications %}
+                <h6 class="text-muted small">{{ t('Origin & Compliance') }}</h6>
+                <dl class="row mb-0">
+                    {% if material.spec_country_of_origin %}<dt class="col-sm-5">{{ t('Country of Origin') }}</dt><dd class="col-sm-7">{{ material.spec_country_of_origin }}</dd>{% endif %}
+                    {% if material.spec_certifications %}<dt class="col-sm-5">{{ t('Certifications') }}</dt><dd class="col-sm-7">{{ material.spec_certifications }}</dd>{% endif %}
+                </dl>
+                {% endif %}
             </div>
         </div>
         {% endif %}

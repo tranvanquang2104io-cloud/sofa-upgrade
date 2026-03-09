@@ -11,7 +11,7 @@ from app.utils.auth_utils import (
 from app.services.services import (
     StoreService, UserService, CustomerService, OrderService, QuotationService,
     ContractService, HandoverRecordService, PaymentReportService, DocumentService,
-    MaterialService,
+    MaterialService, SupplierService,
 )
 from app.repositories.repository import (
     StoreRepository, CustomerRepository, OrderRepository, DocumentRepository
@@ -2416,6 +2416,66 @@ def _get_material_svc():
     return MaterialService()
 
 
+def _get_supplier_svc():
+    return SupplierService()
+
+
+# ── Suppliers ───────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/suppliers', methods=['GET', 'POST'])
+@store_admin_required
+def material_suppliers():
+    """Manage suppliers (store_admin+)."""
+    company_id = get_current_company_id()
+    svc = _get_supplier_svc()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        try:
+            if action == 'create':
+                svc.create_supplier(
+                    company_id,
+                    name=request.form.get('name', '').strip(),
+                    contact_person=request.form.get('contact_person', '').strip() or None,
+                    phone=request.form.get('phone', '').strip() or None,
+                    email=request.form.get('email', '').strip() or None,
+                    address=request.form.get('address', '').strip() or None,
+                    tax_code=request.form.get('tax_code', '').strip() or None,
+                    payment_terms=request.form.get('payment_terms', 'COD'),
+                    lead_time_days=request.form.get('lead_time_days', 0) or 0,
+                    rating=request.form.get('rating', 0) or 0,
+                    notes=request.form.get('notes', '').strip() or None,
+                )
+                flash('Nhà cung cấp đã được tạo', 'success')
+            elif action == 'edit':
+                svc.update_supplier(
+                    request.form.get('supplier_id'), company_id,
+                    name=request.form.get('name', '').strip(),
+                    contact_person=request.form.get('contact_person', '').strip() or None,
+                    phone=request.form.get('phone', '').strip() or None,
+                    email=request.form.get('email', '').strip() or None,
+                    address=request.form.get('address', '').strip() or None,
+                    tax_code=request.form.get('tax_code', '').strip() or None,
+                    payment_terms=request.form.get('payment_terms', 'COD'),
+                    lead_time_days=int(request.form.get('lead_time_days', 0) or 0),
+                    rating=int(request.form.get('rating', 0) or 0),
+                    notes=request.form.get('notes', '').strip() or None,
+                )
+                flash('Nhà cung cấp đã được cập nhật', 'success')
+            elif action == 'delete':
+                svc.delete_supplier(request.form.get('supplier_id'), company_id)
+                flash('Nhà cung cấp đã bị vô hiệu hóa', 'warning')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error(f'material_suppliers error: {e}', exc_info=True)
+            db.session.rollback()
+            flash('Lỗi hệ thống', 'error')
+        return redirect(url_for('dashboard.material_suppliers'))
+
+    suppliers = svc.list_suppliers(company_id, active_only=False)
+    return render_template('materials/suppliers.html', suppliers=suppliers)
+
+
 # ── Units ────────────────────────────────────────────────────────────
 
 @dashboard_bp.route('/materials/units', methods=['GET', 'POST'])
@@ -2529,19 +2589,23 @@ def create_material():
     svc = _get_material_svc()
     if request.method == 'POST':
         try:
-            specs_raw = request.form.get('specifications', '').strip()
-            import json as _json
-            specs = {}
-            if specs_raw:
-                try:
-                    specs = _json.loads(specs_raw)
-                except Exception:
-                    pass
             image_file = request.files.get('image')
             image_path = _save_item_image(image_file) if image_file else None
 
             unit_price_raw = request.form.get('unit_price', '').strip()
             min_stock_raw  = request.form.get('min_stock_level', '').strip()
+
+            def _f(key):  # float or None
+                v = request.form.get(key, '').strip()
+                return float(v) if v else None
+
+            def _i(key):  # int or None
+                v = request.form.get(key, '').strip()
+                return int(v) if v else None
+
+            def _s(key):  # stripped string or None
+                v = request.form.get(key, '').strip()
+                return v or None
 
             mat = svc.create_material(
                 company_id=company_id,
@@ -2549,15 +2613,30 @@ def create_material():
                 name=request.form.get('name', '').strip(),
                 category_id=request.form.get('category_id') or None,
                 unit_id=request.form.get('unit_id') or None,
-                description=request.form.get('description', '').strip() or None,
-                color=request.form.get('color', '').strip() or None,
-                specifications=specs,
+                supplier_id=request.form.get('supplier_id') or None,
+                description=_s('description'),
+                color=_s('color'),
                 unit_price=float(unit_price_raw) if unit_price_raw else 0,
-                supplier_name=request.form.get('supplier_name', '').strip() or None,
-                supplier_contact=request.form.get('supplier_contact', '').strip() or None,
+                supplier_sku=_s('supplier_sku'),
                 min_stock_level=float(min_stock_raw) if min_stock_raw else 0,
                 image_path=image_path,
-                notes=request.form.get('notes', '').strip() or None,
+                notes=_s('notes'),
+                spec_width_cm=_f('spec_width_cm'),
+                spec_thickness_mm=_f('spec_thickness_mm'),
+                spec_roll_length_m=_f('spec_roll_length_m'),
+                spec_weight_per_unit=_f('spec_weight_per_unit'),
+                spec_weight_unit=_s('spec_weight_unit'),
+                spec_composition=_s('spec_composition'),
+                spec_pattern=_s('spec_pattern'),
+                spec_finish=_s('spec_finish'),
+                spec_durability_cycles=_i('spec_durability_cycles'),
+                spec_density_kg_m3=_f('spec_density_kg_m3'),
+                spec_hardness=_s('spec_hardness'),
+                spec_fire_resistance=_s('spec_fire_resistance'),
+                spec_water_resistance=_s('spec_water_resistance'),
+                spec_uv_resistance=_s('spec_uv_resistance'),
+                spec_country_of_origin=_s('spec_country_of_origin'),
+                spec_certifications=_s('spec_certifications'),
             )
             # Ensure stock rows exist for all stores
             svc.ensure_stock_entries_for_stores(mat.id, company_id)
@@ -2572,7 +2651,8 @@ def create_material():
 
     categories = svc.list_categories(company_id)
     units = svc.list_units(company_id)
-    return render_template('materials/create.html', categories=categories, units=units)
+    suppliers = _get_supplier_svc().list_suppliers(company_id)
+    return render_template('materials/create.html', categories=categories, units=units, suppliers=suppliers)
 
 
 # ── View Material ───────────────────────────────────────────────────
@@ -2605,19 +2685,23 @@ def edit_material(material_id):
         abort(404)
     if request.method == 'POST':
         try:
-            specs_raw = request.form.get('specifications', '').strip()
-            import json as _json
-            specs = mat.specifications or {}
-            if specs_raw:
-                try:
-                    specs = _json.loads(specs_raw)
-                except Exception:
-                    pass
             image_file = request.files.get('image')
             image_path = _save_item_image(image_file, mat.image_path)
 
             unit_price_raw = request.form.get('unit_price', '').strip()
             min_stock_raw  = request.form.get('min_stock_level', '').strip()
+
+            def _f(key):
+                v = request.form.get(key, '').strip()
+                return float(v) if v else None
+
+            def _i(key):
+                v = request.form.get(key, '').strip()
+                return int(v) if v else None
+
+            def _s(key):
+                v = request.form.get(key, '').strip()
+                return v or None
 
             svc.update_material(
                 material_id, company_id,
@@ -2625,15 +2709,30 @@ def edit_material(material_id):
                 name=request.form.get('name', '').strip(),
                 category_id=request.form.get('category_id') or None,
                 unit_id=request.form.get('unit_id') or None,
-                description=request.form.get('description', '').strip() or None,
-                color=request.form.get('color', '').strip() or None,
-                specifications=specs,
+                supplier_id=request.form.get('supplier_id') or None,
+                description=_s('description'),
+                color=_s('color'),
                 unit_price=float(unit_price_raw) if unit_price_raw else 0,
-                supplier_name=request.form.get('supplier_name', '').strip() or None,
-                supplier_contact=request.form.get('supplier_contact', '').strip() or None,
+                supplier_sku=_s('supplier_sku'),
                 min_stock_level=float(min_stock_raw) if min_stock_raw else 0,
                 image_path=image_path,
-                notes=request.form.get('notes', '').strip() or None,
+                notes=_s('notes'),
+                spec_width_cm=_f('spec_width_cm'),
+                spec_thickness_mm=_f('spec_thickness_mm'),
+                spec_roll_length_m=_f('spec_roll_length_m'),
+                spec_weight_per_unit=_f('spec_weight_per_unit'),
+                spec_weight_unit=_s('spec_weight_unit'),
+                spec_composition=_s('spec_composition'),
+                spec_pattern=_s('spec_pattern'),
+                spec_finish=_s('spec_finish'),
+                spec_durability_cycles=_i('spec_durability_cycles'),
+                spec_density_kg_m3=_f('spec_density_kg_m3'),
+                spec_hardness=_s('spec_hardness'),
+                spec_fire_resistance=_s('spec_fire_resistance'),
+                spec_water_resistance=_s('spec_water_resistance'),
+                spec_uv_resistance=_s('spec_uv_resistance'),
+                spec_country_of_origin=_s('spec_country_of_origin'),
+                spec_certifications=_s('spec_certifications'),
             )
             flash('Đã cập nhật nguyên vật liệu', 'success')
             return redirect(url_for('dashboard.view_material', material_id=material_id))
@@ -2646,7 +2745,8 @@ def edit_material(material_id):
 
     categories = svc.list_categories(company_id)
     units = svc.list_units(company_id)
-    return render_template('materials/edit.html', material=mat, categories=categories, units=units)
+    suppliers = _get_supplier_svc().list_suppliers(company_id)
+    return render_template('materials/edit.html', material=mat, categories=categories, units=units, suppliers=suppliers)
 
 
 # ── Deactivate Material ─────────────────────────────────────────────

@@ -12,6 +12,9 @@
         <a href="{{ url_for('dashboard.material_categories') }}" class="btn btn-outline-secondary">
             <i class="bi bi-tags"></i> {{ t('Categories') }}
         </a>
+        <a href="{{ url_for('dashboard.material_suppliers') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-building"></i> {{ t('Suppliers') }}
+        </a>
         {% if session.role == 'company_admin' %}
         <a href="{{ url_for('dashboard.material_units') }}" class="btn btn-outline-secondary">
             <i class="bi bi-rulers"></i> {{ t('Units') }}

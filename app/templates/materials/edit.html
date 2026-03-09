@@ -84,16 +84,22 @@
             </div>
 
             <div class="card mb-3">
-                <div class="card-header fw-semibold"><i class="bi bi-truck"></i> {{ t('Supplier Information') }}</div>
+                <div class="card-header fw-semibold"><i class="bi bi-truck"></i> {{ t('Supplier') }}</div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">{{ t('Supplier Name') }}</label>
-                            <input type="text" class="form-control" name="supplier_name" value="{{ material.supplier_name or '' }}">
+                        <div class="col-md-8">
+                            <label class="form-label">{{ t('Supplier') }}</label>
+                            <select class="form-select" name="supplier_id">
+                                <option value="">-- {{ t('No supplier') }} --</option>
+                                {% for sup in suppliers %}
+                                <option value="{{ sup.id }}" {% if material.supplier_id == sup.id %}selected{% endif %}>{{ sup.name }} ({{ sup.supplier_code }})</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text"><a href="{{ url_for('dashboard.material_suppliers') }}" target="_blank">{{ t('Manage suppliers') }} <i class="bi bi-box-arrow-up-right"></i></a></div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">{{ t('Supplier Contact') }}</label>
-                            <input type="text" class="form-control" name="supplier_contact" value="{{ material.supplier_contact or '' }}">
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t("Supplier's SKU") }}</label>
+                            <input type="text" class="form-control" name="supplier_sku" value="{{ material.supplier_sku or '' }}">
                         </div>
                     </div>
                 </div>
@@ -102,8 +108,112 @@
             <div class="card mb-3">
                 <div class="card-header fw-semibold"><i class="bi bi-list-ul"></i> {{ t('Technical Specifications') }}</div>
                 <div class="card-body">
-                    <label class="form-label small text-muted">{{ t('Enter as JSON: {"thickness":"5mm","width":"1.4m"}') }}</label>
-                    <textarea class="form-control font-monospace" name="specifications" rows="3">{{ material.specifications | tojson(indent=2) if material.specifications else '' }}</textarea>
+                    <h6 class="text-muted small mb-3">{{ t('Dimensions & Weight') }}</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Width (cm)') }}</label>
+                            <input type="number" class="form-control" name="spec_width_cm" step="0.01" min="0" value="{{ material.spec_width_cm or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Thickness (mm)') }}</label>
+                            <input type="number" class="form-control" name="spec_thickness_mm" step="0.01" min="0" value="{{ material.spec_thickness_mm or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Roll Length (m)') }}</label>
+                            <input type="number" class="form-control" name="spec_roll_length_m" step="0.01" min="0" value="{{ material.spec_roll_length_m or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ t('Weight / Unit') }}</label>
+                            <input type="number" class="form-control" name="spec_weight_per_unit" step="0.001" min="0" value="{{ material.spec_weight_per_unit or '' }}">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">{{ t('Unit') }}</label>
+                            <select class="form-select" name="spec_weight_unit">
+                                <option value="">-</option>
+                                {% for wu in ['g/m²','g/m','kg/m³','kg/cái'] %}
+                                <option {% if material.spec_weight_unit == wu %}selected{% endif %}>{{ wu }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <h6 class="text-muted small mb-3">{{ t('Composition & Appearance') }}</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Composition') }}</label>
+                            <input type="text" class="form-control" name="spec_composition" value="{{ material.spec_composition or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Pattern') }}</label>
+                            <select class="form-select" name="spec_pattern">
+                                <option value="">--</option>
+                                {% for p in ['Trơn','Kẻ sọc','Hoa văn','Vân gỗ','Khác'] %}
+                                <option {% if material.spec_pattern == p %}selected{% endif %}>{{ p }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Finish') }}</label>
+                            <select class="form-select" name="spec_finish">
+                                <option value="">--</option>
+                                {% for f in ['Matt','Bóng','Nhám','Nhung','Wax'] %}
+                                <option {% if material.spec_finish == f %}selected{% endif %}>{{ f }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <h6 class="text-muted small mb-3">{{ t('Quality & Performance') }}</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Durability (Martindale)') }}</label>
+                            <input type="number" class="form-control" name="spec_durability_cycles" min="0" value="{{ material.spec_durability_cycles or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Foam Density (kg/m³)') }}</label>
+                            <input type="number" class="form-control" name="spec_density_kg_m3" step="0.01" min="0" value="{{ material.spec_density_kg_m3 or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Hardness / Grade') }}</label>
+                            <input type="text" class="form-control" name="spec_hardness" value="{{ material.spec_hardness or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Fire Resistance') }}</label>
+                            <select class="form-select" name="spec_fire_resistance">
+                                <option value="">{{ t('None') }}</option>
+                                {% for fr in ['BS5852','California TB117','EN-1021'] %}
+                                <option {% if material.spec_fire_resistance == fr %}selected{% endif %}>{{ fr }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Water Resistance') }}</label>
+                            <select class="form-select" name="spec_water_resistance">
+                                <option value="">{{ t('None') }}</option>
+                                {% for wr in ['Kháng nước','Chống thấm'] %}
+                                <option {% if material.spec_water_resistance == wr %}selected{% endif %}>{{ wr }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('UV Resistance') }}</label>
+                            <select class="form-select" name="spec_uv_resistance">
+                                <option value="">{{ t('None') }}</option>
+                                {% for uv in ['Trung bình','Cao'] %}
+                                <option {% if material.spec_uv_resistance == uv %}selected{% endif %}>{{ uv }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <h6 class="text-muted small mb-3">{{ t('Origin & Compliance') }}</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Country of Origin') }}</label>
+                            <input type="text" class="form-control" name="spec_country_of_origin" value="{{ material.spec_country_of_origin or '' }}">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">{{ t('Certifications') }}</label>
+                            <input type="text" class="form-control" name="spec_certifications" value="{{ material.spec_certifications or '' }}">
+                        </div>
+                    </div>
                 </div>
             </div>
 

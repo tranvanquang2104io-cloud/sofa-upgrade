@@ -41,6 +41,7 @@ class Company(db.Model):
     documents = db.relationship('Document', backref='company', lazy=True, cascade='all, delete-orphan')
     material_units = db.relationship('MaterialUnit', backref='company', lazy=True, cascade='all, delete-orphan')
     material_categories = db.relationship('MaterialCategory', backref='company', lazy=True, cascade='all, delete-orphan')
+    suppliers = db.relationship('Supplier', backref='company', lazy=True, cascade='all, delete-orphan')
     materials = db.relationship('Material', backref='company', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
@@ -597,6 +598,37 @@ class MaterialCategory(db.Model):
         return f'<MaterialCategory {self.name}>'
 
 
+class Supplier(db.Model):
+    """Supplier / Nhà cung cấp — scoped per company."""
+    __tablename__ = 'suppliers'
+
+    id         = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+
+    supplier_code   = db.Column(db.String(50), nullable=False)   # e.g. NCC-001
+    name            = db.Column(db.String(255), nullable=False, index=True)
+    contact_person  = db.Column(db.String(255))   # Tên người liên hệ
+    phone           = db.Column(db.String(20))
+    email           = db.Column(db.String(255))
+    address         = db.Column(db.Text)
+    tax_code        = db.Column(db.String(50))    # Mã số thuế
+    payment_terms   = db.Column(db.String(20), default='COD')  # COD / NET15 / NET30 / NET60
+    lead_time_days  = db.Column(db.Integer, default=0)   # Thời gian giao hàng mặc định (ngày)
+    rating          = db.Column(db.Integer, default=0)   # 0-5 star rating
+    notes           = db.Column(db.Text)
+    is_active       = db.Column(db.Boolean, default=True, index=True)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at      = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'supplier_code', name='uq_company_supplier_code'),)
+
+    # Relationships
+    materials = db.relationship('Material', backref='supplier', lazy=True, foreign_keys='Material.supplier_id')
+
+    def __repr__(self):
+        return f'<Supplier {self.supplier_code}>'
+
+
 class Material(db.Model):
     """Raw material / nguyên vật liệu — company-level catalog with optional per-store stock."""
     __tablename__ = 'materials'
@@ -605,22 +637,43 @@ class Material(db.Model):
     company_id  = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
     category_id = db.Column(UUID(as_uuid=True), db.ForeignKey('material_categories.id'), nullable=True, index=True)
     unit_id     = db.Column(UUID(as_uuid=True), db.ForeignKey('material_units.id'), nullable=True, index=True)
+    supplier_id = db.Column(UUID(as_uuid=True), db.ForeignKey('suppliers.id'), nullable=True, index=True)
 
     material_code = db.Column(db.String(50), nullable=False)
     name          = db.Column(db.String(255), nullable=False, index=True)
     description   = db.Column(db.Text)
     color         = db.Column(db.String(100))
-    # Free-form technical specs: {"thickness": "5mm", "width": "1.4m", "supplier_sku": "VB-001"}
-    specifications = db.Column(db.JSON, default=dict)
-    unit_price     = db.Column(db.Numeric(15, 2), default=0)  # Reference purchase price
-    supplier_name  = db.Column(db.String(255))
-    supplier_contact = db.Column(db.String(100))  # Phone / email of supplier
-    min_stock_level  = db.Column(db.Numeric(10, 2), default=0)  # Alert threshold
-    image_path     = db.Column(db.String(500))    # Relative path under uploads/
-    notes          = db.Column(db.Text)
-    is_active      = db.Column(db.Boolean, default=True, index=True)
-    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    unit_price    = db.Column(db.Numeric(15, 2), default=0)   # Reference purchase price
+    supplier_sku  = db.Column(db.String(100))                 # Mã SKU bên nhà cung cấp
+    min_stock_level = db.Column(db.Numeric(10, 2), default=0) # Alert threshold
+    image_path    = db.Column(db.String(500))                 # Relative path under uploads/
+    notes         = db.Column(db.Text)
+
+    # ── Technical Specifications (structured) ──────────────────────────
+    # Kích thước & Trọng lượng
+    spec_width_cm          = db.Column(db.Numeric(10, 2))   # Khổ rộng (cm)
+    spec_thickness_mm      = db.Column(db.Numeric(10, 2))   # Độ dày (mm)
+    spec_roll_length_m     = db.Column(db.Numeric(10, 2))   # Chiều dài cuộn (m)
+    spec_weight_per_unit   = db.Column(db.Numeric(10, 3))   # Trọng lượng / đơn vị
+    spec_weight_unit       = db.Column(db.String(20))       # g/m², g/m, kg/m³, kg/cái
+    # Thành phần & Ngoại quan
+    spec_composition       = db.Column(db.String(255))      # Thành phần vật liệu
+    spec_pattern           = db.Column(db.String(50))       # Trơn / Kẻ sọc / Hoa văn / Vân gỗ / Khác
+    spec_finish            = db.Column(db.String(50))       # Matt / Bóng / Nhám / Nhung / Wax
+    # Chất lượng & Hiệu năng
+    spec_durability_cycles = db.Column(db.Integer)          # Martindale cycles (vải/da)
+    spec_density_kg_m3     = db.Column(db.Numeric(8, 2))    # Mật độ mút (kg/m³)
+    spec_hardness          = db.Column(db.String(50))       # Độ cứng: ILD 28, Grade A …
+    spec_fire_resistance   = db.Column(db.String(50))       # Không / BS5852 / TB117 / EN-1021
+    spec_water_resistance  = db.Column(db.String(30))       # Không / Kháng nước / Chống thấm
+    spec_uv_resistance     = db.Column(db.String(30))       # Không / Trung bình / Cao
+    # Xuất xứ & Tuân thủ
+    spec_country_of_origin = db.Column(db.String(100))      # Xuất xứ
+    spec_certifications    = db.Column(db.Text)             # Chứng nhận (OEKO-TEX, ISO ...)
+
+    is_active  = db.Column(db.Boolean, default=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint('company_id', 'material_code', name='uq_company_material_code'),)
 

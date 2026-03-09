@@ -11,7 +11,7 @@ from app.repositories.repository import (
     HandoverRecordRepository, PaymentReportRepository, DocumentRepository,
     DocumentTemplateRepository, LifecycleStatusRepository,
     MaterialUnitRepository, MaterialCategoryRepository,
-    MaterialRepository, MaterialStockRepository,
+    SupplierRepository, MaterialRepository, MaterialStockRepository,
 )
 from app.utils.template_engine import TemplateEngine, DocxTemplateEngine, DocumentVariableCollector
 from app.models import Document, Order, Quotation, Contract, HandoverRecord
@@ -1256,11 +1256,17 @@ class MaterialService:
         self.unit_repo     = MaterialUnitRepository()
         self.stock_repo    = MaterialStockRepository()
         self.store_repo    = StoreRepository()
+        self.supplier_repo = SupplierRepository()
 
     # ── Units ────────────────────────────────────────────────
 
     def list_units(self, company_id, active_only=True):
         return self.unit_repo.get_for_company(company_id, active_only=active_only)
+
+    # ── Suppliers (thin proxy — SupplierService is standalone) ──
+
+    def list_suppliers(self, company_id, active_only=True):
+        return self.supplier_repo.get_for_company(company_id, active_only=active_only)
 
     def create_unit(self, company_id, name, abbreviation=None, description=None):
         if not name:
@@ -1418,3 +1424,61 @@ class MaterialService:
         self.stock_repo.get_or_create_entry(material_id, company_id, store_id=None)
         for store in stores:
             self.stock_repo.get_or_create_entry(material_id, company_id, store_id=store.id)
+
+
+class SupplierService:
+    """Business logic for managing Suppliers / Nhà cung cấp."""
+
+    def __init__(self):
+        self.repo = SupplierRepository()
+
+    def list_suppliers(self, company_id, active_only=True):
+        return self.repo.get_for_company(company_id, active_only=active_only)
+
+    def get_supplier(self, supplier_id, company_id=None):
+        s = self.repo.get_by_id(supplier_id)
+        if s and company_id and str(s.company_id) != str(company_id):
+            return None
+        return s
+
+    def create_supplier(self, company_id, name, contact_person=None, phone=None,
+                        email=None, address=None, tax_code=None,
+                        payment_terms='COD', lead_time_days=0, rating=0, notes=None):
+        if not name:
+            raise ValueError('Tên nhà cung cấp không được để trống')
+        supplier_code = self.repo.get_next_code(company_id)
+        return self.repo.create(
+            company_id=company_id,
+            supplier_code=supplier_code,
+            name=name,
+            contact_person=contact_person or None,
+            phone=phone or None,
+            email=email or None,
+            address=address or None,
+            tax_code=tax_code or None,
+            payment_terms=payment_terms or 'COD',
+            lead_time_days=int(lead_time_days or 0),
+            rating=int(rating or 0),
+            notes=notes or None,
+        )
+
+    def update_supplier(self, supplier_id, company_id, **kwargs):
+        s = self.repo.get_by_id(supplier_id)
+        if not s or str(s.company_id) != str(company_id):
+            raise ValueError('Nhà cung cấp không tìm thấy')
+        for k, v in kwargs.items():
+            setattr(s, k, v)
+        db.session.commit()
+        logger.info(f'Supplier updated: {s.supplier_code}')
+        return s
+
+    def delete_supplier(self, supplier_id, company_id):
+        """Soft-delete. Cannot delete if materials reference this supplier."""
+        s = self.repo.get_by_id(supplier_id)
+        if not s or str(s.company_id) != str(company_id):
+            raise ValueError('Nhà cung cấp không tìm thấy')
+        if s.materials:
+            raise ValueError('Không thể xóa nhà cung cấp đang được sử dụng bởi NVL')
+        s.is_active = False
+        db.session.commit()
+        logger.info(f'Supplier deactivated: {s.supplier_code}')

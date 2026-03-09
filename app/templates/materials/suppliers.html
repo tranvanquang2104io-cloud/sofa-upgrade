@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}{{ t('Suppliers') }} - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.list_materials') }}">{{ t('Materials') }}</a></li>
+                <li class="breadcrumb-item active">{{ t('Suppliers') }}</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-building"></i> {{ t('Suppliers') }}</h2>
+        <p class="text-muted">{{ t('Manage supplier records. Assign suppliers when creating materials.') }}</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-circle"></i> {{ t('Add Supplier') }}
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:100px">{{ t('Code') }}</th>
+                    <th>{{ t('Name') }}</th>
+                    <th>{{ t('Contact') }}</th>
+                    <th>{{ t('Phone') }}</th>
+                    <th>{{ t('Payment Terms') }}</th>
+                    <th class="text-center">{{ t('Lead Time') }}</th>
+                    <th class="text-center">{{ t('Rating') }}</th>
+                    <th class="text-center">{{ t('Materials') }}</th>
+                    <th class="text-center">{{ t('Status') }}</th>
+                    <th>{{ t('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in suppliers %}
+                <tr>
+                    <td><span class="badge bg-light text-dark font-monospace">{{ s.supplier_code }}</span></td>
+                    <td>
+                        <strong>{{ s.name }}</strong>
+                        {% if s.tax_code %}<br><small class="text-muted">MST: {{ s.tax_code }}</small>{% endif %}
+                    </td>
+                    <td>
+                        {{ s.contact_person or '-' }}
+                        {% if s.email %}<br><small class="text-muted">{{ s.email }}</small>{% endif %}
+                    </td>
+                    <td>{{ s.phone or '-' }}</td>
+                    <td>
+                        {% set pt_colors = {'COD': 'secondary', 'NET15': 'info', 'NET30': 'primary', 'NET60': 'warning'} %}
+                        <span class="badge bg-{{ pt_colors.get(s.payment_terms, 'secondary') }}">{{ s.payment_terms }}</span>
+                    </td>
+                    <td class="text-center">{{ s.lead_time_days ~ ' ngày' if s.lead_time_days else '-' }}</td>
+                    <td class="text-center">
+                        {% for i in range(5) %}
+                            <i class="bi bi-star{% if i < s.rating %}-fill text-warning{% endif %}"></i>
+                        {% endfor %}
+                    </td>
+                    <td class="text-center">{{ s.materials | selectattr('is_active') | list | length }}</td>
+                    <td class="text-center">
+                        {% if s.is_active %}
+                        <span class="badge bg-success">{{ t('Active') }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ t('Inactive') }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal"
+                                data-id="{{ s.id }}"
+                                data-name="{{ s.name }}"
+                                data-contact="{{ s.contact_person or '' }}"
+                                data-phone="{{ s.phone or '' }}"
+                                data-email="{{ s.email or '' }}"
+                                data-address="{{ s.address or '' }}"
+                                data-taxcode="{{ s.tax_code or '' }}"
+                                data-terms="{{ s.payment_terms }}"
+                                data-lead="{{ s.lead_time_days }}"
+                                data-rating="{{ s.rating }}"
+                                data-notes="{{ s.notes or '' }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        {% if s.is_active %}
+                        <form method="POST" class="d-inline"
+                              onsubmit="return confirm('{{ t('Deactivate this supplier?') }}')">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="supplier_id" value="{{ s.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                        {{ t('No suppliers yet. Add one to get started.') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-building"></i> {{ t('Add Supplier') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="create">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">{{ t('Company Name') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required placeholder="{{ t('e.g. Công ty TNHH Vải Thiên Hà') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Contact Person') }}</label>
+                            <input type="text" class="form-control" name="contact_person" placeholder="{{ t('Name of contact') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Phone') }}</label>
+                            <input type="text" class="form-control" name="phone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Email') }}</label>
+                            <input type="email" class="form-control" name="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Tax Code') }} (MST)</label>
+                            <input type="text" class="form-control" name="tax_code">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">{{ t('Address') }}</label>
+                            <input type="text" class="form-control" name="address">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Payment Terms') }}</label>
+                            <select class="form-select" name="payment_terms">
+                                <option value="COD">COD (Thanh toán ngay)</option>
+                                <option value="NET15">NET 15 ngày</option>
+                                <option value="NET30">NET 30 ngày</option>
+                                <option value="NET60">NET 60 ngày</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Lead Time (days)') }}</label>
+                            <input type="number" class="form-control" name="lead_time_days" value="0" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Rating') }} (0-5)</label>
+                            <input type="number" class="form-control" name="rating" value="0" min="0" max="5">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">{{ t('Notes') }}</label>
+                            <textarea class="form-control" name="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ t('Save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> {{ t('Edit Supplier') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="supplier_id" id="editSupplierId">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">{{ t('Company Name') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" id="editName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Contact Person') }}</label>
+                            <input type="text" class="form-control" name="contact_person" id="editContact">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Phone') }}</label>
+                            <input type="text" class="form-control" name="phone" id="editPhone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Email') }}</label>
+                            <input type="email" class="form-control" name="email" id="editEmail">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Tax Code') }} (MST)</label>
+                            <input type="text" class="form-control" name="tax_code" id="editTaxCode">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">{{ t('Address') }}</label>
+                            <input type="text" class="form-control" name="address" id="editAddress">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Payment Terms') }}</label>
+                            <select class="form-select" name="payment_terms" id="editTerms">
+                                <option value="COD">COD (Thanh toán ngay)</option>
+                                <option value="NET15">NET 15 ngày</option>
+                                <option value="NET30">NET 30 ngày</option>
+                                <option value="NET60">NET 60 ngày</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Lead Time (days)') }}</label>
+                            <input type="number" class="form-control" name="lead_time_days" id="editLead" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Rating') }} (0-5)</label>
+                            <input type="number" class="form-control" name="rating" id="editRating" min="0" max="5">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">{{ t('Notes') }}</label>
+                            <textarea class="form-control" name="notes" id="editNotes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ t('Save Changes') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('editModal').addEventListener('show.bs.modal', function(e){
+    const b = e.relatedTarget;
+    document.getElementById('editSupplierId').value = b.dataset.id;
+    document.getElementById('editName').value        = b.dataset.name;
+    document.getElementById('editContact').value     = b.dataset.contact;
+    document.getElementById('editPhone').value       = b.dataset.phone;
+    document.getElementById('editEmail').value       = b.dataset.email;
+    document.getElementById('editAddress').value     = b.dataset.address;
+    document.getElementById('editTaxCode').value     = b.dataset.taxcode;
+    document.getElementById('editLead').value        = b.dataset.lead;
+    document.getElementById('editRating').value      = b.dataset.rating;
+    document.getElementById('editNotes').value       = b.dataset.notes;
+    const sel = document.getElementById('editTerms');
+    for(let opt of sel.options){ opt.selected = opt.value === b.dataset.terms; }
+});
+</script>
+{% endblock %}
