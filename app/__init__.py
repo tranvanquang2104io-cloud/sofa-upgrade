@@ -4,6 +4,14 @@ Flask application factory
 import os
 import logging
 from datetime import datetime
+
+# Read version from VERSION file at project root
+_VERSION_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'VERSION')
+try:
+    with open(_VERSION_FILE) as _f:
+        __version__ = _f.read().strip()
+except FileNotFoundError:
+    __version__ = 'unknown'
 from flask import Flask, render_template, session, g
 from app.config import init_db, config
 from app.routes.auth_routes import auth_bp
@@ -37,6 +45,7 @@ def create_app(config_name=None):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['TEMPLATES_FOLDER'], exist_ok=True)
     os.makedirs(app.config['DOCUMENTS_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['ITEMS_FOLDER'], exist_ok=True)
     
     # Initialize database
     init_db(app)
@@ -62,11 +71,12 @@ def create_app(config_name=None):
     # Context processors
     @app.context_processor
     def inject_user():
-        """Inject user and utilities into templates"""
+        """Inject user, utilities and app version into templates"""
         return dict(
             current_user=g.get('user'),
             company_id=g.get('company_id'),
-            now=datetime.now
+            now=datetime.now,
+            app_version=__version__,
         )
 
     @app.context_processor
