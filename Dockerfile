@@ -40,12 +40,17 @@ COPY --chown=appuser:appuser . .
 
 # Upload directories must exist inside container; actual data lives in volumes
 RUN mkdir -p app/uploads/documents app/uploads/templates app/uploads/items \
- && chown -R appuser:appuser app/uploads
+ && chown -R appuser:appuser app/uploads \
+ && sed -i 's/\r$//' entrypoint.sh \
+ && chmod +x entrypoint.sh
 
 USER appuser
 
 # Expose port (Gunicorn listens here; Nginx proxies to it)
 EXPOSE 5000
+
+# Entrypoint: khởi tạo DB/master admin rồi mới chạy app
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Default: run Gunicorn with 4 workers
 # Override CMD in docker-compose for dev (flask run with reload)
