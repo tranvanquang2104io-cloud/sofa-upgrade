@@ -5,11 +5,11 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
-        <h1><i class="bi bi-file-pdf"></i> Documents for {{ order.order_code }}</h1>
+        <h1><i class="bi bi-file-pdf"></i> {{ t('Documents for') }} {{ order.order_code }}</h1>
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back
+            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
         </a>
     </div>
 </div>
@@ -20,12 +20,12 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Document Name</th>
-                        <th>Type</th>
-                        <th>Format</th>
-                        <th>Size</th>
-                        <th>Generated</th>
-                        <th>Action</th>
+                        <th>{{ t('Document Name') }}</th>
+                        <th>{{ t('Type') }}</th>
+                        <th>{{ t('Format') }}</th>
+                        <th>{{ t('Size') }}</th>
+                        <th>{{ t('Generated') }}</th>
+                        <th>{{ t('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,18 +36,55 @@
                         <td>{{ document.document_format.upper() }}</td>
                         <td>{{ (document.file_size / 1024)|round(2) }} KB</td>
                         <td>{{ document.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>
+                        <td class="d-flex gap-2">
                             <a href="{{ url_for('dashboard.download_document', document_id=document.id) }}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-download"></i> Download
+                                <i class="bi bi-download"></i> {{ t('Download') }}
                             </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal"
+                                    data-doc-id="{{ document.id }}"
+                                    data-doc-name="{{ document.document_name }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         {% else %}
-            <p class="text-muted">No documents generated yet.</p>
+            <p class="text-muted">{{ t('No documents generated yet.') }}</p>
         {% endif %}
     </div>
 </div>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel"><i class="bi bi-trash text-danger"></i> {{ t('Delete Document') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {{ t('Are you sure you want to delete') }} <strong id="deleteDocName"></strong>?
+                <div class="text-muted small mt-1">{{ t('This action cannot be undone. The file will be permanently removed.') }}</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Cancel') }}</button>
+                <form id="deleteForm" method="POST" action="">
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> {{ t('Delete') }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('deleteModal').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('deleteDocName').textContent = btn.dataset.docName;
+    document.getElementById('deleteForm').action = '/documents/delete/' + btn.dataset.docId;
+});
+</script>
 {% endblock %}

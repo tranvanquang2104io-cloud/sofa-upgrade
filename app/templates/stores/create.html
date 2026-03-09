@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Add Store - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="d-flex align-items-center mb-4 gap-2">
+            <a href="{{ url_for('dashboard.list_stores') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0"><i class="bi bi-shop-window"></i> {{ t('Add New Store') }}</h2>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ t('Store Code') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="store_code" required
+                                   placeholder="CH001" maxlength="50">
+                            <div class="form-text">{{ t('Identifier code, cannot be changed after creation.') }}</div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">{{ t('Store Name') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required
+                                   placeholder="Ví dụ: Chi Nhánh Quận 1" maxlength="255">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Manager Name') }}</label>
+                            <input type="text" class="form-control" name="manager_name"
+                                   placeholder="Họ và tên quản lý" maxlength="255">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Phone') }}</label>
+                            <input type="text" class="form-control" name="phone"
+                                   placeholder="0909..." maxlength="20">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">{{ t('Address') }}</label>
+                            <input type="text" class="form-control" name="address"
+                                   placeholder="Số nhà, tên đường, phường/xã" maxlength="500">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('City / Province') }}</label>
+                            <input type="text" class="form-control" name="city"
+                                   placeholder="TP. Hồ Chí Minh" maxlength="100">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('dashboard.list_stores') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-plus-lg"></i> {{ t('Create Store') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

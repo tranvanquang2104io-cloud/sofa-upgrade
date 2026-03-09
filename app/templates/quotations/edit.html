@@ -5,86 +5,130 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
-        <h1>
-            <i class="bi bi-pencil-square"></i> Edit Quotation
-        </h1>
+        <h1><i class="bi bi-pencil-square"></i> {{ t('Edit Quotation') }}</h1>
         <p class="text-muted">{{ quotation.quotation_number }} - {{ order.order_code }}</p>
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back
+            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
         </a>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card">
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="quotation_date" class="form-label">Quotation Date</label>
-                            <input type="date" class="form-control" id="quotation_date" name="quotation_date" 
+                        <div class="col-md-4 mb-3">
+                            <label for="quotation_date" class="form-label">{{ t('Quotation Date *') }}</label>
+                            <input type="date" class="form-control" id="quotation_date" name="quotation_date"
                                    value="{{ quotation.quotation_date.strftime('%Y-%m-%d') }}" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="validity_days" class="form-label">Validity (Days)</label>
-                            <input type="number" class="form-control" id="validity_days" name="validity_days" 
+                        <div class="col-md-4 mb-3">
+                            <label for="validity_days" class="form-label">{{ t('Validity (Days)') }}</label>
+                            <input type="number" class="form-control" id="validity_days" name="validity_days"
                                    value="{{ quotation.validity_days }}" min="1" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="city" class="form-label">{{ t('Location') }}</label>
+                            <input type="text" class="form-control" id="city" name="city"
+                                   value="{{ quotation.city or '' }}" placeholder="E.g. Ho Chi Minh City">
                         </div>
                     </div>
 
+                    <!-- Items Table -->
                     <div class="mb-3">
-                        <label class="form-label">Line Items</label>
-                        <div id="items-container">
-                            {% for item in quotation.items %}
-                            <div class="row mb-2 item-row">
-                                <div class="col-md-5">
-                                    <input type="text" class="form-control" name="item_name[]" 
-                                           placeholder="Item name" value="{{ item.name }}" required>
-                                </div>
-                                <div class="col-md-2">
-                                    <input type="number" class="form-control item-qty" name="item_quantity[]" 
-                                           placeholder="Qty" value="{{ item.quantity }}" step="0.01" required>
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="number" class="form-control item-price" name="item_price[]" 
-                                           placeholder="Unit Price" value="{{ item.unit_price }}" step="0.01" required>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-item">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            {% endfor %}
+                        <h5><i class="bi bi-table"></i> {{ t('Items / Work Table') }}</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:5%">No.</th>
+                                        <th style="width:30%">{{ t('Item Name / Work') }}</th>
+                                        <th style="width:8%">{{ t('Unit') }}</th>
+                                        <th style="width:8%">{{ t('Qty') }}</th>
+                                        <th style="width:13%">{{ t('Unit Price') }}</th>
+                                        <th style="width:13%">{{ t('Amount') }}</th>
+                                        <th style="width:13%">{{ t('Image') }}</th>
+                                        <th style="width:10%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-tbody">
+                                    {% for item in quotation.items %}
+                                    <tr class="item-row">
+                                        <td class="stt-cell text-center align-middle">{{ loop.index }}</td>
+                                        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="{{ item.name }}" placeholder="Item name"></td>
+                                        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="{{ item.get('unit', 'pcs') }}" placeholder="pcs"></td>
+                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="{{ item.quantity }}" step="0.01"></td>
+                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1"></td>
+                                        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly value="{{ item.get('total', 0)|int }}"></td>
+                                        <td>
+                                            {% if item.get('image_path') %}
+                                            <img src="{{ url_for('dashboard.serve_item_image', filename=item.image_path[6:]) }}" class="img-thumbnail mb-1" style="max-height:50px;" alt="">
+                                            {% endif %}
+                                            <input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*">
+                                            <input type="hidden" name="item_existing_image[]" value="{{ item.get('image_path', '') }}">
+                                        </td>
+                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-item">
-                            <i class="bi bi-plus"></i> Add Item
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addRow()">
+                            <i class="bi bi-plus"></i> {{ t('Add Row') }}
                         </button>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Total Amount</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" id="total-amount" 
-                                   value="{{ quotation.total_amount }}" step="0.01" readonly>
+                    <!-- VAT & Totals -->
+                    <div class="row justify-content-end mb-3">
+                        <div class="col-md-5">
+                            <table class="table table-sm table-bordered">
+                                <tr>
+                                    <th class="bg-light">{{ t('Subtotal:') }}</th>
+                                    <td class="text-end"><input type="text" id="subtotal_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ quotation.subtotal|int if quotation.subtotal else '' }}"></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">
+                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" or 8 }}" min="0" max="100" step="0.1">%):
+                                    </th>
+                                    <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ quotation.vat_amount|int if quotation.vat_amount else '' }}"></td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th>{{ t('Grand Total:') }}</th>
+                                    <td class="text-end fw-bold"><input type="text" id="total_amount_display" class="form-control form-control-sm text-end fw-bold bg-light" readonly value="{{ quotation.total_amount|int if quotation.total_amount else '' }}"></td>
+                                </tr>
+                            </table>
+                            <input type="hidden" id="total_amount" name="total_amount" value="{{ quotation.total_amount or 0 }}">
+                            <input type="hidden" id="vat_amount" name="vat_amount" value="{{ quotation.vat_amount or 0 }}">
+                            <input type="hidden" id="subtotal_hidden" name="subtotal" value="{{ quotation.subtotal or 0 }}">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3">{{ quotation.notes or '' }}</textarea>
+                        <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
+                        <input type="text" class="form-control" id="amount_in_words" name="amount_in_words"
+                               value="{{ quotation.amount_in_words or '' }}" placeholder="E.g. One hundred twenty-five million, seven hundred thirty thousand dong">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="payment_terms" class="form-label">{{ t('Payment Terms') }}</label>
+                        <textarea class="form-control" id="payment_terms" name="payment_terms" rows="3">{{ quotation.payment_terms or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">{{ t('Additional Notes') }}</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2">{{ quotation.notes or '' }}</textarea>
                     </div>
 
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Save Changes
+                            <i class="bi bi-save"></i> {{ t('Save Changes') }}
                         </button>
                         <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-secondary">
-                            Cancel
+                            {{ t('Cancel') }}
                         </a>
                     </div>
                 </form>
@@ -95,67 +139,109 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const addItemBtn = document.getElementById('add-item');
-    const itemsContainer = document.getElementById('items-container');
-    const totalAmountInput = document.getElementById('total-amount');
+    recalcAll();
+    updateRowNumbers();
 
-    function updateTotal() {
-        let total = 0;
-        const rows = document.querySelectorAll('.item-row');
-        rows.forEach(row => {
-            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-            const price = parseFloat(row.querySelector('.item-price').value) || 0;
-            total += qty * price;
-        });
-        totalAmountInput.value = total.toFixed(2);
+    // Track manual editing of amount_in_words
+    const wordsInput = document.getElementById('amount_in_words');
+    if (wordsInput) {
+        // If field already has a saved value, treat it as user-edited so recalc won't overwrite it
+        if (wordsInput.value.trim()) wordsInput._userEdited = true;
+        wordsInput.addEventListener('input', function() { this._userEdited = true; });
     }
+});
 
-    function addItemRow() {
-        const row = document.createElement('div');
-        row.className = 'row mb-2 item-row';
-        row.innerHTML = `
-            <div class="col-md-5">
-                <input type="text" class="form-control" name="item_name[]" placeholder="Item name" required>
-            </div>
-            <div class="col-md-2">
-                <input type="number" class="form-control item-qty" name="item_quantity[]" placeholder="Qty" step="0.01" required>
-            </div>
-            <div class="col-md-3">
-                <input type="number" class="form-control item-price" name="item_price[]" placeholder="Unit Price" step="0.01" required>
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-item">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-        `;
-        itemsContainer.appendChild(row);
-        attachEventListeners(row);
+document.getElementById('vat_rate').addEventListener('input', recalcAll);
+
+function numberToWordsVi(n) {
+    n = Math.round(n);
+    if (!n || n === 0) return 'Không đồng';
+    const u = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    function r3(x, notFirst) {
+        if (x === 0) return '';
+        let s = '', h = Math.floor(x/100), rem = x%100, t = Math.floor(rem/10), d = rem%10;
+        if (h) { s += u[h] + ' trăm'; if (rem) s += ' '; }
+        else if (notFirst && rem) s += 'không trăm ';
+        if (rem >= 10 && rem <= 19) { s += ['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín'][rem-10]; }
+        else if (t > 1) { s += u[t]+' mươi'; if (d===1) s+=' mốt'; else if (d===5) s+=' lăm'; else if (d) s+=' '+u[d]; }
+        else if (t === 1) { s += ['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín'][d]; }
+        else if (d) { s += (h || notFirst) ? 'lẻ '+u[d] : u[d]; }
+        return s.trim();
     }
+    const ty=Math.floor(n/1e9), tr=Math.floor((n%1e9)/1e6), ng=Math.floor((n%1e6)/1e3), con=n%1e3;
+    let parts=[];
+    if(ty)  parts.push(r3(ty,false)+' tỷ');
+    if(tr)  parts.push(r3(tr, ty>0)+' triệu');
+    if(ng)  parts.push(r3(ng, tr>0||ty>0)+' nghìn');
+    if(con) parts.push(r3(con, ng>0||tr>0||ty>0));
+    const res = parts.join(' ').trim();
+    return res.charAt(0).toUpperCase()+res.slice(1)+' đồng';
+}
 
-    function attachEventListeners(row) {
-        row.querySelector('.remove-item').addEventListener('click', function(e) {
-            e.preventDefault();
-            row.remove();
-            updateTotal();
-        });
+function fmtNum(n) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
 
-        row.querySelectorAll('.item-qty, .item-price').forEach(input => {
-            input.addEventListener('change', updateTotal);
-            input.addEventListener('input', updateTotal);
-        });
-    }
-
-    // Attach listeners to existing rows
-    document.querySelectorAll('.item-row').forEach(row => {
-        attachEventListeners(row);
+function recalcAll() {
+    let subtotal = 0;
+    document.querySelectorAll('#items-tbody .item-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const total = qty * price;
+        row.querySelector('.row-total').value = fmtNum(total);
+        subtotal += total;
     });
+    const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
+    const vatAmount = Math.round(subtotal * vatRate / 100);
+    const grandTotal = subtotal + vatAmount;
 
-    // Add new item button
-    addItemBtn.addEventListener('click', addItemRow);
+    document.getElementById('subtotal_display').value = fmtNum(subtotal);
+    document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
+    document.getElementById('total_amount_display').value = fmtNum(grandTotal);
+    document.getElementById('total_amount').value = grandTotal;
+    document.getElementById('vat_amount').value = vatAmount;
+    document.getElementById('subtotal_hidden').value = subtotal;
 
-    // Initial total calculation
-    updateTotal();
+    // Auto-fill amount in words from grand total unless user has overridden
+    const wordsEl = document.getElementById('amount_in_words');
+    if (wordsEl && !wordsEl._userEdited) wordsEl.value = numberToWordsVi(grandTotal);
+}
+
+function updateRowNumbers() {
+    document.querySelectorAll('#items-tbody .item-row').forEach((row, idx) => {
+        row.querySelector('.stt-cell').textContent = idx + 1;
+    });
+}
+
+function addRow() {
+    const tbody = document.getElementById('items-tbody');
+    const row = document.createElement('tr');
+    row.className = 'item-row';
+    row.innerHTML = `
+        <td class="stt-cell text-center align-middle"></td>
+        <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / work"></td>
+        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" placeholder="pcs" value="pcs"></td>
+        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1"></td>
+        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
+        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"><input type="hidden" name="item_existing_image[]" value=""></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(row);
+    row.querySelector('.qty-input').addEventListener('input', recalcAll);
+    row.querySelector('.price-input').addEventListener('input', recalcAll);
+    updateRowNumbers();
+}
+
+function removeRow(btn) {
+    btn.closest('tr').remove();
+    recalcAll();
+    updateRowNumbers();
+}
+
+document.querySelectorAll('#items-tbody .item-row').forEach(row => {
+    row.querySelector('.qty-input').addEventListener('input', recalcAll);
+    row.querySelector('.price-input').addEventListener('input', recalcAll);
 });
 </script>
 {% endblock %}

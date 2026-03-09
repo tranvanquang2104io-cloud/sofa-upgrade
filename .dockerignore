@@ -1,0 +1,41 @@
+# Virtual environments — không copy vào image, Docker tự cài từ requirements.txt
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets / env files
+.env
+.env.prod
+
+# Docs (không cần trong container)
+*.md
+docs/
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads sinh ra lúc runtime — được mount qua volume
+app/uploads/documents/
+app/uploads/items/
+
+# Logs
+*.log

@@ -29,7 +29,7 @@ class CompanyService:
         existing = self.repo.get_by_code(company_code)
         if existing:
             raise ValueError(f"Company with code {company_code} already exists")
-        
+
         company = self.repo.create(
             company_code=company_code,
             name=name,
@@ -39,6 +39,17 @@ class CompanyService:
             city=city,
             country=country
         )
+
+        # Auto-create company template subfolder
+        try:
+            templates_base = current_app.config.get('TEMPLATES_FOLDER')
+            if templates_base:
+                safe_code = company_code.replace('/', '_').replace('\\', '_')
+                os.makedirs(os.path.join(templates_base, safe_code), exist_ok=True)
+                logger.info(f"Created template folder for company: {company_code}")
+        except RuntimeError:
+            pass  # Outside app context (tests)
+
         logger.info(f"Company created: {company_code}")
         return company
     
@@ -83,6 +94,28 @@ class StoreService:
         """List all stores for company"""
         return self.repo.get_stores_for_company(company_id)
 
+    def update_store(self, store_id, name=None, manager_name=None, phone=None, address=None, city=None):
+        """Update store details"""
+        store = self.repo.get_by_id(store_id)
+        if not store:
+            raise ValueError(f"Store {store_id} not found")
+        if name         is not None: store.name         = name
+        if manager_name is not None: store.manager_name = manager_name
+        if phone        is not None: store.phone        = phone
+        if address      is not None: store.address      = address
+        if city         is not None: store.city         = city
+        db.session.commit()
+        return store
+
+    def deactivate_store(self, store_id):
+        """Soft-deactivate a store"""
+        store = self.repo.get_by_id(store_id)
+        if not store:
+            raise ValueError(f"Store {store_id} not found")
+        store.is_active = False
+        db.session.commit()
+        return store
+
 
 class UserService:
     """Service for user management"""
@@ -90,38 +123,72 @@ class UserService:
     def __init__(self):
         self.repo = UserRepository()
     
-    def create_user(self, company_id, username, email, password, full_name, role='user'):
+    def create_user(self, company_id, username, email, password, full_name,
+                    role='user', store_id=None, phone=None, position=None):
         """Create new user"""
         existing = self.repo.get_by_username(username, company_id)
         if existing:
             raise ValueError(f"User with username {username} already exists")
-        
+
         user = self.repo.create(
             company_id=company_id,
             username=username,
             email=email,
             full_name=full_name,
-            role=role
+            role=role,
+            store_id=store_id,
+            phone=phone,
+            position=position,
         )
         user.set_password(password)
         db.session.commit()
         logger.info(f"User created: {username} for company {company_id}")
         return user
-    
+
     def authenticate_user(self, username, password, company_id):
         """Authenticate user"""
         user = self.repo.get_by_username(username, company_id)
         if user and user.check_password(password):
             return user
         return None
-    
+
     def get_user(self, user_id):
         """Get user by ID"""
         return self.repo.get_by_id(user_id)
-    
+
     def list_users_for_company(self, company_id):
-        """List all users for company"""
+        """List all active users for company"""
         return self.repo.get_users_for_company(company_id)
+
+    def list_users_for_store(self, store_id):
+        """List all active users for a store"""
+        return self.repo.get_users_for_store(store_id)
+
+    def update_user(self, user_id, full_name=None, email=None, phone=None,
+                    position=None, role=None, store_id=None, password=None):
+        """Update user profile / role / store assignment"""
+        user = self.repo.get_by_id(user_id)
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+        if full_name  is not None: user.full_name  = full_name
+        if email      is not None: user.email      = email
+        if phone      is not None: user.phone      = phone
+        if position   is not None: user.position   = position
+        if role       is not None: user.role       = role
+        if store_id   is not None: user.store_id   = store_id
+        if password:
+            user.set_password(password)
+        db.session.commit()
+        return user
+
+    def deactivate_user(self, user_id):
+        """Soft-delete / deactivate a user"""
+        user = self.repo.get_by_id(user_id)
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+        user.is_active = False
+        db.session.commit()
+        return user
 
 
 class CustomerService:
@@ -130,12 +197,13 @@ class CustomerService:
     def __init__(self):
         self.repo = CustomerRepository()
     
-    def create_customer(self, company_id, store_id, customer_code, name, phone=None, email=None, 
-                       address=None, city=None, postal_code=None, country=None, notes=None):
+    def create_customer(self, company_id, store_id, customer_code, name, phone=None, email=None,
+                       address=None, city=None, postal_code=None, country=None, notes=None,
+                       tax_code=None, representative_name=None, representative_title=None):
         """Create new customer"""
-        existing = self.repo.get_by_store_and_code(store_id, customer_code)
+        existing = self.repo.get_by_company_and_code(company_id, customer_code)
         if existing:
-            raise ValueError(f"Customer with code {customer_code} already exists in store")
+            raise ValueError(f"Mã khách hàng {customer_code} đã tồn tại. Vui lòng dùng mã khác.")
         
         customer = self.repo.create(
             company_id=company_id,
@@ -148,8 +216,22 @@ class CustomerService:
             city=city,
             postal_code=postal_code,
             country=country,
+            tax_code=tax_code,
+            representative_name=representative_name,
+            representative_title=representative_title,
             notes=notes
         )
+
+        # Auto-create customer document subfolder
+        try:
+            docs_base = current_app.config.get('DOCUMENTS_FOLDER')
+            if docs_base:
+                safe_code = customer_code.replace('/', '_').replace('\\', '_')
+                os.makedirs(os.path.join(docs_base, safe_code), exist_ok=True)
+                logger.info(f"Created document folder for customer: {customer_code}")
+        except RuntimeError:
+            pass
+
         logger.info(f"Customer created: {customer_code}")
         return customer
     
@@ -170,6 +252,37 @@ class CustomerService:
         """Count customers in store"""
         return self.repo.count_for_store(store_id)
 
+    def update_customer(self, customer_id, name=None, phone=None, email=None,
+                        address=None, city=None, postal_code=None, country=None,
+                        tax_code=None, representative_name=None, representative_title=None,
+                        notes=None):
+        """Update customer information"""
+        customer = self.repo.get_by_id(customer_id)
+        if not customer:
+            raise ValueError(f"Customer {customer_id} not found")
+
+        fields = {
+            'name': name,
+            'phone': phone,
+            'email': email,
+            'address': address,
+            'city': city,
+            'postal_code': postal_code,
+            'country': country,
+            'tax_code': tax_code,
+            'representative_name': representative_name,
+            'representative_title': representative_title,
+            'notes': notes,
+        }
+        for field, value in fields.items():
+            if value is not None:
+                setattr(customer, field, value if value != '' else None)
+
+        from app.config.database import db
+        db.session.commit()
+        logger.info(f"Customer updated: {customer_id}")
+        return customer
+
 
 class OrderService:
     """Service for order management"""
@@ -178,13 +291,13 @@ class OrderService:
         self.repo = OrderRepository()
         self.lifecycle_repo = LifecycleStatusRepository()
     
-    def create_order(self, store_id, company_id, customer_id, order_code, title, 
+    def create_order(self, store_id, company_id, customer_id, order_code, title,
                     description=None, notes=None):
         """Create new order"""
-        existing = self.repo.get_by_store_and_code(store_id, order_code)
+        existing = self.repo.get_by_company_and_code(company_id, order_code)
         if existing:
-            raise ValueError(f"Order with code {order_code} already exists in store")
-        
+            raise ValueError(f"Mã đơn hàng {order_code} đã tồn tại. Vui lòng dùng mã khác.")
+
         order = self.repo.create(
             store_id=store_id,
             company_id=company_id,
@@ -194,10 +307,26 @@ class OrderService:
             description=description,
             notes=notes
         )
-        
+
         # Create lifecycle status
         self.lifecycle_repo.create(order_id=order.id)
-        
+
+        # Auto-create order document subfolders (one per document type)
+        try:
+            docs_base = current_app.config.get('DOCUMENTS_FOLDER')
+            if docs_base:
+                from app.models.models import Customer as _Cust
+                cust = db.session.get(_Cust, customer_id)
+                if cust:
+                    safe_cust  = cust.customer_code.replace('/', '_').replace('\\', '_')
+                    safe_order = order_code.replace('/', '_').replace('\\', '_')
+                    base = os.path.join(docs_base, safe_cust, safe_order)
+                    for doc_type in ('quotation', 'contract', 'handover', 'delivery', 'payment', 'request_payment'):
+                        os.makedirs(os.path.join(base, doc_type), exist_ok=True)
+                    logger.info(f"Created document folders for order: {order_code}")
+        except RuntimeError:
+            pass
+
         logger.info(f"Order created: {order_code}")
         return order
     
@@ -261,20 +390,31 @@ class QuotationService:
         self.repo = QuotationRepository()
         self.order_service = OrderService()
     
-    def create_quotation(self, order_id, quotation_number, quotation_date, items, 
-                        total_amount, validity_days=30, notes=None):
+    def create_quotation(self, order_id, quotation_number, quotation_date, items,
+                        total_amount, validity_days=30, notes=None,
+                        city=None, subtotal=None, vat_rate=8.0, vat_amount=0,
+                        payment_terms=None, amount_in_words=None):
         """Create quotation"""
         existing = self.repo.get_by_number(quotation_number)
         if existing:
             raise ValueError(f"Quotation {quotation_number} already exists")
         
+        if subtotal is None:
+            subtotal = total_amount
+
         quotation = self.repo.create(
             order_id=order_id,
             quotation_number=quotation_number,
             quotation_date=quotation_date,
             items=items,
+            subtotal=subtotal,
+            vat_rate=vat_rate,
+            vat_amount=vat_amount,
             total_amount=total_amount,
             validity_days=validity_days,
+            city=city,
+            payment_terms=payment_terms,
+            amount_in_words=amount_in_words,
             notes=notes
         )
         
@@ -339,7 +479,9 @@ class QuotationService:
         logger.info(f"Quotation canceled: {quotation.quotation_number}")
         return quotation
     
-    def update_quotation(self, quotation_id, items=None, total_amount=None, validity_days=None, notes=None):
+    def update_quotation(self, quotation_id, items=None, total_amount=None, validity_days=None,
+                         notes=None, city=None, subtotal=None, vat_rate=None, vat_amount=None,
+                         payment_terms=None, amount_in_words=None):
         """Update quotation - only if not approved"""
         quotation = self.repo.get_by_id(quotation_id)
         if not quotation:
@@ -352,12 +494,23 @@ class QuotationService:
             quotation.items = items
         if total_amount is not None:
             quotation.total_amount = total_amount
-            # Update order totals when quotation amount changes
             self.order_service.update_order_totals(quotation.order_id, total_amount=total_amount)
         if validity_days is not None:
             quotation.validity_days = validity_days
         if notes is not None:
             quotation.notes = notes
+        if city is not None:
+            quotation.city = city
+        if subtotal is not None:
+            quotation.subtotal = subtotal
+        if vat_rate is not None:
+            quotation.vat_rate = vat_rate
+        if vat_amount is not None:
+            quotation.vat_amount = vat_amount
+        if payment_terms is not None:
+            quotation.payment_terms = payment_terms
+        if amount_in_words is not None:
+            quotation.amount_in_words = amount_in_words
         
         db.session.commit()
         logger.info(f"Quotation updated: {quotation.quotation_number}")
@@ -522,7 +675,12 @@ class HandoverRecordService:
     
     def create_handover_record(self, order_id, report_number, report_date, handover_date,
                               customer_representative=None, company_representative=None,
-                              product_condition=None, items=None, notes=None):
+                              product_condition=None, items=None, notes=None,
+                              handover_location=None, start_time=None, end_time=None,
+                              copies_count=2, vat_rate=8.0, vat_amount=0,
+                              subtotal=0, total_amount=0,
+                              customer_representative_title=None,
+                              company_representative_title=None):
         """Create handover record"""
         existing = self.repo.get_by_number(report_number)
         if existing:
@@ -538,10 +696,20 @@ class HandoverRecordService:
             report_number=report_number,
             report_date=report_date,
             handover_date=handover_date,
+            handover_location=handover_location,
+            start_time=start_time,
+            end_time=end_time,
+            copies_count=copies_count,
             customer_representative=customer_representative,
+            customer_representative_title=customer_representative_title,
             company_representative=company_representative,
+            company_representative_title=company_representative_title,
             product_condition=product_condition,
             items=items or [],
+            subtotal=subtotal,
+            vat_rate=vat_rate,
+            vat_amount=vat_amount,
+            total_amount=total_amount,
             notes=notes
         )
         
@@ -625,9 +793,15 @@ class PaymentReportService:
     def __init__(self):
         self.repo = PaymentReportRepository()
     
-    def create_payment_report(self, order_id, report_number, payment_type, report_date, 
-                             payment_date, amount, payment_method=None, 
-                             transaction_reference=None, notes=None):
+    def create_payment_report(self, order_id, report_number, payment_type, report_date,
+                             payment_date, amount, payment_method=None,
+                             transaction_reference=None, notes=None,
+                             items=None, subtotal=0, vat_rate=8.0, vat_amount=0,
+                             advance_percentage=None, advance_amount=0,
+                             remaining_amount=0, amount_in_words=None,
+                             work_completed_summary=None,
+                             quotation_reference_date=None,
+                             bank_account_info=None):
         """Create payment report"""
         existing = self.repo.get_by_number(report_number)
         if existing:
@@ -651,7 +825,18 @@ class PaymentReportService:
             payment_type=payment_type,
             report_date=report_date,
             payment_date=payment_date,
+            items=items or [],
+            subtotal=subtotal,
+            vat_rate=vat_rate,
+            vat_amount=vat_amount,
             amount=amount,
+            advance_percentage=advance_percentage,
+            advance_amount=advance_amount,
+            remaining_amount=remaining_amount,
+            amount_in_words=amount_in_words,
+            work_completed_summary=work_completed_summary,
+            quotation_reference_date=quotation_reference_date,
+            bank_account_info=bank_account_info or [],
             payment_method=payment_method,
             transaction_reference=transaction_reference,
             notes=notes
@@ -721,8 +906,23 @@ class PaymentReportService:
             payment.is_canceled = True
             payment.canceled_at = datetime.utcnow()
             payment.canceled_reason = reason
-            
-            # Lifecycle does not revert - payment can be recreated after cancellation
+
+            # If this was a confirmed advance payment, check if lifecycle should revert
+            if payment.payment_type == 'advance' and payment.is_confirmed:
+                from app.repositories.repository import LifecycleStatusRepository, PaymentReportRepository as _PRRepo
+                from app.models.models import PaymentReport as _PR
+                remaining_confirmed = db.session.query(_PR).filter(
+                    _PR.order_id == payment.order_id,
+                    _PR.payment_type == 'advance',
+                    _PR.is_confirmed == True,
+                    _PR.is_canceled == False,
+                    _PR.id != payment.id
+                ).count()
+                lifecycle = LifecycleStatusRepository().get_or_create_for_order(str(payment.order_id))
+                if remaining_confirmed == 0 and not getattr(lifecycle, 'advance_skipped', False):
+                    lifecycle.advance_paid = False
+                    lifecycle.advance_paid_at = None
+                    db.session.add(lifecycle)
             
             # Make update atomic
             db.session.add(payment)
@@ -757,8 +957,33 @@ class DocumentService:
             return None
 
     def _get_template_file_path(self, template) -> str:
-        """Build absolute path to the template file."""
+        """Build absolute path to the template file.
+
+        Resolution order:
+          1. templates/{company_code}/{filename}  (per-company subfolder)
+          2. templates/{company_id}/{filename}    (legacy UUID subfolder)
+          3. templates/{filename}                 (legacy flat folder)
+        """
         templates_dir = current_app.config['TEMPLATES_FOLDER']
+
+        # 1. company_code subfolder
+        try:
+            company_code = template.company.company_code if template.company else None
+        except Exception:
+            company_code = None
+
+        if company_code:
+            safe_code = company_code.replace('/', '_').replace('\\', '_')
+            p = os.path.join(templates_dir, safe_code, template.template_file)
+            if os.path.exists(p):
+                return p
+
+        # 2. company_id subfolder (legacy)
+        p = os.path.join(templates_dir, str(template.company_id), template.template_file)
+        if os.path.exists(p):
+            return p
+
+        # 3. flat folder fallback
         return os.path.join(templates_dir, template.template_file)
 
     def _save_document(self, *, company_id, order_id, template, document_type,
@@ -775,7 +1000,14 @@ class DocumentService:
 
         timestamp  = datetime.now().strftime('%Y%m%d_%H%M%S')
         doc_name   = f"{document_type}_{timestamp}"
-        docs_dir   = current_app.config['DOCUMENTS_FOLDER']
+        # Build hierarchical output path: documents/{customer_code}/{order_code}/{doc_type}/
+        _safe = lambda s: str(s or 'unknown').replace('/', '_').replace('\\', '_')
+        customer_code = _safe(context.get('customer_code'))
+        order_code    = _safe(context.get('order_code'))
+        docs_dir   = os.path.join(
+            current_app.config['DOCUMENTS_FOLDER'],
+            customer_code, order_code, document_type
+        )
         os.makedirs(docs_dir, exist_ok=True)
 
         template_file_path = self._get_template_file_path(template)
@@ -825,6 +1057,16 @@ class DocumentService:
 
         file_size = os.path.getsize(file_path)
 
+        def _sanitize(v):
+            """Recursively convert context values to JSON-safe types."""
+            if isinstance(v, dict):
+                return {k2: _sanitize(v2) for k2, v2 in v.items()}
+            if isinstance(v, list):
+                return [_sanitize(i) for i in v]
+            if isinstance(v, (str, int, float, bool)) or v is None:
+                return v
+            return ''   # InlineImage and any other non-serializable object
+
         document = self.repo.create(
             company_id          = company_id,
             order_id            = order_id,
@@ -838,8 +1080,7 @@ class DocumentService:
             document_format     = output_ext,
             file_path           = file_path,
             file_size           = file_size,
-            variables_used      = {k: str(v) if not isinstance(v, (list, dict)) else v
-                                   for k, v in context.items()},
+            variables_used      = _sanitize(context),
         )
         logger.info(f"Document generated: {os.path.basename(file_path)}")
         return document
@@ -927,6 +1168,8 @@ class DocumentService:
 
         template = self.template_repo.get_default_for_type(company_id, 'delivery')
         if not template:
+            template = self.template_repo.get_default_for_type(company_id, 'handover')
+        if not template:
             raise ValueError("No delivery template found for company")
 
         company = self._get_company(company_id)
@@ -965,8 +1208,16 @@ class DocumentService:
             raise ValueError("No payment template found for company")
 
         company = self._get_company(company_id)
+
+        # Look up active contract for this order to reference in payment doc
+        _contract = None
+        if order and hasattr(order, 'contracts'):
+            _active = [c for c in (order.contracts or []) if getattr(c, 'is_active', False) and not getattr(c, 'is_canceled', False)]
+            if _active:
+                _contract = _active[0]
+
         context = DocumentVariableCollector.collect_payment_variables(
-            payment_report, customer, order, company=company
+            payment_report, customer, order, company=company, contract=_contract
         )
 
         return self._save_document(

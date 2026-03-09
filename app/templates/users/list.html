@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}User Management - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0"><i class="bi bi-person-lines-fill"></i> {{ t('User Management') }}</h2>
+        <p class="text-muted mb-0">
+            {% if session.role == 'company_admin' %}{{ t('All company accounts') }}{% else %}{{ t('Users at your store') }}{% endif %}
+            ({{ users|length }} {{ t('users') }})
+        </p>
+    </div>
+    <a href="{{ url_for('dashboard.create_user') }}" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> {{ t('Add User') }}
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>{{ t('Full Name') }}</th>
+                        <th>{{ t('Username') }}</th>
+                        <th>Email</th>
+                        <th>{{ t('Role') }}</th>
+                        <th>{{ t('Store') }}</th>
+                        <th>{{ t('Position') }}</th>
+                        <th>{{ t('Last Login') }}</th>
+                        <th class="text-center">{{ t('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                     style="width:36px;height:36px;font-size:0.85rem;flex-shrink:0">
+                                    {{ u.full_name[0]|upper }}
+                                </div>
+                                <span class="fw-semibold">{{ u.full_name }}</span>
+                            </div>
+                        </td>
+                        <td class="text-muted small">{{ u.username }}</td>
+                        <td class="text-muted small">{{ u.email }}</td>
+                        <td>
+                            {% if u.role == 'company_admin' %}
+                                <span class="badge bg-danger">{{ t('Company Admin') }}</span>
+                            {% elif u.role == 'store_admin' %}
+                                <span class="badge bg-warning text-dark">{{ t('Store Manager') }}</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark">{{ t('Employee') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.store_id %}
+                                {{ store_map.get(u.store_id|string, '—') }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">{{ u.position or '—' }}</td>
+                        <td class="text-muted small">
+                            {{ u.last_login.strftime('%d/%m/%Y') if u.last_login else t('Never') }}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('dashboard.edit_user', user_id=u.id) }}"
+                                   class="btn btn-outline-primary" title="{{ t('Edit') }}">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if u.id|string != session.user_id %}
+                                <button type="button" class="btn btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#deactivateUserModal{{ loop.index }}"
+                                        title="{{ t('Deactivate') }}">
+                                    <i class="bi bi-person-x"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Deactivate Modal -->
+                    <div class="modal fade" id="deactivateUserModal{{ loop.index }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title"><i class="bi bi-person-x"></i> {{ t('Deactivate Account') }}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    {{ t('Deactivate account') }} <strong>{{ u.full_name }}</strong> ({{ u.username }})?
+                                    <p class="text-danger mt-2 small">{{ t('This user will no longer be able to log in.') }}</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Cancel') }}</button>
+                                    <form action="{{ url_for('dashboard.deactivate_user', user_id=u.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-danger">{{ t('Confirm') }}</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-people display-6"></i>
+                            <p class="mt-2">{{ t('No users yet') }}</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

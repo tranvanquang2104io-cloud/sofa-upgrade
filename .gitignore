@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment / secrets
+.env
+.env.prod
+*.env.local
+
+# Docker runtime volumes (data lives outside repo)
+postgres_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads (generated at runtime, not source code)
+app/uploads/documents/
+app/uploads/items/
+# Keep the templates folder structure but not uploaded files
+app/uploads/templates/*.docx
+app/uploads/templates/*.pdf
+
+# Logs
+*.log
+logs/
+
+# Database dumps / backups
+*.sql
+*.sql.gz
+backups/
+
+# Coverage / test artifacts
+.coverage
+htmlcov/
+.pytest_cache/

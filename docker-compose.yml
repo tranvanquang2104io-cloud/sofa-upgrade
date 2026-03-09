@@ -1,0 +1,66 @@
+# docker-compose.yml  —  Local development
+# Chạy: docker compose up
+# Truy cập: http://localhost:5000
+#
+# Flask dev server với hot-reload; PostgreSQL trên port 5433 (tránh xung đột local)
+
+name: sofa-flow-dev
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       sofa_flow_dev
+      POSTGRES_USER:     sofa_user
+      POSTGRES_PASSWORD: sofa_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"   # truy cập từ host: psql -p 5433 -U sofa_user sofa_flow_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sofa_user -d sofa_flow_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      target: runtime    # dùng stage runtime (không rebuild toàn bộ)
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV:      development
+      FLASK_DEBUG:    "true"
+      SECRET_KEY:     dev-docker-secret-key
+      DATABASE_URL:   postgresql+psycopg://sofa_user:sofa_password@db:5432/sofa_flow_dev
+      FLASK_HOST:     "0.0.0.0"
+      FLASK_PORT:     "5000"
+    volumes:
+      # Mount source code để hot-reload có tác dụng
+      - .:/app
+      # Tách riêng uploads để không bị ghi đè khi mount source
+      - uploads_dev:/app/app/uploads
+    ports:
+      - "5000:5000"
+    # Ghi đè CMD của Dockerfile: dùng Flask dev server thay Gunicorn
+    command: python wsgi.py
+
+  # Adminer: web UI để xem/query DB ngay trên browser
+  # Truy cập: http://localhost:8080
+  # System: PostgreSQL | Server: db | User: sofa_user | Pass: sofa_password | DB: sofa_flow_dev
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_dev_data:
+  uploads_dev:

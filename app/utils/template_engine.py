@@ -244,6 +244,42 @@ class DocxTemplateEngine:
     """
 
     @staticmethod
+    def _inject_inline_images(tpl, context: dict) -> None:
+        """
+        Walk context lists and replace ``image_path`` strings in item dicts
+        with ``docxtpl.InlineImage`` objects so that {{ item.image }} tags in
+        .docx templates render the actual picture.
+
+        Images are sized to 3 cm wide by default; the aspect ratio is preserved.
+        """
+        try:
+            from docxtpl import InlineImage
+            from docx.shared import Cm
+            upload_root = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+            upload_root = os.path.normpath(upload_root)
+        except ImportError:
+            return
+
+        for val in context.values():
+            if not isinstance(val, list):
+                continue
+            for item in val:
+                if not isinstance(item, dict):
+                    continue
+                path_rel = item.get('image_path')
+                if not path_rel:
+                    item['image'] = ''
+                    continue
+                full_path = os.path.join(upload_root, path_rel)
+                if os.path.exists(full_path):
+                    try:
+                        item['image'] = InlineImage(tpl, full_path, width=Cm(4))
+                    except Exception:
+                        item['image'] = ''
+                else:
+                    item['image'] = ''
+
+    @staticmethod
     def render(template_path: str, context: dict) -> BytesIO:
         """
         Render a .docx template and return a BytesIO DOCX.
@@ -257,6 +293,7 @@ class DocxTemplateEngine:
         """
         from docxtpl import DocxTemplate
         tpl = DocxTemplate(template_path)
+        DocxTemplateEngine._inject_inline_images(tpl, context)
         tpl.render(context)
         output = BytesIO()
         tpl.save(output)
@@ -269,6 +306,7 @@ class DocxTemplateEngine:
         from docxtpl import DocxTemplate
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         tpl = DocxTemplate(template_path)
+        DocxTemplateEngine._inject_inline_images(tpl, context)
         tpl.render(context)
         tpl.save(output_path)
 
@@ -303,6 +341,22 @@ def _fmt_date(d, fmt='%d/%m/%Y') -> str:
         return str(d)
 
 
+def _date_parts(d) -> tuple:
+    """Return (day, month, year) as zero-padded strings, e.g. ('03', '02', '2026')."""
+    if d is None:
+        return ('', '', '')
+    try:
+        return (d.strftime('%d'), d.strftime('%m'), d.strftime('%Y'))
+    except AttributeError:
+        # Try to parse from 'DD/MM/YYYY' string fallback
+        try:
+            from datetime import datetime as _dt
+            parsed = _dt.strptime(str(d), '%d/%m/%Y')
+            return (parsed.strftime('%d'), parsed.strftime('%m'), parsed.strftime('%Y'))
+        except Exception:
+            return ('', '', '')
+
+
 class DocumentVariableCollector:
     """
     Builds Jinja2 context dicts for each document type.
@@ -330,6 +384,8 @@ class DocumentVariableCollector:
                 'unit_price': _fmt(item.get('unit_price', 0)),
                 'total':      _fmt(item.get('total', 0)),
                 'notes':      item.get('notes', ''),
+                'image_path': item.get('image_path') or '',  # preserved for InlineImage injection
+                'image':      '',  # placeholder; overwritten by _inject_inline_images
             })
         return result
 
@@ -339,16 +395,32 @@ class DocumentVariableCollector:
             return {
                 'company_name': '',
                 'company_address': '',
+                'company_production_address': '',
                 'company_phone': '',
                 'company_email': '',
                 'company_tax_code': '',
+                'company_representative_name': '',
+                'company_representative_title': '',
+                'company_vat_rate': '8',
+                'company_bank_accounts': [],
             }
+        bank_accounts = getattr(company, 'bank_accounts', None) or []
+        # Flatten first bank for convenience
+        first_bank = bank_accounts[0] if bank_accounts else {}
         return {
-            'company_name':     getattr(company, 'name', ''),
-            'company_address':  getattr(company, 'address', '') or '',
-            'company_phone':    getattr(company, 'phone', '') or '',
-            'company_email':    getattr(company, 'email', '') or '',
-            'company_tax_code': getattr(company, 'tax_code', '') or '',
+            'company_name':                getattr(company, 'name', ''),
+            'company_address':             getattr(company, 'address', '') or '',
+            'company_production_address':  getattr(company, 'production_address', '') or '',
+            'company_phone':               getattr(company, 'phone', '') or '',
+            'company_email':               getattr(company, 'email', '') or '',
+            'company_tax_code':            getattr(company, 'tax_code', '') or '',
+            'company_representative_name': getattr(company, 'representative_name', '') or '',
+            'company_representative_title': getattr(company, 'representative_title', '') or '',
+            'company_vat_rate':            str(getattr(company, 'vat_rate', 8) or 8),
+            'company_bank_accounts':       bank_accounts,
+            'company_bank_name':           first_bank.get('bank_name', ''),
+            'company_bank_account_number': first_bank.get('account_number', ''),
+            'company_bank_account_holder': first_bank.get('account_holder', ''),
         }
 
     # ------------------------------------------------------------------
@@ -360,25 +432,38 @@ class DocumentVariableCollector:
         """Context for quotation document."""
         ctx = DocumentVariableCollector._company_ctx(company)
         ctx.update({
-            # Quotation
+            # Quotation header
             'quotation_number': quotation.quotation_number,
             'quotation_date':   _fmt_date(quotation.quotation_date),
+            'quotation_day':    _date_parts(quotation.quotation_date)[0],
+            'quotation_month':  _date_parts(quotation.quotation_date)[1],
+            'quotation_year':   _date_parts(quotation.quotation_date)[2],
             'validity_days':    str(quotation.validity_days or 30),
+            'city':             getattr(quotation, 'city', '') or '',
             # Customer
-            'customer_name':        customer.name,
-            'customer_code':        customer.customer_code,
-            'customer_phone':       customer.phone or '',
-            'customer_email':       customer.email or '',
-            'customer_address':     customer.address or '',
-            'customer_city':        customer.city or '',
-            'customer_postal_code': customer.postal_code or '',
+            'customer_name':              customer.name,
+            'customer_code':              customer.customer_code,
+            'customer_phone':             customer.phone or '',
+            'customer_email':             customer.email or '',
+            'customer_address':           customer.address or '',
+            'customer_city':              customer.city or '',
+            'customer_postal_code':       customer.postal_code or '',
+            'customer_tax_code':          getattr(customer, 'tax_code', '') or '',
+            'customer_representative':    getattr(customer, 'representative_name', '') or '',
+            'customer_representative_title': getattr(customer, 'representative_title', '') or '',
             # Order
             'order_code':  order.order_code,
             'order_title': order.title,
             # Items (list → table loop)
             'items':        DocumentVariableCollector._build_items(quotation.items),
+            # Financials
+            'subtotal':     _fmt(getattr(quotation, 'subtotal', 0) or 0),
+            'vat_rate':     str(getattr(quotation, 'vat_rate', 8) or 8),
+            'vat_amount':   _fmt(getattr(quotation, 'vat_amount', 0) or 0),
             'total_amount': _fmt(quotation.total_amount),
-            # Misc
+            'amount_in_words': getattr(quotation, 'amount_in_words', '') or '',
+            # Payment terms / misc
+            'payment_terms':  getattr(quotation, 'payment_terms', '') or '',
             'notes':          quotation.notes or '',
             'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
         })
@@ -388,19 +473,53 @@ class DocumentVariableCollector:
     def collect_contract_variables(contract, quotation, customer, order, company=None):
         """Context for contract document."""
         ctx = DocumentVariableCollector._company_ctx(company)
+
+        # Override company bank info with the selected bank account on this contract
+        selected_bank_index = int(getattr(contract, 'selected_bank_index', 0) or 0)
+        bank_accounts = getattr(company, 'bank_accounts', None) or [] if company else []
+        if bank_accounts and selected_bank_index < len(bank_accounts):
+            selected_bank = bank_accounts[selected_bank_index]
+        elif bank_accounts:
+            selected_bank = bank_accounts[0]
+        else:
+            selected_bank = {}
+        ctx['company_bank_name']           = selected_bank.get('bank_name', '')
+        ctx['company_bank_account_number'] = selected_bank.get('account_number', '')
+        ctx['company_bank_account_holder'] = selected_bank.get('account_holder', '')
+
         ctx.update({
-            # Contract
+            # Contract header
             'contract_number': contract.contract_number,
             'contract_date':   _fmt_date(contract.contract_date),
+            'contract_day':    _date_parts(contract.contract_date)[0],
+            'contract_month':  _date_parts(contract.contract_date)[1],
+            'contract_year':   _date_parts(contract.contract_date)[2],
+            # Contract start date (ngày bắt đầu thực hiện)
+            'contract_start_date':       _fmt_date(getattr(contract, 'contract_start_date', None)),
+            'contract_start_day':        _date_parts(getattr(contract, 'contract_start_date', None))[0],
+            'contract_start_month':      _date_parts(getattr(contract, 'contract_start_date', None))[1],
+            'contract_start_year':       _date_parts(getattr(contract, 'contract_start_date', None))[2],
+            # Financials
             'contract_value':  _fmt(contract.contract_value),
+            'total_amount':    _fmt(contract.contract_value),  # alias
+            'amount_in_words': getattr(contract, 'amount_in_words', '') or '',
+            'city':            getattr(contract, 'city', '') or '',
+            # Completion & cancellation
+            'contract_days_complete': str(getattr(contract, 'contract_days_complete', 30) or 30),
+            'num_date_notice_cancel': str(getattr(contract, 'num_date_notice_cancel', 7) or 7),
+            # Contract content from order description
+            'contract_content': getattr(order, 'description', '') or '',
             # Related quotation
             'quotation_number': quotation.quotation_number if quotation else '',
             # Customer
-            'customer_name':    customer.name,
-            'customer_code':    customer.customer_code,
-            'customer_phone':   customer.phone or '',
-            'customer_email':   customer.email or '',
-            'customer_address': customer.address or '',
+            'customer_name':              customer.name,
+            'customer_code':              customer.customer_code,
+            'customer_phone':             customer.phone or '',
+            'customer_email':             customer.email or '',
+            'customer_address':           customer.address or '',
+            'customer_tax_code':          getattr(customer, 'tax_code', '') or '',
+            'customer_representative':    getattr(customer, 'representative_name', '') or '',
+            'customer_representative_title': getattr(customer, 'representative_title', '') or '',
             # Order
             'order_code':  order.order_code,
             'order_title': order.title,
@@ -408,6 +527,12 @@ class DocumentVariableCollector:
             'items': DocumentVariableCollector._build_items(
                 contract.items or (quotation.items if quotation else [])
             ),
+            # Financials
+            'subtotal':           _fmt(getattr(contract, 'subtotal', 0) or 0),
+            'vat_rate':           str(getattr(contract, 'vat_rate', 8) or 8),
+            'vat_amount':         _fmt(getattr(contract, 'vat_amount', 0) or 0),
+            'advance_percentage': str(getattr(contract, 'advance_percentage', 30) or 30),
+            'advance_amount':     _fmt(getattr(contract, 'advance_amount', 0) or 0),
             # Terms, misc
             'terms_and_conditions': contract.terms_and_conditions or '',
             'notes':                getattr(contract, 'notes', '') or '',
@@ -435,32 +560,51 @@ class DocumentVariableCollector:
                 'notes':            item.get('notes', ''),
             })
         ctx.update({
-            # Report
-            'report_number':  delivery_report.report_number,
-            'report_date':    _fmt_date(delivery_report.report_date),
-            'handover_date':  _fmt_date(delivery_report.handover_date),
-            'delivery_date':  _fmt_date(delivery_report.handover_date),
+            # Report header
+            'report_number': delivery_report.report_number,
+            'report_date':   _fmt_date(delivery_report.report_date),
+            'report_day':    _date_parts(delivery_report.report_date)[0],
+            'report_month':  _date_parts(delivery_report.report_date)[1],
+            'report_year':   _date_parts(delivery_report.report_date)[2],
+            'handover_date': _fmt_date(delivery_report.handover_date),
+            'handover_day':  _date_parts(delivery_report.handover_date)[0],
+            'handover_month': _date_parts(delivery_report.handover_date)[1],
+            'handover_year': _date_parts(delivery_report.handover_date)[2],
+            'delivery_date': _fmt_date(delivery_report.handover_date),
+            # Location / timing
+            'handover_location': getattr(delivery_report, 'handover_location', '') or '',
+            'start_time':        str(getattr(delivery_report, 'start_time', '') or ''),
+            'end_time':          str(getattr(delivery_report, 'end_time', '') or ''),
+            'copies_count':      str(getattr(delivery_report, 'copies_count', 2) or 2),
             # Customer
-            'customer_name':    customer.name,
-            'customer_code':    customer.customer_code,
-            'customer_phone':   customer.phone or '',
-            'customer_address': customer.address or '',
+            'customer_name':              customer.name,
+            'customer_code':              customer.customer_code,
+            'customer_phone':             customer.phone or '',
+            'customer_address':           customer.address or '',
+            'customer_tax_code':          getattr(customer, 'tax_code', '') or '',
+            'customer_representative':    getattr(customer, 'representative_name', '') or delivery_report.customer_representative or '',
+            'customer_representative_title': getattr(delivery_report, 'customer_representative_title', '') or '',
             # Order
             'order_code':  order.order_code,
             'order_title': order.title,
             # Items list
             'items': handover_items,
+            # Financials
+            'subtotal':     _fmt(getattr(delivery_report, 'subtotal', 0) or 0),
+            'vat_rate':     str(getattr(delivery_report, 'vat_rate', 8) or 8),
+            'vat_amount':   _fmt(getattr(delivery_report, 'vat_amount', 0) or 0),
+            'total_amount': _fmt(getattr(delivery_report, 'total_amount', 0) or 0),
             # Representatives
-            'company_representative':  delivery_report.company_representative or '',
-            'customer_representative': delivery_report.customer_representative or '',
-            'product_condition':       delivery_report.product_condition or '',
-            'notes':                   delivery_report.notes or '',
-            'generated_date':          datetime.now().strftime('%d/%m/%Y %H:%M'),
+            'company_representative':      delivery_report.company_representative or '',
+            'company_representative_title': getattr(delivery_report, 'company_representative_title', '') or '',
+            'product_condition':           delivery_report.product_condition or '',
+            'notes':                       delivery_report.notes or '',
+            'generated_date':              datetime.now().strftime('%d/%m/%Y %H:%M'),
         })
         return ctx
 
     @staticmethod
-    def collect_payment_variables(payment_report, customer, order, company=None):
+    def collect_payment_variables(payment_report, customer, order, company=None, contract=None):
         """Context for payment report."""
         payment_type_display = {
             'advance': 'Tạm ứng (Advance)',
@@ -469,22 +613,58 @@ class DocumentVariableCollector:
 
         ctx = DocumentVariableCollector._company_ctx(company)
         ctx.update({
-            # Report
-            'report_number':       payment_report.report_number,
-            'payment_type':        payment_report.payment_type,
+            # Report header
+            'report_number':        payment_report.report_number,
+            'payment_type':         payment_report.payment_type,
             'payment_type_display': payment_type_display,
-            'report_date':         _fmt_date(payment_report.report_date),
-            'payment_date':        _fmt_date(payment_report.payment_date),
+            'report_date':          _fmt_date(payment_report.report_date),
+            'report_day':           _date_parts(payment_report.report_date)[0],
+            'report_month':         _date_parts(payment_report.report_date)[1],
+            'report_year':          _date_parts(payment_report.report_date)[2],
+            'payment_date':         _fmt_date(payment_report.payment_date),
+            'payment_day':          _date_parts(payment_report.payment_date)[0],
+            'payment_month':        _date_parts(payment_report.payment_date)[1],
+            'payment_year':         _date_parts(payment_report.payment_date)[2],
+            'quotation_reference_date': _fmt_date(getattr(payment_report, 'quotation_reference_date', None)),
             # Customer
-            'customer_name': customer.name,
-            'customer_code': customer.customer_code,
+            'customer_name':              customer.name,
+            'customer_code':              customer.customer_code,
+            'customer_phone':             customer.phone or '',
+            'customer_address':           customer.address or '',
+            'customer_tax_code':          getattr(customer, 'tax_code', '') or '',
+            'customer_representative':    getattr(customer, 'representative_name', '') or '',
+            'customer_representative_title': getattr(customer, 'representative_title', '') or '',
             # Order
             'order_code':  order.order_code,
             'order_title': order.title,
+            # Items (list → table loop)
+            'items': DocumentVariableCollector._build_items(
+                getattr(payment_report, 'items', None) or []
+            ),
             # Financials
-            'amount':                _fmt(payment_report.amount),
+            'subtotal':           _fmt(getattr(payment_report, 'subtotal', 0) or 0),
+            'vat_rate':           str(getattr(payment_report, 'vat_rate', 8) or 8),
+            'vat_amount':         _fmt(getattr(payment_report, 'vat_amount', 0) or 0),
+            'amount':             _fmt(payment_report.amount),
+            'advance_percentage': str(getattr(payment_report, 'advance_percentage', 30) or 30),
+            'advance_amount':     _fmt(getattr(payment_report, 'advance_amount', 0) or 0),
+            'remaining_amount':   _fmt(getattr(payment_report, 'remaining_amount', 0) or 0),
+            'amount_in_words':    getattr(payment_report, 'amount_in_words', '') or '',
+            # Work summary / bank
+            'work_completed_summary': getattr(payment_report, 'work_completed_summary', '') or '',
+            'bank_account_info':      getattr(payment_report, 'bank_account_info', None) or [],
+            # Legacy payment fields
             'payment_method':        payment_report.payment_method or '',
             'transaction_reference': payment_report.transaction_reference or '',
+            # Contract reference
+            'contract_number':    getattr(contract, 'contract_number', '') if contract else '',
+            'contract_date':      _fmt_date(getattr(contract, 'contract_date', None)) if contract else '',
+            'contract_day':       _date_parts(getattr(contract, 'contract_date', None) if contract else None)[0],
+            'contract_month':     _date_parts(getattr(contract, 'contract_date', None) if contract else None)[1],
+            'contract_year':      _date_parts(getattr(contract, 'contract_date', None) if contract else None)[2],
+            'contract_value':     _fmt(getattr(contract, 'contract_value', 0) or 0) if contract else '',
+            'advance_percentage_contract': str(getattr(contract, 'advance_percentage', 30) or 30) if contract else '',
+            'advance_amount_contract':     _fmt(getattr(contract, 'advance_amount', 0) or 0) if contract else '',
             # Misc
             'notes':          payment_report.notes or '',
             'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),

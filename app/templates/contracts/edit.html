@@ -5,107 +5,189 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
-        <h1><i class="bi bi-pencil-square"></i> Edit Contract - {{ contract.contract_number }}</h1>
+        <h1><i class="bi bi-pencil-square"></i> {{ t('Edit Contract') }} - {{ contract.contract_number }}</h1>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}">
+
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="contract_number" class="form-label">Contract Number</label>
-                                <input type="text" class="form-control" id="contract_number" name="contract_number" disabled value="{{ contract.contract_number }}" placeholder="Read-only">
-                                <small class="text-muted">Contract number cannot be changed</small>
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ t('Contract Number') }}</label>
+                            <input type="text" class="form-control" disabled value="{{ contract.contract_number }}">
+                            <small class="text-muted">{{ t('Contract number cannot be changed') }}</small>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="contract_date" class="form-label">Contract Date</label>
-                                <input type="date" class="form-control" id="contract_date" name="contract_date" disabled value="{{ contract.contract_date.strftime('%Y-%m-%d') }}" placeholder="Read-only">
-                                <small class="text-muted">Contract date cannot be changed</small>
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ t('Signing Date') }}</label>
+                            <input type="date" class="form-control" disabled value="{{ contract.contract_date.strftime('%Y-%m-%d') }}">
+                            <small class="text-muted">{{ t('Signing date cannot be changed') }}</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="city" class="form-label">{{ t('Signing Location') }}</label>
+                            <input type="text" class="form-control" id="city" name="city" value="{{ contract.city or '' }}" placeholder="E.g. Ho Chi Minh City">
                         </div>
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="contract_value" class="form-label">Contract Value *</label>
-                                <input type="number" class="form-control" id="contract_value" name="contract_value" required step="0.01" value="{{ contract.contract_value }}">
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="contract_start_date" class="form-label">{{ t('Contract Start Date') }}</label>
+                            <input type="date" class="form-control" id="contract_start_date" name="contract_start_date"
+                                   value="{{ contract.contract_start_date.strftime('%Y-%m-%d') if contract.contract_start_date else '' }}">
+                            <small class="text-muted">{{ t('Ngày bắt đầu thực hiện hợp đồng') }}</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="contract_days_complete" class="form-label">{{ t('Days to Complete') }}</label>
+                            <input type="number" class="form-control" id="contract_days_complete" name="contract_days_complete"
+                                   value="{{ contract.contract_days_complete or 30 }}" min="1">
+                            <small class="text-muted">{{ t('Số ngày cam kết hoàn thiện') }}</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="num_date_notice_cancel" class="form-label">{{ t('Cancellation Notice (days)') }}</label>
+                            <input type="number" class="form-control" id="num_date_notice_cancel" name="num_date_notice_cancel"
+                                   value="{{ contract.num_date_notice_cancel or 7 }}" min="0">
+                            <small class="text-muted">{{ t('Số ngày báo trước nếu muốn hủy HĐ') }}</small>
                         </div>
                     </div>
 
-                    <!-- Line Items Section -->
-                    <div class="mb-4">
-                        <h6 class="mb-3"><i class="bi bi-list-ul"></i> Line Items</h6>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">{{ t('Contract Content') }}</label>
+                            <textarea class="form-control bg-light" rows="3" readonly>{{ order.description or '' }}</textarea>
+                            <small class="text-muted">{{ t('Nội dung lấy từ mô tả đơn hàng – chỉnh sửa trong trang Order') }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <div class="mb-3">
+                        <h5><i class="bi bi-table"></i> {{ t('Items / Work Table') }}</h5>
                         <div class="table-responsive">
-                            <table class="table table-sm">
+                            <table class="table table-sm table-bordered">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width: 40%">Item Name</th>
-                                        <th style="width: 15%" class="text-end">Qty</th>
-                                        <th style="width: 20%" class="text-end">Unit Price</th>
-                                        <th style="width: 15%" class="text-end">Total</th>
-                                        <th style="width: 10%"></th>
+                                        <th style="width:5%">No.</th>
+                                        <th style="width:33%">{{ t('Item Name / Work') }}</th>
+                                        <th style="width:10%">{{ t('Unit') }}</th>
+                                        <th style="width:10%">{{ t('Qty') }}</th>
+                                        <th style="width:15%">{{ t('Unit Price') }}</th>
+                                        <th style="width:15%">{{ t('Amount') }}</th>
+                                        <th style="width:12%"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="items-body">
                                     {% if contract.items %}
-                                        {% for item in contract.items %}
-                                        <tr class="item-row">
-                                            <td>
-                                                <input type="text" class="form-control form-control-sm item-name" name="item_name[]" value="{{ item.name }}" placeholder="Item name">
-                                            </td>
-                                            <td>
-                                                <input type="number" class="form-control form-control-sm item-qty text-end" name="item_quantity[]" value="{{ item.quantity }}" step="0.01" placeholder="0">
-                                            </td>
-                                            <td>
-                                                <input type="number" class="form-control form-control-sm item-price text-end" name="item_price[]" value="{{ item.unit_price }}" step="0.01" placeholder="0.00">
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control form-control-sm item-total text-end" value="${{ item.total }}" readonly style="background-color: #f8f9fa;">
-                                            </td>
-                                            <td>
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-item" title="Remove item">
-                                                    <i class="bi bi-x"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
+                                    {% for item in contract.items %}
+                                    <tr class="item-row">
+                                        <td class="stt-cell text-center align-middle">{{ loop.index }}</td>
+                                        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="{{ item.name }}"></td>
+                                        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="{{ item.get('unit', 'pcs') }}"></td>
+                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="{{ item.quantity }}" step="0.01"></td>
+                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1"></td>
+                                        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly value="{{ item.get('total', 0)|int }}"></td>
+                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
+                                    </tr>
+                                    {% endfor %}
                                     {% endif %}
                                 </tbody>
                             </table>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="add-item-btn">
-                            <i class="bi bi-plus"></i> Add Item
+                            <i class="bi bi-plus"></i> {{ t('Add Row') }}
                         </button>
                     </div>
 
-                    <!-- Total Amount (Read-only) -->
-                    <div class="mb-3">
-                        <label for="total_amount" class="form-label">Total Amount (from items)</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="text" class="form-control" id="total_amount" value="{{ contract.contract_value }}" readonly style="background-color: #f8f9fa;">
+                    <!-- VAT & Totals -->
+                    <div class="row justify-content-end mb-3">
+                        <div class="col-md-5">
+                            <table class="table table-sm table-bordered">
+                                <tr>
+                                    <th class="bg-light">{{ t('Subtotal:') }}</th>
+                                    <td class="text-end"><input type="text" id="subtotal_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ contract.subtotal|int if contract.subtotal else '' }}"></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">
+                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" or 8 }}" min="0" max="100" step="0.1">%):
+                                    </th>
+                                    <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ contract.vat_amount|int if contract.vat_amount else '' }}"></td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th>{{ t('Total Contract Value:') }}</th>
+                                    <td class="text-end fw-bold"><input type="text" id="total_display" class="form-control form-control-sm text-end fw-bold bg-light" readonly value="{{ contract.contract_value|int if contract.contract_value else '' }}"></td>
+                                </tr>
+                            </table>
+                            <input type="hidden" id="contract_value" name="contract_value" value="{{ contract.contract_value or 0 }}">
+                            <input type="hidden" id="vat_amount" name="vat_amount" value="{{ contract.vat_amount or 0 }}">
+                            <input type="hidden" id="subtotal_hidden" name="subtotal" value="{{ contract.subtotal or 0 }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
+                            <input type="text" class="form-control" id="amount_in_words" name="amount_in_words"
+                                   value="{{ contract.amount_in_words or '' }}" placeholder="E.g. Hai trăm triệu đồng">
+                            <small class="text-muted">{{ t('Số tiền bằng chữ') }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Advance Payment -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="advance_percentage" class="form-label">{{ t('Advance (%)') }}</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="advance_percentage" name="advance_percentage" value="{{ contract.advance_percentage or 30 }}" min="0" max="100" step="1">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Advance Amount') }}</label>
+                            <input type="text" id="advance_display" class="form-control bg-light" readonly value="{{ contract.advance_amount|int if contract.advance_amount else '' }}">
+                            <input type="hidden" id="advance_amount" name="advance_amount" value="{{ contract.advance_amount or 0 }}">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="terms_and_conditions" class="form-label">Terms & Conditions</label>
-                        <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5" placeholder="Enter terms and conditions">{{ contract.terms_and_conditions or '' }}</textarea>
+                        <h6><i class="bi bi-bank2"></i> {{ t('Payment Bank Account') }}</h6>
+                        {% if company and company.bank_accounts %}
+                        <p class="text-muted small mb-2">{{ t('Ngân hàng thanh toán cho hợp đồng này:') }}
+                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank" class="ms-1">{{ t('Settings') }}</a>
+                        </p>
+                        {% for bank in company.bank_accounts %}
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="radio"
+                                   name="selected_bank_index"
+                                   id="contract_bank_{{ loop.index }}"
+                                   value="{{ loop.index0 }}"
+                                   {% if (contract.selected_bank_index or 0) == loop.index0 %}checked{% endif %}>
+                            <label class="form-check-label" for="contract_bank_{{ loop.index }}">
+                                <strong>{{ bank.bank_name }}</strong> —
+                                TK: <code>{{ bank.account_number }}</code>
+                                {% if bank.account_holder %} ({{ bank.account_holder }}){% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted small">Chưa có tài khoản ngân hàng.
+                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Thêm trong Cài đặt</a>.
+                        </p>
+                        <input type="hidden" name="selected_bank_index" value="{{ contract.selected_bank_index or 0 }}">
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="terms_and_conditions" class="form-label">{{ t('Contract Terms & Conditions') }}</label>
+                        <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5">{{ contract.terms_and_conditions or '' }}</textarea>
                     </div>
 
                     <div class="d-grid gap-2 d-md-block">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle"></i> Save Changes
+                            <i class="bi bi-check-circle"></i> {{ t('Save Changes') }}
                         </button>
                         <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> Cancel
+                            <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
                         </a>
                     </div>
                 </form>
@@ -116,80 +198,128 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const itemsBody = document.getElementById('items-body');
-    const addItemBtn = document.getElementById('add-item-btn');
-    const totalAmountInput = document.getElementById('total_amount');
-    const contractValueInput = document.getElementById('contract_value');
-
-    function createItemRow(name = '', qty = 0, price = 0) {
-        const row = document.createElement('tr');
-        row.className = 'item-row';
-        row.innerHTML = `
-            <td>
-                <input type="text" class="form-control form-control-sm item-name" name="item_name[]" value="${name}" placeholder="Item name">
-            </td>
-            <td>
-                <input type="number" class="form-control form-control-sm item-qty text-end" name="item_quantity[]" value="${qty}" step="0.01" placeholder="0">
-            </td>
-            <td>
-                <input type="number" class="form-control form-control-sm item-price text-end" name="item_price[]" value="${price}" step="0.01" placeholder="0.00">
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm item-total text-end" value="$0.00" readonly style="background-color: #f8f9fa;">
-            </td>
-            <td>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-item" title="Remove item">
-                    <i class="bi bi-x"></i>
-                </button>
-            </td>
-        `;
-        
-        const removeBtn = row.querySelector('.remove-item');
-        removeBtn.addEventListener('click', () => {
-            row.remove();
-            updateTotal();
-        });
-
-        row.querySelector('.item-qty').addEventListener('change', updateTotal);
-        row.querySelector('.item-price').addEventListener('change', updateTotal);
-        row.querySelector('.item-qty').addEventListener('input', updateTotal);
-        row.querySelector('.item-price').addEventListener('input', updateTotal);
-
-        return row;
-    }
-
-    function updateTotal() {
-        let total = 0;
-        const rows = document.querySelectorAll('.item-row');
-        rows.forEach(row => {
-            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-            const price = parseFloat(row.querySelector('.item-price').value) || 0;
-            const itemTotal = (qty * price).toFixed(2);
-            row.querySelector('.item-total').value = `$${itemTotal}`;
-            total += qty * price;
-        });
-        totalAmountInput.value = total.toFixed(2);
-        contractValueInput.value = total.toFixed(2);
-    }
-
-    addItemBtn.addEventListener('click', () => {
-        itemsBody.appendChild(createItemRow());
+    document.getElementById('add-item-btn').addEventListener('click', () => addItemRow());
+    document.getElementById('vat_rate').addEventListener('input', recalcAll);
+    document.getElementById('advance_percentage').addEventListener('input', recalcAll);
+    document.querySelectorAll('#items-body .item-row').forEach(row => {
+        row.querySelector('.qty-input').addEventListener('input', recalcAll);
+        row.querySelector('.price-input').addEventListener('input', recalcAll);
     });
 
-    // Attach event listeners to existing items
-    document.querySelectorAll('.item-row').forEach(row => {
-        row.querySelector('.remove-item').addEventListener('click', () => {
-            row.remove();
-            updateTotal();
-        });
-        row.querySelector('.item-qty').addEventListener('change', updateTotal);
-        row.querySelector('.item-price').addEventListener('change', updateTotal);
-        row.querySelector('.item-qty').addEventListener('input', updateTotal);
-        row.querySelector('.item-price').addEventListener('input', updateTotal);
-    });
+    // Mark amount_in_words as manually entered if user types in it
+    const aiw = document.getElementById('amount_in_words');
+    if (aiw) aiw.addEventListener('input', () => { aiw.dataset.manualEdit = '1'; });
 
-    // Initial total calculation
-    updateTotal();
+    recalcAll();
+    updateRowNumbers();
 });
+
+function fmtNum(n) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function numberToVietnamese(num) {
+    num = Math.round(num);
+    if (!num || num === 0) return '';
+    const units = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    function readTens(n) {
+        if (n === 0) return '';
+        if (n < 10) return units[n];
+        if (n === 10) return 'mười';
+        if (n < 20) return 'mười ' + (n % 10 === 5 ? 'lăm' : units[n % 10]);
+        const t = Math.floor(n / 10), u = n % 10;
+        let s = units[t] + ' mươi';
+        if (u === 1) s += ' mốt';
+        else if (u === 5) s += ' lăm';
+        else if (u !== 0) s += ' ' + units[u];
+        return s;
+    }
+    function readHundreds(n) {
+        const h = Math.floor(n / 100), rest = n % 100;
+        let s = '';
+        if (h > 0) s = units[h] + ' trăm';
+        if (rest > 0) {
+            if (h > 0 && rest < 10) s += ' linh ' + units[rest];
+            else if (h > 0) s += ' ' + readTens(rest);
+            else s = readTens(rest);
+        }
+        return s;
+    }
+    const ty     = Math.floor(num / 1_000_000_000);
+    const trieu  = Math.floor((num % 1_000_000_000) / 1_000_000);
+    const nghin  = Math.floor((num % 1_000_000) / 1_000);
+    const rest   = num % 1_000;
+    const parts  = [];
+    if (ty    > 0) parts.push(readHundreds(ty)    + ' tỷ');
+    if (trieu > 0) parts.push(readHundreds(trieu) + ' triệu');
+    if (nghin > 0) parts.push(readHundreds(nghin) + ' nghìn');
+    if (rest  > 0) parts.push(readHundreds(rest));
+    if (!parts.length) return '';
+    const text = parts.join(' ');
+    return text.charAt(0).toUpperCase() + text.slice(1) + ' đồng';
+}
+
+function addItemRow(name='', unit='pcs', quantity='1', price='') {
+    const tbody = document.getElementById('items-body');
+    const row = document.createElement('tr');
+    row.className = 'item-row';
+    row.innerHTML = `
+        <td class="stt-cell text-center align-middle"></td>
+        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="${name}" placeholder="Item name / work"></td>
+        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="${unit}" placeholder="pcs"></td>
+        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="${quantity}" step="0.01" placeholder="0"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="${price}" step="1" placeholder="0"></td>
+        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
+    `;
+    tbody.appendChild(row);
+    row.querySelector('.qty-input').addEventListener('input', recalcAll);
+    row.querySelector('.price-input').addEventListener('input', recalcAll);
+    updateRowNumbers();
+}
+
+function removeItemRow(btn) {
+    btn.closest('tr').remove();
+    recalcAll();
+    updateRowNumbers();
+}
+
+function updateRowNumbers() {
+    document.querySelectorAll('#items-body .item-row').forEach((row, idx) => {
+        row.querySelector('.stt-cell').textContent = idx + 1;
+    });
+}
+
+function recalcAll() {
+    let subtotal = 0;
+    document.querySelectorAll('#items-body .item-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const total = qty * price;
+        row.querySelector('.row-total').value = fmtNum(total);
+        subtotal += total;
+    });
+    const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
+    const vatAmount = Math.round(subtotal * vatRate / 100);
+    const grandTotal = subtotal + vatAmount;
+    const advPct = parseFloat(document.getElementById('advance_percentage').value) || 0;
+    const advAmount = Math.round(grandTotal * advPct / 100);
+
+    document.getElementById('subtotal_display').value = fmtNum(subtotal);
+    document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
+    document.getElementById('total_display').value = fmtNum(grandTotal);
+    document.getElementById('advance_display').value = fmtNum(advAmount);
+
+    document.getElementById('contract_value').value = grandTotal;
+    document.getElementById('vat_amount').value = vatAmount;
+    document.getElementById('subtotal_hidden').value = subtotal;
+    document.getElementById('advance_amount').value = advAmount;
+
+    // Auto-fill amount_in_words (chỉ khi chưa chỉnh tay)
+    const aiw = document.getElementById('amount_in_words');
+    if (aiw && !aiw.dataset.manualEdit) {
+        aiw.value = numberToVietnamese(grandTotal);
+    }
+}
 </script>
 {% endblock %}

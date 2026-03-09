@@ -1,147 +1,597 @@
 {% extends "base.html" %}
 
-{% block title %}Create Payment Report - SofaFlow{% endblock %}
+{% block title %}Create Payment Record - SofaFlow{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-12">
-        <h1><i class="bi bi-plus-circle"></i> Create Payment Report</h1>
+    <div class="col-md-8">
+        <h1><i class="bi bi-plus-circle"></i> {{ t('Create Payment Record') }}</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> {{ t('Back to Order') }}
+        </a>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-9">
+        <!-- Contract Reference Card -->
+        {% if active_contract %}
+        <div class="card border-primary mb-4">
+            <div class="card-header bg-primary bg-opacity-10">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-primary">
+                        <i class="bi bi-file-earmark-text"></i>
+                        {{ t('Reference Contract:') }} <strong>{{ active_contract.contract_number }}</strong>
+                        <span class="badge bg-secondary ms-1">{{ active_contract.contract_date.strftime('%d/%m/%Y') }}</span>
+                    </h6>
+                    <button type="button" class="btn btn-sm btn-primary" id="load-contract-btn">
+                        <i class="bi bi-download"></i> {{ t('Load items from contract') }}
+                    </button>
+                </div>
+            </div>
+            <div class="card-body py-2">
+                <div class="row text-sm">
+                    <div class="col-md-3">
+                        <small class="text-muted">{{ t('Contract Value') }}</small><br>
+                        <strong>{{ "{:,.0f}".format(active_contract.contract_value) }} ₫</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">{{ t('VAT Tax') }}</small><br>
+                        <strong>{{ active_contract.vat_rate }}%
+                            ({{ "{:,.0f}".format(active_contract.vat_amount or 0) }} ₫)</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Advance ({{ active_contract.advance_percentage }}%)</small><br>
+                        <strong>{{ "{:,.0f}".format(active_contract.advance_amount or 0) }} ₫</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">{{ t('Remaining Balance') }}</small><br>
+                        <strong>{{ "{:,.0f}".format((active_contract.contract_value or 0) - (active_contract.advance_amount or 0)) }} ₫</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="{{ url_for('dashboard.create_payment', order_id=order.id) }}">
+                <form method="POST" action="{{ url_for('dashboard.create_payment', order_id=order.id) }}" id="payment-form">
+
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="report_number" class="form-label">Report Number *</label>
+                                <label for="report_number" class="form-label">{{ t('Report Number *') }}</label>
                                 <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="Loading...">
                                 <div id="code-warning" class="text-danger small mt-1" style="display:none;">
-                                    <i class="bi bi-exclamation-triangle"></i> This code is already taken!
+                                    <i class="bi bi-exclamation-triangle"></i> This code is already in use!
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="payment_type" class="form-label">Payment Type *</label>
+                                <label for="payment_type" class="form-label">{{ t('Payment Type *') }}</label>
                                 <select class="form-select" id="payment_type" name="payment_type" required>
-                                    <option value="">Select type</option>
-                                    <option value="advance" {% if default_type == 'advance' %}selected{% endif %}>Advance</option>
-                                    <option value="final" {% if default_type == 'final' %}selected{% endif %}>Final</option>
+                                    <option value="">{{ t('-- Select type --') }}</option>
+                                    <option value="advance" {% if default_type == 'advance' %}selected{% endif %}>{{ t('Advance') }}</option>
+                                    <option value="final" {% if default_type == 'final' %}selected{% endif %}>{{ t('Final Payment') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="report_date" class="form-label">{{ t('Date *') }}</label>
+                                <input type="date" class="form-control" id="report_date" name="report_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="payment_date" class="form-label">{{ t('Payment Date *') }}</label>
+                                <input type="date" class="form-control" id="payment_date" name="payment_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="quotation_reference_date" class="form-label">{{ t('Contract Signing Date') }}</label>
+                                <input type="date" class="form-control" id="quotation_reference_date" name="quotation_reference_date"
+                                       value="{{ active_contract.contract_date.strftime('%Y-%m-%d') if active_contract else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="payment_method" class="form-label">Payment Method</label>
+                                <select class="form-select" id="payment_method" name="payment_method">
+                                    <option value="">-- Select --</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Check">Check</option>
                                 </select>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="report_date" class="form-label">Report Date *</label>
-                                <input type="date" class="form-control" id="report_date" name="report_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                    <!-- Work Items -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0"><i class="bi bi-table"></i> Work Items / Goods</h5>
+                            {% if active_contract %}
+                            <span class="text-muted small">Click "Load items from contract" to auto-fill</span>
+                            {% endif %}
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:5%">No.</th>
+                                        <th style="width:35%">Item Name</th>
+                                        <th style="width:10%">Unit</th>
+                                        <th style="width:10%">Qty</th>
+                                        <th style="width:15%">Unit Price</th>
+                                        <th style="width:15%">Amount</th>
+                                        <th style="width:10%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-body">
+                                    <tr class="item-row">
+                                        <td class="stt-cell text-center align-middle">1</td>
+                                        <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / goods"></td>
+                                        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="pcs" placeholder="pcs"></td>
+                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="1" step="0.01"></td>
+                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" step="1" placeholder="0"></td>
+                                        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
+                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-trash"></i></button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addItemRow()">
+                            <i class="bi bi-plus"></i> {{ t('Add Row') }}
+                        </button>
+                    </div>
+
+                    <!-- VAT & Totals -->
+                    <div class="row justify-content-end mb-3">
+                        <div class="col-md-5">
+                            <table class="table table-sm table-bordered">
+                                <tr>
+                                    <th class="bg-light">Subtotal:</th>
+                                    <td class="text-end"><input type="text" id="subtotal_display" class="form-control form-control-sm text-end bg-light" readonly></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">
+                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" if active_contract else 8 }}" min="0" max="100" step="0.1">%):
+                                    </th>
+                                    <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly></td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th>Payment Value:</th>
+                                    <td class="text-end fw-bold"><input type="text" id="total_display" class="form-control form-control-sm text-end fw-bold bg-light" readonly></td>
+                                </tr>
+                            </table>
+                            <input type="hidden" id="subtotal_hidden" name="subtotal">
+                            <input type="hidden" id="vat_amount" name="vat_amount">
+                            <input type="hidden" id="amount" name="amount">
+                        </div>
+                    </div>
+
+                    <!-- Advance & Remaining -->
+                    <div id="advance-section" class="mb-3">
+
+                        <!-- Show when: payment_type == advance | OR | payment_type == final AND advance_skipped -->
+                        <div id="advance_pct_section" class="row mb-2">
+                            <div class="col-md-4">
+                                <label for="advance_percentage" class="form-label">Tạm ứng (%)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="advance_percentage" name="advance_percentage"
+                                           value="{{ 0 if advance_skipped else (active_contract.advance_percentage if active_contract else 30) }}"
+                                           min="0" max="100" step="1">
+                                    <span class="input-group-text">%</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="payment_date" class="form-label">Payment Date *</label>
-                                <input type="date" class="form-control" id="payment_date" name="payment_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+
+                        <!-- Show when: payment_type == final AND NOT advance_skipped -->
+                        <div id="confirmed_adv_section" class="mb-2" style="display:none">
+                            <label class="form-label fw-bold">Tổng tạm ứng đã xác nhận</label>
+                            {% if confirmed_advance_payments %}
+                            <table class="table table-sm table-bordered mb-1">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Số chứng từ</th>
+                                        <th>Ngày</th>
+                                        <th class="text-end">Số tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in confirmed_advance_payments %}
+                                    <tr>
+                                        <td>{{ p.report_number }}</td>
+                                        <td>{{ p.payment_date.strftime('%d/%m/%Y') if p.payment_date else '-' }}</td>
+                                        <td class="text-end">{{ "{:,.0f}".format(p.advance_amount|float if p.advance_amount else 0) }} ₫</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr>
+                                        <td colspan="2" class="text-end">Tổng tạm ứng:</td>
+                                        <td class="text-end">{{ "{:,.0f}".format(confirmed_advance_total) }} ₫</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                            {% else %}
+                            <div class="alert alert-info py-2 mb-1">Không có chứng từ tạm ứng nào được xác nhận.</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6" id="advance_display_col">
+                                <label class="form-label">Số tiền tạm ứng</label>
+                                <input type="text" id="advance_display" class="form-control bg-light" readonly>
+                                <input type="hidden" id="advance_amount" name="advance_amount">
+                            </div>
+                            <div class="col-md-6" id="remaining_display_col">
+                                <label class="form-label">Số tiền còn lại</label>
+                                <input type="text" id="remaining_display" class="form-control bg-light fw-bold" readonly>
+                                <input type="hidden" id="remaining_amount" name="remaining_amount">
                             </div>
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="amount" class="form-label">Amount *</label>
-                                <input type="number" class="form-control" id="amount" name="amount" required step="0.01" placeholder="0.00">
-                            </div>
+                    <div class="mb-3">
+                        <label for="amount_in_words" class="form-label">Amount in Words</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="amount_in_words" name="amount_in_words"
+                                   placeholder="Auto-fill based on payment type...">
+                            <button type="button" class="btn btn-outline-secondary" title="Auto-fill" onclick="autoFillWords()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="payment_method" class="form-label">Payment Method</label>
-                                <input type="text" class="form-control" id="payment_method" name="payment_method" placeholder="e.g., Bank Transfer, Cash, Check">
+                        <div class="form-text">Tự động điền: tạm ứng nếu chọn Advance, số tiền còn lại nếu chọn Final Payment. Sửa trực tiếp để override.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="work_completed_summary" class="form-label">Work Completion Summary</label>
+                        <textarea class="form-control" id="work_completed_summary" name="work_completed_summary" rows="2"
+                                  placeholder="VD: Sản xuất và lắp đặt hoàn chỉnh sofa theo yêu cầu..."></textarea>
+                    </div>
+
+                    <!-- Bank Accounts -->
+                    <div class="mb-3">
+                        <h6><i class="bi bi-bank2"></i> Payment Bank Accounts</h6>
+
+                        {% if company and company.bank_accounts %}
+                        <p class="text-muted small mb-2">Chọn tài khoản thanh toán từ
+                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Cài đặt</a>:
+                        </p>
+                        <div id="saved-banks-list" class="mb-2">
+                            {% for bank in company.bank_accounts %}
+                            <div class="form-check mb-1">
+                                <input class="form-check-input saved-bank-check" type="radio"
+                                       name="saved_bank_radio"
+                                       id="saved_bank_{{ loop.index }}"
+                                       data-bank-name="{{ bank.bank_name }}"
+                                       data-account-number="{{ bank.account_number }}"
+                                       data-account-holder="{{ bank.account_holder or '' }}"
+                                       {% if loop.first %}checked{% endif %}>
+                                <label class="form-check-label" for="saved_bank_{{ loop.index }}">
+                                    <strong>{{ bank.bank_name }}</strong> —
+                                    TK: <code>{{ bank.account_number }}</code>
+                                    {% if bank.account_holder %} ({{ bank.account_holder }}){% endif %}
+                                </label>
                             </div>
+                            {% endfor %}
                         </div>
+                        {% else %}
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="text-muted small">Chưa có tài khoản ngân hàng.
+                                <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Thêm trong Cài đặt</a> hoặc nhập thủ công:
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addBankRow()">
+                                <i class="bi bi-plus"></i> Add account
+                            </button>
+                        </div>
+                        {% endif %}
+
+                        <div id="bank-accounts"></div>
+                        <input type="hidden" id="bank_account_info" name="bank_account_info" value="[]">
                     </div>
 
                     <div class="mb-3">
                         <label for="transaction_reference" class="form-label">Transaction Reference</label>
-                        <input type="text" class="form-control" id="transaction_reference" name="transaction_reference" placeholder="e.g., Check #, Bank Ref, etc.">
+                        <input type="text" class="form-control" id="transaction_reference" name="transaction_reference" placeholder="E.g. check number, transfer code...">
                     </div>
 
                     <div class="mb-3">
-                        <label for="notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        <label for="notes" class="form-label">{{ t('Notes') }}</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
                     </div>
 
                     <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Create Payment Report
-                    </button>
-                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {{ t('Create Record') }}
+                        </button>
+                        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
+                        </a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+
+    <!-- Right sidebar -->
+    <div class="col-md-3">
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-info-circle"></i> Order Information</h6></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-5">Order:</dt>
+                    <dd class="col-sm-7">{{ order.order_code }}</dd>
+                    <dt class="col-sm-5">Customer:</dt>
+                    <dd class="col-sm-7">{{ order.customer.name }}</dd>
+                    {% if active_contract %}
+                    <dt class="col-sm-5">Contract:</dt>
+                    <dd class="col-sm-7">{{ active_contract.contract_number }}</dd>
+                    <dt class="col-sm-5">Contract Value:</dt>
+                    <dd class="col-sm-7">{{ "{:,.0f}".format(active_contract.contract_value) }} ₫</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+        {% if active_contract %}
+        <div class="alert alert-info small">
+            <i class="bi bi-lightbulb"></i>
+            Click <strong>"Load items from contract"</strong> to auto-fill the work items and VAT rate from contract {{ active_contract.contract_number }}.
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 <script>
-// Auto-fill payment report number on page load
+const CONTRACT_ID = "{{ active_contract.id if active_contract else '' }}";
+const ADVANCE_SKIPPED = {{ 'true' if advance_skipped else 'false' }};
+const CONFIRMED_ADVANCE_TOTAL = {{ confirmed_advance_total }};
+
 document.addEventListener('DOMContentLoaded', async function() {
     try {
         const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="payment") }}');
         const data = await response.json();
-        if (data.next_code) {
-            document.getElementById('report_number').value = data.next_code;
-            document.getElementById('report_number').placeholder = 'e.g., PR-001';
-        }
-    } catch (error) {
-        console.error('Error loading next code:', error);
-        document.getElementById('report_number').placeholder = 'e.g., PR-001';
-    }
+        if (data.next_code) document.getElementById('report_number').value = data.next_code;
+    } catch {}
 
-    // Check for duplicate code when user changes it
     let checkTimeout;
     document.getElementById('report_number').addEventListener('input', function() {
         clearTimeout(checkTimeout);
         const code = this.value.trim();
         const warning = document.getElementById('code-warning');
         const submitBtn = document.querySelector('button[type="submit"]');
-        
-        if (!code) {
-            warning.style.display = 'none';
-            submitBtn.disabled = false;
-            return;
-        }
-        
+        if (!code) { warning.style.display = 'none'; submitBtn.disabled = false; return; }
         checkTimeout = setTimeout(async () => {
             try {
-                const response = await fetch('{{ url_for("dashboard.check_code", doc_type="payment") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ code: code })
+                const res = await fetch('{{ url_for("dashboard.check_code", doc_type="payment") }}', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ code })
                 });
-                const data = await response.json();
-                
-                if (data.exists) {
-                    warning.style.display = 'block';
-                    submitBtn.disabled = true;
-                } else {
-                    warning.style.display = 'none';
-                    submitBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('Error checking code:', error);
-            }
+                const d = await res.json();
+                warning.style.display = d.exists ? 'block' : 'none';
+                submitBtn.disabled = !!d.exists;
+            } catch {}
         }, 500);
     });
+
+    document.getElementById('vat_rate').addEventListener('input', recalcAll);
+    document.getElementById('advance_percentage').addEventListener('input', recalcAll);
+    document.getElementById('payment_type').addEventListener('change', function() {
+        updateAdvanceSection();
+        recalcAll();
+    });
+    document.querySelectorAll('#items-body .item-row').forEach(row => {
+        row.querySelector('.qty-input').addEventListener('input', recalcAll);
+        row.querySelector('.price-input').addEventListener('input', recalcAll);
+    });
+
+    // Load from contract button
+    const loadBtn = document.getElementById('load-contract-btn');
+    if (loadBtn && CONTRACT_ID) {
+        loadBtn.addEventListener('click', async function() {
+            try {
+                const res = await fetch(`/api/contracts/${CONTRACT_ID}`);
+                const data = await res.json();
+                if (res.ok && data.items) {
+                    document.getElementById('items-body').innerHTML = '';
+                    data.items.forEach(item => addItemRow(item.name, item.unit || 'Cái', item.quantity, item.unit_price));
+                    if (data.vat_rate !== undefined) document.getElementById('vat_rate').value = data.vat_rate;
+                    if (data.advance_percentage !== undefined) document.getElementById('advance_percentage').value = data.advance_percentage;
+                    recalcAll();
+                    updateRowNumbers();
+                }
+            } catch(e) { console.error('Load contract error:', e); }
+        });
+    }
+
+    document.getElementById('payment-form').addEventListener('submit', function() {
+        updateBankJson();
+    });
+
+    recalcAll();
+    updateRowNumbers();
+    updateAdvanceSection();
+
+    // Track manual editing of amount_in_words
+    const wordsInput = document.getElementById('amount_in_words');
+    wordsInput.addEventListener('input', function() { this._userEdited = true; });
 });
+
+function updateAdvanceSection() {
+    const payType = document.getElementById('payment_type').value;
+    const showConfirmed = payType === 'final' && !ADVANCE_SKIPPED;
+    const showPct = payType === 'advance' || (payType === 'final' && ADVANCE_SKIPPED);
+    const pctSection = document.getElementById('advance_pct_section');
+    const confSection = document.getElementById('confirmed_adv_section');
+    const advDisplayCol = document.getElementById('advance_display_col');
+    if (pctSection) pctSection.style.display = showPct ? '' : 'none';
+    if (confSection) confSection.style.display = showConfirmed ? '' : 'none';
+    // When the confirmed list is shown, the advance display box is redundant
+    if (advDisplayCol) advDisplayCol.style.display = showConfirmed ? 'none' : '';
+    // Expand remaining to full width when advance box is hidden
+    const remCol = document.getElementById('remaining_display_col');
+    if (remCol) {
+        remCol.className = showConfirmed ? 'col-md-12' : 'col-md-6';
+    }
+}
+
+function autoFillWords() {
+    const wordsEl = document.getElementById('amount_in_words');
+    wordsEl._userEdited = false;
+    const payType = document.getElementById('payment_type').value;
+    const amt = payType === 'advance'
+        ? parseInt(document.getElementById('advance_amount').value || '0')
+        : parseInt(document.getElementById('remaining_amount').value || '0');
+    wordsEl.value = amt > 0 ? numberToWordsVi(amt) : '';
+}
+
+function numberToWordsVi(n) {
+    n = Math.round(n);
+    if (!n || n === 0) return 'Không đồng';
+    const u = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    function r3(x, notFirst) {
+        if (x === 0) return '';
+        let s = '', h = Math.floor(x/100), rem = x%100, t = Math.floor(rem/10), d = rem%10;
+        if (h) { s += u[h] + ' trăm'; if (rem) s += ' '; }
+        else if (notFirst && rem) s += 'không trăm ';
+        if (rem >= 10 && rem <= 19) { s += ['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín'][rem-10]; }
+        else if (t > 1) { s += u[t]+' mươi'; if (d===1) s+=' mốt'; else if (d===5) s+=' lăm'; else if (d) s+=' '+u[d]; }
+        else if (t === 1) { s += ['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín'][d]; }
+        else if (d) { s += (h || notFirst) ? 'lẻ '+u[d] : u[d]; }
+        return s.trim();
+    }
+    const ty=Math.floor(n/1e9), tr=Math.floor((n%1e9)/1e6), ng=Math.floor((n%1e6)/1e3), con=n%1e3;
+    let parts=[];
+    if(ty)  parts.push(r3(ty,false)+' tỷ');
+    if(tr)  parts.push(r3(tr, ty>0)+' triệu');
+    if(ng)  parts.push(r3(ng, tr>0||ty>0)+' nghìn');
+    if(con) parts.push(r3(con, ng>0||tr>0||ty>0));
+    const res = parts.join(' ').trim();
+    return res.charAt(0).toUpperCase()+res.slice(1)+' đồng';
+}
+
+function fmtNum(n) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function recalcAll() {
+    let subtotal = 0;
+    document.querySelectorAll('#items-body .item-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const total = qty * price;
+        row.querySelector('.row-total').value = fmtNum(total);
+        subtotal += total;
+    });
+    const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
+    const vatAmount = Math.round(subtotal * vatRate / 100);
+    const grandTotal = subtotal + vatAmount;
+
+    // Advance amount: use confirmed advance total for final type (not skipped)
+    const payType = document.getElementById('payment_type').value;
+    let advAmount;
+    if (payType === 'final' && !ADVANCE_SKIPPED) {
+        advAmount = Math.round(CONFIRMED_ADVANCE_TOTAL);
+    } else {
+        const advPct = parseFloat(document.getElementById('advance_percentage').value) || 0;
+        advAmount = Math.round(grandTotal * advPct / 100);
+    }
+    const remaining = grandTotal - advAmount;
+
+    document.getElementById('subtotal_display').value = fmtNum(subtotal);
+    document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
+    document.getElementById('total_display').value = fmtNum(grandTotal);
+    document.getElementById('advance_display').value = fmtNum(advAmount);
+    document.getElementById('remaining_display').value = fmtNum(remaining);
+
+    document.getElementById('subtotal_hidden').value = subtotal;
+    document.getElementById('vat_amount').value = vatAmount;
+    document.getElementById('amount').value = grandTotal;
+    document.getElementById('advance_amount').value = advAmount;
+    document.getElementById('remaining_amount').value = remaining;
+
+    // Auto-fill amount in words: advance amount if advance payment, remaining balance if final
+    const wordsEl = document.getElementById('amount_in_words');
+    if (wordsEl && !wordsEl._userEdited) {
+        const payType = document.getElementById('payment_type').value;
+        const amtForWords = payType === 'advance' ? advAmount : remaining;
+        wordsEl.value = amtForWords > 0 ? numberToWordsVi(amtForWords) : '';
+    }
+}
+
+function updateRowNumbers() {
+    document.querySelectorAll('#items-body .item-row').forEach((row, idx) => {
+        row.querySelector('.stt-cell').textContent = idx + 1;
+    });
+}
+
+function addItemRow(name='', unit='pcs', quantity='1', price='') {
+    const tbody = document.getElementById('items-body');
+    const row = document.createElement('tr');
+    row.className = 'item-row';
+    row.innerHTML = `
+        <td class="stt-cell text-center align-middle"></td>
+        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="${name}" placeholder="Item name / goods"></td>
+        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="${unit}" placeholder="pcs"></td>
+        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="${quantity}" step="0.01"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="${price}" step="1" placeholder="0"></td>
+        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(row);
+    row.querySelector('.qty-input').addEventListener('input', recalcAll);
+    row.querySelector('.price-input').addEventListener('input', recalcAll);
+    updateRowNumbers();
+    recalcAll();
+}
+
+function removeItemRow(btn) {
+    btn.closest('tr').remove();
+    recalcAll();
+    updateRowNumbers();
+}
+
+function addBankRow(bankName='', accountNumber='', accountHolder='') {
+    const container = document.getElementById('bank-accounts');
+    const div = document.createElement('div');
+    div.className = 'row mb-2 bank-row';
+    div.innerHTML = `
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="Bank name" value="${bankName}"></div>
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="Account number" value="${accountNumber}"></div>
+        <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="Account holder" value="${accountHolder}"></div>
+        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.bank-row').remove()"><i class="bi bi-trash"></i></button></div>
+    `;
+    container.appendChild(div);
+}
+
+function updateBankJson() {
+    const banks = [];
+    // Collect selected radio bank
+    const selected = document.querySelector('.saved-bank-check:checked');
+    if (selected) {
+        banks.push({
+            bank_name: selected.dataset.bankName,
+            account_number: selected.dataset.accountNumber,
+            account_holder: selected.dataset.accountHolder
+        });
+    }
+    // Collect manually added banks (fallback when no company banks)
+    document.querySelectorAll('.bank-row').forEach(row => {
+        const name = row.querySelector('.bank-name').value.trim();
+        const acct = row.querySelector('.bank-account').value.trim();
+        const holder = row.querySelector('.bank-holder').value.trim();
+        if (name || acct) banks.push({bank_name: name, account_number: acct, account_holder: holder});
+    });
+    document.getElementById('bank_account_info').value = JSON.stringify(banks);
+}
 </script>
 {% endblock %}

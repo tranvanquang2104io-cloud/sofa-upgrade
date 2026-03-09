@@ -15,9 +15,9 @@
             <div class="card-body">
                 <form method="POST" action="{{ url_for('dashboard.create_order') }}">
                     <div class="mb-3">
-                        <label for="store_id" class="form-label">Store *</label>
+                        <label for="store_id" class="form-label">{{ t('Store *') }}</label>
                         <select class="form-select" id="store_id" name="store_id" required onchange="updateCustomers()">
-                            <option value="">Select a store</option>
+                            <option value="">{{ t('Select a store') }}</option>
                             {% for store in stores %}
                             <option value="{{ store.id }}">{{ store.name }}</option>
                             {% endfor %}
@@ -25,38 +25,46 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="customer_id" class="form-label">Customer *</label>
+                        <label for="customer_id" class="form-label">{{ t('Customer *') }}</label>
                         <select class="form-select" id="customer_id" name="customer_id" required>
-                            <option value="">Select a customer</option>
+                            <option value="">{{ t('Select a customer') }}</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label for="order_code" class="form-label">Order Code *</label>
-                        <input type="text" class="form-control" id="order_code" name="order_code" required placeholder="e.g., ORD-001">
+                        <label for="order_code" class="form-label">{{ t('Order Code *') }}</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="order_code" name="order_code" required placeholder="{{ t('Loading...') }}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="refreshOrderCode()" title="Get new code">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                        <div id="code-warning" class="text-danger small mt-1" style="display:none;">
+                            <i class="bi bi-exclamation-triangle"></i> {{ t('This code is already in use!') }}
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="title" class="form-label">Order Title *</label>
+                        <label for="title" class="form-label">{{ t('Order Title *') }}</label>
                         <input type="text" class="form-control" id="title" name="title" required placeholder="e.g., Sofa Repair">
                     </div>
 
                     <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
+                        <label for="description" class="form-label">{{ t('Description') }}</label>
                         <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                     </div>
 
                     <div class="mb-3">
-                        <label for="notes" class="form-label">Notes</label>
+                        <label for="notes" class="form-label">{{ t('Notes') }}</label>
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                     </div>
 
                     <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Create Order
+                        <i class="bi bi-check-circle"></i> {{ t('Create Order') }}
                     </button>
                     <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
-                        <i class="bi bi-x-circle"></i> Cancel
+                        <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
                     </a>
                     </div>
                 </form>
@@ -71,7 +79,7 @@
     function updateCustomers() {
         const storeId = document.getElementById('store_id').value;
         const customerSelect = document.getElementById('customer_id');
-        customerSelect.innerHTML = '<option value="">Select a customer</option>';
+        customerSelect.innerHTML = '<option value="">{{ t('Select a customer') }}</option>';
         
         if (storeId && storeCustomers[storeId]) {
             storeCustomers[storeId].forEach(customer => {
@@ -82,5 +90,48 @@
             });
         }
     }
+
+    async function loadNextOrderCode() {
+        try {
+            const res = await fetch('{{ url_for("dashboard.get_next_code", doc_type="order") }}');
+            const data = await res.json();
+            if (data.next_code) {
+                document.getElementById('order_code').value = data.next_code;
+                document.getElementById('order_code').placeholder = 'e.g., ORD-001';
+            }
+        } catch { document.getElementById('order_code').placeholder = 'e.g., ORD-001'; }
+    }
+
+    function refreshOrderCode() { loadNextOrderCode(); }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Auto-select first store and populate customers immediately
+        const storeSelect = document.getElementById('store_id');
+        if (storeSelect.options.length > 1 && !storeSelect.value) {
+            storeSelect.selectedIndex = 1; // skip the blank "Select a store" option
+        }
+        updateCustomers();
+        loadNextOrderCode();
+    });
+
+    let _ckTimer;
+    document.getElementById('order_code').addEventListener('input', function () {
+        clearTimeout(_ckTimer);
+        const code = this.value.trim();
+        const warn = document.getElementById('code-warning');
+        const btn  = document.querySelector('button[type="submit"]');
+        if (!code) { warn.style.display = 'none'; btn.disabled = false; return; }
+        _ckTimer = setTimeout(async () => {
+            try {
+                const r = await fetch('{{ url_for("dashboard.check_code", doc_type="order") }}', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ code })
+                });
+                const d = await r.json();
+                warn.style.display = d.exists ? 'block' : 'none';
+                btn.disabled = !!d.exists;
+            } catch {}
+        }, 400);
+    });
 </script>
 {% endblock %}

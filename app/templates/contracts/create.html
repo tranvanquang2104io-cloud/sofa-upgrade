@@ -5,110 +5,209 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
-        <h1><i class="bi bi-plus-circle"></i> Create Contract</h1>
+        <h1><i class="bi bi-plus-circle"></i> {{ t('Create New Contract') }}</h1>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="{{ url_for('dashboard.create_contract', order_id=order.id) }}">
+                <form method="POST" action="{{ url_for('dashboard.create_contract', order_id=order.id) }}" id="contract-form">
+
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="contract_number" class="form-label">Contract Number *</label>
+                                <label for="contract_number" class="form-label">{{ t('Contract Number *') }}</label>
                                 <input type="text" class="form-control" id="contract_number" name="contract_number" required placeholder="Loading...">
                                 <div id="code-warning" class="text-danger small mt-1" style="display:none;">
-                                    <i class="bi bi-exclamation-triangle"></i> This code is already taken!
+                                    <i class="bi bi-exclamation-triangle"></i> This code is already in use!
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="contract_date" class="form-label">{{ t('Signing Date *') }}</label>
+                                <input type="date" class="form-control" id="contract_date" name="contract_date" required value="{{ now().strftime('%Y-%m-%d') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="city" class="form-label">{{ t('Signing Location') }}</label>
+                                <input type="text" class="form-control" id="city" name="city" placeholder="E.g. Ho Chi Minh City">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="contract_start_date" class="form-label">{{ t('Contract Start Date') }}</label>
+                                <input type="date" class="form-control" id="contract_start_date" name="contract_start_date">
+                                <small class="text-muted">{{ t('Ngày bắt đầu thực hiện hợp đồng') }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="contract_days_complete" class="form-label">{{ t('Days to Complete') }}</label>
+                                <input type="number" class="form-control" id="contract_days_complete" name="contract_days_complete" value="30" min="1">
+                                <small class="text-muted">{{ t('Số ngày cam kết hoàn thiện') }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="num_date_notice_cancel" class="form-label">{{ t('Cancellation Notice (days)') }}</label>
+                                <input type="number" class="form-control" id="num_date_notice_cancel" name="num_date_notice_cancel" value="7" min="0" placeholder="7">
+                                <small class="text-muted">{{ t('Số ngày báo trước nếu muốn hủy HĐ') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">{{ t('Contract Content') }}</label>
+                                <textarea class="form-control bg-light" rows="3" readonly>{{ order.description or '' }}</textarea>
+                                <small class="text-muted">{{ t('Nội dung lấy từ mô tả đơn hàng – chỉnh sửa trong trang Order') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="quotation_id" class="form-label">Source Quotation</label>
+                                <label for="quotation_id" class="form-label">{{ t('Reference Quotation') }}</label>
                                 <select class="form-select" id="quotation_id" name="quotation_id">
-                                    <option value="">Select a quotation</option>
+                                    <option value="">{{ t('-- Select quotation --') }}</option>
                                     {% for quotation in quotations %}
-                                    <option value="{{ quotation.id }}" data-amount="{{ quotation.total_amount }}">{{ quotation.quotation_number }} - ${{ quotation.total_amount }}</option>
+                                    <option value="{{ quotation.id }}" data-amount="{{ quotation.total_amount }}"
+                            {% if selected_quotation and selected_quotation.id == quotation.id %}selected{% endif %}>
+                        {{ quotation.quotation_number }} - {{ "{:,.0f}".format(quotation.total_amount) }} đ
+                        {% if quotation.is_approved %}<span class="text-success">(Approved)</span>{% endif %}
+                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="contract_date" class="form-label">Contract Date *</label>
-                                <input type="date" class="form-control" id="contract_date" name="contract_date" required value="{{ now().strftime('%Y-%m-%d') }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="contract_value" class="form-label">Contract Value *</label>
-                                <input type="number" class="form-control" id="contract_value" name="contract_value" required step="0.01" placeholder="0.00">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quotation Items Display Section -->
-                    <div id="quotation-items-section" style="display: none;">
-                        <div class="mb-3">
-                            <label class="form-label"><strong>Items from Selected Quotation</strong></label>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Item Name</th>
-                                            <th class="text-end">Qty</th>
-                                            <th class="text-end">Unit Price</th>
-                                            <th class="text-end">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="quotation-items-body">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Editable Line Items Section -->
-                    <div class="mb-4">
-                        <h6 class="mb-3"><i class="bi bi-list-ul"></i> Contract Items</h6>
+                    <!-- Items Table -->
+                    <div class="mb-3">
+                        <h5><i class="bi bi-table"></i> {{ t('Items / Work Table') }}</h5>
                         <div class="table-responsive">
-                            <table class="table table-sm">
+                            <table class="table table-sm table-bordered">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width: 40%">Item Name</th>
-                                        <th style="width: 15%" class="text-end">Qty</th>
-                                        <th style="width: 20%" class="text-end">Unit Price</th>
-                                        <th style="width: 15%" class="text-end">Total</th>
-                                        <th style="width: 10%"></th>
+                                        <th style="width:5%">No.</th>
+                                        <th style="width:33%">{{ t('Item Name / Work') }}</th>
+                                        <th style="width:10%">{{ t('Unit') }}</th>
+                                        <th style="width:10%">{{ t('Qty') }}</th>
+                                        <th style="width:15%">{{ t('Unit Price') }}</th>
+                                        <th style="width:15%">{{ t('Amount') }}</th>
+                                        <th style="width:12%"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="items-body">
-                                    <!-- Items will be added here -->
+                                    <!-- Rows injected via JS -->
                                 </tbody>
                             </table>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="add-item-btn">
-                            <i class="bi bi-plus"></i> Add Item
+                            <i class="bi bi-plus"></i> {{ t('Add Row') }}
                         </button>
                     </div>
 
+                    <!-- VAT & Totals -->
+                    <div class="row justify-content-end mb-3">
+                        <div class="col-md-5">
+                            <table class="table table-sm table-bordered">
+                                <tr>
+                                    <th class="bg-light">{{ t('Subtotal:') }}</th>
+                                    <td class="text-end"><input type="text" id="subtotal_display" class="form-control form-control-sm text-end bg-light" readonly></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">
+                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" if company and company.vat_rate is not none else 8 }}" min="0" max="100" step="0.1">%):
+                                    </th>
+                                    <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly></td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th>{{ t('Total Contract Value:') }}</th>
+                                    <td class="text-end fw-bold"><input type="text" id="total_display" class="form-control form-control-sm text-end fw-bold bg-light" readonly></td>
+                                </tr>
+                            </table>
+                            <input type="hidden" id="contract_value" name="contract_value">
+                            <input type="hidden" id="vat_amount" name="vat_amount">
+                            <input type="hidden" id="subtotal_hidden" name="subtotal">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
+                                <input type="text" class="form-control" id="amount_in_words" name="amount_in_words" placeholder="E.g. Hai trăm triệu đồng">
+                                <small class="text-muted">{{ t('Số tiền bằng chữ') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advance Payment -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="advance_percentage" class="form-label">{{ t('Advance (%)') }}</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="advance_percentage" name="advance_percentage" value="30" min="0" max="100" step="1">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Advance Amount') }}</label>
+                            <input type="text" id="advance_display" class="form-control bg-light" readonly>
+                            <input type="hidden" id="advance_amount" name="advance_amount">
+                        </div>
+                    </div>
+
                     <div class="mb-3">
-                        <label for="terms_and_conditions" class="form-label">Terms & Conditions</label>
-                        <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5"></textarea>
+                        <h6><i class="bi bi-bank2"></i> {{ t('Payment Bank Account') }}</h6>
+                        {% if company and company.bank_accounts %}
+                        <p class="text-muted small mb-2">{{ t('Ngân hàng thanh toán cho hợp đồng này:') }}
+                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank" class="ms-1">{{ t('Settings') }}</a>
+                        </p>
+                        {% for bank in company.bank_accounts %}
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="radio"
+                                   name="selected_bank_index"
+                                   id="contract_bank_{{ loop.index }}"
+                                   value="{{ loop.index0 }}"
+                                   {% if loop.first %}checked{% endif %}>
+                            <label class="form-check-label" for="contract_bank_{{ loop.index }}">
+                                <strong>{{ bank.bank_name }}</strong> —
+                                TK: <code>{{ bank.account_number }}</code>
+                                {% if bank.account_holder %} ({{ bank.account_holder }}){% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted small">Chưa có tài khoản ngân hàng.
+                            <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Thêm trong Cài đặt</a>.
+                        </p>
+                        <input type="hidden" name="selected_bank_index" value="0">
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="terms_and_conditions" class="form-label">{{ t('Contract Terms & Conditions') }}</label>
+                        <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5" placeholder="Enter terms and conditions..."></textarea>
                     </div>
 
                     <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Create Contract
-                    </button>
-                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {{ t('Create Contract') }}
+                        </button>
+                        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
+                        </a>
                     </div>
                 </form>
             </div>
@@ -118,208 +217,185 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
-    // Auto-fill contract number on page load
+    // ── Register all static listeners FIRST (before any async/return) ──
+    document.getElementById('add-item-btn').addEventListener('click', () => addItemRow());
+    document.getElementById('vat_rate').addEventListener('input', recalcAll);
+    document.getElementById('advance_percentage').addEventListener('input', recalcAll);
+    // Mark amount_in_words as manually edited if user types in it
+    const aiw = document.getElementById('amount_in_words');
+    if (aiw) aiw.addEventListener('input', () => { aiw.dataset.manualEdit = '1'; });
+
     try {
         const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="contract") }}');
         const data = await response.json();
         if (data.next_code) {
             document.getElementById('contract_number').value = data.next_code;
-            document.getElementById('contract_number').placeholder = 'e.g., CT-001';
         }
-    } catch (error) {
-        console.error('Error loading next code:', error);
-        document.getElementById('contract_number').placeholder = 'e.g., CT-001';
-    }
+    } catch (error) {}
 
-    // Check for duplicate code when user changes it
     let checkTimeout;
     document.getElementById('contract_number').addEventListener('input', function() {
         clearTimeout(checkTimeout);
         const code = this.value.trim();
         const warning = document.getElementById('code-warning');
         const submitBtn = document.querySelector('button[type="submit"]');
-        
-        if (!code) {
-            warning.style.display = 'none';
-            submitBtn.disabled = false;
-            return;
-        }
-        
+        if (!code) { warning.style.display = 'none'; submitBtn.disabled = false; return; }
         checkTimeout = setTimeout(async () => {
             try {
-                const response = await fetch('{{ url_for("dashboard.check_code", doc_type="contract") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ code: code })
+                const res = await fetch('{{ url_for("dashboard.check_code", doc_type="contract") }}', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ code })
                 });
-                const data = await response.json();
-                
-                if (data.exists) {
-                    warning.style.display = 'block';
-                    submitBtn.disabled = true;
-                } else {
-                    warning.style.display = 'none';
-                    submitBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('Error checking code:', error);
-            }
+                const d = await res.json();
+                warning.style.display = d.exists ? 'block' : 'none';
+                submitBtn.disabled = !!d.exists;
+            } catch {}
         }, 500);
     });
 
-    const quotationSelect = document.getElementById('quotation_id');
-    const contractValueInput = document.getElementById('contract_value');
-    const itemsSection = document.getElementById('quotation-items-section');
-    const quotationItemsBody = document.getElementById('quotation-items-body');
-    const editableItemsBody = document.getElementById('items-body');
-    const addItemBtn = document.getElementById('add-item-btn');
-
-    // Function to calculate item total
-    function calculateItemTotal(row) {
-        const qtyInput = row.querySelector('.item-qty');
-        const priceInput = row.querySelector('.item-price');
-        const totalInput = row.querySelector('.item-total');
-        
-        const qty = parseFloat(qtyInput.value) || 0;
-        const price = parseFloat(priceInput.value) || 0;
-        const total = qty * price;
-        
-        totalInput.value = '$' + total.toFixed(2);
-        updateContractValue();
-    }
-
-    // Function to update contract value from all items
-    function updateContractValue() {
-        let total = 0;
-        document.querySelectorAll('#items-body .item-row').forEach(row => {
-            const qtyInput = row.querySelector('.item-qty');
-            const priceInput = row.querySelector('.item-price');
-            const qty = parseFloat(qtyInput.value) || 0;
-            const price = parseFloat(priceInput.value) || 0;
-            total += qty * price;
-        });
-        contractValueInput.value = total.toFixed(2);
-    }
-
-    // Function to add a new item row
-    function addItemRow(name = '', quantity = '', unitPrice = '') {
-        const row = document.createElement('tr');
-        row.className = 'item-row';
-        
-        const total = (parseFloat(quantity) || 0) * (parseFloat(unitPrice) || 0);
-        
-        row.innerHTML = `
-            <td>
-                <input type="text" class="form-control form-control-sm item-name" name="item_name[]" value="${name}" placeholder="Item name" required>
-            </td>
-            <td>
-                <input type="number" class="form-control form-control-sm item-qty text-end" name="item_quantity[]" value="${quantity}" step="0.01" placeholder="0" required>
-            </td>
-            <td>
-                <input type="number" class="form-control form-control-sm item-price text-end" name="item_price[]" value="${unitPrice}" step="0.01" placeholder="0.00" required>
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm item-total text-end" value="$${total.toFixed(2)}" readonly style="background-color: #f8f9fa;">
-            </td>
-            <td>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-item" title="Remove item">
-                    <i class="bi bi-x"></i>
-                </button>
-            </td>
-        `;
-        
-        editableItemsBody.appendChild(row);
-        
-        // Add event listeners
-        row.querySelector('.item-qty').addEventListener('input', function() {
-            calculateItemTotal(row);
-        });
-        row.querySelector('.item-price').addEventListener('input', function() {
-            calculateItemTotal(row);
-        });
-        row.querySelector('.remove-item').addEventListener('click', function() {
-            row.remove();
-            updateContractValue();
-        });
-        
-        updateContractValue();
-    }
-
-    // Add item button handler
-    addItemBtn.addEventListener('click', function() {
-        addItemRow();
-    });
-
-    // Quotation selection handler
-    quotationSelect.addEventListener('change', async function() {
-        console.log('Quotation selected:', this.value);
-        if (!this.value) {
-            itemsSection.style.display = 'none';
-            quotationItemsBody.innerHTML = '';
-            // Don't clear editable items - user might have manually added them
-            return;
-        }
-
+    // Quotation selection → load items
+    document.getElementById('quotation_id').addEventListener('change', async function() {
+        if (!this.value) { document.getElementById('items-body').innerHTML = ''; recalcAll(); return; }
         try {
-            // Fetch quotation details via AJAX
-            const url = `/api/quotations/${this.value}`;
-            console.log('Fetching from:', url);
-            const response = await fetch(url);
-            const data = await response.json();
-
-            console.log('Response:', response.status, data);
-
-            if (response.ok) {
-                // Clear editable items first
-                editableItemsBody.innerHTML = '';
-                
-                // Display items from quotation (readonly preview)
-                quotationItemsBody.innerHTML = '';
-                
-                if (data.items && data.items.length > 0) {
-                    // Show quotation items preview
-                    data.items.forEach((item, index) => {
-                        console.log(`Item ${index}:`, item);
-                        const row = document.createElement('tr');
-                        const qty = parseFloat(item.quantity || 0);
-                        const price = parseFloat(item.unit_price || 0);
-                        const total = (qty * price).toFixed(2);
-                        row.innerHTML = `
-                            <td>${item.name || 'N/A'}</td>
-                            <td class="text-end">${qty}</td>
-                            <td class="text-end">$${price.toFixed(2)}</td>
-                            <td class="text-end">$${total}</td>
-                        `;
-                        quotationItemsBody.appendChild(row);
-                    });
-                    itemsSection.style.display = 'block';
-                    
-                    // Populate editable items
-                    data.items.forEach(item => {
-                        addItemRow(item.name, item.quantity, item.unit_price);
-                    });
-                    
-                    console.log('Items table displayed and populated');
-                } else {
-                    console.log('No items to display');
-                    itemsSection.style.display = 'none';
-                }
-                
-                // Auto-populate contract value
-                contractValueInput.value = data.total_amount.toFixed(2);
-                console.log('Contract value populated:', data.total_amount);
-            } else {
-                console.error('API Error:', data.error);
-                itemsSection.style.display = 'none';
+            const res = await fetch(`/api/quotations/${this.value}`);
+            const data = await res.json();
+            if (res.ok && data.items) {
+                document.getElementById('items-body').innerHTML = '';
+                data.items.forEach(item => addItemRow(item.name, item.unit || 'pcs', item.quantity, item.unit_price));
+                if (data.vat_rate !== undefined) document.getElementById('vat_rate').value = data.vat_rate;
+                recalcAll();
             }
-        } catch (error) {
-            console.error('Fetch error:', error);
-            itemsSection.style.display = 'none';
-        }
+        } catch {}
     });
+
+    // Auto-load items from pre-selected quotation on page load
+    const preSelected = document.getElementById('quotation_id').value;
+    if (preSelected) {
+        try {
+            const res = await fetch(`/api/quotations/${preSelected}`);
+            const data = await res.json();
+            if (res.ok && data.items && data.items.length > 0) {
+                document.getElementById('items-body').innerHTML = '';
+                data.items.forEach(item => addItemRow(item.name, item.unit || 'pcs', item.quantity, item.unit_price));
+                if (data.vat_rate !== undefined) document.getElementById('vat_rate').value = data.vat_rate;
+                recalcAll();
+                return;
+            }
+        } catch {}
+    }
+
+    addItemRow();
+    recalcAll();
 });
+
+function fmtNum(n) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function numberToVietnamese(num) {
+    num = Math.round(num);
+    if (!num || num === 0) return '';
+    const units = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    function readTens(n) {
+        if (n === 0) return '';
+        if (n < 10) return units[n];
+        if (n === 10) return 'mười';
+        if (n < 20) return 'mười ' + (n % 10 === 5 ? 'lăm' : units[n % 10]);
+        const t = Math.floor(n / 10), u = n % 10;
+        let s = units[t] + ' mươi';
+        if (u === 1) s += ' mốt';
+        else if (u === 5) s += ' lăm';
+        else if (u !== 0) s += ' ' + units[u];
+        return s;
+    }
+    function readHundreds(n) {
+        const h = Math.floor(n / 100), rest = n % 100;
+        let s = '';
+        if (h > 0) s = units[h] + ' trăm';
+        if (rest > 0) {
+            if (h > 0 && rest < 10) s += ' linh ' + units[rest];
+            else if (h > 0) s += ' ' + readTens(rest);
+            else s = readTens(rest);
+        }
+        return s;
+    }
+    const ty     = Math.floor(num / 1_000_000_000);
+    const trieu  = Math.floor((num % 1_000_000_000) / 1_000_000);
+    const nghin  = Math.floor((num % 1_000_000) / 1_000);
+    const rest   = num % 1_000;
+    const parts  = [];
+    if (ty    > 0) parts.push(readHundreds(ty)    + ' tỷ');
+    if (trieu > 0) parts.push(readHundreds(trieu) + ' triệu');
+    if (nghin > 0) parts.push(readHundreds(nghin) + ' nghìn');
+    if (rest  > 0) parts.push(readHundreds(rest));
+    if (!parts.length) return '';
+    const text = parts.join(' ');
+    return text.charAt(0).toUpperCase() + text.slice(1) + ' đồng';
+}
+
+let rowCount = 0;
+function addItemRow(name='', unit='pcs', quantity='1', price='') {
+    const tbody = document.getElementById('items-body');
+    rowCount++;
+    const row = document.createElement('tr');
+    row.className = 'item-row';
+    row.innerHTML = `
+        <td class="stt-cell text-center align-middle">${tbody.querySelectorAll('.item-row').length + 1}</td>
+        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="${name}" placeholder="Item name / work"></td>
+        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="${unit}" placeholder="pcs"></td>
+        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="${quantity}" step="0.01" placeholder="0"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="${price}" step="1" placeholder="0"></td>
+        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
+    `;
+    tbody.appendChild(row);
+    row.querySelector('.qty-input').addEventListener('input', recalcAll);
+    row.querySelector('.price-input').addEventListener('input', recalcAll);
+    updateRowNumbers();
+}
+
+function removeItemRow(btn) {
+    btn.closest('tr').remove();
+    recalcAll();
+    updateRowNumbers();
+}
+
+function updateRowNumbers() {
+    document.querySelectorAll('#items-body .item-row').forEach((row, idx) => {
+        row.querySelector('.stt-cell').textContent = idx + 1;
+    });
+}
+
+function recalcAll() {
+    let subtotal = 0;
+    document.querySelectorAll('#items-body .item-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const total = qty * price;
+        row.querySelector('.row-total').value = fmtNum(total);
+        subtotal += total;
+    });
+    const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
+    const vatAmount = Math.round(subtotal * vatRate / 100);
+    const grandTotal = subtotal + vatAmount;
+    const advPct = parseFloat(document.getElementById('advance_percentage').value) || 0;
+    const advAmount = Math.round(grandTotal * advPct / 100);
+
+    document.getElementById('subtotal_display').value = fmtNum(subtotal);
+    document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
+    document.getElementById('total_display').value = fmtNum(grandTotal);
+    document.getElementById('advance_display').value = fmtNum(advAmount);
+
+    document.getElementById('contract_value').value = grandTotal;
+    document.getElementById('vat_amount').value = vatAmount;
+    document.getElementById('subtotal_hidden').value = subtotal;
+    document.getElementById('advance_amount').value = advAmount;
+
+    // Auto-fill amount_in_words
+    const aiw = document.getElementById('amount_in_words');
+    if (aiw && !aiw.dataset.manualEdit) {
+        aiw.value = numberToVietnamese(grandTotal);
+    }
+}
 </script>
 {% endblock %}
-

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Edit Store - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="d-flex align-items-center mb-4 gap-2">
+            <a href="{{ url_for('dashboard.list_stores') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0"><i class="bi bi-pencil-square"></i> {{ t('Edit Store') }}</h2>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <span class="fw-bold text-primary">{{ store.store_code }}</span>
+                <span class="text-muted ms-2">— {{ store.name }}</span>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">{{ t('Store Name') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required
+                                   value="{{ store.name }}" maxlength="255">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Manager Name') }}</label>
+                            <input type="text" class="form-control" name="manager_name"
+                                   value="{{ store.manager_name or '' }}" maxlength="255">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('Phone') }}</label>
+                            <input type="text" class="form-control" name="phone"
+                                   value="{{ store.phone or '' }}" maxlength="20">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">{{ t('Address') }}</label>
+                            <input type="text" class="form-control" name="address"
+                                   value="{{ store.address or '' }}" maxlength="500">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ t('City / Province') }}</label>
+                            <input type="text" class="form-control" name="city"
+                                   value="{{ store.city or '' }}" maxlength="100">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('dashboard.list_stores') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save"></i> {{ t('Save Changes') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

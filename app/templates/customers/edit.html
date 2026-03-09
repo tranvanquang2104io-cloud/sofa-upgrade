@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Customer - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-person-gear"></i> {{ t('Edit Customer') }}</h1>
+        <p class="text-muted">Customer Code: <strong>{{ customer.customer_code }}</strong></p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('dashboard.view_customer', customer_id=customer.id) }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-10 col-lg-8">
+        <form method="POST" action="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}">
+            <!-- Thông tin cơ bản -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-fill"></i> {{ t('Basic Information') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ t('Customer / Company Name') }} <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="name"
+                               value="{{ customer.name }}" required
+                               placeholder="Nhập tên khách hàng hoặc tên công ty">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">{{ t('Phone') }}</label>
+                            <input type="tel" class="form-control" name="phone"
+                                   value="{{ customer.phone or '' }}"
+                                   placeholder="VD: 0912 345 678">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">{{ t('Email') }}</label>
+                            <input type="email" class="form-control" name="email"
+                                   value="{{ customer.email or '' }}"
+                                   placeholder="VD: email@congty.com">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ t('Tax Code') }}</label>
+                        <input type="text" class="form-control" name="tax_code"
+                               value="{{ customer.tax_code or '' }}"
+                               placeholder="Nhập mã số thuế (nếu có)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thông tin người đại diện -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-badge"></i> {{ t('Representative') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-7 mb-3">
+                            <label class="form-label fw-bold">{{ t('Representative Name') }}</label>
+                            <input type="text" class="form-control" name="representative_name"
+                                   value="{{ customer.representative_name or '' }}"
+                                   placeholder="Họ và tên người đại diện">
+                        </div>
+                        <div class="col-md-5 mb-3">
+                            <label class="form-label fw-bold">{{ t('Position') }}</label>
+                            <input type="text" class="form-control" name="representative_title"
+                                   value="{{ customer.representative_title or '' }}"
+                                   placeholder="VD: Giám Đốc, Trưởng Phòng">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Địa chỉ -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt-fill"></i> {{ t('Address') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ t('Address') }}</label>
+                        <input type="text" class="form-control" name="address"
+                               value="{{ customer.address or '' }}"
+                               placeholder="Số nhà, tên đường, phường/xã">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-5 mb-3">
+                            <label class="form-label fw-bold">{{ t('City / Province') }}</label>
+                            <input type="text" class="form-control" name="city"
+                                   value="{{ customer.city or '' }}"
+                                   placeholder="VD: Hà Nội, TP. HCM">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold">{{ t('Postal Code') }}</label>
+                            <input type="text" class="form-control" name="postal_code"
+                                   value="{{ customer.postal_code or '' }}"
+                                   placeholder="VD: 100000">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">{{ t('Country') }}</label>
+                            <input type="text" class="form-control" name="country"
+                                   value="{{ customer.country or 'Việt Nam' }}"
+                                   placeholder="VD: Việt Nam">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ghi chú -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-chat-left-text"></i> {{ t('Notes') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ t('Additional Notes') }}</label>
+                        <textarea class="form-control" name="notes" rows="4"
+                                  placeholder="Thêm ghi chú về khách hàng...">{{ customer.notes or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end mb-4">
+                <button type="button" class="btn btn-secondary btn-lg" onclick="history.back()">
+                    <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
+                </button>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle-fill"></i> {{ t('Save Changes') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

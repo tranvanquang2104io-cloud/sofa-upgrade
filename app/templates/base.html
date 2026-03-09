@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SofaFlow - SaaS Customer Lifecycle Management{% endblock %}</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -20,13 +23,13 @@
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container-fluid">
                 <a class="navbar-brand" href="{{ url_for('dashboard.index') }}">
-                    <i class="bi bi-sofa"></i> SofaFlow
+                    <i class="bi bi-house-door-fill"></i> SofaFlow
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
+                    <ul class="navbar-nav me-auto">
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
                                 <i class="bi bi-speedometer2"></i> Dashboard
@@ -34,22 +37,72 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if 'customer' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_customers') }}">
-                                <i class="bi bi-people"></i> Customers
+                                <i class="bi bi-people"></i> {{ t('Customers') }}
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if 'order' in (request.endpoint or '') or 'quotation' in (request.endpoint or '') or 'contract' in (request.endpoint or '') or 'handover' in (request.endpoint or '') or 'payment' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_orders') }}">
-                                <i class="bi bi-boxes"></i> Orders
+                                <i class="bi bi-boxes"></i> {{ t('Orders') }}
                             </a>
                         </li>
+                        {% if session.role in ('company_admin', 'store_admin') %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> {{ session.full_name }}
+                            <a class="nav-link dropdown-toggle {% if 'store' in (request.endpoint or '') or 'user' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-building-gear"></i> {{ t('Management') }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.list_stores') }}">
+                                        <i class="bi bi-shop"></i> {{ t('Stores') }}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.list_users') }}">
+                                        <i class="bi bi-person-lines-fill"></i> {{ t('Users') }}
+                                    </a>
+                                </li>
+                                {% if session.role == 'company_admin' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.list_templates') }}">
+                                        <i class="bi bi-file-earmark-text"></i> {{ t('Document Templates') }}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.company_settings') }}">
+                                        <i class="bi bi-gear"></i> {{ t('Company Settings') }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    <ul class="navbar-nav ms-auto">
+                        <!-- Language Switcher -->
+                        <li class="nav-item">
+                            {% if current_lang == 'vi' %}
+                            <a class="nav-link" href="{{ url_for('dashboard.set_language', lang='en') }}" title="Switch to English">
+                                <i class="bi bi-translate"></i> EN
+                            </a>
+                            {% else %}
+                            <a class="nav-link" href="{{ url_for('dashboard.set_language', lang='vi') }}" title="Chuyển sang Tiếng Việt">
+                                <i class="bi bi-translate"></i> VI
+                            </a>
+                            {% endif %}
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle fs-5"></i>
+                                <span class="d-flex flex-column lh-1">
+                                    <span style="font-size:.9rem">{{ session.full_name }}</span>
+                                    <span class="badge bg-secondary mt-1" style="font-size:.6rem;font-weight:500;align-self:flex-start">{% if session.role == 'company_admin' %}{{ t('Company Admin') }}{% elif session.role == 'store_admin' %}{{ t('Store Admin') }}{% else %}{{ t('Staff') }}{% endif %}</span>
+                                </span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item" href="#">Profile</a></li>
+                                <li><span class="dropdown-item-text text-muted small">{{ session.username }}</span></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> {{ t('Log Out') }}</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -86,7 +139,7 @@
 
     <!-- Footer -->
     <footer class="bg-dark text-white text-center py-3 mt-5">
-        <p>&copy; 2026 SofaFlow. All rights reserved.</p>
+        <p class="mb-0">&copy; 2026 SofaFlow. All rights reserved. &nbsp;<span class="text-secondary small">v{{ app_version }}</span></p>
     </footer>
 
     <!-- Bootstrap JS -->

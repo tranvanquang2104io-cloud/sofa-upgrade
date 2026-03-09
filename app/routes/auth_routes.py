@@ -96,7 +96,7 @@ def register():
                 email=email,
                 password=password,
                 full_name=full_name,
-                role='admin'
+                role='company_admin'
             )
             
             logger.info(f"Company registered: {company_code}")

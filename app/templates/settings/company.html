@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Company Settings - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-building-gear"></i> {{ t('Company Settings') }}</h1>
+        <p class="text-muted">{{ t('These details appear on all generated documents (quotations, contracts, etc.)') }}</p>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('dashboard.company_settings') }}">
+<div class="row">
+    <!-- Basic Info -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header"><strong>{{ t('Basic Information') }}</strong></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Company Name *') }}</label>
+                            <input type="text" class="form-control" name="name" value="{{ company.name }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Tax Code') }}</label>
+                            <input type="text" class="form-control" name="tax_code" value="{{ company.tax_code or '' }}" placeholder="e.g., 0312742744">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Email *') }}</label>
+                            <input type="email" class="form-control" name="email" value="{{ company.email }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Phone') }}</label>
+                            <input type="text" class="form-control" name="phone" value="{{ company.phone or '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ t('Registered / Head-office Address') }}</label>
+                    <textarea class="form-control" name="address" rows="2">{{ company.address or '' }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ t('Production / Manufacturing Address') }}</label>
+                    <textarea class="form-control" name="production_address" rows="2">{{ company.production_address or '' }}</textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('City') }}</label>
+                            <input type="text" class="form-control" name="city" value="{{ company.city or '' }}" placeholder="e.g., TP. Hồ Chí Minh">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Country') }}</label>
+                            <input type="text" class="form-control" name="country" value="{{ company.country or '' }}" placeholder="Vietnam">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legal Representative -->
+        <div class="card mb-4">
+            <div class="card-header"><strong>{{ t('Legal Representative') }}</strong></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Representative Name') }}</label>
+                            <input type="text" class="form-control" name="representative_name" value="{{ company.representative_name or '' }}" placeholder="e.g., Lê Thị Thắm">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Title / Position') }}</label>
+                            <input type="text" class="form-control" name="representative_title" value="{{ company.representative_title or 'Director' }}" placeholder="Director">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VAT -->
+        <div class="card mb-4">
+            <div class="card-header"><strong>{{ t('Tax Settings') }}</strong></div>
+            <div class="card-body">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">{{ t('Default VAT Rate (%)') }}</label>
+                        <input type="number" class="form-control" name="vat_rate" value="{{ company.vat_rate or 8 }}" step="0.01" min="0" max="100">
+                        <div class="form-text">{{ t('This default is pre-filled in all new documents.') }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bank Accounts -->
+        <div class="card mb-4">
+            <div class="card-header"><strong>{{ t('Bank Accounts') }}</strong>
+                <span class="text-muted ms-2 small">{{ t('Used in payment documents') }}</span>
+            </div>
+            <div class="card-body">
+                <div id="bank-accounts-container">
+                    {% set accounts = company.bank_accounts or [] %}
+                    {% for acct in accounts %}
+                    <div class="row bank-row mb-2" data-index="{{ loop.index0 }}">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" placeholder="Bank name (e.g. LPBank)" 
+                                   data-field="bank_name" value="{{ acct.bank_name or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" placeholder="Account number" 
+                                   data-field="account_number" value="{{ acct.account_number or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" placeholder="Account holder" 
+                                   data-field="account_holder" value="{{ acct.account_holder or '' }}">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addBankRow()">
+                    <i class="bi bi-plus"></i> Add Bank Account
+                </button>
+                <input type="hidden" name="bank_accounts" id="bank_accounts_json" value='{{ (company.bank_accounts or []) | tojson }}'>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> {{ t('Save Settings') }}
+            </button>
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">{{ t('Cancel') }}</a>
+        </div>
+    </div>
+
+    <!-- Preview card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><strong>{{ t('Document Header Preview') }}</strong></div>
+            <div class="card-body small text-muted">
+                <strong class="d-block">{{ company.name }}</strong>
+                {% if company.address %}<div>{{ t('Head office:') }} {{ company.address }}</div>{% endif %}
+                {% if company.production_address %}<div>{{ t('Manufacturing address:') }} {{ company.production_address }}</div>{% endif %}
+                {% if company.tax_code %}<div>{{ t('Tax Code:') }} {{ company.tax_code }}</div>{% endif %}
+                {% if company.phone %}<div>Phone: {{ company.phone }}</div>{% endif %}
+                {% if company.email %}<div>Email: {{ company.email }}</div>{% endif %}
+                {% if company.representative_name %}<div>{{ t('Representative:') }} {{ company.representative_name }} – {{ company.representative_title or 'Director' }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+
+<script>
+function addBankRow() {
+    const container = document.getElementById('bank-accounts-container');
+    const idx = container.querySelectorAll('.bank-row').length;
+    const row = document.createElement('div');
+    row.className = 'row bank-row mb-2';
+    row.setAttribute('data-index', idx);
+    row.innerHTML = `
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="Bank name (e.g. LPBank)" data-field="bank_name" value=""></div>
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="Account number" data-field="account_number" value=""></div>
+        <div class="col-md-3"><input type="text" class="form-control form-control-sm" placeholder="Account holder" data-field="account_holder" value=""></div>
+        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)"><i class="bi bi-trash"></i></button></div>
+    `;
+    container.appendChild(row);
+}
+
+function removeBankRow(btn) {
+    btn.closest('.bank-row').remove();
+    updateBankJson();
+}
+
+function updateBankJson() {
+    const rows = document.querySelectorAll('#bank-accounts-container .bank-row');
+    const accounts = [];
+    rows.forEach(row => {
+        const bank_name = row.querySelector('[data-field="bank_name"]').value.trim();
+        const account_number = row.querySelector('[data-field="account_number"]').value.trim();
+        const account_holder = row.querySelector('[data-field="account_holder"]').value.trim();
+        if (bank_name || account_number) {
+            accounts.push({ bank_name, account_number, account_holder });
+        }
+    });
+    document.getElementById('bank_accounts_json').value = JSON.stringify(accounts);
+}
+
+// Pre-populate hidden field before form submit
+document.querySelector('form').addEventListener('submit', updateBankJson);
+
+// Also update on any input change
+document.getElementById('bank-accounts-container').addEventListener('input', updateBankJson);
+</script>
+{% endblock %}

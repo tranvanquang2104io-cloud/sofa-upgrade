@@ -1,72 +1,116 @@
 {% extends "base.html" %}
 
-{% block title %}View Customer - SofaFlow{% endblock %}
+{% block title %}{{ customer.name }} - SofaFlow{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
         <h1><i class="bi bi-person"></i> {{ customer.name }}</h1>
+        <span class="badge bg-secondary fs-6">{{ customer.customer_code }}</span>
     </div>
-    <div class="col-md-4 text-end">
+    <div class="col-md-4 text-end d-flex gap-2 justify-content-end align-items-start">
+        <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}" class="btn btn-primary">
+            <i class="bi bi-pencil-fill"></i> {{ t('Edit') }}
+        </a>
         <a href="{{ url_for('dashboard.list_customers') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back
+            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
         </a>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-8">
+        <!-- Thông tin khách hàng -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Customer Information</h5>
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Customer Information') }}</h5>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-4">Customer Code:</dt>
-                    <dd class="col-sm-8">{{ customer.customer_code }}</dd>
-                    
-                    <dt class="col-sm-4">Phone:</dt>
+                    <dt class="col-sm-4">{{ t('Customer Code:') }}</dt>
+                    <dd class="col-sm-8"><strong>{{ customer.customer_code }}</strong></dd>
+
+                    <dt class="col-sm-4">{{ t('Customer Name:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.name }}</dd>
+
+                    <dt class="col-sm-4">{{ t('Phone:') }}</dt>
                     <dd class="col-sm-8">{{ customer.phone or '-' }}</dd>
-                    
-                    <dt class="col-sm-4">Email:</dt>
+
+                    <dt class="col-sm-4">{{ t('Email:') }}</dt>
                     <dd class="col-sm-8">{{ customer.email or '-' }}</dd>
-                    
-                    <dt class="col-sm-4">City:</dt>
-                    <dd class="col-sm-8">{{ customer.city or '-' }}</dd>
-                    
-                    <dt class="col-sm-4">Postal Code:</dt>
-                    <dd class="col-sm-8">{{ customer.postal_code or '-' }}</dd>
-                    
-                    <dt class="col-sm-4">Country:</dt>
-                    <dd class="col-sm-8">{{ customer.country or '-' }}</dd>
-                    
-                    {% if customer.address %}
-                    <dt class="col-sm-4">Address:</dt>
-                    <dd class="col-sm-8">{{ customer.address }}</dd>
-                    {% endif %}
-                    
-                    {% if customer.notes %}
-                    <dt class="col-sm-4">Notes:</dt>
-                    <dd class="col-sm-8">{{ customer.notes }}</dd>
-                    {% endif %}
+
+                    <dt class="col-sm-4">{{ t('Tax Code:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.tax_code or '-' }}</dd>
                 </dl>
             </div>
         </div>
 
-        <div class="card">
+        <!-- Người đại diện -->
+        <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-boxes"></i> Orders</h5>
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> {{ t('Representative') }}</h5>
             </div>
             <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">{{ t('Representative Name:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.representative_name or '-' }}</dd>
+
+                    <dt class="col-sm-4">{{ t('Position:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.representative_title or '-' }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Địa chỉ -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-geo-alt-fill"></i> {{ t('Address') }}</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">{{ t('Address:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.address or '-' }}</dd>
+
+                    <dt class="col-sm-4">{{ t('City / Province:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.city or '-' }}</dd>
+
+                    <dt class="col-sm-4">{{ t('Postal Code:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.postal_code or '-' }}</dd>
+
+                    <dt class="col-sm-4">{{ t('Country:') }}</dt>
+                    <dd class="col-sm-8">{{ customer.country or '-' }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        {% if customer.notes %}
+        <!-- Ghi chú -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-chat-left-text"></i> {{ t('Notes') }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ customer.notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Danh sách đơn hàng -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-box-seam"></i> {{ t('Orders') }}</h5>
+                <span class="badge bg-primary">{{ orders|length }} {{ t('orders') }}</span>
+            </div>
+            <div class="card-body p-0">
                 {% if orders %}
-                    <table class="table table-hover">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <th>Order Code</th>
-                                <th>Title</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                                <th>{{ t('Order Code') }}</th>
+                                <th>{{ t('Title') }}</th>
+                                <th class="text-end">{{ t('Value') }}</th>
+                                <th class="text-center">{{ t('Status') }}</th>
+                                <th class="text-center">{{ t('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -74,19 +118,22 @@
                             <tr>
                                 <td><strong>{{ order.order_code }}</strong></td>
                                 <td>{{ order.title }}</td>
-                                <td>${{ "%.2f"|format(order.total_amount|default(0)|float) }}</td>
-                                <td>
-                                    {% if order.lifecycle.completed %}
-                                        <span class="badge bg-success">Completed</span>
-                                    {% elif order.lifecycle.fully_paid %}
-                                        <span class="badge bg-info">Fully Paid</span>
+                                <td class="text-end">
+                                    {{ "{:,.0f}".format(order.total_amount|default(0)|float) }} ₫
+                                </td>
+                                <td class="text-center">
+                                    {% if order.lifecycle and order.lifecycle.completed %}
+                                        <span class="badge bg-success">{{ t('Completed') }}</span>
+                                    {% elif order.lifecycle and order.lifecycle.fully_paid %}
+                                        <span class="badge bg-info text-dark">{{ t('Fully Paid') }}</span>
                                     {% else %}
-                                        <span class="badge bg-warning">In Progress</span>
+                                        <span class="badge bg-warning text-dark">{{ t('In Progress') }}</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-info">
-                                        <i class="bi bi-eye"></i> View
+                                <td class="text-center">
+                                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}"
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i> {{ t('View') }}
                                     </a>
                                 </td>
                             </tr>
@@ -94,9 +141,56 @@
                         </tbody>
                     </table>
                 {% else %}
-                    <p class="text-muted">No orders for this customer.</p>
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-2"></i>
+                        <p class="mt-2 mb-0">{{ t('No orders yet.') }}</p>
+                    </div>
                 {% endif %}
             </div>
+        </div>
+    </div>
+
+    <!-- Cột thống kê bên phải -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart-fill"></i> Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Total orders</span>
+                    <strong>{{ orders|length }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Completed</span>
+                    <strong class="text-success">
+                        {{ orders|selectattr('lifecycle.completed')|list|length }}
+                    </strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">In progress</span>
+                    <strong class="text-warning">
+                        {{ orders|rejectattr('lifecycle.completed')|list|length }}
+                    </strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Total value</span>
+                    <strong>
+                        {{ "{:,.0f}".format(orders|sum(attribute='total_amount') if orders else 0) }} ₫
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}"
+               class="btn btn-primary">
+                <i class="bi bi-pencil-fill"></i> {{ t('Edit') }} Information
+            </a>
+            <a href="{{ url_for('dashboard.list_customers') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> {{ t('Customers') }} List
+            </a>
         </div>
     </div>
 </div>
