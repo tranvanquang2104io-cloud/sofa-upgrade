@@ -129,25 +129,50 @@ Tạo 1 đơn test và đi qua toàn bộ các bước:
 
 ## 3. Quy trình release
 
-Sau khi toàn bộ checklist kiểm thử ở mục 2 đã pass:
+### 3.1 Dùng script tự động (khuyến nghị)
+
+`scripts/deploy.ps1` tự động thực hiện toàn bộ pipeline:
+**Backup DB → Cập nhật version → Git commit + tag → Push GitHub → Docker rebuild → Health check**
 
 ```powershell
-# Trên máy dev, đảm bảo branch main đã được merge đầy đủ
+# Đảm bảo branch main đã merge đầy đủ code muốn release
 git checkout main
 git pull origin main
 
-# Bump version (chọn patch / minor / major)
-.\scripts\release.ps1 -Bump patch        # bug fix: 1.0.0 → 1.0.1
-.\scripts\release.ps1 -Bump minor        # tính năng mới: 1.0.1 → 1.1.0
-.\scripts\release.ps1 -Bump major        # breaking change: 1.x → 2.0.0
+# Chạy deploy — nhập version theo SemVer
+.\scripts\deploy.ps1 -Version "1.2.0"
 
-# Mở CHANGELOG.md, điền nội dung thay đổi vào section [x.y.z] vừa tạo
-# Sau đó amend commit để lưu nội dung CHANGELOG
-git add CHANGELOG.md
-git commit --amend --no-edit
+# Tuỳ chọn thêm:
+.\scripts\deploy.ps1 -Version "1.2.0" -Message "Thêm tính năng phân tích kho"
+.\scripts\deploy.ps1 -Version "1.2.0" -DryRun     # xem trước, không làm gì
+.\scripts\deploy.ps1 -Version "1.2.0" -NoPush     # chỉ commit local, không push
+.\scripts\deploy.ps1 -Version "1.2.0" -NoDocker   # bỏ qua Docker rebuild
+```
 
-# Push lên GitHub kèm tag
+Script sẽ tự hỏi nếu thiếu thông tin (release message) — chỉ cần trả lời tương tác.
+
+**Luồng script thực hiện:**
+```
+[0] Kiểm tra git status + version hiện tại
+[1] Backup database → backups/before_v1.2.0_YYYYMMDD.sql
+[2] Hỏi mô tả release (nếu không truyền -Message)
+[3] Cập nhật VERSION file + CHANGELOG.md
+[4] git add -A  →  git commit  →  git tag v1.2.0
+[5] git push origin main --tags
+[6] docker compose up --build -d
+[7] Health check http://localhost:5000/auth/login
+```
+
+### 3.2 Thủ công (fallback)
+
+```powershell
+git checkout main && git pull origin main
+# Sửa file VERSION thủ công, cập nhật CHANGELOG.md
+git add -A
+git commit -m "release: v1.2.0"
+git tag v1.2.0
 git push origin main --tags
+docker compose up --build -d
 ```
 
 ---
@@ -212,33 +237,65 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/auth/login
 
 ## 5. Rollback khi có sự cố
 
-### 5.1 Rollback code
+### 5.1 Dùng script tự động (khuyến nghị)
 
-```bash
-cd /home/sofaflow/sofaflow
-git fetch --tags
+`scripts/rollback.ps1` tự động thực hiện:
+**Backup DB hiện tại (an toàn) → Khôi phục code về version cũ → Docker rebuild → Health check**
 
-# Quay về tag trước đó, ví dụ v1.0.0
-git checkout v1.0.0
+```powershell
+# Cách 1: menu tương tác — hiện danh sách tất cả version, chọn số thứ tự
+.\scripts\rollback.ps1
 
-pip install -r requirements.txt      # về đúng dependencies của version cũ
-sudo supervisorctl restart sofaflow
+# Cách 2: chỉ định version thẳng
+.\scripts\rollback.ps1 -ToVersion "1.0.0"
+
+# Cách 3: rollback code + khôi phục database backup
+.\scripts\rollback.ps1 -ToVersion "1.0.0" -RestoreDB
+
+# Preview — xem các bước mà không thực sự thay đổi gì
+.\scripts\rollback.ps1 -DryRun
 ```
 
-### 5.2 Rollback database (nếu migration gây lỗi)
+**Luồng script thực hiện:**
+```
+[0] Hiện danh sách git tags → chọn version muốn quay về
+[1] Xác nhận (phải gõ 'yes' chính xác)
+[2] Backup DB hiện tại → backups/pre_rollback_vCURRENT_to_vOLD_YYYYMMDD.sql
+[3] git checkout <tag> -- .  (khôi phục tất cả files về version cũ)
+    git commit -m "rollback: restore code to vX.Y.Z"
+[4] (--RestoreDB) chọn file backup SQL → restore DB
+[5] docker compose up --build -d
+[6] Health check
+```
 
-```bash
-# Khôi phục từ backup gần nhất
-ls -lth /home/sofaflow/backups/       # tìm file backup trước khi deploy
+> **Lưu ý về database:** Khi rollback code, database giữ nguyên mặc định.  
+> Điều này **an toàn** khi upgrade chỉ **thêm** tables mới (như Material module).  
+> Chỉ dùng `--RestoreDB` khi upgrade **xóa hoặc đổi cấu trúc** tables cũ.
 
-sudo -u postgres dropdb sofa_flow
-sudo -u postgres createdb sofa_flow
-sudo -u postgres psql sofa_flow -c "GRANT ALL ON SCHEMA public TO sofa_user;"
+### 5.2 Thủ công (fallback khi script không chạy được)
 
-gunzip -c /home/sofaflow/backups/sofa_flow_YYYYMMDD_HHMMSS.sql.gz \
-    | psql -U sofa_user sofa_flow
+```powershell
+# Backup DB trước
+docker compose exec -T db pg_dump -U sofa_user sofa_flow_dev > backups/manual_backup.sql
 
-sudo supervisorctl restart sofaflow
+# Khôi phục code
+git fetch --tags
+git checkout v1.0.0 -- .
+git add -A
+git commit -m "rollback: restore code to v1.0.0"
+
+# Rebuild
+docker compose up --build -d
+```
+
+### 5.3 Sau khi rollback thành công
+
+```powershell
+# Xác nhận app đang chạy đúng version
+Invoke-WebRequest http://localhost:5000 | Select-String 'v[0-9]\.[0-9]\.[0-9]'
+
+# Xem logs nếu cần debug
+docker compose logs app --tail=50
 ```
 
 ---
@@ -386,10 +443,14 @@ gunzip -c backup_20260310.sql.gz | \
 |---|---|
 | Bật virtualenv | `.\venv\Scripts\Activate.ps1` |
 | Chạy server dev | `python wsgi.py` |
-| Preview release (không thay đổi) | `.\scripts\release.ps1 -Bump patch -DryRun` |
-| Tạo release patch | `.\scripts\release.ps1 -Bump patch` |
+| **Deploy version mới** | `.\scripts\deploy.ps1 -Version "1.2.0"` |
+| Deploy (preview, không làm gì) | `.\scripts\deploy.ps1 -Version "1.2.0" -DryRun` |
+| **Rollback về version cũ** | `.\scripts\rollback.ps1` (menu tương tác) |
+| Rollback thẳng về version cụ thể | `.\scripts\rollback.ps1 -ToVersion "1.0.0"` |
+| Rollback + khôi phục DB | `.\scripts\rollback.ps1 -ToVersion "1.0.0" -RestoreDB` |
 | Xem toàn bộ git tags | `git tag -l` |
 | Xem log commit | `git log --oneline -10` |
+| Xem backups DB | `Get-ChildItem backups\` |
 
 ### Database
 
