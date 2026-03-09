@@ -1,0 +1,26 @@
+# Force LF line endings for shell scripts in all environments
+# (prevents CRLF breaking /bin/sh in Linux Docker containers)
+*.sh        text eol=lf
+
+# Other text files — auto-detect
+*.py        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text
+*.txt       text
+*.cfg       text
+*.ini       text
+*.conf      text
+*.html      text
+*.css       text
+*.js        text
+
+# Binary files — no line ending conversion
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.docx      binary
+*.xlsx      binary
