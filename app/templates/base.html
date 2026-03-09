@@ -45,6 +45,11 @@
                                 <i class="bi bi-boxes"></i> {{ t('Orders') }}
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'material' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_materials') }}">
+                                <i class="bi bi-box-seam"></i> {{ t('Materials') }}
+                            </a>
+                        </li>
                         {% if session.role in ('company_admin', 'store_admin') %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle {% if 'store' in (request.endpoint or '') or 'user' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">

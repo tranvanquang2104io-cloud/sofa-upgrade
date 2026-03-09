@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-03-09
+
+### Added
+- **Module Quản lý Nguyên Vật Liệu (Material Management)** — đầy đủ CRUD + tồn kho
+  - 4 bảng DB mới: `material_units`, `material_categories`, `materials`, `material_stock`
+  - Quản lý đơn vị tính (Units of Measure) — scoped theo công ty, quick-seed 8 đơn vị phổ biến
+  - Quản lý danh mục (Categories) — có thứ tự sắp xếp
+  - Catalog NVL toàn công ty: mã, tên, màu, đơn giá, nhà cung cấp, thông số kỹ thuật (JSON), ảnh
+  - Tồn kho theo địa điểm: kho công ty + từng cửa hàng (store), cập nhật qua modal
+  - Cảnh báo tồn kho thấp (low stock) trực quan trên giao diện
+  - Soft-delete (vô hiệu hóa) cho NVL, danh mục, đơn vị
+  - Phân quyền: `user` xem, `store_admin` CRUD, `company_admin` xóa/quản lý đơn vị
+  - 6 giao diện mới: danh sách, tạo, xem chi tiết, chỉnh sửa, danh mục, đơn vị
+  - Scripts migration: `scripts/migrate_materials.py`
+  - Thêm translations tiếng Việt cho toàn bộ chuỗi giao diện mới
+
+---
+
 ## [1.0.0] - 2026-03-09
 
 ### Added
@@ -36,5 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 <!-- Links — cập nhật khi release -->
-[Unreleased]: https://github.com/tranquanguit/sofa-flow/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/tranquanguit/sofa-flow/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/tranquanguit/sofa-flow/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/tranquanguit/sofa-flow/releases/tag/v1.0.0

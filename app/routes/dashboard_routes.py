@@ -10,7 +10,8 @@ from app.utils.auth_utils import (
 )
 from app.services.services import (
     StoreService, UserService, CustomerService, OrderService, QuotationService,
-    ContractService, HandoverRecordService, PaymentReportService, DocumentService
+    ContractService, HandoverRecordService, PaymentReportService, DocumentService,
+    MaterialService,
 )
 from app.repositories.repository import (
     StoreRepository, CustomerRepository, OrderRepository, DocumentRepository
@@ -2405,3 +2406,292 @@ def deactivate_user(user_id):
             logger.error(f"Error deactivating user: {e}", exc_info=True)
             flash('Lỗi khi vô hiệu hóa tài khoản', 'error')
     return redirect(url_for('dashboard.list_users'))
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# MATERIAL MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════
+
+def _get_material_svc():
+    return MaterialService()
+
+
+# ── Units ────────────────────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/units', methods=['GET', 'POST'])
+@company_admin_required
+def material_units():
+    """Manage units of measure (company_admin only)."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        try:
+            if action == 'create':
+                svc.create_unit(
+                    company_id,
+                    name=request.form.get('name', '').strip(),
+                    abbreviation=request.form.get('abbreviation', '').strip() or None,
+                    description=request.form.get('description', '').strip() or None,
+                )
+                flash('Đơn vị đã được tạo', 'success')
+            elif action == 'edit':
+                svc.update_unit(
+                    request.form.get('unit_id'), company_id,
+                    name=request.form.get('name', '').strip(),
+                    abbreviation=request.form.get('abbreviation', '').strip() or None,
+                    description=request.form.get('description', '').strip() or None,
+                )
+                flash('Đơn vị đã được cập nhật', 'success')
+            elif action == 'delete':
+                svc.delete_unit(request.form.get('unit_id'), company_id)
+                flash('Đơn vị đã bị vô hiệu hóa', 'warning')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error(f'material_units error: {e}', exc_info=True)
+            db.session.rollback()
+            flash('Lỗi hệ thống', 'error')
+        return redirect(url_for('dashboard.material_units'))
+
+    units = svc.list_units(company_id, active_only=False)
+    return render_template('materials/units.html', units=units)
+
+
+# ── Categories ───────────────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/categories', methods=['GET', 'POST'])
+@store_admin_required
+def material_categories():
+    """Manage material categories (store_admin+)."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        try:
+            if action == 'create':
+                svc.create_category(
+                    company_id,
+                    name=request.form.get('name', '').strip(),
+                    description=request.form.get('description', '').strip() or None,
+                    sort_order=int(request.form.get('sort_order', 0) or 0),
+                )
+                flash('Danh mục đã được tạo', 'success')
+            elif action == 'edit':
+                svc.update_category(
+                    request.form.get('cat_id'), company_id,
+                    name=request.form.get('name', '').strip(),
+                    description=request.form.get('description', '').strip() or None,
+                    sort_order=int(request.form.get('sort_order', 0) or 0),
+                )
+                flash('Danh mục đã được cập nhật', 'success')
+            elif action == 'delete':
+                svc.delete_category(request.form.get('cat_id'), company_id)
+                flash('Danh mục đã bị vô hiệu hóa', 'warning')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error(f'material_categories error: {e}', exc_info=True)
+            db.session.rollback()
+            flash('Lỗi hệ thống', 'error')
+        return redirect(url_for('dashboard.material_categories'))
+
+    cats = svc.list_categories(company_id, active_only=False)
+    return render_template('materials/categories.html', categories=cats)
+
+
+# ── Material List ───────────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/')
+@login_required
+def list_materials():
+    """List all materials for the company."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    search = request.args.get('search', '').strip()
+    category_id = request.args.get('category_id', '').strip() or None
+    materials = svc.list_materials(company_id, category_id=category_id, search=search)
+    categories = svc.list_categories(company_id)
+    return render_template('materials/list.html',
+                           materials=materials,
+                           categories=categories,
+                           selected_category_id=category_id,
+                           search=search)
+
+
+# ── Create Material ─────────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/create', methods=['GET', 'POST'])
+@store_admin_required
+def create_material():
+    """Create a new material."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    if request.method == 'POST':
+        try:
+            specs_raw = request.form.get('specifications', '').strip()
+            import json as _json
+            specs = {}
+            if specs_raw:
+                try:
+                    specs = _json.loads(specs_raw)
+                except Exception:
+                    pass
+            image_file = request.files.get('image')
+            image_path = _save_item_image(image_file) if image_file else None
+
+            unit_price_raw = request.form.get('unit_price', '').strip()
+            min_stock_raw  = request.form.get('min_stock_level', '').strip()
+
+            mat = svc.create_material(
+                company_id=company_id,
+                material_code=request.form.get('material_code', '').strip(),
+                name=request.form.get('name', '').strip(),
+                category_id=request.form.get('category_id') or None,
+                unit_id=request.form.get('unit_id') or None,
+                description=request.form.get('description', '').strip() or None,
+                color=request.form.get('color', '').strip() or None,
+                specifications=specs,
+                unit_price=float(unit_price_raw) if unit_price_raw else 0,
+                supplier_name=request.form.get('supplier_name', '').strip() or None,
+                supplier_contact=request.form.get('supplier_contact', '').strip() or None,
+                min_stock_level=float(min_stock_raw) if min_stock_raw else 0,
+                image_path=image_path,
+                notes=request.form.get('notes', '').strip() or None,
+            )
+            # Ensure stock rows exist for all stores
+            svc.ensure_stock_entries_for_stores(mat.id, company_id)
+            flash(f'Nguyên vật liệu "{mat.name}" đã được tạo', 'success')
+            return redirect(url_for('dashboard.view_material', material_id=mat.id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error(f'create_material error: {e}', exc_info=True)
+            db.session.rollback()
+            flash('Lỗi hệ thống khi tạo NVL', 'error')
+
+    categories = svc.list_categories(company_id)
+    units = svc.list_units(company_id)
+    return render_template('materials/create.html', categories=categories, units=units)
+
+
+# ── View Material ───────────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/<material_id>')
+@login_required
+def view_material(material_id):
+    """View material detail + stock."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    mat = svc.get_material(material_id, company_id)
+    if not mat:
+        abort(404)
+    # Ensure all stores have a stock entry (so the table is complete)
+    svc.ensure_stock_entries_for_stores(mat.id, company_id)
+    stock_entries = svc.get_stock_for_material(mat.id)
+    return render_template('materials/view.html', material=mat, stock_entries=stock_entries)
+
+
+# ── Edit Material ───────────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/<material_id>/edit', methods=['GET', 'POST'])
+@store_admin_required
+def edit_material(material_id):
+    """Edit a material."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    mat = svc.get_material(material_id, company_id)
+    if not mat:
+        abort(404)
+    if request.method == 'POST':
+        try:
+            specs_raw = request.form.get('specifications', '').strip()
+            import json as _json
+            specs = mat.specifications or {}
+            if specs_raw:
+                try:
+                    specs = _json.loads(specs_raw)
+                except Exception:
+                    pass
+            image_file = request.files.get('image')
+            image_path = _save_item_image(image_file, mat.image_path)
+
+            unit_price_raw = request.form.get('unit_price', '').strip()
+            min_stock_raw  = request.form.get('min_stock_level', '').strip()
+
+            svc.update_material(
+                material_id, company_id,
+                material_code=request.form.get('material_code', '').strip(),
+                name=request.form.get('name', '').strip(),
+                category_id=request.form.get('category_id') or None,
+                unit_id=request.form.get('unit_id') or None,
+                description=request.form.get('description', '').strip() or None,
+                color=request.form.get('color', '').strip() or None,
+                specifications=specs,
+                unit_price=float(unit_price_raw) if unit_price_raw else 0,
+                supplier_name=request.form.get('supplier_name', '').strip() or None,
+                supplier_contact=request.form.get('supplier_contact', '').strip() or None,
+                min_stock_level=float(min_stock_raw) if min_stock_raw else 0,
+                image_path=image_path,
+                notes=request.form.get('notes', '').strip() or None,
+            )
+            flash('Đã cập nhật nguyên vật liệu', 'success')
+            return redirect(url_for('dashboard.view_material', material_id=material_id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error(f'edit_material error: {e}', exc_info=True)
+            db.session.rollback()
+            flash('Lỗi hệ thống khi cập nhật NVL', 'error')
+
+    categories = svc.list_categories(company_id)
+    units = svc.list_units(company_id)
+    return render_template('materials/edit.html', material=mat, categories=categories, units=units)
+
+
+# ── Deactivate Material ─────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/<material_id>/deactivate', methods=['POST'])
+@company_admin_required
+def deactivate_material(material_id):
+    """Soft-delete a material (company_admin only)."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    try:
+        mat = svc.get_material(material_id, company_id)
+        if not mat:
+            abort(404)
+        svc.deactivate_material(material_id, company_id)
+        flash(f'NVL "{mat.name}" đã bị vô hiệu hóa', 'warning')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error(f'deactivate_material error: {e}', exc_info=True)
+        flash('Lỗi hệ thống', 'error')
+    return redirect(url_for('dashboard.list_materials'))
+
+
+# ── Update Stock ────────────────────────────────────────────────────
+
+@dashboard_bp.route('/materials/<material_id>/stock', methods=['POST'])
+@store_admin_required
+def update_material_stock(material_id):
+    """Update stock quantity for a single material+location."""
+    company_id = get_current_company_id()
+    svc = _get_material_svc()
+    mat = svc.get_material(material_id, company_id)
+    if not mat:
+        abort(404)
+    try:
+        store_id_raw = request.form.get('store_id', '').strip() or None
+        quantity_raw = request.form.get('quantity', '0').strip()
+        quantity = float(quantity_raw) if quantity_raw else 0
+        svc.update_stock(material_id, company_id, store_id=store_id_raw, quantity=quantity)
+        flash('Cập nhật tồn kho thành công', 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error(f'update_material_stock error: {e}', exc_info=True)
+        db.session.rollback()
+        flash('Lỗi hệ thống khi cập nhật tồn kho', 'error')
+    return redirect(url_for('dashboard.view_material', material_id=material_id))

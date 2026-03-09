@@ -4,9 +4,11 @@ Repository layer for data access
 from app.config.database import db
 from app.models import (
     Company, Store, User, Customer, Order, Quotation, Contract,
-    HandoverRecord, PaymentReport, Document, DocumentTemplate, LifecycleStatus
+    HandoverRecord, PaymentReport, Document, DocumentTemplate, LifecycleStatus,
+    MaterialUnit, MaterialCategory, Material, MaterialStock,
 )
 from sqlalchemy import and_, desc
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -430,3 +432,121 @@ class LifecycleStatusRepository(BaseRepository):
         if not status:
             status = self.create(order_id=order_id)
         return status
+
+
+# ── Material Management Repositories ────────────────────────────────────────
+
+class MaterialUnitRepository(BaseRepository):
+    """Repository for MaterialUnit model"""
+
+    def __init__(self):
+        super().__init__(MaterialUnit)
+
+    def get_for_company(self, company_id, active_only=True):
+        """All units for a company, optionally only active."""
+        q = self.model.query.filter_by(company_id=company_id)
+        if active_only:
+            q = q.filter_by(is_active=True)
+        return q.order_by(self.model.name).all()
+
+    def get_by_name(self, company_id, name):
+        """Get unit by exact name within company."""
+        return self.model.query.filter_by(company_id=company_id, name=name).first()
+
+
+class MaterialCategoryRepository(BaseRepository):
+    """Repository for MaterialCategory model"""
+
+    def __init__(self):
+        super().__init__(MaterialCategory)
+
+    def get_for_company(self, company_id, active_only=True):
+        """All categories for a company ordered by sort_order then name."""
+        q = self.model.query.filter_by(company_id=company_id)
+        if active_only:
+            q = q.filter_by(is_active=True)
+        return q.order_by(self.model.sort_order, self.model.name).all()
+
+    def get_by_name(self, company_id, name):
+        """Get category by exact name within company."""
+        return self.model.query.filter_by(company_id=company_id, name=name).first()
+
+
+class MaterialRepository(BaseRepository):
+    """Repository for Material model"""
+
+    def __init__(self):
+        super().__init__(Material)
+
+    def get_for_company(self, company_id, category_id=None, active_only=True, search=None):
+        """All materials for a company with optional filters."""
+        q = self.model.query.filter_by(company_id=company_id)
+        if active_only:
+            q = q.filter_by(is_active=True)
+        if category_id:
+            q = q.filter_by(category_id=category_id)
+        if search:
+            pattern = f'%{search}%'
+            q = q.filter(
+                (self.model.name.ilike(pattern)) |
+                (self.model.material_code.ilike(pattern)) |
+                (self.model.supplier_name.ilike(pattern))
+            )
+        return q.order_by(self.model.material_code).all()
+
+    def get_by_code(self, company_id, material_code):
+        """Get material by code within company."""
+        return self.model.query.filter_by(
+            company_id=company_id, material_code=material_code
+        ).first()
+
+    def count_for_company(self, company_id, active_only=True):
+        """Count materials for a company."""
+        q = self.model.query.filter_by(company_id=company_id)
+        if active_only:
+            q = q.filter_by(is_active=True)
+        return q.count()
+
+
+class MaterialStockRepository(BaseRepository):
+    """Repository for MaterialStock model"""
+
+    def __init__(self):
+        super().__init__(MaterialStock)
+
+    def get_for_material(self, material_id):
+        """All stock entries for a material."""
+        return self.model.query.filter_by(material_id=material_id).all()
+
+    def get_for_store(self, company_id, store_id):
+        """All stock entries for a specific store."""
+        return self.model.query.filter_by(
+            company_id=company_id, store_id=store_id
+        ).all()
+
+    def get_entry(self, material_id, store_id):
+        """Get the single stock entry for material+store (store_id may be None for company warehouse)."""
+        return self.model.query.filter_by(
+            material_id=material_id, store_id=store_id
+        ).first()
+
+    def get_or_create_entry(self, material_id, company_id, store_id):
+        """Get or create a stock entry row."""
+        entry = self.get_entry(material_id, store_id)
+        if not entry:
+            entry = self.create(
+                material_id=material_id,
+                company_id=company_id,
+                store_id=store_id,
+                current_quantity=0,
+            )
+        return entry
+
+    def upsert_quantity(self, material_id, company_id, store_id, quantity):
+        """Set (overwrite) current_quantity for a stock entry."""
+        from app.config.database import db as _db
+        entry = self.get_or_create_entry(material_id, company_id, store_id)
+        entry.current_quantity = quantity
+        entry.last_updated = datetime.utcnow()
+        _db.session.commit()
+        return entry

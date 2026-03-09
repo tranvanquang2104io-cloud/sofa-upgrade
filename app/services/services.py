@@ -9,7 +9,9 @@ from app.repositories.repository import (
     CompanyRepository, StoreRepository, UserRepository, CustomerRepository,
     OrderRepository, QuotationRepository, ContractRepository,
     HandoverRecordRepository, PaymentReportRepository, DocumentRepository,
-    DocumentTemplateRepository, LifecycleStatusRepository
+    DocumentTemplateRepository, LifecycleStatusRepository,
+    MaterialUnitRepository, MaterialCategoryRepository,
+    MaterialRepository, MaterialStockRepository,
 )
 from app.utils.template_engine import TemplateEngine, DocxTemplateEngine, DocumentVariableCollector
 from app.models import Document, Order, Quotation, Contract, HandoverRecord
@@ -1241,3 +1243,178 @@ class DocumentService:
     def list_documents_for_order(self, order_id):
         """List documents for order"""
         return self.repo.get_for_order(order_id)
+
+
+# ── Material Service ───────────────────────────────────────────────────
+
+class MaterialService:
+    """Business logic for the Material management module."""
+
+    def __init__(self):
+        self.repo          = MaterialRepository()
+        self.cat_repo      = MaterialCategoryRepository()
+        self.unit_repo     = MaterialUnitRepository()
+        self.stock_repo    = MaterialStockRepository()
+        self.store_repo    = StoreRepository()
+
+    # ── Units ────────────────────────────────────────────────
+
+    def list_units(self, company_id, active_only=True):
+        return self.unit_repo.get_for_company(company_id, active_only=active_only)
+
+    def create_unit(self, company_id, name, abbreviation=None, description=None):
+        if not name:
+            raise ValueError('Tên đơn vị không được để trống')
+        if self.unit_repo.get_by_name(company_id, name):
+            raise ValueError(f'Đơn vị “{name}” đã tồn tại')
+        return self.unit_repo.create(
+            company_id=company_id, name=name,
+            abbreviation=abbreviation or None,
+            description=description or None,
+        )
+
+    def update_unit(self, unit_id, company_id, **kwargs):
+        unit = self.unit_repo.get_by_id(unit_id)
+        if not unit or str(unit.company_id) != str(company_id):
+            raise ValueError('Đơn vị không tìm thấy')
+        new_name = kwargs.get('name')
+        if new_name and new_name != unit.name:
+            existing = self.unit_repo.get_by_name(company_id, new_name)
+            if existing and str(existing.id) != str(unit_id):
+                raise ValueError(f'Đơn vị “{new_name}” đã tồn tại')
+        for k, v in kwargs.items():
+            setattr(unit, k, v)
+        db.session.commit()
+        return unit
+
+    def delete_unit(self, unit_id, company_id):
+        """Soft-delete: set is_active=False. Cannot delete if materials use it."""
+        unit = self.unit_repo.get_by_id(unit_id)
+        if not unit or str(unit.company_id) != str(company_id):
+            raise ValueError('Đơn vị không tìm thấy')
+        if unit.materials:
+            raise ValueError('Không thể xóa đơn vị đang được sử dụng bởi NVL')
+        unit.is_active = False
+        db.session.commit()
+
+    # ── Categories ────────────────────────────────────────────
+
+    def list_categories(self, company_id, active_only=True):
+        return self.cat_repo.get_for_company(company_id, active_only=active_only)
+
+    def create_category(self, company_id, name, description=None, sort_order=0):
+        if not name:
+            raise ValueError('Tên danh mục không được để trống')
+        if self.cat_repo.get_by_name(company_id, name):
+            raise ValueError(f'Danh mục “{name}” đã tồn tại')
+        return self.cat_repo.create(
+            company_id=company_id, name=name,
+            description=description or None,
+            sort_order=sort_order,
+        )
+
+    def update_category(self, cat_id, company_id, **kwargs):
+        cat = self.cat_repo.get_by_id(cat_id)
+        if not cat or str(cat.company_id) != str(company_id):
+            raise ValueError('Danh mục không tìm thấy')
+        new_name = kwargs.get('name')
+        if new_name and new_name != cat.name:
+            existing = self.cat_repo.get_by_name(company_id, new_name)
+            if existing and str(existing.id) != str(cat_id):
+                raise ValueError(f'Danh mục “{new_name}” đã tồn tại')
+        for k, v in kwargs.items():
+            setattr(cat, k, v)
+        db.session.commit()
+        return cat
+
+    def delete_category(self, cat_id, company_id):
+        """Soft-delete. Cannot delete if materials are in this category."""
+        cat = self.cat_repo.get_by_id(cat_id)
+        if not cat or str(cat.company_id) != str(company_id):
+            raise ValueError('Danh mục không tìm thấy')
+        if cat.materials:
+            raise ValueError('Không thể xóa danh mục đang có NVL')
+        cat.is_active = False
+        db.session.commit()
+
+    # ── Materials ──────────────────────────────────────────────
+
+    def list_materials(self, company_id, category_id=None, search=None, active_only=True):
+        return self.repo.get_for_company(
+            company_id, category_id=category_id, search=search, active_only=active_only
+        )
+
+    def get_material(self, material_id, company_id=None):
+        mat = self.repo.get_by_id(material_id)
+        if mat and company_id and str(mat.company_id) != str(company_id):
+            return None
+        return mat
+
+    def create_material(self, company_id, material_code, name, **kwargs):
+        if not material_code or not name:
+            raise ValueError('Mã NVL và tên không được để trống')
+        if self.repo.get_by_code(company_id, material_code):
+            raise ValueError(f'Mã NVL “{material_code}” đã tồn tại')
+        mat = self.repo.create(
+            company_id=company_id,
+            material_code=material_code,
+            name=name,
+            **kwargs,
+        )
+        # Auto-create company warehouse stock entry (store_id=None)
+        self.stock_repo.get_or_create_entry(mat.id, company_id, store_id=None)
+        logger.info(f'Material created: {material_code} for company {company_id}')
+        return mat
+
+    def update_material(self, material_id, company_id, **kwargs):
+        mat = self.repo.get_by_id(material_id)
+        if not mat or str(mat.company_id) != str(company_id):
+            raise ValueError('NVL không tìm thấy')
+        new_code = kwargs.get('material_code')
+        if new_code and new_code != mat.material_code:
+            existing = self.repo.get_by_code(company_id, new_code)
+            if existing and str(existing.id) != str(material_id):
+                raise ValueError(f'Mã NVL “{new_code}” đã tồn tại')
+        for k, v in kwargs.items():
+            setattr(mat, k, v)
+        db.session.commit()
+        logger.info(f'Material updated: {mat.material_code}')
+        return mat
+
+    def deactivate_material(self, material_id, company_id):
+        mat = self.repo.get_by_id(material_id)
+        if not mat or str(mat.company_id) != str(company_id):
+            raise ValueError('NVL không tìm thấy')
+        mat.is_active = False
+        db.session.commit()
+        logger.info(f'Material deactivated: {mat.material_code}')
+
+    # ── Stock management ────────────────────────────────────────
+
+    def get_stock_for_material(self, material_id):
+        """Return all stock entries enriched with store name."""
+        entries = self.stock_repo.get_for_material(material_id)
+        result = []
+        for e in entries:
+            store_name = 'Kho công ty' if e.store_id is None else (
+                self.store_repo.get_by_id(e.store_id).name
+                if self.store_repo.get_by_id(e.store_id) else str(e.store_id)
+            )
+            result.append({'entry': e, 'store_name': store_name})
+        return result
+
+    def update_stock(self, material_id, company_id, store_id, quantity):
+        """Update or create stock quantity for a material+location."""
+        mat = self.repo.get_by_id(material_id)
+        if not mat or str(mat.company_id) != str(company_id):
+            raise ValueError('NVL không tìm thấy')
+        if quantity < 0:
+            raise ValueError('Số lượng không thể âm')
+        return self.stock_repo.upsert_quantity(material_id, company_id, store_id, quantity)
+
+    def ensure_stock_entries_for_stores(self, material_id, company_id):
+        """Ensure a stock entry exists for company warehouse + every active store."""
+        stores = self.store_repo.get_stores_for_company(company_id)
+        self.stock_repo.get_or_create_entry(material_id, company_id, store_id=None)
+        for store in stores:
+            self.stock_repo.get_or_create_entry(material_id, company_id, store_id=store.id)

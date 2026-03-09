@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}{{ material.name }} - {{ t('Materials') }} - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.list_materials') }}">{{ t('Materials') }}</a></li>
+                <li class="breadcrumb-item active">{{ material.material_code }}</li>
+            </ol>
+        </nav>
+        <h2>
+            <i class="bi bi-box-seam"></i> {{ material.name }}
+            {% if not material.is_active %}<span class="badge bg-secondary ms-2">{{ t('Inactive') }}</span>{% endif %}
+            {% if material.is_low_stock %}<span class="badge bg-warning text-dark ms-2"><i class="bi bi-exclamation-triangle"></i> {{ t('Low Stock') }}</span>{% endif %}
+        </h2>
+        <p class="text-muted mb-0">{{ t('Code') }}: <strong>{{ material.material_code }}</strong></p>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        {% if session.role in ('company_admin', 'store_admin') %}
+        <a href="{{ url_for('dashboard.edit_material', material_id=material.id) }}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> {{ t('Edit') }}
+        </a>
+        {% endif %}
+        {% if session.role == 'company_admin' and material.is_active %}
+        <form method="POST" action="{{ url_for('dashboard.deactivate_material', material_id=material.id) }}"
+              onsubmit="return confirm('{{ t('Deactivate this material?') }}')">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-x-circle"></i> {{ t('Deactivate') }}</button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('dashboard.list_materials') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Details column -->
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header fw-semibold"><i class="bi bi-info-circle"></i> {{ t('Basic Information') }}</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">{{ t('Category') }}</dt>
+                    <dd class="col-sm-8">{{ material.category.name if material.category else '-' }}</dd>
+                    <dt class="col-sm-4">{{ t('Unit') }}</dt>
+                    <dd class="col-sm-8">
+                        {% if material.unit %}
+                            {{ material.unit.name }}{% if material.unit.abbreviation %} <span class="text-muted">({{ material.unit.abbreviation }})</span>{% endif %}
+                        {% else %}-{% endif %}
+                    </dd>
+                    <dt class="col-sm-4">{{ t('Color') }}</dt>
+                    <dd class="col-sm-8">{{ material.color or '-' }}</dd>
+                    <dt class="col-sm-4">{{ t('Description') }}</dt>
+                    <dd class="col-sm-8">{{ material.description or '-' }}</dd>
+                    <dt class="col-sm-4">{{ t('Unit Price') }}</dt>
+                    <dd class="col-sm-8">{{ '{:,.0f}'.format(material.unit_price) ~ ' đ' if material.unit_price else '-' }}</dd>
+                    <dt class="col-sm-4">{{ t('Min Stock Alert') }}</dt>
+                    <dd class="col-sm-8">{{ '{:,.2f}'.format(material.min_stock_level) if material.min_stock_level else '-' }}</dd>
+                    <dt class="col-sm-4">{{ t('Notes') }}</dt>
+                    <dd class="col-sm-8">{{ material.notes or '-' }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-semibold"><i class="bi bi-truck"></i> {{ t('Supplier Information') }}</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">{{ t('Supplier Name') }}</dt>
+                    <dd class="col-sm-8">{{ material.supplier_name or '-' }}</dd>
+                    <dt class="col-sm-4">{{ t('Supplier Contact') }}</dt>
+                    <dd class="col-sm-8">{{ material.supplier_contact or '-' }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        {% if material.specifications %}
+        <div class="card mb-3">
+            <div class="card-header fw-semibold"><i class="bi bi-list-ul"></i> {{ t('Technical Specifications') }}</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    {% for key, val in material.specifications.items() %}
+                    <tr><th class="ps-0 border-0" style="width:40%">{{ key }}</th><td class="border-0">{{ val }}</td></tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Stock management -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold"><i class="bi bi-archive"></i> {{ t('Inventory') }}</span>
+                <span class="badge bg-primary fs-6">{{ t('Total') }}: {{ '{:,.2f}'.format(material.total_stock) }}</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ t('Location') }}</th>
+                            <th class="text-end">{{ t('Quantity') }}</th>
+                            <th>{{ t('Last Updated') }}</th>
+                            {% if session.role in ('company_admin', 'store_admin') %}
+                            <th>{{ t('Update') }}</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stock_entries %}
+                        <tr {% if item.entry.current_quantity == 0 %}class="text-muted"{% endif %}>
+                            <td>
+                                <i class="bi bi-{% if item.entry.store_id is none %}building{% else %}shop{% endif %}"></i>
+                                {{ item.store_name }}
+                            </td>
+                            <td class="text-end fw-semibold">{{ '{:,.2f}'.format(item.entry.current_quantity) }}</td>
+                            <td><small>{{ item.entry.last_updated.strftime('%d/%m/%Y %H:%M') if item.entry.last_updated else '-' }}</small></td>
+                            {% if session.role in ('company_admin', 'store_admin') %}
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#stockModal"
+                                        data-store-id="{{ item.entry.store_id or '' }}"
+                                        data-store-name="{{ item.store_name }}"
+                                        data-qty="{{ item.entry.current_quantity }}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-muted text-center py-2">{{ t('No stock entries.') }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right column: image + meta -->
+    <div class="col-lg-4">
+        {% if material.image_path %}
+        <div class="card mb-3">
+            <div class="card-body text-center">
+                <img src="{{ url_for('dashboard.serve_item_image', filename=material.image_path) }}"
+                     alt="{{ material.name }}" class="img-fluid rounded" style="max-height:280px">
+            </div>
+        </div>
+        {% endif %}
+        <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> {{ t('Record Info') }}</div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-5">{{ t('Created') }}</dt>
+                    <dd class="col-sm-7">{{ material.created_at.strftime('%d/%m/%Y') }}</dd>
+                    <dt class="col-sm-5">{{ t('Updated') }}</dt>
+                    <dd class="col-sm-7">{{ material.updated_at.strftime('%d/%m/%Y') }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock update modal -->
+{% if session.role in ('company_admin', 'store_admin') %}
+<div class="modal fade" id="stockModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-archive"></i> {{ t('Update Stock') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.update_material_stock', material_id=material.id) }}">
+                <div class="modal-body">
+                    <p class="text-muted small mb-2" id="modalStoreName"></p>
+                    <input type="hidden" name="store_id" id="modalStoreId">
+                    <label class="form-label">{{ t('Quantity') }}</label>
+                    <input type="number" class="form-control" name="quantity" id="modalQty" step="0.01" min="0" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> {{ t('Save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('stockModal').addEventListener('show.bs.modal', function(e){
+    const btn = e.relatedTarget;
+    document.getElementById('modalStoreId').value = btn.dataset.storeId;
+    document.getElementById('modalStoreName').textContent = btn.dataset.storeName;
+    document.getElementById('modalQty').value = btn.dataset.qty;
+});
+</script>
+{% endif %}
+{% endblock %}

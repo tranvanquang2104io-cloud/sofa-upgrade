@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ t('Edit') }} {{ material.name }} - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.list_materials') }}">{{ t('Materials') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.view_material', material_id=material.id) }}">{{ material.material_code }}</a></li>
+                <li class="breadcrumb-item active">{{ t('Edit') }}</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-pencil"></i> {{ t('Edit Material') }}: {{ material.name }}</h2>
+    </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header fw-semibold"><i class="bi bi-info-circle"></i> {{ t('Basic Information') }}</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Material Code') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="material_code" required value="{{ material.material_code }}">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">{{ t('Name') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required value="{{ material.name }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Category') }}</label>
+                            <select class="form-select" name="category_id">
+                                <option value="">-- {{ t('No category') }} --</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if material.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Unit') }}</label>
+                            <select class="form-select" name="unit_id">
+                                <option value="">-- {{ t('Select unit') }} --</option>
+                                {% for unit in units %}
+                                <option value="{{ unit.id }}" {% if material.unit_id == unit.id %}selected{% endif %}>
+                                    {{ unit.name }}{% if unit.abbreviation %} ({{ unit.abbreviation }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ t('Color') }}</label>
+                            <input type="text" class="form-control" name="color" value="{{ material.color or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">{{ t('Description') }}</label>
+                            <textarea class="form-control" name="description" rows="2">{{ material.description or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header fw-semibold"><i class="bi bi-currency-dollar"></i> {{ t('Pricing & Stock') }}</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Unit Price') }}</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" name="unit_price" step="0.01" min="0"
+                                       value="{{ material.unit_price or 0 }}">
+                                <span class="input-group-text">đ</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ t('Min Stock Alert') }}</label>
+                            <input type="number" class="form-control" name="min_stock_level" step="0.01" min="0"
+                                   value="{{ material.min_stock_level or 0 }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header fw-semibold"><i class="bi bi-truck"></i> {{ t('Supplier Information') }}</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Supplier Name') }}</label>
+                            <input type="text" class="form-control" name="supplier_name" value="{{ material.supplier_name or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('Supplier Contact') }}</label>
+                            <input type="text" class="form-control" name="supplier_contact" value="{{ material.supplier_contact or '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header fw-semibold"><i class="bi bi-list-ul"></i> {{ t('Technical Specifications') }}</div>
+                <div class="card-body">
+                    <label class="form-label small text-muted">{{ t('Enter as JSON: {"thickness":"5mm","width":"1.4m"}') }}</label>
+                    <textarea class="form-control font-monospace" name="specifications" rows="3">{{ material.specifications | tojson(indent=2) if material.specifications else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header fw-semibold"><i class="bi bi-chat-left-text"></i> {{ t('Notes') }}</div>
+                <div class="card-body">
+                    <textarea class="form-control" name="notes" rows="2">{{ material.notes or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header fw-semibold"><i class="bi bi-image"></i> {{ t('Material Image') }}</div>
+                <div class="card-body text-center">
+                    {% if material.image_path %}
+                    <img id="imgPreview"
+                         src="{{ url_for('dashboard.serve_item_image', filename=material.image_path) }}"
+                         alt="{{ material.name }}" class="img-fluid rounded mb-2" style="max-height:200px">
+                    {% else %}
+                    <img id="imgPreview" src="" alt="preview" class="img-fluid rounded mb-2 d-none" style="max-height:200px">
+                    {% endif %}
+                    <label class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-upload"></i> {{ t('Change Image') }}
+                        <input type="file" name="image" accept="image/*" class="d-none" id="imgInput">
+                    </label>
+                    <div class="form-text">{{ t('Leave empty to keep current image') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-5">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ t('Save Changes') }}</button>
+        <a href="{{ url_for('dashboard.view_material', material_id=material.id) }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('imgInput').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = document.getElementById('imgPreview');
+        img.src = e.target.result;
+        img.classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+});
+</script>
+{% endblock %}

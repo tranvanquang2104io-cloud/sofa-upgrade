@@ -39,6 +39,9 @@ class Company(db.Model):
     orders = db.relationship('Order', backref='company', lazy=True, cascade='all, delete-orphan')
     templates = db.relationship('DocumentTemplate', backref='company', lazy=True, cascade='all, delete-orphan')
     documents = db.relationship('Document', backref='company', lazy=True, cascade='all, delete-orphan')
+    material_units = db.relationship('MaterialUnit', backref='company', lazy=True, cascade='all, delete-orphan')
+    material_categories = db.relationship('MaterialCategory', backref='company', lazy=True, cascade='all, delete-orphan')
+    materials = db.relationship('Material', backref='company', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Company {self.company_code}>'
@@ -548,6 +551,120 @@ class Document(db.Model):
     
     def __repr__(self):
         return f'<Document {self.document_name}>'
+
+
+class MaterialUnit(db.Model):
+    """Unit of measure for materials — scoped per company."""
+    __tablename__ = 'material_units'
+
+    id         = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    name         = db.Column(db.String(50), nullable=False)    # e.g. "m²", "kg", "cái", "cuộn"
+    abbreviation = db.Column(db.String(20))                    # Optional short form displayed on forms
+    description  = db.Column(db.String(255))
+    is_active    = db.Column(db.Boolean, default=True, index=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'name', name='uq_company_unit_name'),)
+
+    # Relationships
+    materials = db.relationship('Material', backref='unit', lazy=True, foreign_keys='Material.unit_id')
+
+    def __repr__(self):
+        return f'<MaterialUnit {self.name}>'
+
+
+class MaterialCategory(db.Model):
+    """Category / group for materials — scoped per company."""
+    __tablename__ = 'material_categories'
+
+    id         = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    name        = db.Column(db.String(100), nullable=False)   # e.g. "Vải bọc", "Da", "Mút xốp", "Gỗ khung"
+    description = db.Column(db.Text)
+    sort_order  = db.Column(db.Integer, default=0)
+    is_active   = db.Column(db.Boolean, default=True, index=True)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at  = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'name', name='uq_company_category_name'),)
+
+    # Relationships
+    materials = db.relationship('Material', backref='category', lazy=True, foreign_keys='Material.category_id')
+
+    def __repr__(self):
+        return f'<MaterialCategory {self.name}>'
+
+
+class Material(db.Model):
+    """Raw material / nguyên vật liệu — company-level catalog with optional per-store stock."""
+    __tablename__ = 'materials'
+
+    id          = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id  = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    category_id = db.Column(UUID(as_uuid=True), db.ForeignKey('material_categories.id'), nullable=True, index=True)
+    unit_id     = db.Column(UUID(as_uuid=True), db.ForeignKey('material_units.id'), nullable=True, index=True)
+
+    material_code = db.Column(db.String(50), nullable=False)
+    name          = db.Column(db.String(255), nullable=False, index=True)
+    description   = db.Column(db.Text)
+    color         = db.Column(db.String(100))
+    # Free-form technical specs: {"thickness": "5mm", "width": "1.4m", "supplier_sku": "VB-001"}
+    specifications = db.Column(db.JSON, default=dict)
+    unit_price     = db.Column(db.Numeric(15, 2), default=0)  # Reference purchase price
+    supplier_name  = db.Column(db.String(255))
+    supplier_contact = db.Column(db.String(100))  # Phone / email of supplier
+    min_stock_level  = db.Column(db.Numeric(10, 2), default=0)  # Alert threshold
+    image_path     = db.Column(db.String(500))    # Relative path under uploads/
+    notes          = db.Column(db.Text)
+    is_active      = db.Column(db.Boolean, default=True, index=True)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'material_code', name='uq_company_material_code'),)
+
+    # Relationships
+    stock_entries = db.relationship('MaterialStock', backref='material', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<Material {self.material_code}>'
+
+    @property
+    def total_stock(self):
+        """Sum of current_quantity across all stock entries."""
+        return sum(s.current_quantity or 0 for s in self.stock_entries)
+
+    @property
+    def is_low_stock(self):
+        """True when total stock falls below min_stock_level."""
+        if self.min_stock_level and self.min_stock_level > 0:
+            return self.total_stock < self.min_stock_level
+        return False
+
+
+class MaterialStock(db.Model):
+    """Per-location stock entry for a material.
+    
+    store_id = NULL  → company-level / main warehouse
+    store_id = <id>  → specific store stock
+    """
+    __tablename__ = 'material_stock'
+
+    id          = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    material_id = db.Column(UUID(as_uuid=True), db.ForeignKey('materials.id'), nullable=False, index=True)
+    company_id  = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    store_id    = db.Column(UUID(as_uuid=True), db.ForeignKey('stores.id'), nullable=True, index=True)
+
+    current_quantity = db.Column(db.Numeric(10, 2), default=0, nullable=False)
+    notes            = db.Column(db.Text)
+    last_updated     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('material_id', 'store_id', name='uq_material_store_stock'),)
+
+    def __repr__(self):
+        return f'<MaterialStock material={self.material_id} store={self.store_id}>'
 
 
 class MasterAdmin(db.Model):
