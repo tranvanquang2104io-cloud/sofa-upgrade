@@ -109,7 +109,16 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" or 8 }}" min="0" max="100" step="0.1">%):
+                                        VAT Tax
+                                        (<input
+                                            type="number"
+                                            id="vat_rate"
+                                            name="vat_rate"
+                                            class="form-control form-control-sm d-inline-block"
+                                            style="width:75px"
+                                            value="{{ contract.vat_rate or 8 }}"
+                                            min="0" max="100" step="0.1"
+                                        >%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ contract.vat_amount|int if contract.vat_amount else '' }}"></td>
                                 </tr>
