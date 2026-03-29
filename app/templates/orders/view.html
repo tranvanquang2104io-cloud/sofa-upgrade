@@ -142,9 +142,9 @@
                         <div class="timeline-content">
                             {{ t('Quotation') }}
                             {% if lifecycle.quotation_created %}
-                                <p class="text-muted small">Created: {{ lifecycle.quotation_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.quotation_created_at else 'N/A' }}</p>
+                                <p class="text-muted small">{{ t('Created:') }} {{ lifecycle.quotation_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.quotation_created_at else 'N/A' }}</p>
                                 {% if lifecycle.quotation_approved %}
-                                <p class="text-muted small">Approved: {{ lifecycle.quotation_approved_at.strftime('%Y-%m-%d %H:%M') if lifecycle.quotation_approved_at else 'N/A' }}</p>
+                                <p class="text-muted small">{{ t('Approved:') }} {{ lifecycle.quotation_approved_at.strftime('%Y-%m-%d %H:%M') if lifecycle.quotation_approved_at else 'N/A' }}</p>
                                 {% endif %}
                                 {% for quotation in quotations %}
                                 {% if quotation.is_active and not quotation.is_canceled %}
@@ -225,9 +225,9 @@
                         <div class="timeline-content">
                             {{ t('Contract') }}
                             {% if lifecycle.contract_created %}
-                                <p class="text-muted small">Created: {{ lifecycle.contract_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.contract_created_at else 'N/A' }}</p>
+                                <p class="text-muted small">{{ t('Created:') }} {{ lifecycle.contract_created_at.strftime('%Y-%m-%d %H:%M') if lifecycle.contract_created_at else 'N/A' }}</p>
                                 {% if lifecycle.contract_signed %}
-                                <p class="text-muted small">Signed: {{ lifecycle.contract_signed_at.strftime('%Y-%m-%d %H:%M') if lifecycle.contract_signed_at else 'N/A' }}</p>
+                                <p class="text-muted small">{{ t('Signed:') }} {{ lifecycle.contract_signed_at.strftime('%Y-%m-%d %H:%M') if lifecycle.contract_signed_at else 'N/A' }}</p>
                                 {% endif %}
                                 {% set active_contracts = order.contracts|selectattr('is_active')|list %}
                                 {% for contract in active_contracts %}
@@ -581,23 +581,26 @@
                     
                     {% if lifecycle.contract_signed and not lifecycle.advance_paid %}
                     <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Record Advance Payment
+                        <i class="bi bi-plus"></i> {{ t('Record Advance Payment') }}
                     </a>
                     <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#skipAdvanceModal">
-                        <i class="bi bi-skip-forward"></i> Bỏ qua tạm ứng
+                        <i class="bi bi-skip-forward"></i> {{ t('Skip Advance Payment') }}
                     </button>
                     {% endif %}
                     
                     {% if lifecycle.advance_paid and not lifecycle.handover_confirmed and not handover_records %}
                     <a href="{{ url_for('dashboard.create_handover', order_id=order.id) }}" class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Create Handover Record
+                        <i class="bi bi-plus"></i> {{ t('Create Handover Record') }}
                     </a>
                     {% endif %}
                     
                     {% if lifecycle.advance_paid and not lifecycle.fully_paid %}
                     <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}?type=final" class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Record Final Payment
+                        <i class="bi bi-plus"></i> {{ t('Record Final Payment') }}
                     </a>
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#generatePaymentRequestModal" title="{{ t('Payment Request') }}">
+                        <i class="bi bi-cash-coin"></i> {{ t('Payment Request') }}
+                    </button>
                     {% endif %}
                     
                     <a href="{{ url_for('dashboard.list_documents', order_id=order.id) }}" class="btn btn-info">
@@ -746,6 +749,35 @@
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-x-circle"></i> {{ t('Cancel Order') }}
                     </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Generate Payment Request Modal -->
+{% if lifecycle.advance_paid and not lifecycle.fully_paid %}
+<div class="modal fade" id="generatePaymentRequestModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ t('Payment Request') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment_request', ref_id=order.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="format" class="form-label">{{ t('Format') }}</label>
+                        <select class="form-select" name="format" required>
+                            <option value="pdf">PDF</option>
+                            <option value="docx">DOCX</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
                 </div>
             </form>
         </div>

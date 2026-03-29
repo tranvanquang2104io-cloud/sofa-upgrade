@@ -84,7 +84,7 @@ def create_app(config_name=None):
         """Inject i18n translation helper and current language into all templates."""
         from flask import session as _session
         from app.utils.i18n import t as _t
-        lang = _session.get('lang', 'en')
+        lang = _session.get('lang', 'vi')
         return dict(
             t=lambda key: _t(key, lang),
             current_lang=lang

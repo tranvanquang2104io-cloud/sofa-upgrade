@@ -164,6 +164,14 @@
                                 <td colspan="5" class="text-end">VAT ({{ payment.vat_rate or 0 }}%):</td>
                                 <td class="text-end">{{ "{:,.0f}".format(payment.vat_amount|float if payment.vat_amount else 0) }} ₫</td>
                             </tr>
+                            <tr>
+                                <td colspan="5" class="text-end">{{ t('Shipping Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(payment.shipping_fee|float if payment.shipping_fee else 0) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-end">{{ t('Other Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(payment.another_fee|float if payment.another_fee else 0) }} ₫</td>
+                            </tr>
                             <tr class="table-primary fw-bold">
                                 <td colspan="5" class="text-end">{{ t('Payment Value:') }}</td>
                                 <td class="text-end">{{ "{:,.0f}".format(payment.amount|float) }} ₫</td>

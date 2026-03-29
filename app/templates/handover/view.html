@@ -65,10 +65,11 @@
                                 <th class="text-center" style="width:5%">No.</th>
                                 <th>{{ t('Item Name') }}</th>
                                 <th style="width:8%">{{ t('Unit') }}</th>
-                                <th class="text-center" style="width:10%">{{ t('Delivered') }}</th>
-                                <th class="text-center" style="width:10%">{{ t('Accepted') }}</th>
-                                <th class="text-center" style="width:10%">{{ t('Status') }}</th>
-                                <th style="width:15%">{{ t('Reason') }}</th>
+                                <th class="text-center" style="width:8%">{{ t('Delivered') }}</th>
+                                <th class="text-center" style="width:8%">{{ t('Accepted') }}</th>
+                                <th class="text-center" style="width:8%">{{ t('Status') }}</th>
+                                <th style="width:12%">{{ t('Reason') }}</th>
+                                <th style="width:13%">{{ t('Image') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -89,20 +90,33 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ item.rejection_reason or '-' }}</td>
+                                <td>
+                                    {% if item.get('image_path') %}
+                                    <img src="{{ url_for('dashboard.serve_item_image', filename=item.image_path[6:]) }}" class="img-thumbnail" style="max-height:50px;" alt="">
+                                    {% else %}—{% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <td colspan="6" class="text-end">{{ t('Subtotal:') }}</td>
+                                <td colspan="7" class="text-end">{{ t('Subtotal:') }}</td>
                                 <td class="text-end">{{ "{:,.0f}".format(handover.subtotal|float if handover.subtotal else 0) }} ₫</td>
                             </tr>
                             <tr>
-                                <td colspan="6" class="text-end">VAT ({{ handover.vat_rate or 0 }}%):</td>
+                                <td colspan="7" class="text-end">VAT ({{ handover.vat_rate or 0 }}%):</td>
                                 <td class="text-end">{{ "{:,.0f}".format(handover.vat_amount|float if handover.vat_amount else 0) }} ₫</td>
                             </tr>
+                            <tr>
+                                <td colspan="7" class="text-end">{{ t('Shipping Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(handover.shipping_fee|float if handover.shipping_fee else 0) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="7" class="text-end">{{ t('Other Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(handover.another_fee|float if handover.another_fee else 0) }} ₫</td>
+                            </tr>
                             <tr class="table-primary fw-bold">
-                                <td colspan="6" class="text-end">{{ t('Total:') }}</td>
+                                <td colspan="7" class="text-end">{{ t('Total:') }}</td>
                                 <td class="text-end">{{ "{:,.0f}".format(handover.total_amount|float if handover.total_amount else 0) }} ₫</td>
                             </tr>
                         </tfoot>

@@ -4,6 +4,7 @@ Completely separate from company-scoped auth.
 """
 import os
 from functools import wraps
+from app.utils.i18n import t
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
     session, flash, current_app
@@ -56,7 +57,7 @@ def login():
             logger.info(f"Master admin logged in: {username}")
             return redirect(url_for('admin.companies'))
 
-        flash('Tên đăng nhập hoặc mật khẩu không đúng.', 'error')
+        flash(t('Tên đăng nhập hoặc mật khẩu không đúng.'), 'error')
 
     return render_template('admin/login.html')
 
@@ -66,7 +67,7 @@ def logout():
     session.pop('master_admin_id', None)
     session.pop('master_admin_username', None)
     session.pop('master_admin_name', None)
-    flash('Đã đăng xuất.', 'success')
+    flash(t('Đã đăng xuất.'), 'success')
     return redirect(url_for('admin.login'))
 
 
@@ -102,11 +103,11 @@ def create_company():
         admin_email       = request.form.get('admin_email', '').strip()
 
         if not all([company_code, name, email, admin_username, admin_password, admin_fullname]):
-            flash('Vui lòng điền đầy đủ các trường bắt buộc.', 'error')
+            flash(t('Vui lòng điền đầy đủ các trường bắt buộc.'), 'error')
             return render_template('admin/create_company.html')
 
         if Company.query.filter_by(company_code=company_code).first():
-            flash(f'Mã công ty "{company_code}" đã tồn tại.', 'error')
+            flash(t(f'Mã công ty "{company_code}" đã tồn tại.'), 'error')
             return render_template('admin/create_company.html')
 
         try:
@@ -159,14 +160,14 @@ def create_company():
             db.session.add(admin_user)
             db.session.commit()
 
-            flash(f'Công ty "{name}" ({company_code}) đã được tạo thành công.', 'success')
+            flash(t(f'Công ty "{name}" ({company_code}) đã được tạo thành công.'), 'success')
             logger.info(f"Master admin created company: {company_code}")
             return redirect(url_for('admin.companies'))
 
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error creating company: {e}", exc_info=True)
-            flash(f'Lỗi: {e}', 'error')
+            flash(t(f'Lỗi: {e}'), 'error')
 
     return render_template('admin/create_company.html')
 
@@ -176,7 +177,7 @@ def create_company():
 def edit_company(company_id):
     company = db.session.get(Company, company_id)
     if not company:
-        flash('Không tìm thấy công ty.', 'error')
+        flash(t('Không tìm thấy công ty.'), 'error')
         return redirect(url_for('admin.companies'))
 
     if request.method == 'POST':
@@ -193,11 +194,11 @@ def edit_company(company_id):
             company.vat_rate = float(vat)
         try:
             db.session.commit()
-            flash('Đã cập nhật thông tin công ty.', 'success')
+            flash(t('Đã cập nhật thông tin công ty.'), 'success')
             return redirect(url_for('admin.companies'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Lỗi: {e}', 'error')
+            flash(t(f'Lỗi: {e}'), 'error')
 
     users = User.query.filter_by(company_id=company.id).order_by(User.role, User.full_name).all()
     return render_template('admin/edit_company.html', company=company, users=users)
@@ -208,12 +209,12 @@ def edit_company(company_id):
 def toggle_company(company_id):
     company = db.session.get(Company, company_id)
     if not company:
-        flash('Không tìm thấy công ty.', 'error')
+        flash(t('Không tìm thấy công ty.'), 'error')
     else:
         company.is_active = not company.is_active
         db.session.commit()
         state = 'kích hoạt' if company.is_active else 'vô hiệu hóa'
-        flash(f'Công ty "{company.name}" đã được {state}.', 'success')
+        flash(t(f'Công ty "{company.name}" đã được {state}.'), 'success')
     return redirect(url_for('admin.companies'))
 
 
@@ -238,18 +239,18 @@ def create_admin():
         password  = request.form.get('password', '')
 
         if not all([username, email, fullname, password]):
-            flash('Vui lòng điền đầy đủ các trường.', 'error')
+            flash(t('Vui lòng điền đầy đủ các trường.'), 'error')
             return render_template('admin/create_admin.html')
 
         if MasterAdmin.query.filter_by(username=username).first():
-            flash(f'Tên đăng nhập "{username}" đã tồn tại.', 'error')
+            flash(t(f'Tên đăng nhập "{username}" đã tồn tại.'), 'error')
             return render_template('admin/create_admin.html')
 
         new_admin = MasterAdmin(username=username, email=email, full_name=fullname)
         new_admin.set_password(password)
         db.session.add(new_admin)
         db.session.commit()
-        flash(f'Master admin "{username}" đã được tạo.', 'success')
+        flash(t(f'Master admin "{username}" đã được tạo.'), 'success')
         return redirect(url_for('admin.list_admins'))
 
     return render_template('admin/create_admin.html')

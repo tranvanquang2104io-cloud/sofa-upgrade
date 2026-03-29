@@ -58,6 +58,7 @@
                                 'payment': ('info', 'Payment'),
                                 'payment_advance': ('info', 'Advance Payment'),
                                 'payment_final': ('info', 'Final Payment'),
+                                'payment_request': ('primary', 'Payment Request'),
                             } %}
                             {% set lbl = type_labels.get(tpl.document_type, ('secondary', tpl.document_type)) %}
                             <span class="badge bg-{{ lbl[0] }}">{{ lbl[1] }}</span>
@@ -126,6 +127,7 @@
                             <option value="payment">Payment (general)</option>
                             <option value="payment_advance">Advance Payment</option>
                             <option value="payment_final">Final Payment</option>
+                            <option value="payment_request">Payment Request (Đề nghị thanh toán)</option>
                         </select>
                     </div>
                     <div class="mb-3">

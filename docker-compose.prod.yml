@@ -48,14 +48,14 @@ services:
     depends_on:
       - app
     ports:
-      - "80:80"
-      - "443:443"
+      - "90:80"
+      - "9443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./app/static:/app/static:ro          # static files phục vụ trực tiếp
       - uploads_prod:/app/uploads:ro          # uploads phục vụ trực tiếp
       # SSL certificates — uncomment khi có cert:
-      # - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
 
 volumes:
   postgres_prod_data:

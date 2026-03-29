@@ -147,7 +147,8 @@
                                             {% if item.get('image_path') %}
                                             <img src="{{ url_for('dashboard.serve_item_image', filename=item.image_path[6:]) }}" class="img-thumbnail mb-1" style="max-height:50px;" alt="">
                                             {% endif %}
-                                            <input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*">
+                                            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+                                            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
                                             <input type="hidden" name="item_existing_image[]" value="{{ item.get('image_path', '') }}">
                                         </td>
                                         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
@@ -172,9 +173,23 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        {{ t('VAT Tax') }} (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" or 8 }}" min="0" max="100" step="0.1">%):
+                                        {{ t('VAT Tax') }} (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" value="{{ handover.vat_rate|int if handover.vat_rate is not none else 8 }}" min="0" max="100" step="0.1">%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ handover.vat_amount|int if handover.vat_amount else '' }}"></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Shipping Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" id="shipping_fee_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ handover.shipping_fee|int if handover.shipping_fee else 0 }}">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="{{ handover.shipping_fee or 0 }}">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Other Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" id="another_fee_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ handover.another_fee|int if handover.another_fee else 0 }}">
+                                        <input type="hidden" id="another_fee" name="another_fee" value="{{ handover.another_fee or 0 }}">
+                                    </td>
                                 </tr>
                                 <tr class="table-primary">
                                     <th>Grand Total:</th>
@@ -219,6 +234,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('vat_rate')) document.getElementById('vat_rate').addEventListener('input', recalcAll);
     document.querySelectorAll('#items-body .item-row').forEach(row => {
         row.querySelectorAll('.delivered-qty, .accepted-qty, .price-input').forEach(inp => inp.addEventListener('input', recalcAll));
+        attachImagePreview(row);
+    });
+    // Format initial fee display values
+    ['shipping_fee_display','another_fee_display'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const raw = parseInt(el.value.replace(/\D/g,''))||0; el.value = fmtNum(raw); }
     });
     recalcAll();
 });
@@ -227,13 +248,35 @@ function fmtNum(n) {
     return new Intl.NumberFormat('vi-VN').format(Math.round(n));
 }
 
+function getStaticFee(id) {
+    const el = document.getElementById(id);
+    return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;
+}
+
+function attachImagePreview(row) {
+    const fileInput = row.querySelector('.img-file-input');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', function() {
+        const preview = this.closest('td').querySelector('.img-preview');
+        if (!preview) return;
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => { preview.src = e.target.result; preview.style.display = ''; };
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            preview.src = ''; preview.style.display = 'none';
+        }
+    });
+}
+
 function addItemRow() {
     const tbody = document.getElementById('items-body');
     if (!tbody) return;
     const row = document.createElement('tr');
     row.className = 'item-row';
+    const idx = tbody.querySelectorAll('.item-row').length + 1;
     row.innerHTML = `
-        <td class="stt-cell text-center">${tbody.querySelectorAll('.item-row').length + 1}</td>
+        <td class="stt-cell text-center">${idx}</td>
         <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name"></td>
         <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="pcs"></td>
         <td><input type="number" class="form-control form-control-sm delivered-qty" name="item_delivered_qty[]" value="1" step="0.01"></td>
@@ -241,11 +284,16 @@ function addItemRow() {
         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" step="1" placeholder="0"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
         <td><select class="form-select form-select-sm" name="item_status[]"><option value="accepted">Pass</option><option value="partial">Partial</option><option value="rejected">Fail</option></select></td>
-        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"><input type="hidden" name="item_existing_image[]" value=""></td>
+        <td>
+            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
+            <input type="hidden" name="item_existing_image[]" value="">
+        </td>
         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
     `;
     tbody.appendChild(row);
     row.querySelectorAll('.delivered-qty,.accepted-qty,.price-input').forEach(inp => inp.addEventListener('input', recalcAll));
+    attachImagePreview(row);
 }
 
 function removeItemRow(btn) { btn.closest('tr').remove(); recalcAll(); }
@@ -263,7 +311,9 @@ function recalcAll() {
     const vatRateEl = document.getElementById('vat_rate');
     const vatRate = vatRateEl ? parseFloat(vatRateEl.value) || 0 : 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
+    const shippingFee = getStaticFee('shipping_fee');
+    const anotherFee = getStaticFee('another_fee');
+    const grandTotal = subtotal + vatAmount + shippingFee + anotherFee;
 
     const sd = document.getElementById('subtotal_display'); if (sd) sd.value = fmtNum(subtotal);
     const vd = document.getElementById('vat_amount_display'); if (vd) vd.value = fmtNum(vatAmount);

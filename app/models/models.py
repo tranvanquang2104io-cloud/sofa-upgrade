@@ -289,6 +289,8 @@ class Quotation(db.Model):
     subtotal = db.Column(db.Numeric(15, 2), default=0)   # Before VAT
     vat_rate = db.Column(db.Numeric(5, 2), default=8.00) # VAT percentage
     vat_amount = db.Column(db.Numeric(15, 2), default=0) # VAT amount
+    shipping_fee = db.Column(db.Numeric(15, 2), default=0)   # Phí vận chuyển (không VAT)
+    another_fee  = db.Column(db.Numeric(15, 2), default=0)   # Chi phí khác (không VAT)
     total_amount = db.Column(db.Numeric(15, 2), nullable=False)
     amount_in_words = db.Column(db.String(500))  # Total amount in words
     payment_terms = db.Column(db.Text)        # Payment terms / Hình thức thanh toán
@@ -338,6 +340,8 @@ class Contract(db.Model):
     subtotal = db.Column(db.Numeric(15, 2), default=0)       # Before VAT
     vat_rate = db.Column(db.Numeric(5, 2), default=8.00)     # VAT percentage
     vat_amount = db.Column(db.Numeric(15, 2), default=0)     # VAT amount
+    shipping_fee = db.Column(db.Numeric(15, 2), default=0)   # Phí vận chuyển (không VAT)
+    another_fee  = db.Column(db.Numeric(15, 2), default=0)   # Chi phí khác (không VAT)
     contract_value = db.Column(db.Numeric(15, 2), nullable=False)  # Total incl. VAT
     advance_percentage = db.Column(db.Numeric(5, 2), default=30.00)  # % tạm ứng
     advance_amount = db.Column(db.Numeric(15, 2), default=0)  # Advance amount
@@ -401,6 +405,8 @@ class HandoverRecord(db.Model):
     subtotal = db.Column(db.Numeric(15, 2), default=0)    # Before VAT
     vat_rate = db.Column(db.Numeric(5, 2), default=8.00)  # VAT percentage
     vat_amount = db.Column(db.Numeric(15, 2), default=0)  # VAT amount
+    shipping_fee = db.Column(db.Numeric(15, 2), default=0)   # Phí vận chuyển (không VAT)
+    another_fee  = db.Column(db.Numeric(15, 2), default=0)   # Chi phí khác (không VAT)
     total_amount = db.Column(db.Numeric(15, 2), default=0)  # Total incl. VAT
     
     customer_representative = db.Column(db.String(200))         # Customer representative name
@@ -456,8 +462,10 @@ class PaymentReport(db.Model):
     subtotal = db.Column(db.Numeric(15, 2), default=0)    # Before VAT
     vat_rate = db.Column(db.Numeric(5, 2), default=8.00)  # VAT percentage
     vat_amount = db.Column(db.Numeric(15, 2), default=0)  # VAT amount
+    shipping_fee = db.Column(db.Numeric(15, 2), default=0)   # Phí vận chuyển (không VAT)
+    another_fee  = db.Column(db.Numeric(15, 2), default=0)   # Chi phí khác (không VAT)
     
-    amount = db.Column(db.Numeric(15, 2), nullable=False) # Total amount incl. VAT
+    amount = db.Column(db.Numeric(15, 2), nullable=False) # Total amount incl. VAT & fees
     advance_percentage = db.Column(db.Numeric(5, 2))      # % tạm ứng (e.g. 30.00)
     advance_amount = db.Column(db.Numeric(15, 2), default=0)   # Amount already paid
     remaining_amount = db.Column(db.Numeric(15, 2), default=0) # Remaining to pay

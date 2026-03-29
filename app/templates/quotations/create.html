@@ -57,12 +57,12 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:5%">No.</th>
-                                        <th style="width:30%">{{ t('Item Name / Work') }}</th>
+                                        <th style="width:28%">{{ t('Item Name / Work') }}</th>
                                         <th style="width:8%">{{ t('Unit') }}</th>
                                         <th style="width:8%">{{ t('Qty') }}</th>
-                                        <th style="width:13%">{{ t('Unit Price') }}</th>
-                                        <th style="width:13%">{{ t('Amount') }}</th>
-                                        <th style="width:13%">{{ t('Image') }}</th>
+                                        <th style="width:12%">{{ t('Unit Price') }}</th>
+                                        <th style="width:12%">{{ t('Amount') }}</th>
+                                        <th style="width:17%">{{ t('Image') }}</th>
                                         <th style="width:10%"></th>
                                     </tr>
                                 </thead>
@@ -74,7 +74,10 @@
                                         <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1"></td>
                                         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1"></td>
                                         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
-                                        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"></td>
+                                        <td>
+                                            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+                                            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
+                                        </td>
                                         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
                                     </tr>
                                 </tbody>
@@ -108,6 +111,20 @@
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly></td>
                                 </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Shipping Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="shipping_fee_display" class="form-control form-control-sm text-end" value="0" placeholder="0">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="0">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Other Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="another_fee_display" class="form-control form-control-sm text-end" value="0" placeholder="0">
+                                        <input type="hidden" id="another_fee" name="another_fee" value="0">
+                                    </td>
+                                </tr>
                                 <tr class="table-primary">
                                     <th>{{ t('Grand Total:') }}</th>
                                     <td class="text-end fw-bold"><input type="text" id="total_amount_display" class="form-control form-control-sm text-end fw-bold bg-light" readonly></td>
@@ -119,7 +136,7 @@
                         </div>
                     </div>
 
-                    <!-- Payment Terms -->
+                    <!-- Amount in Words -->
                     <div class="mb-3">
                         <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
                         <input type="text" class="form-control" id="amount_in_words" name="amount_in_words" placeholder="E.g. One hundred twenty-five million, seven hundred thirty thousand dong">
@@ -164,6 +181,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     recalcAll();
     updateRowNumbers();
+    // Attach preview to initial static rows
+    document.querySelectorAll('#items-tbody .item-row').forEach(row => attachImagePreview(row));
+    // Track manual editing of amount_in_words
+    const wordsInput = document.getElementById('amount_in_words');
+    if (wordsInput) wordsInput.addEventListener('input', function() { this._userEdited = true; });
 });
 
 let checkTimeout;
@@ -187,9 +209,21 @@ document.getElementById('quotation_number').addEventListener('input', function()
 });
 
 document.getElementById('vat_rate').addEventListener('input', recalcAll);
-    // Track manual editing of amount_in_words
-    const wordsInput = document.getElementById('amount_in_words');
-    if (wordsInput) wordsInput.addEventListener('input', function() { this._userEdited = true; });
+
+document.getElementById('shipping_fee_display').addEventListener('input', recalcAll);
+document.getElementById('another_fee_display').addEventListener('input', recalcAll);
+document.getElementById('shipping_fee_display').addEventListener('blur', function() {
+    const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+    this.value = fmtNum(raw);
+    document.getElementById('shipping_fee').value = raw;
+    recalcAll();
+});
+document.getElementById('another_fee_display').addEventListener('blur', function() {
+    const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+    this.value = fmtNum(raw);
+    document.getElementById('another_fee').value = raw;
+    recalcAll();
+});
 
 function numberToWordsVi(n) {
     n = Math.round(n);
@@ -215,8 +249,14 @@ function numberToWordsVi(n) {
     const res = parts.join(' ').trim();
     return res.charAt(0).toUpperCase()+res.slice(1)+' đồng';
 }
+
 function fmtNum(n) {
     return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function parseRawFee(displayId) {
+    const el = document.getElementById(displayId);
+    return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;
 }
 
 function recalcAll() {
@@ -230,7 +270,9 @@ function recalcAll() {
     });
     const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
+    const shippingFee = parseRawFee('shipping_fee_display');
+    const anotherFee = parseRawFee('another_fee_display');
+    const grandTotal = subtotal + vatAmount + shippingFee + anotherFee;
 
     document.getElementById('subtotal_display').value = fmtNum(subtotal);
     document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
@@ -238,10 +280,28 @@ function recalcAll() {
     document.getElementById('total_amount').value = grandTotal;
     document.getElementById('vat_amount').value = vatAmount;
     document.getElementById('subtotal_hidden').value = subtotal;
+    document.getElementById('shipping_fee').value = shippingFee;
+    document.getElementById('another_fee').value = anotherFee;
 
-    // Auto-fill amount in words from grand total unless user has overridden
+    // Auto-fill amount in words
     const wordsEl = document.getElementById('amount_in_words');
     if (wordsEl && !wordsEl._userEdited) wordsEl.value = numberToWordsVi(grandTotal);
+}
+
+function attachImagePreview(row) {
+    const fileInput = row.querySelector('.img-file-input');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', function() {
+        const preview = this.closest('td').querySelector('.img-preview');
+        if (!preview) return;
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => { preview.src = e.target.result; preview.style.display = ''; };
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            preview.src = ''; preview.style.display = 'none';
+        }
+    });
 }
 
 function updateRowNumbers() {
@@ -261,12 +321,16 @@ function addRow() {
         <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1"></td>
         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
-        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"></td>
+        <td>
+            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
+        </td>
         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
     `;
     tbody.appendChild(row);
     row.querySelector('.qty-input').addEventListener('input', recalcAll);
     row.querySelector('.price-input').addEventListener('input', recalcAll);
+    attachImagePreview(row);
     updateRowNumbers();
 }
 
@@ -275,10 +339,5 @@ function removeRow(btn) {
     recalcAll();
     updateRowNumbers();
 }
-
-document.querySelectorAll('#items-tbody .item-row').forEach(row => {
-    row.querySelector('.qty-input').addEventListener('input', recalcAll);
-    row.querySelector('.price-input').addEventListener('input', recalcAll);
-});
 </script>
 {% endblock %}

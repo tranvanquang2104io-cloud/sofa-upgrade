@@ -2,6 +2,7 @@
 Dashboard and main application routes
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, send_file, current_app, session, abort
+from app.utils.i18n import t
 from app.utils.auth_utils import (
     login_required, company_admin_required, store_admin_required,
     ensure_tenant_access, ensure_store_access,
@@ -123,7 +124,7 @@ def company_settings():
     company_id = get_current_company_id()
     company = db.session.get(Company, company_id)
     if not company:
-        flash('Company not found', 'error')
+        flash(t('Company not found'), 'error')
         return redirect(url_for('dashboard.index'))
 
     if request.method == 'POST':
@@ -147,11 +148,11 @@ def company_settings():
             except Exception:
                 pass
             db.session.commit()
-            flash('Company settings updated successfully', 'success')
+            flash(t('Company settings updated successfully'), 'success')
         except Exception as e:
             logger.error(f"Error updating company settings: {str(e)}")
             db.session.rollback()
-            flash('Error updating company settings', 'error')
+            flash(t('Error updating company settings'), 'error')
     
     return render_template('settings/company.html', company=company)
 
@@ -182,18 +183,18 @@ def upload_template():
     description = request.form.get('description', '').strip() or None
 
     if not name or not doc_type:
-        flash('Vui lòng điền đầy đủ tên và loại tài liệu.', 'error')
+        flash(t('Vui lòng điền đầy đủ tên và loại tài liệu.'), 'error')
         return redirect(url_for('dashboard.list_templates'))
 
     file = request.files.get('template_file')
     if not file or file.filename == '':
-        flash('Vui lòng chọn tệp mẫu (.docx).', 'error')
+        flash(t('Vui lòng chọn tệp mẫu (.docx).'), 'error')
         return redirect(url_for('dashboard.list_templates'))
 
     allowed_exts = {'.docx', '.rtf', '.txt'}
     _, ext = os.path.splitext(file.filename.lower())
     if ext not in allowed_exts:
-        flash('Chỉ cho phép tệp .docx, .rtf hoặc .txt.', 'error')
+        flash(t('Chỉ cho phép tệp .docx, .rtf hoặc .txt.'), 'error')
         return redirect(url_for('dashboard.list_templates'))
 
     try:
@@ -229,11 +230,11 @@ def upload_template():
         )
         db.session.add(new_tpl)
         db.session.commit()
-        flash(f'Mẫu "{name}" đã được tải lên thành công.', 'success')
+        flash(t(f'Mẫu "{name}" đã được tải lên thành công.'), 'success')
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error uploading template: {str(e)}", exc_info=True)
-        flash(f'Lỗi khi tải lên mẫu: {str(e)}', 'error')
+        flash(t(f'Lỗi khi tải lên mẫu: {str(e)}'), 'error')
 
     return redirect(url_for('dashboard.list_templates'))
 
@@ -246,11 +247,11 @@ def deactivate_template(template_id):
     from app.models.models import DocumentTemplate as _DT
     tpl = db.session.get(_DT, template_id)
     if not tpl or str(tpl.company_id) != str(company_id):
-        flash('Không tìm thấy mẫu.', 'error')
+        flash(t('Không tìm thấy mẫu.'), 'error')
     else:
         tpl.is_active = False
         db.session.commit()
-        flash(f'Mẫu "{tpl.name}" đã được vô hiệu hóa.', 'success')
+        flash(t(f'Mẫu "{tpl.name}" đã được vô hiệu hóa.'), 'success')
     return redirect(url_for('dashboard.list_templates'))
 
 
@@ -262,11 +263,11 @@ def activate_template(template_id):
     from app.models.models import DocumentTemplate as _DT
     tpl = db.session.get(_DT, template_id)
     if not tpl or str(tpl.company_id) != str(company_id):
-        flash('Không tìm thấy mẫu.', 'error')
+        flash(t('Không tìm thấy mẫu.'), 'error')
     else:
         tpl.is_active = True
         db.session.commit()
-        flash(f'Mẫu "{tpl.name}" đã được kích hoạt.', 'success')
+        flash(t(f'Mẫu "{tpl.name}" đã được kích hoạt.'), 'success')
     return redirect(url_for('dashboard.list_templates'))
 
 
@@ -301,12 +302,12 @@ def list_customers():
         try:
             ensure_store_access(store_id)
         except Exception:
-            flash('Không có quyền truy cập cửa hàng này', 'error')
+            flash(t('Không có quyền truy cập cửa hàng này'), 'error')
             return redirect(url_for('dashboard.index'))
 
         store = store_repo.get_active_store(company_id, store_id)
         if not store:
-            flash('Cửa hàng không tìm thấy', 'error')
+            flash(t('Cửa hàng không tìm thấy'), 'error')
             return redirect(url_for('dashboard.index'))
 
         if search:
@@ -356,7 +357,7 @@ def create_customer():
 
     # Check if company has any stores
     if not stores:
-        flash('Chưa có cửa hàng nào. Vui lòng tạo cửa hàng trước.', 'error')
+        flash(t('Chưa có cửa hàng nào. Vui lòng tạo cửa hàng trước.'), 'error')
         return redirect(url_for('dashboard.index'))
     
     # Set default store_id if not provided, convert string to UUID if needed
@@ -366,14 +367,14 @@ def create_customer():
         try:
             store_id = uuid.UUID(store_id)
         except ValueError:
-            flash('Invalid store ID', 'error')
+            flash(t('Invalid store ID'), 'error')
             return redirect(url_for('dashboard.index'))
     
     if request.method == 'POST':
         try:
             # Validate store_id is provided
             if not store_id:
-                flash('Store selection is required', 'error')
+                flash(t('Store selection is required'), 'error')
                 return render_template('customers/create.html', stores=stores, selected_store_id=store_id)
             
             store_customer = CustomerService()
@@ -393,13 +394,13 @@ def create_customer():
                 representative_title=request.form.get('representative_title', '').strip() or None,
                 notes=request.form.get('notes', '').strip() or None
             )
-            flash('Customer created successfully', 'success')
+            flash(t('Customer created successfully'), 'success')
             return redirect(url_for('dashboard.list_customers', store_id=store_id))
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error creating customer: {str(e)}", exc_info=True)
-            flash('Error creating customer', 'error')
+            flash(t('Error creating customer'), 'error')
     
     return render_template('customers/create.html', stores=stores, selected_store_id=store_id)
 
@@ -413,7 +414,7 @@ def view_customer(customer_id):
     
     customer = customer_repo.get_by_id(customer_id)
     if not customer or str(customer.store.company_id) != str(company_id):
-        flash('Customer not found or access denied', 'error')
+        flash(t('Customer not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_customers'))
     
     order_service = OrderService()
@@ -431,7 +432,7 @@ def edit_customer(customer_id):
 
     customer = customer_repo.get_by_id(customer_id)
     if not customer or str(customer.store.company_id) != str(company_id):
-        flash('Không tìm thấy khách hàng hoặc không có quyền truy cập', 'error')
+        flash(t('Không tìm thấy khách hàng hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_customers'))
 
     if request.method == 'POST':
@@ -451,13 +452,13 @@ def edit_customer(customer_id):
                 country=request.form.get('country', '').strip() or None,
                 notes=request.form.get('notes', '').strip() or None,
             )
-            flash('Cập nhật thông tin khách hàng thành công!', 'success')
+            flash(t('Cập nhật thông tin khách hàng thành công!'), 'success')
             return redirect(url_for('dashboard.view_customer', customer_id=customer_id))
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error updating customer: {str(e)}", exc_info=True)
-            flash('Lỗi khi cập nhật thông tin khách hàng', 'error')
+            flash(t('Lỗi khi cập nhật thông tin khách hàng'), 'error')
 
     return render_template('customers/edit.html', customer=customer)
 
@@ -508,7 +509,7 @@ def create_order():
             # Verify access
             customer = customer_repo.get_by_id(customer_id)
             if not customer or str(customer.store_id) != str(store_id):
-                flash('Invalid customer selection', 'error')
+                flash(t('Invalid customer selection'), 'error')
                 return redirect(url_for('dashboard.create_order'))
             
             order_service = OrderService()
@@ -522,14 +523,14 @@ def create_order():
                 notes=request.form.get('notes', '').strip() or None
             )
             
-            flash('Order created successfully', 'success')
+            flash(t('Order created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order.id))
             
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error creating order: {str(e)}")
-            flash('Error creating order', 'error')
+            flash(t('Error creating order'), 'error')
     
     store_customers = {}
     for store in stores:
@@ -556,7 +557,7 @@ def view_order(order_id):
     order_details = order_service.get_order_with_details(order_id, company_id)
     
     if not order_details:
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     return render_template('orders/view.html', **order_details)
@@ -573,7 +574,7 @@ def create_quotation(order_id):
     
     order = order_service.get_order(order_id, company_id)
     if not order:
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
 
     from app.models.models import Company as _CompanyQ
@@ -589,7 +590,7 @@ def create_quotation(order_id):
             from app.models.models import Quotation
             existing = db.session.query(Quotation).filter_by(quotation_number=quotation_number).first()
             if existing:
-                flash(f'Quotation number "{quotation_number}" is already taken. Please use a different number.', 'error')
+                flash(t(f'Quotation number "{quotation_number}" is already taken. Please use a different number.'), 'error')
                 return render_template('quotations/create.html', order=order, company_vat_rate=company_vat_rate)
             
             # Parse items from request
@@ -620,7 +621,9 @@ def create_quotation(order_id):
             
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
-            total = subtotal + vat_amount
+            shipping_fee = float(request.form.get('shipping_fee') or 0)
+            another_fee = float(request.form.get('another_fee') or 0)
+            total = subtotal + vat_amount + shipping_fee + another_fee
             city = request.form.get('city', '').strip() or None
             payment_terms = request.form.get('payment_terms', '').strip() or None
             amount_in_words = request.form.get('amount_in_words', '').strip() or None
@@ -634,6 +637,8 @@ def create_quotation(order_id):
                 subtotal=subtotal,
                 vat_rate=vat_rate,
                 vat_amount=vat_amount,
+                shipping_fee=shipping_fee,
+                another_fee=another_fee,
                 total_amount=total,
                 validity_days=int(request.form.get('validity_days', 30)),
                 city=city,
@@ -642,14 +647,14 @@ def create_quotation(order_id):
                 notes=request.form.get('notes', '').strip() or None
             )
             
-            flash('Quotation created successfully', 'success')
+            flash(t('Quotation created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
         except ValueError as e:
-            flash(f'Error: {str(e)}', 'error')
+            flash(t(f'Error: {str(e)}'), 'error')
         except Exception as e:
             logger.error(f"Error creating quotation: {str(e)}")
-            flash('Error creating quotation', 'error')
+            flash(t('Error creating quotation'), 'error')
 
     return render_template('quotations/create.html', order=order, company_vat_rate=company_vat_rate)
 
@@ -665,7 +670,7 @@ def view_quotation(quotation_id):
     
     quotation = quotation_service.get_quotation(quotation_id)
     if not quotation or str(quotation.order.company_id) != str(company_id):
-        flash('Quotation not found or access denied', 'error')
+        flash(t('Quotation not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     return render_template('quotations/view.html', quotation=quotation, order=quotation.order)
@@ -680,11 +685,11 @@ def edit_quotation(quotation_id):
     
     quotation = quotation_service.get_quotation(quotation_id)
     if not quotation or str(quotation.order.company_id) != str(company_id):
-        flash('Quotation not found or access denied', 'error')
+        flash(t('Quotation not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     if not quotation.can_edit():
-        flash('Quotation cannot be edited after approval', 'error')
+        flash(t('Quotation cannot be edited after approval'), 'error')
         return redirect(url_for('dashboard.view_quotation', quotation_id=quotation_id))
     
     if request.method == 'POST':
@@ -719,7 +724,9 @@ def edit_quotation(quotation_id):
             
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
-            total = subtotal + vat_amount
+            shipping_fee = float(request.form.get('shipping_fee') or 0)
+            another_fee = float(request.form.get('another_fee') or 0)
+            total = subtotal + vat_amount + shipping_fee + another_fee
             
             quotation_service.update_quotation(
                 quotation_id=quotation_id,
@@ -727,6 +734,8 @@ def edit_quotation(quotation_id):
                 subtotal=subtotal,
                 vat_rate=vat_rate,
                 vat_amount=vat_amount,
+                shipping_fee=shipping_fee,
+                another_fee=another_fee,
                 total_amount=total,
                 validity_days=int(request.form.get('validity_days', 30)),
                 city=request.form.get('city', '').strip() or None,
@@ -735,14 +744,14 @@ def edit_quotation(quotation_id):
                 notes=request.form.get('notes', '').strip() or None
             )
             
-            flash('Quotation updated successfully', 'success')
+            flash(t('Quotation updated successfully'), 'success')
             return redirect(url_for('dashboard.view_quotation', quotation_id=quotation_id))
             
         except ValueError as e:
-            flash(f'Error: {str(e)}', 'error')
+            flash(t(f'Error: {str(e)}'), 'error')
         except Exception as e:
             logger.error(f"Error updating quotation: {str(e)}")
-            flash('Error updating quotation', 'error')
+            flash(t('Error updating quotation'), 'error')
     
     return render_template('quotations/edit.html', quotation=quotation, order=quotation.order)
 
@@ -757,18 +766,18 @@ def approve_quotation(quotation_id):
     try:
         quotation = quotation_service.get_quotation(quotation_id)
         if not quotation or str(quotation.order.company_id) != str(company_id):
-            flash('Quotation not found or access denied', 'error')
+            flash(t('Quotation not found or access denied'), 'error')
             return redirect(url_for('dashboard.list_orders'))
         
         quotation_service.approve_quotation(quotation_id, quotation.order_id)
-        flash('Quotation approved successfully', 'success')
+        flash(t('Quotation approved successfully'), 'success')
         return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
 
     except ValueError as e:
-        flash(f'Error: {str(e)}', 'error')
+        flash(t(f'Error: {str(e)}'), 'error')
     except Exception as e:
         logger.error(f"Error approving quotation: {str(e)}")
-        flash('Error approving quotation', 'error')
+        flash(t('Error approving quotation'), 'error')
 
     return redirect(url_for('dashboard.list_orders'))
 
@@ -783,19 +792,19 @@ def cancel_quotation(quotation_id):
     try:
         quotation = quotation_service.get_quotation(quotation_id)
         if not quotation or str(quotation.order.company_id) != str(company_id):
-            flash('Quotation not found or access denied', 'error')
+            flash(t('Quotation not found or access denied'), 'error')
             return redirect(url_for('dashboard.list_orders'))
         
         reason = request.form.get('reason', '').strip() or 'No reason provided'
         quotation_service.cancel_quotation(quotation_id, reason)
-        flash('Quotation canceled successfully', 'success')
+        flash(t('Quotation canceled successfully'), 'success')
         return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
 
     except ValueError as e:
-        flash(f'Error: {str(e)}', 'error')
+        flash(t(f'Error: {str(e)}'), 'error')
     except Exception as e:
         logger.error(f"Error canceling quotation: {str(e)}")
-        flash('Error canceling quotation', 'error')
+        flash(t('Error canceling quotation'), 'error')
 
     return redirect(url_for('dashboard.list_orders'))
 
@@ -811,7 +820,7 @@ def create_contract(order_id):
     
     order = order_service.get_order(order_id, company_id)
     if not order:
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     # Only show active quotations (not canceled) - typically approved ones for contract
@@ -824,7 +833,7 @@ def create_contract(order_id):
             from app.models.models import Contract
             existing = db.session.query(Contract).filter_by(contract_number=contract_number).first()
             if existing:
-                flash(f'Contract number "{contract_number}" is already taken. Please use a different number.', 'error')
+                flash(t(f'Contract number "{contract_number}" is already taken. Please use a different number.'), 'error')
                 from app.models.models import Company as _CompanyC
                 _co = db.session.get(_CompanyC, order.company_id)
                 return render_template('contracts/create.html', order=order, quotations=quotations, company=_co)
@@ -854,7 +863,10 @@ def create_contract(order_id):
             
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
-            contract_value = subtotal + vat_amount
+            # Shipping/other fees come from quotation when referenced
+            shipping_fee = float(request.form.get('shipping_fee') or 0)
+            another_fee = float(request.form.get('another_fee') or 0)
+            contract_value = subtotal + vat_amount + shipping_fee + another_fee
 
             advance_percentage = float(request.form.get('advance_percentage') or 30)
             advance_amount = round(contract_value * advance_percentage / 100, 2)
@@ -893,6 +905,8 @@ def create_contract(order_id):
                 subtotal=subtotal,
                 vat_rate=vat_rate,
                 vat_amount=vat_amount,
+                shipping_fee=shipping_fee,
+                another_fee=another_fee,
                 contract_value=contract_value,
                 advance_percentage=advance_percentage,
                 advance_amount=advance_amount,
@@ -912,12 +926,12 @@ def create_contract(order_id):
             db.session.add(lifecycle)
             db.session.commit()
             
-            flash('Contract created successfully', 'success')
+            flash(t('Contract created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
         except Exception as e:
             logger.error(f"Error creating contract: {str(e)}")
-            flash('Error creating contract', 'error')
+            flash(t('Error creating contract'), 'error')
 
     # Auto-select first approved quotation to pre-populate items
     selected_quotation = None
@@ -945,7 +959,7 @@ def view_contract(contract_id):
     contract = contract_repo.get_by_id(contract_id)
     
     if not contract or str(contract.order.company_id) != str(company_id):
-        flash('Contract not found or access denied', 'error')
+        flash(t('Contract not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
 
     from app.models.models import Company
@@ -965,11 +979,11 @@ def edit_contract(contract_id):
     contract = contract_repo.get_by_id(contract_id)
     
     if not contract or str(contract.order.company_id) != str(company_id):
-        flash('Contract not found or access denied', 'error')
+        flash(t('Contract not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     if contract.is_signed:
-        flash('Cannot edit a signed contract', 'error')
+        flash(t('Cannot edit a signed contract'), 'error')
         return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
     
     if request.method == 'POST':
@@ -1005,7 +1019,9 @@ def edit_contract(contract_id):
             
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
-            contract_value = subtotal + vat_amount
+            shipping_fee = float(request.form.get('shipping_fee') or 0)
+            another_fee = float(request.form.get('another_fee') or 0)
+            contract_value = subtotal + vat_amount + shipping_fee + another_fee
             advance_percentage = float(request.form.get('advance_percentage') or 30)
             advance_amount = round(contract_value * advance_percentage / 100, 2)
             
@@ -1023,6 +1039,8 @@ def edit_contract(contract_id):
             contract.subtotal = subtotal
             contract.vat_rate = vat_rate
             contract.vat_amount = vat_amount
+            contract.shipping_fee = shipping_fee
+            contract.another_fee = another_fee
             contract.advance_percentage = advance_percentage
             contract.advance_amount = advance_amount
             contract.terms_and_conditions = terms_and_conditions
@@ -1035,12 +1053,12 @@ def edit_contract(contract_id):
             contract.updated_at = datetime.utcnow()
             db.session.commit()
             
-            flash('Contract updated successfully', 'success')
+            flash(t('Contract updated successfully'), 'success')
             return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
             
         except Exception as e:
             logger.error(f"Error updating contract: {str(e)}")
-            flash('Error updating contract', 'error')
+            flash(t('Error updating contract'), 'error')
     
     from app.models.models import Company
     company = db.session.get(Company, contract.order.company_id)
@@ -1059,16 +1077,16 @@ def sign_contract(contract_id):
     contract = contract_repo.get_by_id(contract_id)
     
     if not contract or str(contract.order.company_id) != str(company_id):
-        flash('Contract not found or access denied', 'error')
+        flash(t('Contract not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     try:
         contract_service = ContractService()
         contract_service.mark_signed(contract_id, contract.order_id)
-        flash('Contract marked as signed', 'success')
+        flash(t('Contract marked as signed'), 'success')
     except Exception as e:
         logger.error(f"Error signing contract: {str(e)}")
-        flash('Error signing contract', 'error')
+        flash(t('Error signing contract'), 'error')
     
     return redirect(url_for('dashboard.view_order', order_id=contract.order_id))
 
@@ -1084,17 +1102,17 @@ def cancel_contract(contract_id):
     contract = contract_repo.get_by_id(contract_id)
     
     if not contract or str(contract.order.company_id) != str(company_id):
-        flash('Contract not found or access denied', 'error')
+        flash(t('Contract not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     if not contract.can_cancel():
-        flash('Contract cannot be canceled', 'error')
+        flash(t('Contract cannot be canceled'), 'error')
         return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
     
     try:
         canceled_reason = request.form.get('canceled_reason', '').strip()
         if not canceled_reason:
-            flash('Cancellation reason is required', 'error')
+            flash(t('Cancellation reason is required'), 'error')
             return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
         
         # Cancel the contract
@@ -1104,12 +1122,12 @@ def cancel_contract(contract_id):
         contract.is_active = False
         db.session.commit()
         
-        flash('Contract has been canceled successfully', 'success')
+        flash(t('Contract has been canceled successfully'), 'success')
         logger.info(f"Contract {contract.contract_number} canceled by user. Reason: {canceled_reason}")
     except Exception as e:
         logger.error(f"Error canceling contract: {str(e)}")
         db.session.rollback()
-        flash('Error canceling contract', 'error')
+        flash(t('Error canceling contract'), 'error')
     
     return redirect(url_for('dashboard.view_order', order_id=contract.order_id))
 
@@ -1149,17 +1167,17 @@ def cancel_order(order_id):
     order = order_repo.get_by_id(order_id)
     
     if not order or str(order.company_id) != str(company_id):
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     if not order.can_cancel():
-        flash('Order cannot be canceled', 'error')
+        flash(t('Order cannot be canceled'), 'error')
         return redirect(url_for('dashboard.view_order', order_id=order_id))
     
     try:
         canceled_reason = request.form.get('canceled_reason', '').strip()
         if not canceled_reason:
-            flash('Cancellation reason is required', 'error')
+            flash(t('Cancellation reason is required'), 'error')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
         
         # Cancel the order
@@ -1168,12 +1186,12 @@ def cancel_order(order_id):
         order.canceled_reason = canceled_reason
         db.session.commit()
         
-        flash('Order has been canceled successfully', 'success')
+        flash(t('Order has been canceled successfully'), 'success')
         logger.info(f"Order {order.order_code} canceled by user. Reason: {canceled_reason}")
     except Exception as e:
         logger.error(f"Error canceling order: {str(e)}")
         db.session.rollback()
-        flash('Error canceling order', 'error')
+        flash(t('Error canceling order'), 'error')
     
     return redirect(url_for('dashboard.list_orders'))
 
@@ -1189,7 +1207,7 @@ def create_handover(order_id):
     
     order = order_service.get_order(order_id, company_id)
     if not order:
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     if request.method == 'POST':
@@ -1199,7 +1217,7 @@ def create_handover(order_id):
             from app.models.models import HandoverRecord
             existing = db.session.query(HandoverRecord).filter_by(report_number=report_number).first()
             if existing:
-                flash(f'Handover record number "{report_number}" is already taken. Please use a different number.', 'error')
+                flash(t(f'Handover record number "{report_number}" is already taken. Please use a different number.'), 'error')
                 # Get contract items for re-render
                 contract_items = []
                 active_contracts = [c for c in order.contracts if c.is_active and not c.is_canceled]
@@ -1251,7 +1269,10 @@ def create_handover(order_id):
             
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
-            total_amount = subtotal + vat_amount
+            active_contract = next((c for c in order.contracts if c.is_active and not c.is_canceled), None)
+            shipping_fee = float(getattr(active_contract, 'shipping_fee', 0) or 0)
+            another_fee = float(getattr(active_contract, 'another_fee', 0) or 0)
+            total_amount = subtotal + vat_amount + shipping_fee + another_fee
             
             handover_service = HandoverRecordService()
             handover = handover_service.create_handover_record(
@@ -1272,16 +1293,18 @@ def create_handover(order_id):
                 subtotal=subtotal,
                 vat_rate=vat_rate,
                 vat_amount=vat_amount,
+                shipping_fee=shipping_fee,
+                another_fee=another_fee,
                 total_amount=total_amount,
                 notes=request.form.get('notes', '').strip() or None
             )
             
-            flash('Handover record created successfully', 'success')
+            flash(t('Handover record created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
         except Exception as e:
             logger.error(f"Error creating handover record: {str(e)}")
-            flash('Error creating handover record', 'error')
+            flash(t('Error creating handover record'), 'error')
     
     # Get contract items for handover item acceptance
     contract_items = []
@@ -1309,16 +1332,16 @@ def confirm_handover(handover_id):
     handover = handover_repo.get_by_id(handover_id)
     
     if not handover or str(handover.order.company_id) != str(company_id):
-        flash('Handover record not found or access denied', 'error')
+        flash(t('Handover record not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     try:
         handover_service = HandoverRecordService()
         handover_service.confirm_handover(handover_id, handover.order_id)
-        flash('Handover record confirmed', 'success')
+        flash(t('Handover record confirmed'), 'success')
     except Exception as e:
         logger.error(f"Error confirming handover: {str(e)}")
-        flash('Error confirming handover', 'error')
+        flash(t('Error confirming handover'), 'error')
     
     return redirect(url_for('dashboard.view_order', order_id=handover.order_id))
 
@@ -1334,7 +1357,7 @@ def view_handover(handover_id):
     handover = handover_repo.get_by_id(handover_id)
     
     if not handover or str(handover.order.company_id) != str(company_id):
-        flash('Handover record not found or access denied', 'error')
+        flash(t('Handover record not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     return render_template('handover/view.html', handover=handover)
@@ -1351,14 +1374,14 @@ def edit_handover(handover_id):
     handover = handover_repo.get_by_id(handover_id)
     
     if not handover or str(handover.order.company_id) != str(company_id):
-        flash('Handover record not found or access denied', 'error')
+        flash(t('Handover record not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     if request.method == 'POST':
         try:
             # Only allow editing if not confirmed and not canceled
             if not handover.can_edit():
-                flash('Handover record cannot be edited (already confirmed or canceled)', 'error')
+                flash(t('Handover record cannot be edited (already confirmed or canceled)'), 'error')
                 return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
             
             # Update handover fields
@@ -1420,19 +1443,21 @@ def edit_handover(handover_id):
                 handover.subtotal = subtotal
                 handover.vat_rate = vat_rate
                 handover.vat_amount = vat_amount
-                handover.total_amount = subtotal + vat_amount
+                ship_fee = float(handover.shipping_fee or 0)
+                other_fee = float(handover.another_fee or 0)
+                handover.total_amount = subtotal + vat_amount + ship_fee + other_fee
             
             db.session.add(handover)
             db.session.commit()
             
-            flash('Handover record updated successfully', 'success')
+            flash(t('Handover record updated successfully'), 'success')
             return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
             
         except ValueError as e:
-            flash(f'Error: {str(e)}', 'error')
+            flash(t(f'Error: {str(e)}'), 'error')
         except Exception as e:
             logger.error(f"Error updating handover record: {str(e)}")
-            flash('Error updating handover record', 'error')
+            flash(t('Error updating handover record'), 'error')
     
     return render_template('handover/edit.html', handover=handover)
 
@@ -1448,17 +1473,17 @@ def cancel_handover(handover_id):
     handover = handover_repo.get_by_id(handover_id)
     
     if not handover or str(handover.order.company_id) != str(company_id):
-        flash('Handover record not found or access denied', 'error')
+        flash(t('Handover record not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     try:
         handover_service = HandoverRecordService()
         reason = request.form.get('reason', '').strip()
         handover_service.cancel_handover(handover_id, handover.order_id, reason)
-        flash('Handover record canceled successfully', 'success')
+        flash(t('Handover record canceled successfully'), 'success')
     except Exception as e:
         logger.error(f"Error canceling handover: {str(e)}")
-        flash(f'Error canceling handover: {str(e)}', 'error')
+        flash(t(f'Error canceling handover: {str(e)}'), 'error')
     
     return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
 
@@ -1474,7 +1499,7 @@ def create_payment(order_id):
     
     order = order_service.get_order(order_id, company_id)
     if not order:
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     # Get default payment type from query parameter (advance or final)
@@ -1492,7 +1517,7 @@ def create_payment(order_id):
             from app.models.models import PaymentReport
             existing = db.session.query(PaymentReport).filter_by(report_number=report_number).first()
             if existing:
-                flash(f'Payment report number "{report_number}" is already taken. Please use a different number.', 'error')
+                flash(t(f'Payment report number "{report_number}" is already taken. Please use a different number.'), 'error')
                 from app.models.models import PaymentReport as _PR
                 _adv = db.session.query(_PR).filter(_PR.order_id==order_id, _PR.payment_type=='advance', _PR.is_confirmed==True, _PR.is_canceled==False).all()
                 return render_template('payment/create.html', order=order, default_type=default_type,
@@ -1506,7 +1531,7 @@ def create_payment(order_id):
             
             # Validate payment sequencing
             if payment_type == 'advance' and not order.lifecycle.contract_signed:
-                flash('Advance payment can only be recorded after contract is signed', 'error')
+                flash(t('Advance payment can only be recorded after contract is signed'), 'error')
                 from app.models.models import PaymentReport as _PR2
                 _adv2 = db.session.query(_PR2).filter(_PR2.order_id==order_id, _PR2.payment_type=='advance', _PR2.is_confirmed==True, _PR2.is_canceled==False).all()
                 return render_template('payment/create.html', order=order, default_type=default_type,
@@ -1516,7 +1541,7 @@ def create_payment(order_id):
                                        advance_skipped=bool(order.lifecycle and order.lifecycle.advance_skipped))
 
             if payment_type == 'final' and not order.lifecycle.handover_confirmed:
-                flash('Final payment can only be recorded after handover is confirmed', 'error')
+                flash(t('Final payment can only be recorded after handover is confirmed'), 'error')
                 from app.models.models import PaymentReport as _PR3
                 _adv3 = db.session.query(_PR3).filter(_PR3.order_id==order_id, _PR3.payment_type=='advance', _PR3.is_confirmed==True, _PR3.is_canceled==False).all()
                 return render_template('payment/create.html', order=order, default_type=default_type,
@@ -1543,7 +1568,10 @@ def create_payment(order_id):
             
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
-            amount = subtotal + vat_amount if items else float(request.form.get('amount') or 0)
+            shipping_fee = float(getattr(active_contract, 'shipping_fee', 0) or 0)
+            another_fee = float(getattr(active_contract, 'another_fee', 0) or 0)
+            base_amount = subtotal + vat_amount if items else float(request.form.get('amount') or 0)
+            amount = base_amount + shipping_fee + another_fee
             
             advance_pct = request.form.get('advance_percentage')
             advance_percentage = float(advance_pct) if advance_pct else None
@@ -1572,6 +1600,8 @@ def create_payment(order_id):
                 subtotal=subtotal,
                 vat_rate=vat_rate,
                 vat_amount=vat_amount,
+                shipping_fee=shipping_fee,
+                another_fee=another_fee,
                 amount=amount,
                 advance_percentage=advance_percentage,
                 advance_amount=advance_amount,
@@ -1585,14 +1615,14 @@ def create_payment(order_id):
                 notes=request.form.get('notes', '').strip() or None
             )
             
-            flash('Payment report created successfully', 'success')
+            flash(t('Payment report created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
         except ValueError as e:
-            flash(f'Error: {str(e)}', 'error')
+            flash(t(f'Error: {str(e)}'), 'error')
         except Exception as e:
             logger.error(f"Error creating payment report: {str(e)}")
-            flash('Error creating payment report', 'error')
+            flash(t('Error creating payment report'), 'error')
     
     # Compute confirmed advance payments for final payment advance display
     from app.models.models import PaymentReport as _PaymentReport
@@ -1621,15 +1651,15 @@ def skip_advance_payment(order_id):
 
     order = order_service.get_order(order_id, company_id)
     if not order:
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
 
     if not order.lifecycle or not order.lifecycle.contract_signed:
-        flash('Contract must be signed before skipping advance payment', 'error')
+        flash(t('Contract must be signed before skipping advance payment'), 'error')
         return redirect(url_for('dashboard.view_order', order_id=order_id))
 
     if order.lifecycle.advance_paid:
-        flash('Advance payment step already completed', 'warning')
+        flash(t('Advance payment step already completed'), 'warning')
         return redirect(url_for('dashboard.view_order', order_id=order_id))
 
     try:
@@ -1642,11 +1672,11 @@ def skip_advance_payment(order_id):
         lifecycle.advance_paid_at = datetime.utcnow()
         db.session.add(lifecycle)
         db.session.commit()
-        flash('Đã bỏ qua bước tạm ứng. Bạn có thể tạo chứng từ bàn giao ngay bây giờ.', 'success')
+        flash(t('Đã bỏ qua bước tạm ứng. Bạn có thể tạo chứng từ bàn giao ngay bây giờ.'), 'success')
     except Exception as e:
         logger.error(f'Error skipping advance payment: {e}')
         db.session.rollback()
-        flash('Lỗi khi bỏ qua tạm ứng', 'error')
+        flash(t('Lỗi khi bỏ qua tạm ứng'), 'error')
 
     return redirect(url_for('dashboard.view_order', order_id=order_id))
 
@@ -1662,16 +1692,16 @@ def confirm_payment(payment_id):
     payment = payment_repo.get_by_id(payment_id)
     
     if not payment or str(payment.order.company_id) != str(company_id):
-        flash('Payment report not found or access denied', 'error')
+        flash(t('Payment report not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     try:
         payment_service = PaymentReportService()
         payment_service.mark_confirmed(payment_id, payment.order_id)
-        flash('Payment marked as confirmed', 'success')
+        flash(t('Payment marked as confirmed'), 'success')
     except Exception as e:
         logger.error(f"Error confirming payment: {str(e)}")
-        flash('Error confirming payment', 'error')
+        flash(t('Error confirming payment'), 'error')
     
     return redirect(url_for('dashboard.view_order', order_id=payment.order_id))
 
@@ -1687,7 +1717,7 @@ def view_payment(payment_id):
     payment = payment_repo.get_by_id(payment_id)
     
     if not payment or str(payment.order.company_id) != str(company_id):
-        flash('Payment report not found or access denied', 'error')
+        flash(t('Payment report not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     return render_template('payments/view.html', payment=payment)
@@ -1704,14 +1734,14 @@ def edit_payment(payment_id):
     payment = payment_repo.get_by_id(payment_id)
     
     if not payment or str(payment.order.company_id) != str(company_id):
-        flash('Payment report not found or access denied', 'error')
+        flash(t('Payment report not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     if request.method == 'POST':
         try:
             # Only allow editing if not confirmed and not canceled
             if not payment.can_edit():
-                flash('Payment cannot be edited (already confirmed or canceled)', 'error')
+                flash(t('Payment cannot be edited (already confirmed or canceled)'), 'error')
                 return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
             
             import json as _json
@@ -1741,14 +1771,14 @@ def edit_payment(payment_id):
             db.session.add(payment)
             db.session.commit()
             
-            flash('Payment report updated successfully', 'success')
+            flash(t('Payment report updated successfully'), 'success')
             return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
             
         except ValueError as e:
-            flash(f'Error: {str(e)}', 'error')
+            flash(t(f'Error: {str(e)}'), 'error')
         except Exception as e:
             logger.error(f"Error updating payment report: {str(e)}")
-            flash('Error updating payment report', 'error')
+            flash(t('Error updating payment report'), 'error')
     
     from app.models.models import Company
     company = db.session.get(Company, payment.order.company_id)
@@ -1766,17 +1796,17 @@ def cancel_payment(payment_id):
     payment = payment_repo.get_by_id(payment_id)
     
     if not payment or str(payment.order.company_id) != str(company_id):
-        flash('Payment report not found or access denied', 'error')
+        flash(t('Payment report not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     try:
         payment_service = PaymentReportService()
         reason = request.form.get('reason', '').strip()
         payment_service.cancel_payment(payment_id, payment.order_id, reason)
-        flash('Payment report canceled successfully', 'success')
+        flash(t('Payment report canceled successfully'), 'success')
     except Exception as e:
         logger.error(f"Error canceling payment: {str(e)}")
-        flash(f'Error canceling payment: {str(e)}', 'error')
+        flash(t(f'Error canceling payment: {str(e)}'), 'error')
     
     return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
 
@@ -1796,7 +1826,7 @@ def generate_document(doc_type, ref_id):
             from app.repositories.repository import QuotationRepository
             quotation = QuotationRepository().get_by_id(ref_id)
             if not quotation or str(quotation.order.company_id) != str(company_id):
-                flash('Quotation not found', 'error')
+                flash(t('Quotation not found'), 'error')
                 return redirect(request.referrer)
             
             document = document_service.generate_quotation_document(ref_id, quotation.order_id, company_id, doc_format)
@@ -1805,7 +1835,7 @@ def generate_document(doc_type, ref_id):
             from app.repositories.repository import ContractRepository
             contract = ContractRepository().get_by_id(ref_id)
             if not contract or str(contract.order.company_id) != str(company_id):
-                flash('Contract not found', 'error')
+                flash(t('Contract not found'), 'error')
                 return redirect(request.referrer)
             
             document = document_service.generate_contract_document(
@@ -1817,7 +1847,7 @@ def generate_document(doc_type, ref_id):
             from app.repositories.repository import HandoverRecordRepository
             handover = HandoverRecordRepository().get_by_id(ref_id)
             if not handover or str(handover.order.company_id) != str(company_id):
-                flash('Handover record not found', 'error')
+                flash(t('Handover record not found'), 'error')
                 return redirect(request.referrer)
             
             document = document_service.generate_delivery_document(ref_id, handover.order_id, company_id, doc_format)
@@ -1826,20 +1856,29 @@ def generate_document(doc_type, ref_id):
             from app.repositories.repository import PaymentReportRepository
             payment = PaymentReportRepository().get_by_id(ref_id)
             if not payment or str(payment.order.company_id) != str(company_id):
-                flash('Payment report not found', 'error')
+                flash(t('Payment report not found'), 'error')
                 return redirect(request.referrer)
             
             document = document_service.generate_payment_document(ref_id, payment.order_id, company_id, doc_format)
+            
+        elif doc_type == 'payment_request':
+            from app.repositories.repository import OrderRepository
+            order = OrderRepository().get_by_id(ref_id)
+            if not order or str(order.company_id) != str(company_id):
+                flash(t('Order not found'), 'error')
+                return redirect(request.referrer)
+                
+            document = document_service.generate_payment_request_document(ref_id, company_id, doc_format)
         
         else:
-            flash('Unknown document type', 'error')
+            flash(t('Unknown document type'), 'error')
             return redirect(request.referrer)
         
-        flash('Document generated successfully', 'success')
+        flash(t('Document generated successfully'), 'success')
         
     except Exception as e:
         logger.error(f"Error generating document: {str(e)}")
-        flash(f'Error generating document: {str(e)}', 'error')
+        flash(t(f'Error generating document: {str(e)}'), 'error')
     
     return redirect(request.referrer)
 
@@ -1853,11 +1892,11 @@ def download_document(document_id):
     
     document = doc_repo.get_by_id(document_id)
     if not document or str(document.company_id) != str(company_id):
-        flash('Document not found or access denied', 'error')
+        flash(t('Document not found or access denied'), 'error')
         return redirect(request.referrer)
     
     if not os.path.exists(document.file_path):
-        flash('Document file not found', 'error')
+        flash(t('Document file not found'), 'error')
         return redirect(request.referrer)
     
     try:
@@ -1868,7 +1907,7 @@ def download_document(document_id):
         )
     except Exception as e:
         logger.error(f"Error downloading document: {str(e)}")
-        flash('Error downloading document', 'error')
+        flash(t('Error downloading document'), 'error')
         return redirect(request.referrer)
 
 
@@ -1895,7 +1934,7 @@ def list_documents(order_id):
     
     order = order_service.get_order(order_id, company_id)
     if not order:
-        flash('Order not found or access denied', 'error')
+        flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
     doc_service = DocumentService()
@@ -1915,7 +1954,7 @@ def delete_document(document_id):
     document = doc_repo.get_by_id(document_id)
 
     if not document or str(document.company_id) != str(company_id):
-        flash('Document not found or access denied', 'error')
+        flash(t('Document not found or access denied'), 'error')
         return redirect(request.referrer or url_for('dashboard.list_orders'))
 
     order_id = document.order_id
@@ -1925,11 +1964,11 @@ def delete_document(document_id):
             os.remove(document.file_path)
         db.session.delete(document)
         db.session.commit()
-        flash('Document deleted successfully', 'success')
+        flash(t('Document deleted successfully'), 'success')
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error deleting document {document_id}: {str(e)}")
-        flash('Error deleting document', 'error')
+        flash(t('Error deleting document'), 'error')
 
     return redirect(url_for('dashboard.list_documents', order_id=order_id))
 @login_required
@@ -1990,6 +2029,8 @@ def get_quotation_detail(quotation_id):
             'quotation_number': quotation.quotation_number,
             'total_amount': float(quotation.total_amount),
             'vat_rate': float(getattr(quotation, 'vat_rate', 8) or 8),
+            'shipping_fee': float(getattr(quotation, 'shipping_fee', 0) or 0),
+            'another_fee': float(getattr(quotation, 'another_fee', 0) or 0),
             'items': items,
             'is_approved': quotation.is_approved,
             'is_canceled': quotation.is_canceled
@@ -2186,14 +2227,14 @@ def create_store():
                 address      = request.form.get('address', '').strip() or None,
                 city         = request.form.get('city', '').strip() or None,
             )
-            flash('Tạo cửa hàng thành công', 'success')
+            flash(t('Tạo cửa hàng thành công'), 'success')
             return redirect(url_for('dashboard.list_stores'))
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error creating store: {e}", exc_info=True)
             db.session.rollback()
-            flash('Lỗi khi tạo cửa hàng', 'error')
+            flash(t('Lỗi khi tạo cửa hàng'), 'error')
     return render_template('stores/create.html')
 
 
@@ -2205,7 +2246,7 @@ def edit_store(store_id):
     from app.models.models import Store as _Store
     store = db.session.query(_Store).filter_by(id=store_id, company_id=company_id, is_active=True).first()
     if not store:
-        flash('Cửa hàng không tìm thấy', 'error')
+        flash(t('Cửa hàng không tìm thấy'), 'error')
         return redirect(url_for('dashboard.list_stores'))
 
     # store_admin may only edit their own store
@@ -2223,12 +2264,12 @@ def edit_store(store_id):
                 address      = request.form.get('address', '').strip() or None,
                 city         = request.form.get('city', '').strip() or None,
             )
-            flash('Cập nhật cửa hàng thành công', 'success')
+            flash(t('Cập nhật cửa hàng thành công'), 'success')
             return redirect(url_for('dashboard.list_stores'))
         except Exception as e:
             logger.error(f"Error updating store: {e}", exc_info=True)
             db.session.rollback()
-            flash('Lỗi khi cập nhật cửa hàng', 'error')
+            flash(t('Lỗi khi cập nhật cửa hàng'), 'error')
     return render_template('stores/edit.html', store=store)
 
 
@@ -2240,14 +2281,14 @@ def deactivate_store(store_id):
     from app.models.models import Store as _Store
     store = db.session.query(_Store).filter_by(id=store_id, company_id=company_id).first()
     if not store:
-        flash('Cửa hàng không tìm thấy', 'error')
+        flash(t('Cửa hàng không tìm thấy'), 'error')
     else:
         try:
             StoreService().deactivate_store(store_id)
-            flash(f'Cửa hàng "{store.name}" đã bị vô hiệu hóa', 'warning')
+            flash(t(f'Cửa hàng "{store.name}" đã bị vô hiệu hóa'), 'warning')
         except Exception as e:
             logger.error(f"Error deactivating store: {e}", exc_info=True)
-            flash('Lỗi khi vô hiệu hóa cửa hàng', 'error')
+            flash(t('Lỗi khi vô hiệu hóa cửa hàng'), 'error')
     return redirect(url_for('dashboard.list_stores'))
 
 
@@ -2298,7 +2339,7 @@ def create_user():
             store_id = request.form.get('store_id', '').strip() or None
             # Prevent store_admin from creating company_admin accounts
             if not is_company_admin() and role == 'company_admin':
-                flash('Không có quyền tạo tài khoản Quản Trị Công Ty', 'error')
+                flash(t('Không có quyền tạo tài khoản Quản Trị Công Ty'), 'error')
                 return render_template('users/create.html', stores=stores)
             # company_admin must not have a store_id
             if role == 'company_admin':
@@ -2317,14 +2358,14 @@ def create_user():
                 phone      = request.form.get('phone', '').strip() or None,
                 position   = request.form.get('position', '').strip() or None,
             )
-            flash('Tạo người dùng thành công', 'success')
+            flash(t('Tạo người dùng thành công'), 'success')
             return redirect(url_for('dashboard.list_users'))
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error creating user: {e}", exc_info=True)
             db.session.rollback()
-            flash('Lỗi khi tạo người dùng', 'error')
+            flash(t('Lỗi khi tạo người dùng'), 'error')
     return render_template('users/create.html', stores=stores)
 
 
@@ -2336,7 +2377,7 @@ def edit_user(user_id):
     from app.models.models import User as _User
     target = db.session.query(_User).filter_by(id=user_id, company_id=company_id, is_active=True).first()
     if not target:
-        flash('Người dùng không tìm thấy', 'error')
+        flash(t('Người dùng không tìm thấy'), 'error')
         return redirect(url_for('dashboard.list_users'))
 
     # store_admin can only edit users in their own store
@@ -2358,7 +2399,7 @@ def edit_user(user_id):
             store_id = request.form.get('store_id', '').strip() or None
             # Prevent store_admin from promoting to company_admin
             if not is_company_admin() and role == 'company_admin':
-                flash('Không có quyền thiết lập vai trò Quản Trị Công Ty', 'error')
+                flash(t('Không có quyền thiết lập vai trò Quản Trị Công Ty'), 'error')
                 return render_template('users/edit.html', target=target, stores=stores)
             if role == 'company_admin':
                 store_id = None
@@ -2376,12 +2417,12 @@ def edit_user(user_id):
                 store_id  = uuid.UUID(str(store_id)) if store_id else None,
                 password  = password,
             )
-            flash('Cập nhật người dùng thành công', 'success')
+            flash(t('Cập nhật người dùng thành công'), 'success')
             return redirect(url_for('dashboard.list_users'))
         except Exception as e:
             logger.error(f"Error updating user: {e}", exc_info=True)
             db.session.rollback()
-            flash('Lỗi khi cập nhật người dùng', 'error')
+            flash(t('Lỗi khi cập nhật người dùng'), 'error')
     return render_template('users/edit.html', target=target, stores=stores)
 
 
@@ -2393,18 +2434,18 @@ def deactivate_user(user_id):
     from app.models.models import User as _User
     target = db.session.query(_User).filter_by(id=user_id, company_id=company_id).first()
     if not target:
-        flash('Người dùng không tìm thấy', 'error')
+        flash(t('Người dùng không tìm thấy'), 'error')
     elif str(target.id) == str(g.user.id):
-        flash('Không thể vô hiệu hóa tài khoản của chính mình', 'error')
+        flash(t('Không thể vô hiệu hóa tài khoản của chính mình'), 'error')
     elif not is_company_admin() and str(target.store_id) != str(get_current_store_id()):
         abort(403)
     else:
         try:
             UserService().deactivate_user(user_id)
-            flash(f'Tài khoản "{target.full_name}" đã bị vô hiệu hóa', 'warning')
+            flash(t(f'Tài khoản "{target.full_name}" đã bị vô hiệu hóa'), 'warning')
         except Exception as e:
             logger.error(f"Error deactivating user: {e}", exc_info=True)
-            flash('Lỗi khi vô hiệu hóa tài khoản', 'error')
+            flash(t('Lỗi khi vô hiệu hóa tài khoản'), 'error')
     return redirect(url_for('dashboard.list_users'))
 
 
@@ -2445,7 +2486,7 @@ def material_suppliers():
                     rating=request.form.get('rating', 0) or 0,
                     notes=request.form.get('notes', '').strip() or None,
                 )
-                flash('Nhà cung cấp đã được tạo', 'success')
+                flash(t('Nhà cung cấp đã được tạo'), 'success')
             elif action == 'edit':
                 svc.update_supplier(
                     request.form.get('supplier_id'), company_id,
@@ -2460,16 +2501,16 @@ def material_suppliers():
                     rating=int(request.form.get('rating', 0) or 0),
                     notes=request.form.get('notes', '').strip() or None,
                 )
-                flash('Nhà cung cấp đã được cập nhật', 'success')
+                flash(t('Nhà cung cấp đã được cập nhật'), 'success')
             elif action == 'delete':
                 svc.delete_supplier(request.form.get('supplier_id'), company_id)
-                flash('Nhà cung cấp đã bị vô hiệu hóa', 'warning')
+                flash(t('Nhà cung cấp đã bị vô hiệu hóa'), 'warning')
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f'material_suppliers error: {e}', exc_info=True)
             db.session.rollback()
-            flash('Lỗi hệ thống', 'error')
+            flash(t('Lỗi hệ thống'), 'error')
         return redirect(url_for('dashboard.material_suppliers'))
 
     suppliers = svc.list_suppliers(company_id, active_only=False)
@@ -2494,7 +2535,7 @@ def material_units():
                     abbreviation=request.form.get('abbreviation', '').strip() or None,
                     description=request.form.get('description', '').strip() or None,
                 )
-                flash('Đơn vị đã được tạo', 'success')
+                flash(t('Đơn vị đã được tạo'), 'success')
             elif action == 'edit':
                 svc.update_unit(
                     request.form.get('unit_id'), company_id,
@@ -2502,16 +2543,16 @@ def material_units():
                     abbreviation=request.form.get('abbreviation', '').strip() or None,
                     description=request.form.get('description', '').strip() or None,
                 )
-                flash('Đơn vị đã được cập nhật', 'success')
+                flash(t('Đơn vị đã được cập nhật'), 'success')
             elif action == 'delete':
                 svc.delete_unit(request.form.get('unit_id'), company_id)
-                flash('Đơn vị đã bị vô hiệu hóa', 'warning')
+                flash(t('Đơn vị đã bị vô hiệu hóa'), 'warning')
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f'material_units error: {e}', exc_info=True)
             db.session.rollback()
-            flash('Lỗi hệ thống', 'error')
+            flash(t('Lỗi hệ thống'), 'error')
         return redirect(url_for('dashboard.material_units'))
 
     units = svc.list_units(company_id, active_only=False)
@@ -2536,7 +2577,7 @@ def material_categories():
                     description=request.form.get('description', '').strip() or None,
                     sort_order=int(request.form.get('sort_order', 0) or 0),
                 )
-                flash('Danh mục đã được tạo', 'success')
+                flash(t('Danh mục đã được tạo'), 'success')
             elif action == 'edit':
                 svc.update_category(
                     request.form.get('cat_id'), company_id,
@@ -2544,16 +2585,16 @@ def material_categories():
                     description=request.form.get('description', '').strip() or None,
                     sort_order=int(request.form.get('sort_order', 0) or 0),
                 )
-                flash('Danh mục đã được cập nhật', 'success')
+                flash(t('Danh mục đã được cập nhật'), 'success')
             elif action == 'delete':
                 svc.delete_category(request.form.get('cat_id'), company_id)
-                flash('Danh mục đã bị vô hiệu hóa', 'warning')
+                flash(t('Danh mục đã bị vô hiệu hóa'), 'warning')
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f'material_categories error: {e}', exc_info=True)
             db.session.rollback()
-            flash('Lỗi hệ thống', 'error')
+            flash(t('Lỗi hệ thống'), 'error')
         return redirect(url_for('dashboard.material_categories'))
 
     cats = svc.list_categories(company_id, active_only=False)
@@ -2640,14 +2681,14 @@ def create_material():
             )
             # Ensure stock rows exist for all stores
             svc.ensure_stock_entries_for_stores(mat.id, company_id)
-            flash(f'Nguyên vật liệu "{mat.name}" đã được tạo', 'success')
+            flash(t(f'Nguyên vật liệu "{mat.name}" đã được tạo'), 'success')
             return redirect(url_for('dashboard.view_material', material_id=mat.id))
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f'create_material error: {e}', exc_info=True)
             db.session.rollback()
-            flash('Lỗi hệ thống khi tạo NVL', 'error')
+            flash(t('Lỗi hệ thống khi tạo NVL'), 'error')
 
     categories = svc.list_categories(company_id)
     units = svc.list_units(company_id)
@@ -2734,14 +2775,14 @@ def edit_material(material_id):
                 spec_country_of_origin=_s('spec_country_of_origin'),
                 spec_certifications=_s('spec_certifications'),
             )
-            flash('Đã cập nhật nguyên vật liệu', 'success')
+            flash(t('Đã cập nhật nguyên vật liệu'), 'success')
             return redirect(url_for('dashboard.view_material', material_id=material_id))
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             logger.error(f'edit_material error: {e}', exc_info=True)
             db.session.rollback()
-            flash('Lỗi hệ thống khi cập nhật NVL', 'error')
+            flash(t('Lỗi hệ thống khi cập nhật NVL'), 'error')
 
     categories = svc.list_categories(company_id)
     units = svc.list_units(company_id)
@@ -2762,12 +2803,12 @@ def deactivate_material(material_id):
         if not mat:
             abort(404)
         svc.deactivate_material(material_id, company_id)
-        flash(f'NVL "{mat.name}" đã bị vô hiệu hóa', 'warning')
+        flash(t(f'NVL "{mat.name}" đã bị vô hiệu hóa'), 'warning')
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
         logger.error(f'deactivate_material error: {e}', exc_info=True)
-        flash('Lỗi hệ thống', 'error')
+        flash(t('Lỗi hệ thống'), 'error')
     return redirect(url_for('dashboard.list_materials'))
 
 
@@ -2787,11 +2828,11 @@ def update_material_stock(material_id):
         quantity_raw = request.form.get('quantity', '0').strip()
         quantity = float(quantity_raw) if quantity_raw else 0
         svc.update_stock(material_id, company_id, store_id=store_id_raw, quantity=quantity)
-        flash('Cập nhật tồn kho thành công', 'success')
+        flash(t('Cập nhật tồn kho thành công'), 'success')
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
         logger.error(f'update_material_stock error: {e}', exc_info=True)
         db.session.rollback()
-        flash('Lỗi hệ thống khi cập nhật tồn kho', 'error')
+        flash(t('Lỗi hệ thống khi cập nhật tồn kho'), 'error')
     return redirect(url_for('dashboard.view_material', material_id=material_id))

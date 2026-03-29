@@ -76,8 +76,9 @@
                                 <th>{{ t('Item Name') }}</th>
                                 <th style="width:8%">{{ t('Unit') }}</th>
                                 <th class="text-end" style="width:8%">{{ t('Qty') }}</th>
-                                <th class="text-end" style="width:17%">{{ t('Unit Price') }}</th>
-                                <th class="text-end" style="width:17%">{{ t('Amount') }}</th>
+                                <th class="text-end" style="width:13%">{{ t('Unit Price') }}</th>
+                                <th class="text-end" style="width:13%">{{ t('Amount') }}</th>
+                                <th style="width:15%">{{ t('Image') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -89,20 +90,33 @@
                                 <td class="text-end">{{ item.quantity }}</td>
                                 <td class="text-end">{{ "{:,.0f}".format(item.unit_price|float) }} ₫</td>
                                 <td class="text-end">{{ "{:,.0f}".format(item.get('total',0)|float) }} ₫</td>
+                                <td>
+                                    {% if item.get('image_path') %}
+                                    <img src="{{ url_for('dashboard.serve_item_image', filename=item.image_path[6:]) }}" class="img-thumbnail" style="max-height:50px;" alt="">
+                                    {% else %}—{% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <td colspan="5" class="text-end">{{ t('Subtotal:') }}</td>
+                                <td colspan="6" class="text-end">{{ t('Subtotal:') }}</td>
                                 <td class="text-end">{{ "{:,.0f}".format(quotation.subtotal|float if quotation.subtotal else 0) }} ₫</td>
                             </tr>
                             <tr>
-                                <td colspan="5" class="text-end">VAT ({{ quotation.vat_rate or 0 }}%):</td>
+                                <td colspan="6" class="text-end">VAT ({{ quotation.vat_rate or 0 }}%):</td>
                                 <td class="text-end">{{ "{:,.0f}".format(quotation.vat_amount|float if quotation.vat_amount else 0) }} ₫</td>
                             </tr>
+                            <tr>
+                                <td colspan="6" class="text-end">{{ t('Shipping Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(quotation.shipping_fee|float if quotation.shipping_fee else 0) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="6" class="text-end">{{ t('Other Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(quotation.another_fee|float if quotation.another_fee else 0) }} ₫</td>
+                            </tr>
                             <tr class="table-primary fw-bold">
-                                <td colspan="5" class="text-end">{{ t('Total:') }}</td>
+                                <td colspan="6" class="text-end">{{ t('Total:') }}</td>
                                 <td class="text-end">{{ "{:,.0f}".format(quotation.total_amount|float if quotation.total_amount else 0) }} ₫</td>
                             </tr>
                         </tfoot>

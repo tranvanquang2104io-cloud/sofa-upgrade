@@ -46,12 +46,12 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:5%">No.</th>
-                                        <th style="width:30%">{{ t('Item Name / Work') }}</th>
+                                        <th style="width:28%">{{ t('Item Name / Work') }}</th>
                                         <th style="width:8%">{{ t('Unit') }}</th>
                                         <th style="width:8%">{{ t('Qty') }}</th>
-                                        <th style="width:13%">{{ t('Unit Price') }}</th>
-                                        <th style="width:13%">{{ t('Amount') }}</th>
-                                        <th style="width:13%">{{ t('Image') }}</th>
+                                        <th style="width:12%">{{ t('Unit Price') }}</th>
+                                        <th style="width:12%">{{ t('Amount') }}</th>
+                                        <th style="width:17%">{{ t('Image') }}</th>
                                         <th style="width:10%"></th>
                                     </tr>
                                 </thead>
@@ -68,7 +68,8 @@
                                             {% if item.get('image_path') %}
                                             <img src="{{ url_for('dashboard.serve_item_image', filename=item.image_path[6:]) }}" class="img-thumbnail mb-1" style="max-height:50px;" alt="">
                                             {% endif %}
-                                            <input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*">
+                                            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+                                            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
                                             <input type="hidden" name="item_existing_image[]" value="{{ item.get('image_path', '') }}">
                                         </td>
                                         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
@@ -104,6 +105,20 @@
                                         >%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ quotation.vat_amount|int if quotation.vat_amount else '' }}"></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Shipping Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="shipping_fee_display" class="form-control form-control-sm text-end" value="{{ quotation.shipping_fee|int if quotation.shipping_fee else 0 }}">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="{{ quotation.shipping_fee or 0 }}">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Other Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="another_fee_display" class="form-control form-control-sm text-end" value="{{ quotation.another_fee|int if quotation.another_fee else 0 }}">
+                                        <input type="hidden" id="another_fee" name="another_fee" value="{{ quotation.another_fee or 0 }}">
+                                    </td>
                                 </tr>
                                 <tr class="table-primary">
                                     <th>{{ t('Grand Total:') }}</th>
@@ -150,17 +165,36 @@
 document.addEventListener('DOMContentLoaded', function() {
     recalcAll();
     updateRowNumbers();
-
+    // Attach live preview to all existing rows
+    document.querySelectorAll('#items-tbody .item-row').forEach(row => attachImagePreview(row));
+    // format initial fee display values
+    ['shipping_fee_display','another_fee_display'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const raw = parseInt(el.value.replace(/\D/g,''))||0; el.value = fmtNum(raw); }
+    });
     // Track manual editing of amount_in_words
     const wordsInput = document.getElementById('amount_in_words');
     if (wordsInput) {
-        // If field already has a saved value, treat it as user-edited so recalc won't overwrite it
         if (wordsInput.value.trim()) wordsInput._userEdited = true;
         wordsInput.addEventListener('input', function() { this._userEdited = true; });
     }
 });
 
 document.getElementById('vat_rate').addEventListener('input', recalcAll);
+document.getElementById('shipping_fee_display').addEventListener('input', recalcAll);
+document.getElementById('another_fee_display').addEventListener('input', recalcAll);
+document.getElementById('shipping_fee_display').addEventListener('blur', function() {
+    const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+    this.value = fmtNum(raw);
+    document.getElementById('shipping_fee').value = raw;
+    recalcAll();
+});
+document.getElementById('another_fee_display').addEventListener('blur', function() {
+    const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+    this.value = fmtNum(raw);
+    document.getElementById('another_fee').value = raw;
+    recalcAll();
+});
 
 function numberToWordsVi(n) {
     n = Math.round(n);
@@ -191,6 +225,11 @@ function fmtNum(n) {
     return new Intl.NumberFormat('vi-VN').format(Math.round(n));
 }
 
+function parseRawFee(displayId) {
+    const el = document.getElementById(displayId);
+    return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;
+}
+
 function recalcAll() {
     let subtotal = 0;
     document.querySelectorAll('#items-tbody .item-row').forEach(row => {
@@ -202,7 +241,9 @@ function recalcAll() {
     });
     const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
+    const shippingFee = parseRawFee('shipping_fee_display');
+    const anotherFee = parseRawFee('another_fee_display');
+    const grandTotal = subtotal + vatAmount + shippingFee + anotherFee;
 
     document.getElementById('subtotal_display').value = fmtNum(subtotal);
     document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
@@ -210,10 +251,27 @@ function recalcAll() {
     document.getElementById('total_amount').value = grandTotal;
     document.getElementById('vat_amount').value = vatAmount;
     document.getElementById('subtotal_hidden').value = subtotal;
+    document.getElementById('shipping_fee').value = shippingFee;
+    document.getElementById('another_fee').value = anotherFee;
 
-    // Auto-fill amount in words from grand total unless user has overridden
     const wordsEl = document.getElementById('amount_in_words');
     if (wordsEl && !wordsEl._userEdited) wordsEl.value = numberToWordsVi(grandTotal);
+}
+
+function attachImagePreview(row) {
+    const fileInput = row.querySelector('.img-file-input');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', function() {
+        const preview = this.closest('td').querySelector('.img-preview');
+        if (!preview) return;
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => { preview.src = e.target.result; preview.style.display = ''; };
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            preview.src = ''; preview.style.display = 'none';
+        }
+    });
 }
 
 function updateRowNumbers() {
@@ -233,12 +291,17 @@ function addRow() {
         <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1"></td>
         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
-        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"><input type="hidden" name="item_existing_image[]" value=""></td>
+        <td>
+            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
+            <input type="hidden" name="item_existing_image[]" value="">
+        </td>
         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
     `;
     tbody.appendChild(row);
     row.querySelector('.qty-input').addEventListener('input', recalcAll);
     row.querySelector('.price-input').addEventListener('input', recalcAll);
+    attachImagePreview(row);
     updateRowNumbers();
 }
 
@@ -247,10 +310,5 @@ function removeRow(btn) {
     recalcAll();
     updateRowNumbers();
 }
-
-document.querySelectorAll('#items-tbody .item-row').forEach(row => {
-    row.querySelector('.qty-input').addEventListener('input', recalcAll);
-    row.querySelector('.price-input').addEventListener('input', recalcAll);
-});
 </script>
 {% endblock %}

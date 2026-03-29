@@ -163,9 +163,23 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" if active_contract else 8 }}" min="0" max="100" step="0.1">%):
+                                VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" value="{{ (active_contract.vat_rate)|int if active_contract and active_contract.vat_rate is not none else 8 }}" min="0" max="100" step="0.1">%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Shipping Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" id="shipping_fee_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ active_contract.shipping_fee|int if active_contract and active_contract.shipping_fee else 0 }}">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="{{ active_contract.shipping_fee or 0 if active_contract else 0 }}">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Other Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" id="another_fee_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ active_contract.another_fee|int if active_contract and active_contract.another_fee else 0 }}">
+                                        <input type="hidden" id="another_fee" name="another_fee" value="{{ active_contract.another_fee or 0 if active_contract else 0 }}">
+                                    </td>
                                 </tr>
                                 <tr class="table-primary">
                                     <th>Payment Value:</th>
@@ -494,7 +508,9 @@ function recalcAll() {
     });
     const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
+    const shippingFee = parseFloat(document.getElementById('shipping_fee').value) || 0;
+    const anotherFee = parseFloat(document.getElementById('another_fee').value) || 0;
+    const grandTotal = subtotal + vatAmount + shippingFee + anotherFee;
 
     // Advance amount: use confirmed advance total for final type (not skipped)
     const payType = document.getElementById('payment_type').value;
@@ -509,6 +525,8 @@ function recalcAll() {
 
     document.getElementById('subtotal_display').value = fmtNum(subtotal);
     document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
+    document.getElementById('shipping_fee').value = shippingFee;
+    document.getElementById('another_fee').value = anotherFee;
     document.getElementById('total_display').value = fmtNum(grandTotal);
     document.getElementById('advance_display').value = fmtNum(advAmount);
     document.getElementById('remaining_display').value = fmtNum(remaining);

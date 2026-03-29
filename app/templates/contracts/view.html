@@ -142,6 +142,14 @@
                                 <td colspan="5" class="text-end">VAT ({{ contract.vat_rate or 0 }}%):</td>
                                 <td class="text-end">{{ "{:,.0f}".format(contract.vat_amount|float if contract.vat_amount else 0) }} ₫</td>
                             </tr>
+                            <tr>
+                                <td colspan="5" class="text-end">{{ t('Shipping Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(contract.shipping_fee|float if contract.shipping_fee else 0) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-end">{{ t('Other Fee') }}:</td>
+                                <td class="text-end">{{ "{:,.0f}".format(contract.another_fee|float if contract.another_fee else 0) }} ₫</td>
+                            </tr>
                             <tr class="table-primary fw-bold">
                                 <td colspan="5" class="text-end">{{ t('Total Contract Value:') }}</td>
                                 <td class="text-end">{{ "{:,.0f}".format(contract.contract_value|float if contract.contract_value else 0) }} ₫</td>

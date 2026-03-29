@@ -48,30 +48,18 @@
 
                     <!-- Timing & Location -->
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="start_time" class="form-label">{{ t('Start Time') }}</label>
-                                <input type="time" class="form-control" id="start_time" name="start_time" value="08:00">
+                                <label for="handover_location" class="form-label">{{ t('Handover Location') }}</label>
+                                <input type="text" class="form-control" id="handover_location" name="handover_location" placeholder="{{ t('Address or location') }}">
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="end_time" class="form-label">{{ t('End Time') }}</label>
-                                <input type="time" class="form-control" id="end_time" name="end_time" value="17:00">
+                                <label for="handover_time" class="form-label">{{ t('Handover Time') }}</label>
+                                <input type="time" class="form-control" id="handover_time" name="handover_time">
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="copies_count" class="form-label">{{ t('Number of Copies') }}</label>
-                                <input type="number" class="form-control" id="copies_count" name="copies_count" value="2" min="1">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="handover_location" class="form-label">{{ t('Handover Location') }}</label>
-                        <input type="text" class="form-control" id="handover_location" name="handover_location"
-                               placeholder="VD: Tại xưởng sản xuất / địa chỉ khách hàng">
                     </div>
 
                     <!-- Representatives -->
@@ -136,9 +124,7 @@
                                         <td>{{ item.get('unit', 'Cái') }}</td>
                                         <td><input type="number" class="form-control form-control-sm delivered-qty" name="item_delivered_qty[]" value="{{ item.quantity }}" step="0.01" min="0"></td>
                                         <td><input type="number" class="form-control form-control-sm accepted-qty" name="item_accepted_qty[]" value="{{ item.quantity }}" step="0.01" min="0"></td>
-                                        <td>
-                                            <input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1">
-                                        </td>
+                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1"></td>
                                         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
                                         <td>
                                             <select class="form-select form-select-sm status-select" name="item_status[]">
@@ -147,7 +133,10 @@
                                                 <option value="rejected">Fail</option>
                                             </select>
                                         </td>
-                                        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"></td>
+                                        <td>
+                                            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+                                            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
+                                        </td>
                                         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
                                     </tr>
                                     {% endfor %}
@@ -173,6 +162,20 @@
                                         {{ t('VAT Tax') }} (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" value="{{ (active_contract.vat_rate)|int if active_contract and active_contract.vat_rate is not none else 8 }}" min="0" max="100" step="0.1">%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Shipping Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" id="shipping_fee_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ active_contract.shipping_fee|int if active_contract and active_contract.shipping_fee else 0 }}">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="{{ active_contract.shipping_fee or 0 if active_contract else 0 }}">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Other Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" id="another_fee_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ active_contract.another_fee|int if active_contract and active_contract.another_fee else 0 }}">
+                                        <input type="hidden" id="another_fee" name="another_fee" value="{{ active_contract.another_fee or 0 if active_contract else 0 }}">
+                                    </td>
                                 </tr>
                                 <tr class="table-primary">
                                     <th>{{ t('Grand Total:') }}</th>
@@ -276,8 +279,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('add-item-btn').addEventListener('click', () => addItemRow());
     document.getElementById('vat_rate').addEventListener('input', recalcAll);
 
+    // Format initial fee display values
+    ['shipping_fee_display','another_fee_display'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const raw = parseInt(el.value.replace(/\D/g,''))||0; el.value = fmtNum(raw); }
+    });
+
     // Attach events to pre-filled rows
-    document.querySelectorAll('#items-body .item-row').forEach(attachRowEvents);
+    document.querySelectorAll('#items-body .item-row').forEach(row => {
+        attachRowEvents(row);
+        attachImagePreview(row);
+    });
     recalcAll();
     updateRowNumbers();
 });
@@ -286,9 +298,30 @@ function fmtNum(n) {
     return new Intl.NumberFormat('vi-VN').format(Math.round(n));
 }
 
+function getStaticFee(id) {
+    const el = document.getElementById(id);
+    return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;
+}
+
 function attachRowEvents(row) {
     row.querySelectorAll('.delivered-qty, .accepted-qty, .price-input').forEach(inp => {
         inp.addEventListener('input', recalcAll);
+    });
+}
+
+function attachImagePreview(row) {
+    const fileInput = row.querySelector('.img-file-input');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', function() {
+        const preview = this.closest('td').querySelector('.img-preview');
+        if (!preview) return;
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => { preview.src = e.target.result; preview.style.display = ''; };
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            preview.src = ''; preview.style.display = 'none';
+        }
     });
 }
 
@@ -311,11 +344,15 @@ function addItemRow() {
                 <option value="rejected">Fail</option>
             </select>
         </td>
-        <td><input type="file" class="form-control form-control-sm" name="item_image[]" accept="image/*"></td>
+        <td>
+            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
+            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
+        </td>
         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
     `;
     tbody.appendChild(row);
     attachRowEvents(row);
+    attachImagePreview(row);
     updateRowNumbers();
 }
 
@@ -344,7 +381,9 @@ function recalcAll() {
     });
     const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
+    const shippingFee = getStaticFee('shipping_fee');
+    const anotherFee = getStaticFee('another_fee');
+    const grandTotal = subtotal + vatAmount + shippingFee + anotherFee;
 
     document.getElementById('subtotal_display').value = fmtNum(subtotal);
     document.getElementById('vat_amount_display').value = fmtNum(vatAmount);

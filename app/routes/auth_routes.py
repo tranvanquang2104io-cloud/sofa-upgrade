@@ -2,6 +2,7 @@
 Authentication routes
 """
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g
+from app.utils.i18n import t
 from app.services.services import UserService, CompanyService
 from app.utils.auth_utils import set_user_context, clear_user_context, login_required
 from app.models import Company
@@ -21,7 +22,7 @@ def login():
         password = request.form.get('password', '')
         
         if not all([company_code, username, password]):
-            flash('Please enter company code, username, and password', 'error')
+            flash(t('Please enter company code, username, and password'), 'error')
             return redirect(url_for('auth.login'))
         
         try:
@@ -30,7 +31,7 @@ def login():
             company = company_service.repo.get_by_code(company_code)
             
             if not company:
-                flash('Invalid company code', 'error')
+                flash(t('Invalid company code'), 'error')
                 return redirect(url_for('auth.login'))
             
             # Authenticate user
@@ -42,12 +43,12 @@ def login():
                 logger.info(f"User logged in: {username} ({company_code})")
                 return redirect(url_for('dashboard.index'))
             else:
-                flash('Invalid username or password', 'error')
+                flash(t('Invalid username or password'), 'error')
                 return redirect(url_for('auth.login'))
                 
         except Exception as e:
             logger.error(f"Login error: {str(e)}")
-            flash('Login failed. Please try again.', 'error')
+            flash(t('Login failed. Please try again.'), 'error')
             return redirect(url_for('auth.login'))
     
     return render_template('auth/login.html')
@@ -59,7 +60,7 @@ def logout():
     username = session.get('username', 'Unknown')
     clear_user_context()
     logger.info(f"User logged out: {username}")
-    flash('You have been logged out', 'success')
+    flash(t('You have been logged out'), 'success')
     return redirect(url_for('auth.login'))
 
 
@@ -75,7 +76,7 @@ def register():
         full_name = request.form.get('full_name', '').strip()
         
         if not all([company_code, company_name, email, username, password, full_name]):
-            flash('All fields are required', 'error')
+            flash(t('All fields are required'), 'error')
             return redirect(url_for('auth.register'))
         
         try:
@@ -100,7 +101,7 @@ def register():
             )
             
             logger.info(f"Company registered: {company_code}")
-            flash('Company registered successfully. Please login.', 'success')
+            flash(t('Company registered successfully. Please login.'), 'success')
             return redirect(url_for('auth.login'))
             
         except ValueError as e:
@@ -108,7 +109,7 @@ def register():
             return redirect(url_for('auth.register'))
         except Exception as e:
             logger.error(f"Registration error: {str(e)}")
-            flash('Registration failed. Please try again.', 'error')
+            flash(t('Registration failed. Please try again.'), 'error')
             return redirect(url_for('auth.register'))
     
     return render_template('auth/register.html')

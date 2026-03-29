@@ -127,9 +127,23 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" if company and company.vat_rate is not none else 8 }}" min="0" max="100" step="0.1">%):
+                                        VAT Tax (<input type="number" id="vat_rate" name="vat_rate" class="form-control form-control-sm d-inline-block" style="width:75px" value="{{ company.vat_rate|int if company and company.vat_rate is not none else 8 }}" min="0" max="100" step="0.1">%):
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Shipping Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="shipping_fee_display" class="form-control form-control-sm text-end" value="{{ selected_quotation.shipping_fee|int if selected_quotation and selected_quotation.shipping_fee else 0 }}" placeholder="0">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="{{ selected_quotation.shipping_fee or 0 if selected_quotation else 0 }}">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Other Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="another_fee_display" class="form-control form-control-sm text-end" value="{{ selected_quotation.another_fee|int if selected_quotation and selected_quotation.another_fee else 0 }}" placeholder="0">
+                                        <input type="hidden" id="another_fee" name="another_fee" value="{{ selected_quotation.another_fee or 0 if selected_quotation else 0 }}">
+                                    </td>
                                 </tr>
                                 <tr class="table-primary">
                                     <th>{{ t('Total Contract Value:') }}</th>
@@ -216,80 +230,114 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', async function() {
-    // ── Register all static listeners FIRST (before any async/return) ──
-    document.getElementById('add-item-btn').addEventListener('click', () => addItemRow());
-    document.getElementById('vat_rate').addEventListener('input', recalcAll);
-    document.getElementById('advance_percentage').addEventListener('input', recalcAll);
-    // Mark amount_in_words as manually edited if user types in it
-    const aiw = document.getElementById('amount_in_words');
-    if (aiw) aiw.addEventListener('input', () => { aiw.dataset.manualEdit = '1'; });
+    document.addEventListener('DOMContentLoaded', async function() {
+        document.getElementById('add-item-btn').addEventListener('click', () => addItemRow());
+        document.getElementById('vat_rate').addEventListener('input', recalcAll);
+        document.getElementById('shipping_fee_display').addEventListener('input', recalcAll);
+        document.getElementById('another_fee_display').addEventListener('input', recalcAll);
+        document.getElementById('advance_percentage').addEventListener('input', recalcAll);
+        document.getElementById('shipping_fee_display').addEventListener('blur', function() {
+            const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+            this.value = fmtNum(raw);
+            document.getElementById('shipping_fee').value = raw;
+            recalcAll();
+        });
+        document.getElementById('another_fee_display').addEventListener('blur', function() {
+            const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+            this.value = fmtNum(raw);
+            document.getElementById('another_fee').value = raw;
+            recalcAll();
+        });
+        const aiw = document.getElementById('amount_in_words');
+        if (aiw) aiw.addEventListener('input', () => { aiw.dataset.manualEdit = '1'; });
+        // Format initial fee display values
+        ['shipping_fee_display','another_fee_display'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { const raw = parseInt(el.value.replace(/\D/g,''))||0; el.value = fmtNum(raw); }
+        });
 
-    try {
-        const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="contract") }}');
-        const data = await response.json();
-        if (data.next_code) {
-            document.getElementById('contract_number').value = data.next_code;
-        }
-    } catch (error) {}
+        try {
+            const response = await fetch('{{ url_for("dashboard.get_next_code", doc_type="contract") }}');
+            const data = await response.json();
+            if (data.next_code) document.getElementById('contract_number').value = data.next_code;
+        } catch (error) {}
 
-    let checkTimeout;
-    document.getElementById('contract_number').addEventListener('input', function() {
-        clearTimeout(checkTimeout);
-        const code = this.value.trim();
-        const warning = document.getElementById('code-warning');
-        const submitBtn = document.querySelector('button[type="submit"]');
-        if (!code) { warning.style.display = 'none'; submitBtn.disabled = false; return; }
-        checkTimeout = setTimeout(async () => {
+        let checkTimeout;
+        document.getElementById('contract_number').addEventListener('input', function() {
+            clearTimeout(checkTimeout);
+            const code = this.value.trim();
+            const warning = document.getElementById('code-warning');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if (!code) { warning.style.display = 'none'; submitBtn.disabled = false; return; }
+            checkTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch('{{ url_for("dashboard.check_code", doc_type="contract") }}', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ code })
+                    });
+                    const d = await res.json();
+                    warning.style.display = d.exists ? 'block' : 'none';
+                    submitBtn.disabled = !!d.exists;
+                } catch {}
+            }, 500);
+        });
+
+        document.getElementById('quotation_id').addEventListener('change', async function() {
+            if (!this.value) { document.getElementById('items-body').innerHTML = ''; recalcAll(); return; }
             try {
-                const res = await fetch('{{ url_for("dashboard.check_code", doc_type="contract") }}', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ code })
-                });
-                const d = await res.json();
-                warning.style.display = d.exists ? 'block' : 'none';
-                submitBtn.disabled = !!d.exists;
+                const res = await fetch(`/api/quotations/${this.value}`);
+                const data = await res.json();
+                if (res.ok && data.items) {
+                    document.getElementById('items-body').innerHTML = '';
+                    data.items.forEach(item => addItemRow(item.name, item.unit || 'pcs', item.quantity, item.unit_price));
+                    if (data.vat_rate !== undefined) document.getElementById('vat_rate').value = data.vat_rate;
+                    if (data.shipping_fee !== undefined) {
+                        document.getElementById('shipping_fee').value = data.shipping_fee;
+                        document.getElementById('shipping_fee_display').value = fmtNum(parseInt(data.shipping_fee)||0);
+                    }
+                    if (data.another_fee !== undefined) {
+                        document.getElementById('another_fee').value = data.another_fee;
+                        document.getElementById('another_fee_display').value = fmtNum(parseInt(data.another_fee)||0);
+                    }
+                    recalcAll();
+                }
             } catch {}
-        }, 500);
+        });
+
+        const preSelected = document.getElementById('quotation_id').value;
+        if (preSelected) {
+            try {
+                const res = await fetch(`/api/quotations/${preSelected}`);
+                const data = await res.json();
+                if (res.ok && data.items && data.items.length > 0) {
+                    document.getElementById('items-body').innerHTML = '';
+                    data.items.forEach(item => addItemRow(item.name, item.unit || 'pcs', item.quantity, item.unit_price));
+                    if (data.vat_rate !== undefined) document.getElementById('vat_rate').value = data.vat_rate;
+                    if (data.shipping_fee !== undefined) {
+                        document.getElementById('shipping_fee').value = data.shipping_fee;
+                        document.getElementById('shipping_fee_display').value = fmtNum(parseInt(data.shipping_fee)||0);
+                    }
+                    if (data.another_fee !== undefined) {
+                        document.getElementById('another_fee').value = data.another_fee;
+                        document.getElementById('another_fee_display').value = fmtNum(parseInt(data.another_fee)||0);
+                    }
+                    recalcAll();
+                    return;
+                }
+            } catch {}
+        }
+
+        addItemRow();
+        recalcAll();
     });
-
-    // Quotation selection → load items
-    document.getElementById('quotation_id').addEventListener('change', async function() {
-        if (!this.value) { document.getElementById('items-body').innerHTML = ''; recalcAll(); return; }
-        try {
-            const res = await fetch(`/api/quotations/${this.value}`);
-            const data = await res.json();
-            if (res.ok && data.items) {
-                document.getElementById('items-body').innerHTML = '';
-                data.items.forEach(item => addItemRow(item.name, item.unit || 'pcs', item.quantity, item.unit_price));
-                if (data.vat_rate !== undefined) document.getElementById('vat_rate').value = data.vat_rate;
-                recalcAll();
-            }
-        } catch {}
-    });
-
-    // Auto-load items from pre-selected quotation on page load
-    const preSelected = document.getElementById('quotation_id').value;
-    if (preSelected) {
-        try {
-            const res = await fetch(`/api/quotations/${preSelected}`);
-            const data = await res.json();
-            if (res.ok && data.items && data.items.length > 0) {
-                document.getElementById('items-body').innerHTML = '';
-                data.items.forEach(item => addItemRow(item.name, item.unit || 'pcs', item.quantity, item.unit_price));
-                if (data.vat_rate !== undefined) document.getElementById('vat_rate').value = data.vat_rate;
-                recalcAll();
-                return;
-            }
-        } catch {}
-    }
-
-    addItemRow();
-    recalcAll();
-});
 
 function fmtNum(n) {
     return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function parseRawFee(id) {
+    const el = document.getElementById(id);
+    return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;
 }
 
 function numberToVietnamese(num) {
@@ -319,11 +367,11 @@ function numberToVietnamese(num) {
         }
         return s;
     }
-    const ty     = Math.floor(num / 1_000_000_000);
-    const trieu  = Math.floor((num % 1_000_000_000) / 1_000_000);
-    const nghin  = Math.floor((num % 1_000_000) / 1_000);
-    const rest   = num % 1_000;
-    const parts  = [];
+    const ty = Math.floor(num / 1_000_000_000);
+    const trieu = Math.floor((num % 1_000_000_000) / 1_000_000);
+    const nghin = Math.floor((num % 1_000_000) / 1_000);
+    const rest = num % 1_000;
+    const parts = [];
     if (ty    > 0) parts.push(readHundreds(ty)    + ' tỷ');
     if (trieu > 0) parts.push(readHundreds(trieu) + ' triệu');
     if (nghin > 0) parts.push(readHundreds(nghin) + ' nghìn');
@@ -377,25 +425,25 @@ function recalcAll() {
     });
     const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
+    const shippingFee = parseRawFee('shipping_fee_display');
+    const anotherFee = parseRawFee('another_fee_display');
+    const grandTotal = subtotal + vatAmount + shippingFee + anotherFee;
     const advPct = parseFloat(document.getElementById('advance_percentage').value) || 0;
     const advAmount = Math.round(grandTotal * advPct / 100);
 
     document.getElementById('subtotal_display').value = fmtNum(subtotal);
     document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
     document.getElementById('total_display').value = fmtNum(grandTotal);
+    document.getElementById('shipping_fee').value = shippingFee;
+    document.getElementById('another_fee').value = anotherFee;
     document.getElementById('advance_display').value = fmtNum(advAmount);
-
     document.getElementById('contract_value').value = grandTotal;
     document.getElementById('vat_amount').value = vatAmount;
     document.getElementById('subtotal_hidden').value = subtotal;
     document.getElementById('advance_amount').value = advAmount;
 
-    // Auto-fill amount_in_words
     const aiw = document.getElementById('amount_in_words');
-    if (aiw && !aiw.dataset.manualEdit) {
-        aiw.value = numberToVietnamese(grandTotal);
-    }
+    if (aiw && !aiw.dataset.manualEdit) aiw.value = numberToVietnamese(grandTotal);
 }
 </script>
 {% endblock %}

@@ -395,7 +395,8 @@ class QuotationService:
     def create_quotation(self, order_id, quotation_number, quotation_date, items,
                         total_amount, validity_days=30, notes=None,
                         city=None, subtotal=None, vat_rate=8.0, vat_amount=0,
-                        payment_terms=None, amount_in_words=None):
+                        payment_terms=None, amount_in_words=None,
+                        shipping_fee=0, another_fee=0):
         """Create quotation"""
         existing = self.repo.get_by_number(quotation_number)
         if existing:
@@ -412,6 +413,8 @@ class QuotationService:
             subtotal=subtotal,
             vat_rate=vat_rate,
             vat_amount=vat_amount,
+            shipping_fee=shipping_fee,
+            another_fee=another_fee,
             total_amount=total_amount,
             validity_days=validity_days,
             city=city,
@@ -483,7 +486,8 @@ class QuotationService:
     
     def update_quotation(self, quotation_id, items=None, total_amount=None, validity_days=None,
                          notes=None, city=None, subtotal=None, vat_rate=None, vat_amount=None,
-                         payment_terms=None, amount_in_words=None):
+                         payment_terms=None, amount_in_words=None,
+                         shipping_fee=None, another_fee=None):
         """Update quotation - only if not approved"""
         quotation = self.repo.get_by_id(quotation_id)
         if not quotation:
@@ -509,6 +513,10 @@ class QuotationService:
             quotation.vat_rate = vat_rate
         if vat_amount is not None:
             quotation.vat_amount = vat_amount
+        if shipping_fee is not None:
+            quotation.shipping_fee = shipping_fee
+        if another_fee is not None:
+            quotation.another_fee = another_fee
         if payment_terms is not None:
             quotation.payment_terms = payment_terms
         if amount_in_words is not None:
@@ -681,6 +689,7 @@ class HandoverRecordService:
                               handover_location=None, start_time=None, end_time=None,
                               copies_count=2, vat_rate=8.0, vat_amount=0,
                               subtotal=0, total_amount=0,
+                              shipping_fee=0, another_fee=0,
                               customer_representative_title=None,
                               company_representative_title=None):
         """Create handover record"""
@@ -711,6 +720,8 @@ class HandoverRecordService:
             subtotal=subtotal,
             vat_rate=vat_rate,
             vat_amount=vat_amount,
+            shipping_fee=shipping_fee,
+            another_fee=another_fee,
             total_amount=total_amount,
             notes=notes
         )
@@ -799,6 +810,7 @@ class PaymentReportService:
                              payment_date, amount, payment_method=None,
                              transaction_reference=None, notes=None,
                              items=None, subtotal=0, vat_rate=8.0, vat_amount=0,
+                             shipping_fee=0, another_fee=0,
                              advance_percentage=None, advance_amount=0,
                              remaining_amount=0, amount_in_words=None,
                              work_completed_summary=None,
@@ -831,6 +843,8 @@ class PaymentReportService:
             subtotal=subtotal,
             vat_rate=vat_rate,
             vat_amount=vat_amount,
+            shipping_fee=shipping_fee,
+            another_fee=another_fee,
             amount=amount,
             advance_percentage=advance_percentage,
             advance_amount=advance_amount,
@@ -1228,6 +1242,56 @@ class DocumentService:
             payment_report_id = payment_report_id,
             template          = template,
             document_type     = 'payment',
+            document_format   = format,
+            context           = context,
+        )
+
+    def generate_payment_request_document(self, order_id, company_id, format='docx'):
+        """Generate a payment request document (Đề nghị thanh toán) for an order"""
+        from app.repositories.repository import OrderRepository, CustomerRepository, PaymentReportRepository
+        
+        order = OrderRepository().get_by_id(order_id)
+        customer = CustomerRepository().get_by_id(order.customer_id)
+        
+        if not all([order, customer]):
+            raise ValueError("Order or Customer not found")
+            
+        template = self.template_repo.get_default_for_type(company_id, 'payment_request')
+        if not template:
+            raise ValueError("No payment request template found for company. Please upload one in Document Templates.")
+            
+        company = self._get_company(company_id)
+        
+        _contract = None
+        if order and hasattr(order, 'contracts'):
+            _active = [c for c in (order.contracts or []) if getattr(c, 'is_active', False) and not getattr(c, 'is_canceled', False)]
+            if _active:
+                _contract = _active[0]
+                
+        # Get confirmed advance payments
+        from app.models.models import PaymentReport
+        from app.config.database import db
+        advance_payments = db.session.query(PaymentReport).filter(
+            PaymentReport.order_id == order_id,
+            PaymentReport.payment_type == 'advance',
+            PaymentReport.is_confirmed == True,
+            PaymentReport.is_canceled == False
+        ).all()
+        
+        total_advance = sum(float(p.amount or 0) for p in advance_payments)
+        contract_value = float(_contract.contract_value) if _contract else 0
+        remaining_amount = contract_value - total_advance
+        
+        context = DocumentVariableCollector.collect_payment_request_variables(
+            order, customer, company=company, contract=_contract, 
+            advance_payments=advance_payments, remaining_amount=remaining_amount
+        )
+        
+        return self._save_document(
+            company_id        = company_id,
+            order_id          = order_id,
+            template          = template,
+            document_type     = 'payment_request',
             document_format   = format,
             context           = context,
         )

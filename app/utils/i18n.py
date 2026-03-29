@@ -197,6 +197,9 @@ TRANSLATIONS = {
         'Cancellation Reason *':  'Lý Do Hủy *',
         'Confirm Cancel':         'Xác Nhận Hủy',
         'Note:':                  'Lưu ý:',
+        'Created:':               'Ngày tạo:',
+        'Approved:':              'Ngày Xác nhận:',
+        'Signed:':                'Ngày ký:',
 
         # ── Store pages ──────────────────────────────────────────────────
         'Manage Stores':          'Quản Lý Cửa Hàng',
@@ -403,6 +406,8 @@ TRANSLATIONS = {
         'Confirm Handover':       'Xác Nhận Bàn Giao',
         'Record Advance Payment': 'Tạo Biên Bản Tạm Ứng',
         'Record Final Payment':   'Tạo Biên Bản Thanh Toán Cuối',
+        'Skip Advance Payment':   'Bỏ Qua Tạm Ứng',
+        'Payment Request':        'Đề Nghị Thanh Toán',
 
         # ── DL labels (view detail pages) ─────────────────────────────────
         'Advance:':               'Tạm Ứng:',
@@ -593,6 +598,8 @@ TRANSLATIONS = {
         'Validity (Days)':        'Thời Hạn Hiệu Lực (Ngày)',
         'Payment Terms':          'Điều Khoản Thanh Toán',
         'Grand Total:':           'Tổng Cộng:',
+        'Shipping Fee':           'Chi phí vận chuyển',
+        'Other Fee':              'Chi phí khác',
         'Create New Quotation':   'Tạo Báo Giá Mới',
 
         # ── Handover form fields ──────────────────────────────────────────
@@ -639,13 +646,23 @@ TRANSLATIONS = {
 }
 
 
-def t(key: str, lang: str = 'en') -> str:
+def t(key: str, lang: str = None) -> str:
     """Translate a UI string.
 
     In English mode the key itself is returned unchanged.
     In Vietnamese mode the Vietnamese translation is returned, or the key
     if no translation is registered.
     """
+    if lang is None:
+        try:
+            from flask import session, has_request_context
+            if has_request_context():
+                lang = session.get('lang', 'vi')
+            else:
+                lang = 'vi'
+        except Exception:
+            lang = 'vi'
+            
     if lang == 'en':
         return key
     return TRANSLATIONS.get(lang, {}).get(key, key)

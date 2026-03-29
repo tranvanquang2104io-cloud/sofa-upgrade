@@ -460,7 +460,10 @@ class DocumentVariableCollector:
             'subtotal':     _fmt(getattr(quotation, 'subtotal', 0) or 0),
             'vat_rate':     str(getattr(quotation, 'vat_rate', 8) or 8),
             'vat_amount':   _fmt(getattr(quotation, 'vat_amount', 0) or 0),
+            'shipping_fee': _fmt(getattr(quotation, 'shipping_fee', 0) or 0),
+            'another_fee':  _fmt(getattr(quotation, 'another_fee', 0) or 0),
             'total_amount': _fmt(quotation.total_amount),
+            'grand_total':  _fmt(quotation.total_amount),
             'amount_in_words': getattr(quotation, 'amount_in_words', '') or '',
             # Payment terms / misc
             'payment_terms':  getattr(quotation, 'payment_terms', '') or '',
@@ -531,8 +534,11 @@ class DocumentVariableCollector:
             'subtotal':           _fmt(getattr(contract, 'subtotal', 0) or 0),
             'vat_rate':           str(getattr(contract, 'vat_rate', 8) or 8),
             'vat_amount':         _fmt(getattr(contract, 'vat_amount', 0) or 0),
+            'shipping_fee':       _fmt(getattr(contract, 'shipping_fee', 0) or 0),
+            'another_fee':        _fmt(getattr(contract, 'another_fee', 0) or 0),
             'advance_percentage': str(getattr(contract, 'advance_percentage', 30) or 30),
             'advance_amount':     _fmt(getattr(contract, 'advance_amount', 0) or 0),
+            'grand_total':        _fmt(contract.contract_value),
             # Terms, misc
             'terms_and_conditions': contract.terms_and_conditions or '',
             'notes':                getattr(contract, 'notes', '') or '',
@@ -593,7 +599,10 @@ class DocumentVariableCollector:
             'subtotal':     _fmt(getattr(delivery_report, 'subtotal', 0) or 0),
             'vat_rate':     str(getattr(delivery_report, 'vat_rate', 8) or 8),
             'vat_amount':   _fmt(getattr(delivery_report, 'vat_amount', 0) or 0),
+            'shipping_fee': _fmt(getattr(delivery_report, 'shipping_fee', 0) or 0),
+            'another_fee':  _fmt(getattr(delivery_report, 'another_fee', 0) or 0),
             'total_amount': _fmt(getattr(delivery_report, 'total_amount', 0) or 0),
+            'grand_total':  _fmt(getattr(delivery_report, 'total_amount', 0) or 0),
             # Representatives
             'company_representative':      delivery_report.company_representative or '',
             'company_representative_title': getattr(delivery_report, 'company_representative_title', '') or '',
@@ -645,7 +654,10 @@ class DocumentVariableCollector:
             'subtotal':           _fmt(getattr(payment_report, 'subtotal', 0) or 0),
             'vat_rate':           str(getattr(payment_report, 'vat_rate', 8) or 8),
             'vat_amount':         _fmt(getattr(payment_report, 'vat_amount', 0) or 0),
+            'shipping_fee':       _fmt(getattr(payment_report, 'shipping_fee', 0) or 0),
+            'another_fee':        _fmt(getattr(payment_report, 'another_fee', 0) or 0),
             'amount':             _fmt(payment_report.amount),
+            'grand_total':        _fmt(payment_report.amount),
             'advance_percentage': str(getattr(payment_report, 'advance_percentage', 30) or 30),
             'advance_amount':     _fmt(getattr(payment_report, 'advance_amount', 0) or 0),
             'remaining_amount':   _fmt(getattr(payment_report, 'remaining_amount', 0) or 0),
@@ -670,3 +682,38 @@ class DocumentVariableCollector:
             'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
         })
         return ctx
+
+    @staticmethod
+    def collect_payment_request_variables(order, customer, company=None, contract=None, advance_payments=None, remaining_amount=0):
+        """Context for payment request document."""
+        ctx = DocumentVariableCollector._company_ctx(company)
+        
+        # Build advance payments list
+        advances = []
+        for i, payment in enumerate(advance_payments or []):
+            advances.append({
+                'stt': str(i + 1),
+                'report_number': payment.report_number,
+                'payment_date': _fmt_date(payment.payment_date),
+                'amount': _fmt(payment.amount),
+                'notes': payment.notes or ''
+            })
+
+        ctx.update({
+            'total_contract': _fmt(contract.contract_value) if contract else '0',
+            'contract_number': contract.contract_number if contract else '',
+            'contract_date': _fmt_date(contract.contract_date) if contract else '',
+            'remaining_due': _fmt(remaining_amount),
+            'advances': advances,
+            'customer_name': customer.name,
+            'customer_representative': getattr(customer, 'representative_name', '') or '',
+            'customer_representative_title': getattr(customer, 'representative_title', '') or '',
+            'customer_address': customer.address or '',
+            'customer_phone': customer.phone or '',
+            'customer_tax_code': getattr(customer, 'tax_code', '') or '',
+            'order_code': order.order_code,
+            'order_title': order.title,
+            'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
+        })
+        return ctx
+

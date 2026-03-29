@@ -122,6 +122,20 @@
                                     </th>
                                     <td class="text-end"><input type="text" id="vat_amount_display" class="form-control form-control-sm text-end bg-light" readonly value="{{ contract.vat_amount|int if contract.vat_amount else '' }}"></td>
                                 </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Shipping Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="shipping_fee_display" class="form-control form-control-sm text-end" value="{{ contract.shipping_fee|int if contract.shipping_fee else 0 }}">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="{{ contract.shipping_fee or 0 }}">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ t('Other Fee') }}</th>
+                                    <td class="text-end">
+                                        <input type="text" inputmode="numeric" id="another_fee_display" class="form-control form-control-sm text-end" value="{{ contract.another_fee|int if contract.another_fee else 0 }}">
+                                        <input type="hidden" id="another_fee" name="another_fee" value="{{ contract.another_fee or 0 }}">
+                                    </td>
+                                </tr>
                                 <tr class="table-primary">
                                     <th>{{ t('Total Contract Value:') }}</th>
                                     <td class="text-end fw-bold"><input type="text" id="total_display" class="form-control form-control-sm text-end fw-bold bg-light" readonly value="{{ contract.contract_value|int if contract.contract_value else '' }}"></td>
@@ -209,22 +223,46 @@
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('add-item-btn').addEventListener('click', () => addItemRow());
     document.getElementById('vat_rate').addEventListener('input', recalcAll);
+    document.getElementById('shipping_fee_display').addEventListener('input', recalcAll);
+    document.getElementById('another_fee_display').addEventListener('input', recalcAll);
     document.getElementById('advance_percentage').addEventListener('input', recalcAll);
+    document.getElementById('shipping_fee_display').addEventListener('blur', function() {
+        const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+        this.value = fmtNum(raw);
+        document.getElementById('shipping_fee').value = raw;
+        recalcAll();
+    });
+    document.getElementById('another_fee_display').addEventListener('blur', function() {
+        const raw = parseInt(this.value.replace(/\D/g, '')) || 0;
+        this.value = fmtNum(raw);
+        document.getElementById('another_fee').value = raw;
+        recalcAll();
+    });
     document.querySelectorAll('#items-body .item-row').forEach(row => {
         row.querySelector('.qty-input').addEventListener('input', recalcAll);
         row.querySelector('.price-input').addEventListener('input', recalcAll);
     });
-
-    // Mark amount_in_words as manually entered if user types in it
     const aiw = document.getElementById('amount_in_words');
-    if (aiw) aiw.addEventListener('input', () => { aiw.dataset.manualEdit = '1'; });
-
+    if (aiw) {
+        if (aiw.value.trim()) aiw.dataset.manualEdit = '1';
+        aiw.addEventListener('input', () => { aiw.dataset.manualEdit = '1'; });
+    }
+    // Format initial fee display values
+    ['shipping_fee_display','another_fee_display'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const raw = parseInt(el.value.replace(/\D/g,''))||0; el.value = fmtNum(raw); }
+    });
     recalcAll();
     updateRowNumbers();
 });
 
 function fmtNum(n) {
     return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function parseRawFee(id) {
+    const el = document.getElementById(id);
+    return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;
 }
 
 function numberToVietnamese(num) {
@@ -254,11 +292,11 @@ function numberToVietnamese(num) {
         }
         return s;
     }
-    const ty     = Math.floor(num / 1_000_000_000);
-    const trieu  = Math.floor((num % 1_000_000_000) / 1_000_000);
-    const nghin  = Math.floor((num % 1_000_000) / 1_000);
-    const rest   = num % 1_000;
-    const parts  = [];
+    const ty = Math.floor(num / 1_000_000_000);
+    const trieu = Math.floor((num % 1_000_000_000) / 1_000_000);
+    const nghin = Math.floor((num % 1_000_000) / 1_000);
+    const rest = num % 1_000;
+    const parts = [];
     if (ty    > 0) parts.push(readHundreds(ty)    + ' tỷ');
     if (trieu > 0) parts.push(readHundreds(trieu) + ' triệu');
     if (nghin > 0) parts.push(readHundreds(nghin) + ' nghìn');
@@ -310,25 +348,25 @@ function recalcAll() {
     });
     const vatRate = parseFloat(document.getElementById('vat_rate').value) || 0;
     const vatAmount = Math.round(subtotal * vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
+    const shippingFee = parseRawFee('shipping_fee_display');
+    const anotherFee = parseRawFee('another_fee_display');
+    const grandTotal = subtotal + vatAmount + shippingFee + anotherFee;
     const advPct = parseFloat(document.getElementById('advance_percentage').value) || 0;
     const advAmount = Math.round(grandTotal * advPct / 100);
 
     document.getElementById('subtotal_display').value = fmtNum(subtotal);
     document.getElementById('vat_amount_display').value = fmtNum(vatAmount);
+    document.getElementById('shipping_fee').value = shippingFee;
+    document.getElementById('another_fee').value = anotherFee;
     document.getElementById('total_display').value = fmtNum(grandTotal);
     document.getElementById('advance_display').value = fmtNum(advAmount);
-
     document.getElementById('contract_value').value = grandTotal;
     document.getElementById('vat_amount').value = vatAmount;
     document.getElementById('subtotal_hidden').value = subtotal;
     document.getElementById('advance_amount').value = advAmount;
 
-    // Auto-fill amount_in_words (chỉ khi chưa chỉnh tay)
     const aiw = document.getElementById('amount_in_words');
-    if (aiw && !aiw.dataset.manualEdit) {
-        aiw.value = numberToVietnamese(grandTotal);
-    }
+    if (aiw && !aiw.dataset.manualEdit) aiw.value = numberToVietnamese(grandTotal);
 }
 </script>
 {% endblock %}

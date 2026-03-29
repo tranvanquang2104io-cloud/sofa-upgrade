@@ -9,7 +9,7 @@ class Config:
     """Base configuration"""
     
     # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql+psycopg://sofa_user:sofa_password@localhost:5432/sofa_flow')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql+psycopg://sofa_user:sofa_password@localhost:5433/sofa_flow_dev')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
     

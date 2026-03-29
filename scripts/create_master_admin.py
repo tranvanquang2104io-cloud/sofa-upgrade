@@ -16,7 +16,7 @@ from app.models.models import MasterAdmin
 def main():
     parser = argparse.ArgumentParser(description='Create master admin account')
     parser.add_argument('--username', default='masteradmin')
-    parser.add_argument('--password', default='Admin@2024!')
+    parser.add_argument('--password', default='Admin@2024!') #NewStrongPass@2024
     parser.add_argument('--name',     default='Master Administrator')
     parser.add_argument('--email',    default='admin@sofaflow.local')
     args = parser.parse_args()
