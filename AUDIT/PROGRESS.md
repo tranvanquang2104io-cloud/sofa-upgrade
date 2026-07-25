@@ -5,14 +5,15 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 2 (đang dựng test & bug catalog)
+**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 3 (hội đồng chuyên gia)
 
-**Điểm resume (đọc khi khởi động lại):** GĐ2 đang mở. 13 test (11 xanh, 2 xfail = B2 & B3). Đã xác nhận: money math đúng cho input dương; B2 (qty âm), B3 (số hiệu unique toàn cục). Việc TIẾP THEO:
-1. **create_order access control:** `dashboard_routes.py:510` dùng `customer_repo.get_by_id(customer_id)` — kiểm xem có lọc company không (nghi IDOR: user cty A tạo order tham chiếu customer cty B nếu get_by_id không scoped). Viết test.
-2. **State machine:** create_contract có bắt buộc quotation đã duyệt không? (đọc 816-1070). approve_quotation có chặn re-approve/approve khi canceled? create_payment `final` khi chưa handover?
-3. **Role permission:** login `staff` (role user) gọi endpoint company-admin (tạo store/user, /settings/company) → phải 403/redirect.
-4. **POST IDOR:** cancel/approve/sign/confirm với id công ty khác.
-Sau đó chốt GĐ2 → sang **GĐ3** (hội đồng chuyên gia). Xem checklist trong `02-bug-catalog.md`.
+**Điểm resume (đọc khi khởi động lại):** GĐ2 **đã chốt v1** (17 test: 13 pass + 4 xfail = B2,B3,B5,B6). Bug catalog có B1–B7 (B5 High-security, B3 High-data, B7 root). Việc TIẾP THEO = **GĐ3** → viết `AUDIT/03-expert-review.md`:
+- **UX** (Norman/Nielsen/Krug/Wroblewski): review `app/templates/` (form nhập dài, feedback, chống lỗi, mobile/responsive, accessibility, i18n).
+- **Clean code/kiến trúc** (Uncle Bob/Fowler/Beck): `dashboard_routes.py` 2838 dòng god-controller; tính tiền trong route; lặp parse-items ~5 lần; bare `except Exception`; import cục bộ lặp.
+- **DBA:** unique toàn cục (B3), thiếu index tổ hợp `(company_id,...)`, JSON items denormalized, cascade delete, thiếu Alembic.
+- **Security OWASP:** CSRF (P1) mọi form POST; IDOR (B5/B7); SECRET_KEY default (P6); session cookie.
+- **Performance:** N+1 ở list_orders/list_documents; phân trang thực (ITEMS_PER_PAGE dùng chưa?).
+Gộp finding có mã + vị trí + mức. Sau đó **GĐ4** backlog ưu tiên → **GĐ5** loop refactor.
 
 ---
 
@@ -22,8 +23,8 @@ Sau đó chốt GĐ2 → sang **GĐ3** (hội đồng chuyên gia). Xem checklis
 |----|-----|-----------|----------|---------|
 | 0 | Thiết lập an toàn & Baseline | ✅ Xong | `00-baseline.md` | Branch tạo, app import OK, SQLite build 18 bảng OK |
 | 1 | Đọc hiểu sâu (Kiến trúc sư) | 🟡 Bản nháp v1 | `01-architecture.md` | ERD + layer map + user journeys xong; cần xác nhận vài business rule |
-| 2 | Testing E2E (QA Lead) | 🟡 Đang chạy | `02-bug-catalog.md` | Harness xong (9 test xanh). Tenant-GET an toàn. B1 tìm được. Còn: luồng tạo, tiền/VAT, state machine, IDOR-POST |
-| 3 | Hội đồng chuyên gia | ⬜ Chưa | `03-expert-review.md` | |
+| 2 | Testing E2E (QA Lead) | ✅ Xong (v1) | `02-bug-catalog.md` | 17 test. 7 bug (B1–B7). Xác nhận đúng: RBAC, payment-seq, approve-state, tenant-GET. Residual input-fuzz để GĐ3/5 |
+| 3 | Hội đồng chuyên gia | 🟡 Bắt đầu | `03-expert-review.md` | UX / Clean-code / DBA / Security / Perf |
 | 4 | Ưu tiên hóa | ⬜ Chưa | `04-backlog.md` | |
 | 5 | Vòng lặp refactor | ⬜ Chưa | `CHANGELOG.md` | |
 | 6 | Hoàn thiện & bàn giao | ⬜ Chưa | `FINAL-REPORT.md` | |
