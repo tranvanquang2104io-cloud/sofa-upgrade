@@ -83,3 +83,12 @@
 - **Migration:** `68c0ef8699e4` (autogenerate, portable — index ops chạy cả Postgres lẫn SQLite). **Round-trip OK.**
 - **Test:** suite **22 passed, 1 xfailed** (không đổi hành vi). → **Kết thúc Nhóm 2 (schema).**
 - **Files:** `app/models/models.py`, `migrations/versions/68c0ef8699e4_*.py`.
+
+---
+
+## W9 — Trích helper `parse_line_items` (Decimal) + gom validate  ✅
+- **Finding:** A2/A3/B4 (Medium/Low). 5+ block parse item lặp lại; tính tiền bằng `float`; negative-guard mới chỉ có ở create_quotation.
+- **Fix:** thêm `parse_line_items(form, files=None, with_images=False)` (đầu `dashboard_routes.py`): parse item_name/unit/quantity/price, **validate qty/price ≥ 0** (tổng quát hóa W7 cho contract/payment), tính line total & subtotal bằng `Decimal` rồi trả float (JSON-friendly, khớp `Numeric`). Thay 5 block: create/edit quotation (with_images), create/edit contract, create payment. **Handover giữ parser riêng** (schema item khác: delivered/accepted qty, status, reason).
+- **Giữ hành vi:** kết quả số học không đổi (`test_quotation_money.py` là lưới an toàn); chuẩn hóa `name.strip()` (bỏ khoảng trắng thừa) — thay đổi vô hại.
+- **Test:** thêm `test_negative_quantity_rejected_on_contract`. Suite: **23 passed, 1 xfailed**.
+- **Files:** `app/routes/dashboard_routes.py`, `tests/test_contract_number.py`.

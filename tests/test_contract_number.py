@@ -29,6 +29,21 @@ def _post_contract(client, order_id, number):
     }, follow_redirects=True)
 
 
+def test_negative_quantity_rejected_on_contract(app, client, login, seeded_order):
+    """W9: parse_line_items generalizes the non-negative guard to contracts."""
+    login(username="admin")
+    client.post(f"/contracts/{seeded_order['order_id']}/create", data={
+        "contract_number": "C-NEG",
+        "contract_date": "2026-07-26",
+        "item_name[]": ["X"], "item_unit[]": ["u"],
+        "item_quantity[]": ["-1"], "item_price[]": ["100"],
+    }, follow_redirects=True)
+    from app.models import Contract
+    with app.app_context():
+        assert Contract.query.filter_by(contract_number="C-NEG").first() is None, \
+            "negative quantity should be rejected on contract create"
+
+
 def test_same_contract_number_allowed_across_tenants(app, client, login):
     a = _make_company(app, "AAA")
     b = _make_company(app, "BBB")

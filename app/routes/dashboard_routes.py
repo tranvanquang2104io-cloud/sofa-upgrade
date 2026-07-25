@@ -48,6 +48,55 @@ def _save_item_image(file_storage, existing_path: str = None) -> str | None:
     return existing_path or None
 
 
+def parse_line_items(form, files=None, with_images=False):
+    """Parse repeated item_* form fields into a list of item dicts and the subtotal.
+
+    Reads item_name[]/item_unit[]/item_quantity[]/item_price[]; blank-name rows are
+    skipped. Validates that quantity and price are non-negative (raises ValueError —
+    generalises the W7 guard to every standard document form). Per-line totals and
+    the subtotal are computed with Decimal to avoid float drift, then returned as
+    JSON-serialisable floats. When ``with_images`` is set, item images are saved
+    (honouring item_existing_image[] for edits) and stored under ``image_path``.
+
+    Note: handover records are NOT parsed here — they carry a different item schema
+    (delivered/accepted qty, status, reason) and keep their own parser.
+    """
+    from decimal import Decimal
+
+    names = form.getlist('item_name[]')
+    units = form.getlist('item_unit[]')
+    quantities = form.getlist('item_quantity[]')
+    prices = form.getlist('item_price[]')
+    images = files.getlist('item_image[]') if (with_images and files is not None) else []
+    existing_images = form.getlist('item_existing_image[]') if with_images else []
+
+    items = []
+    subtotal = Decimal('0')
+    for i, name in enumerate(names):
+        if not name or not name.strip():
+            continue
+        qty = float(quantities[i] or 0) if i < len(quantities) else 0.0
+        price = float(prices[i] or 0) if i < len(prices) else 0.0
+        if qty < 0 or price < 0:
+            raise ValueError(t('Quantity and unit price cannot be negative'))
+        unit = units[i].strip() if i < len(units) else ''
+        line_total = Decimal(str(qty)) * Decimal(str(price))
+        item = {
+            'name': name.strip(),
+            'unit': unit,
+            'quantity': qty,
+            'unit_price': price,
+            'total': float(line_total),
+        }
+        if with_images:
+            existing = existing_images[i] if i < len(existing_images) else None
+            item['image_path'] = _save_item_image(
+                images[i] if i < len(images) else None, existing)
+        items.append(item)
+        subtotal += line_total
+    return items, float(subtotal)
+
+
 # ===== LANGUAGE SWITCHER =====
 
 @dashboard_bp.route('/set-language/<lang>')
@@ -599,33 +648,8 @@ def create_quotation(order_id):
                 return render_template('quotations/create.html', order=order, company_vat_rate=company_vat_rate)
             
             # Parse items from request
-            items = []
-            item_names = request.form.getlist('item_name[]')
-            item_units = request.form.getlist('item_unit[]')
-            item_quantities = request.form.getlist('item_quantity[]')
-            item_prices = request.form.getlist('item_price[]')
-            item_images = request.files.getlist('item_image[]')
-            
-            subtotal = 0
-            for i, name in enumerate(item_names):
-                if name:
-                    qty = float(item_quantities[i] or 0)
-                    price = float(item_prices[i] or 0)
-                    if qty < 0 or price < 0:
-                        raise ValueError(t('Quantity and unit price cannot be negative'))
-                    unit = item_units[i].strip() if i < len(item_units) else ''
-                    item_total = qty * price
-                    image_path = _save_item_image(item_images[i] if i < len(item_images) else None)
-                    items.append({
-                        'name': name,
-                        'unit': unit,
-                        'quantity': qty,
-                        'unit_price': price,
-                        'total': item_total,
-                        'image_path': image_path
-                    })
-                    subtotal += item_total
-            
+            items, subtotal = parse_line_items(request.form, request.files, with_images=True)
+
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
             shipping_fee = float(request.form.get('shipping_fee') or 0)
@@ -703,33 +727,8 @@ def edit_quotation(quotation_id):
     if request.method == 'POST':
         try:
             # Parse items from request
-            items = []
-            item_names = request.form.getlist('item_name[]')
-            item_units = request.form.getlist('item_unit[]')
-            item_quantities = request.form.getlist('item_quantity[]')
-            item_prices = request.form.getlist('item_price[]')
-            item_images = request.files.getlist('item_image[]')
-            item_existing_images = request.form.getlist('item_existing_image[]')
-            
-            subtotal = 0
-            for i, name in enumerate(item_names):
-                if name:
-                    qty = float(item_quantities[i] or 0)
-                    price = float(item_prices[i] or 0)
-                    unit = item_units[i].strip() if i < len(item_units) else ''
-                    item_total = qty * price
-                    existing = item_existing_images[i] if i < len(item_existing_images) else None
-                    image_path = _save_item_image(item_images[i] if i < len(item_images) else None, existing)
-                    items.append({
-                        'name': name,
-                        'unit': unit,
-                        'quantity': qty,
-                        'unit_price': price,
-                        'total': item_total,
-                        'image_path': image_path
-                    })
-                    subtotal += item_total
-            
+            items, subtotal = parse_line_items(request.form, request.files, with_images=True)
+
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
             shipping_fee = float(request.form.get('shipping_fee') or 0)
@@ -848,28 +847,8 @@ def create_contract(order_id):
                 return render_template('contracts/create.html', order=order, quotations=quotations, company=_co)
             
             # Parse items from form
-            items = []
-            item_names = request.form.getlist('item_name[]')
-            item_units = request.form.getlist('item_unit[]')
-            item_quantities = request.form.getlist('item_quantity[]')
-            item_prices = request.form.getlist('item_price[]')
-            
-            subtotal = 0
-            for i, name in enumerate(item_names):
-                if name.strip():
-                    qty = float(item_quantities[i] or 0)
-                    price = float(item_prices[i] or 0)
-                    unit = item_units[i].strip() if i < len(item_units) else ''
-                    item_total = qty * price
-                    items.append({
-                        'name': name.strip(),
-                        'unit': unit,
-                        'quantity': qty,
-                        'unit_price': price,
-                        'total': item_total
-                    })
-                    subtotal += item_total
-            
+            items, subtotal = parse_line_items(request.form)
+
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
             # Shipping/other fees come from quotation when referenced
@@ -1004,28 +983,8 @@ def edit_contract(contract_id):
             terms_and_conditions = request.form.get('terms_and_conditions', '').strip() or None
             
             # Parse items from form
-            items = []
-            item_names = request.form.getlist('item_name[]')
-            item_units = request.form.getlist('item_unit[]')
-            item_quantities = request.form.getlist('item_quantity[]')
-            item_prices = request.form.getlist('item_price[]')
-            
-            subtotal = 0
-            for i, name in enumerate(item_names):
-                if name:
-                    qty = float(item_quantities[i] or 0)
-                    price = float(item_prices[i] or 0)
-                    unit = item_units[i].strip() if i < len(item_units) else ''
-                    item_total = qty * price
-                    items.append({
-                        'name': name,
-                        'unit': unit,
-                        'quantity': qty,
-                        'unit_price': price,
-                        'total': item_total
-                    })
-                    subtotal += item_total
-            
+            items, subtotal = parse_line_items(request.form)
+
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
             shipping_fee = float(request.form.get('shipping_fee') or 0)
@@ -1562,21 +1521,8 @@ def create_payment(order_id):
                                        advance_skipped=bool(order.lifecycle and order.lifecycle.advance_skipped))
             
             # Parse work items
-            items = []
-            item_names = request.form.getlist('item_name[]')
-            item_units = request.form.getlist('item_unit[]')
-            item_quantities = request.form.getlist('item_quantity[]')
-            item_prices = request.form.getlist('item_price[]')
-            subtotal = 0
-            for i, name in enumerate(item_names):
-                if name.strip():
-                    qty = float(item_quantities[i] or 0)
-                    price = float(item_prices[i] or 0)
-                    unit = item_units[i].strip() if i < len(item_units) else ''
-                    item_total = qty * price
-                    items.append({'name': name.strip(), 'unit': unit, 'quantity': qty, 'unit_price': price, 'total': item_total})
-                    subtotal += item_total
-            
+            items, subtotal = parse_line_items(request.form)
+
             vat_rate = float(request.form.get('vat_rate') or 8)
             vat_amount = round(subtotal * vat_rate / 100, 2)
             shipping_fee = float(getattr(active_contract, 'shipping_fee', 0) or 0)
