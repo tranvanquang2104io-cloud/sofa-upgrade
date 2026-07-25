@@ -32,6 +32,8 @@ TRANSLATIONS = {
         'Delete':                 'Xóa',
         'Search':                 'Tìm Kiếm',
         'Submit':                 'Gửi',
+        'Previous':               'Trước',
+        'Next':                   'Sau',
         'Confirm':                'Xác Nhận',
         'Close':                  'Đóng',
         'Save Changes':           'Lưu Thay Đổi',
