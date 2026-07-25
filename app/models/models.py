@@ -168,7 +168,11 @@ class Customer(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Unique constraint on customer_code per store
-    __table_args__ = (db.UniqueConstraint('store_id', 'customer_code', name='uq_store_customer_code'),)
+    __table_args__ = (
+        db.UniqueConstraint('store_id', 'customer_code', name='uq_store_customer_code'),
+        db.Index('ix_customers_company_active', 'company_id', 'is_active'),
+        db.Index('ix_customers_company_created', 'company_id', 'created_at'),
+    )
     
     # Relationships
     orders = db.relationship('Order', backref='customer', lazy=True, cascade='all, delete-orphan')
@@ -246,7 +250,11 @@ class Order(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Unique constraint on order_code per store
-    __table_args__ = (db.UniqueConstraint('store_id', 'order_code', name='uq_store_order_code'),)
+    __table_args__ = (
+        db.UniqueConstraint('store_id', 'order_code', name='uq_store_order_code'),
+        db.Index('ix_orders_company_created', 'company_id', 'created_at'),
+        db.Index('ix_orders_company_active', 'company_id', 'is_active'),
+    )
     
     # Relationships
     lifecycle = db.relationship('LifecycleStatus', backref='order', uselist=False, lazy=True, cascade='all, delete-orphan', foreign_keys='LifecycleStatus.order_id')

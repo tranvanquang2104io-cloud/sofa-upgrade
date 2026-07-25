@@ -74,3 +74,12 @@
 - **Test:** `test_contract_number.py` — 2 công ty cùng số hợp đồng `C-DUP` → OK. Suite: **22 passed, 1 xfailed**.
 - **Kết quả:** B3 đã fix hoàn toàn cho cả 4 loại chứng từ (quotation+contract+handover+payment). Bản DB-level per-company chặt hơn vẫn ở **NR3**.
 - **Files:** `app/models/models.py`, `app/repositories/repository.py`, `app/services/services.py`, `app/routes/dashboard_routes.py`, `migrations/versions/e1b399a3d96d_*.py`, `tests/test_contract_number.py`.
+
+## W8 — Index tổ hợp cho Orders & Customers  ✅
+- **Finding:** DB2 (Medium). Thiếu index cho truy vấn list phổ biến (lọc theo company + sắp xếp theo created_at / lọc is_active).
+- **Fix:** thêm vào model:
+  - `orders`: `ix_orders_company_created(company_id, created_at)`, `ix_orders_company_active(company_id, is_active)`.
+  - `customers`: `ix_customers_company_active(company_id, is_active)`, `ix_customers_company_created(company_id, created_at)`.
+- **Migration:** `68c0ef8699e4` (autogenerate, portable — index ops chạy cả Postgres lẫn SQLite). **Round-trip OK.**
+- **Test:** suite **22 passed, 1 xfailed** (không đổi hành vi). → **Kết thúc Nhóm 2 (schema).**
+- **Files:** `app/models/models.py`, `migrations/versions/68c0ef8699e4_*.py`.
