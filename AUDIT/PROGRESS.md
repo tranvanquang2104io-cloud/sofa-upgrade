@@ -5,7 +5,9 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟢 Cốt lõi HOÀN THÀNH — Bảo mật + Schema + Refactor lõi + N+1 xong; `FINAL-REPORT.md` đã viết. Còn lại: đánh bóng UX/perf (W14/W15/W16/W18) + W10 (rủi ro cao). **Chưa merge.**
+**Trạng thái tổng thể:** 🟢 Cốt lõi + phần lớn đánh bóng XONG. Bảo mật, Schema/migration, refactor lõi, N+1, phân trang đơn hàng (W18), min=0 (W15), i18n slice (W14). `FINAL-REPORT.md` cập nhật. Còn long-tail: W14 (i18n còn), W15b (confirm), W18b (customers), W16 (SRI), W10 (god-controller, rủi ro cao), bare-excepts. **Chưa merge.**
+
+**Điểm resume:** tiếp tục polish long-tail theo thứ tự: W18b (customers pagination — verify được) → thêm W14 i18n slices (vài template/commit) → W15b confirm dialogs. Mỗi W = vòng nhỏ, suite xanh. Khi long-tail cạn/giá trị thấp → cập nhật FINAL-REPORT & dừng loop. NR1/NR2/NR3 KHÔNG tự làm. Suite hiện **28 passed, 1 xfailed**; 30 commit trên nhánh.
 
 **Điểm resume (đọc khi khởi động lại):** GĐ2/3/4 **đã xong**. Có `03-expert-review.md` (panel UX/Code/DBA/Security/Perf) + `04-backlog.md` (W1–W21 ưu tiên) + `NEEDS-REVIEW.md` (NR1 B6, NR2 cascade — KHÔNG tự đổi). Việc TIẾP THEO = **GĐ5 loop refactor**, theo thứ tự trong `04-backlog.md`:
 `W2 (IDOR create_order) → W7 (validate qty≥0) → W19 (xóa route trùng) → W3 (SECRET_KEY fail-fast) → W4 (session rotate) → W1 (CSRF)` rồi schema `W5 Alembic → W6 unique per-tenant → W8 index` ...

@@ -73,14 +73,20 @@
 - **NR2 — Cascade delete vs soft-delete** Company/Order (lưu trữ hồ sơ tài chính).
 - **NR3 — Ràng buộc DB-level per-company** cho số hiệu chứng từ (cần thêm cột `company_id` + backfill trên prod — muốn có prod DB + backup để kiểm chứng). Hiện đã per-order (DB) + per-company (app), đủ chặn bug.
 
-## 7. Còn lại (đánh bóng — chưa làm, rủi ro thấp)
+## 7. Đánh bóng — trạng thái
 
-- **W14 (UX/i18n):** bọc `t()` cho một số heading/placeholder hardcode tiếng Anh.
-- **W15 (UX):** `min="0"` cho input số + confirm dialog cho vài hành động phá hủy còn thiếu.
-- **W16 (UX/security):** thêm SRI cho link CDN Bootstrap — **cần hash đúng** (hash sai sẽ chặn tải trang, không verify được offline) → làm khi có mạng, hoặc vendor asset.
-- **W18 (perf):** phân trang thật `db.paginate` (hiện `limit/offset`, chưa có tổng số trang).
-- **W10 (kiến trúc):** tách god-controller `dashboard_routes.py` (~2900 dòng) thành blueprint theo domain — **rủi ro cao**, để lại làm có chủ đích với regression net.
-- **W11 (còn lại):** thu hẹp 47 `except Exception` — hoãn vì đường lỗi không có test, đổi sẽ đổi hành vi (500 thay vì flash) không verify an toàn được.
+**Đã làm thêm (verify được):**
+- ✅ **W18 (perf):** phân trang thật `db.paginate` cho danh sách **đơn hàng** (+ partial `_pagination.html` dùng lại). *(customers: W18b còn lại.)*
+- ✅ **W15 (UX):** `min="0"` cho 22 input số lượng/đơn giá (mirror guard B2 phía server).
+- ✅ **W14 (UX/i18n):** bắt đầu — thêm khóa `Previous`/`Next`, bọc `t()` heading "Create Order".
+
+**Còn lại (rủi ro thấp / long-tail / cần chủ đích):**
+- **W14 (còn):** bọc `t()` cho các heading/placeholder hardcode còn lại (long-tail nhiều template).
+- **W15b (UX):** rà & thêm `confirm()` cho form hủy/xóa còn thiếu (không có test tự động cho confirm).
+- **W18b (perf):** phân trang `db.paginate` cho `list_customers` (có search + "tất cả cửa hàng" → cần cẩn thận giữ query params).
+- **W16 (UX/security):** SRI cho CDN — **cần hash đúng** (hash sai chặn tải trang, không verify offline) → làm khi có mạng, hoặc vendor asset.
+- **W10 (kiến trúc):** tách god-controller `dashboard_routes.py` (~2900 dòng) — **rủi ro cao**, để lại làm có chủ đích với regression net.
+- **W11 (còn):** thu hẹp 47 `except Exception` — hoãn vì đường lỗi không có test (đổi → 500 thay vì flash, không verify an toàn được).
 
 ## 8. Rủi ro còn lại
 
