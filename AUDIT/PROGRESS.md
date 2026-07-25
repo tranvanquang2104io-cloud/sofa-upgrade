@@ -5,7 +5,9 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 0 & 1
+**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 2 (đang dựng test & bug catalog)
+
+**Điểm resume (đọc khi khởi động lại):** GĐ2 đang mở. Harness `pytest` đã chạy (9 test xanh: smoke + tenant-isolation). Việc TIẾP THEO: đọc shape POST trong `app/routes/dashboard_routes.py` cho luồng tạo Order/Quotation/Contract/Handover/Payment → viết test luồng E2E + test tính tiền/VAT + test state machine + IDOR trên POST. Xem checklist "Đang chờ kiểm thử" trong `02-bug-catalog.md`.
 
 ---
 
@@ -15,7 +17,7 @@
 |----|-----|-----------|----------|---------|
 | 0 | Thiết lập an toàn & Baseline | ✅ Xong | `00-baseline.md` | Branch tạo, app import OK, SQLite build 18 bảng OK |
 | 1 | Đọc hiểu sâu (Kiến trúc sư) | 🟡 Bản nháp v1 | `01-architecture.md` | ERD + layer map + user journeys xong; cần xác nhận vài business rule |
-| 2 | Testing E2E (QA Lead) | ⬜ Chưa | `02-bug-catalog.md` | Sẽ dựng harness pytest trên SQLite |
+| 2 | Testing E2E (QA Lead) | 🟡 Đang chạy | `02-bug-catalog.md` | Harness xong (9 test xanh). Tenant-GET an toàn. B1 tìm được. Còn: luồng tạo, tiền/VAT, state machine, IDOR-POST |
 | 3 | Hội đồng chuyên gia | ⬜ Chưa | `03-expert-review.md` | |
 | 4 | Ưu tiên hóa | ⬜ Chưa | `04-backlog.md` | |
 | 5 | Vòng lặp refactor | ⬜ Chưa | `CHANGELOG.md` | |
