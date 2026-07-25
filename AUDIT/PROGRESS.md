@@ -5,15 +5,11 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 3 (hội đồng chuyên gia)
+**Trạng thái tổng thể:** 🟡 Đang chạy — sắp vào Giai đoạn 5 (loop refactor)
 
-**Điểm resume (đọc khi khởi động lại):** GĐ2 **đã chốt v1** (17 test: 13 pass + 4 xfail = B2,B3,B5,B6). Bug catalog có B1–B7 (B5 High-security, B3 High-data, B7 root). Việc TIẾP THEO = **GĐ3** → viết `AUDIT/03-expert-review.md`:
-- **UX** (Norman/Nielsen/Krug/Wroblewski): review `app/templates/` (form nhập dài, feedback, chống lỗi, mobile/responsive, accessibility, i18n).
-- **Clean code/kiến trúc** (Uncle Bob/Fowler/Beck): `dashboard_routes.py` 2838 dòng god-controller; tính tiền trong route; lặp parse-items ~5 lần; bare `except Exception`; import cục bộ lặp.
-- **DBA:** unique toàn cục (B3), thiếu index tổ hợp `(company_id,...)`, JSON items denormalized, cascade delete, thiếu Alembic.
-- **Security OWASP:** CSRF (P1) mọi form POST; IDOR (B5/B7); SECRET_KEY default (P6); session cookie.
-- **Performance:** N+1 ở list_orders/list_documents; phân trang thực (ITEMS_PER_PAGE dùng chưa?).
-Gộp finding có mã + vị trí + mức. Sau đó **GĐ4** backlog ưu tiên → **GĐ5** loop refactor.
+**Điểm resume (đọc khi khởi động lại):** GĐ2/3/4 **đã xong**. Có `03-expert-review.md` (panel UX/Code/DBA/Security/Perf) + `04-backlog.md` (W1–W21 ưu tiên) + `NEEDS-REVIEW.md` (NR1 B6, NR2 cascade — KHÔNG tự đổi). Việc TIẾP THEO = **GĐ5 loop refactor**, theo thứ tự trong `04-backlog.md`:
+`W2 (IDOR create_order) → W7 (validate qty≥0) → W19 (xóa route trùng) → W3 (SECRET_KEY fail-fast) → W4 (session rotate) → W1 (CSRF)` rồi schema `W5 Alembic → W6 unique per-tenant → W8 index` ...
+**Bắt đầu với W2** (đã có test xfail `test_create_order_rejects_cross_tenant_customer` — fix xong thì bỏ `xfail`). Mỗi W = 1 vòng PLAN→TEST→FIX→VERIFY→COMMIT→LOG; giữ suite xanh; backup+rollback trước migration.
 
 ---
 
@@ -24,8 +20,8 @@ Gộp finding có mã + vị trí + mức. Sau đó **GĐ4** backlog ưu tiên �
 | 0 | Thiết lập an toàn & Baseline | ✅ Xong | `00-baseline.md` | Branch tạo, app import OK, SQLite build 18 bảng OK |
 | 1 | Đọc hiểu sâu (Kiến trúc sư) | 🟡 Bản nháp v1 | `01-architecture.md` | ERD + layer map + user journeys xong; cần xác nhận vài business rule |
 | 2 | Testing E2E (QA Lead) | ✅ Xong (v1) | `02-bug-catalog.md` | 17 test. 7 bug (B1–B7). Xác nhận đúng: RBAC, payment-seq, approve-state, tenant-GET. Residual input-fuzz để GĐ3/5 |
-| 3 | Hội đồng chuyên gia | 🟡 Bắt đầu | `03-expert-review.md` | UX / Clean-code / DBA / Security / Perf |
-| 4 | Ưu tiên hóa | ⬜ Chưa | `04-backlog.md` | |
+| 3 | Hội đồng chuyên gia | ✅ Xong | `03-expert-review.md` | 5 panel; finding U/A/DB/S/PF + tổng hợp mức |
+| 4 | Ưu tiên hóa | ✅ Xong | `04-backlog.md` | W1–W21 theo I/E; NR1/NR2 → NEEDS-REVIEW |
 | 5 | Vòng lặp refactor | ⬜ Chưa | `CHANGELOG.md` | |
 | 6 | Hoàn thiện & bàn giao | ⬜ Chưa | `FINAL-REPORT.md` | |
 
