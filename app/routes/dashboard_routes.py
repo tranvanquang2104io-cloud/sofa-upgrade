@@ -593,7 +593,7 @@ def create_quotation(order_id):
             from app.repositories.repository import QuotationRepository
             quotation_repo = QuotationRepository()
             from app.models.models import Quotation
-            existing = db.session.query(Quotation).filter_by(quotation_number=quotation_number).first()
+            existing = quotation_repo.get_by_company_and_number(company_id, quotation_number)
             if existing:
                 flash(t(f'Quotation number "{quotation_number}" is already taken. Please use a different number.'), 'error')
                 return render_template('quotations/create.html', order=order, company_vat_rate=company_vat_rate)
@@ -638,6 +638,7 @@ def create_quotation(order_id):
             quotation_service = QuotationService()
             quotation = quotation_service.create_quotation(
                 order_id=order_id,
+                company_id=company_id,
                 quotation_number=request.form.get('quotation_number', '').strip(),
                 quotation_date=datetime.strptime(request.form.get('quotation_date'), '%Y-%m-%d').date(),
                 items=items,

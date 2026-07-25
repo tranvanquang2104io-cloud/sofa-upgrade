@@ -396,9 +396,14 @@ class QuotationService:
                         total_amount, validity_days=30, notes=None,
                         city=None, subtotal=None, vat_rate=8.0, vat_amount=0,
                         payment_terms=None, amount_in_words=None,
-                        shipping_fee=0, another_fee=0):
+                        shipping_fee=0, another_fee=0, company_id=None):
         """Create quotation"""
-        existing = self.repo.get_by_number(quotation_number)
+        # Per-tenant duplicate check (AUDIT W6/B3): scope by company when known,
+        # else fall back to the order's company.
+        if company_id is None:
+            _order = OrderRepository().get_by_id(order_id)
+            company_id = _order.company_id if _order else None
+        existing = self.repo.get_by_company_and_number(company_id, quotation_number)
         if existing:
             raise ValueError(f"Quotation {quotation_number} already exists")
         

@@ -290,6 +290,16 @@ class QuotationRepository(BaseRepository):
     def get_by_number(self, quotation_number):
         """Get quotation by number"""
         return self.model.query.filter_by(quotation_number=quotation_number).first()
+
+    def get_by_company_and_number(self, company_id, quotation_number):
+        """Per-tenant duplicate check: a quotation with this number within the
+        given company (joined via its order). Replaces the old global check
+        that leaked across tenants (AUDIT W6/B3)."""
+        return (self.model.query
+                .join(Order, Order.id == self.model.order_id)
+                .filter(Order.company_id == company_id,
+                        self.model.quotation_number == quotation_number)
+                .first())
     
     def get_for_order(self, order_id):
         """Get all quotations for order"""

@@ -65,8 +65,6 @@ def test_negative_quantity_is_rejected(app, client, login, seeded_order):
     assert q is None or float(q.subtotal) >= 0
 
 
-@pytest.mark.xfail(strict=False, reason="B3/P2: document numbers are globally "
-                   "unique instead of per-tenant (dashboard_routes.py:591 & model)")
 def test_same_quotation_number_allowed_across_tenants(app, client, login, seeded_order):
     # Tenant A (ACME) uses Q-DUP.
     login(username="admin")

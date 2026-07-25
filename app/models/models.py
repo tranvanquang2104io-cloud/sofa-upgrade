@@ -278,7 +278,7 @@ class Quotation(db.Model):
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     
-    quotation_number = db.Column(db.String(50), nullable=False, unique=True)
+    quotation_number = db.Column(db.String(50), nullable=False)
     quotation_date = db.Column(db.Date, nullable=False)
     validity_days = db.Column(db.Integer, default=30)
     city = db.Column(db.String(100))          # City for date header (e.g. TP. Hồ Chí Minh)
@@ -305,10 +305,15 @@ class Quotation(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    # Document numbers are unique per order (was global — see AUDIT W6/B3).
+    # Per-company enforcement is done at the app layer (via the order's company).
+    __table_args__ = (db.UniqueConstraint('order_id', 'quotation_number',
+                                          name='uq_order_quotation_number'),)
+
     # Relationships
     documents = db.relationship('Document', backref='quotation', lazy=True, cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<Quotation {self.quotation_number}>'
     

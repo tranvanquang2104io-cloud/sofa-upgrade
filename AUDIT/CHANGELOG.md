@@ -57,3 +57,12 @@
 - **Verify:** `alembic upgrade head` tạo đủ 18 bảng; `alembic downgrade base` xóa sạch (reversible). App suite: **20 passed, 2 xfailed** (không ảnh hưởng).
 - **Lưu ý bàn giao:** app vẫn gọi `create_all()` lúc khởi động. Với DB hiện có: chạy **`alembic stamp head`** 1 lần để đánh dấu baseline, rồi các migration W6/W8 áp lên trên. Migration Postgres-compatible.
 - **Files:** `alembic.ini`, `migrations/*`, `requirements-dev.txt`.
+
+## W6 — Số hiệu Quotation unique per-order + enforce per-company (app)  ✅
+- **Finding:** B3/DB1 (High). `quotation_number` unique **toàn cục** (model + route + service) → tenant khác không dùng lại số được.
+- **Quyết định:** xem **D5** — DB unique theo `(order_id, quotation_number)`; enforce per-company ở tầng app (tránh phải thêm cột `company_id` + backfill prod đêm nay). Bản chặt hơn (per-company DB) → **NR3**.
+- **Fix:** model bỏ `unique=True`, thêm `UniqueConstraint(order_id, quotation_number)`; `QuotationRepository.get_by_company_and_number` (join Order); service + route check trùng theo company; route truyền `company_id`.
+- **Migration:** `acb618e15b19` — dialect-aware (Postgres: drop `quotations_quotation_number_key` + add composite; SQLite: batch add). **Verify upgrade/downgrade round-trip trên SQLite OK.** Không xóa dữ liệu.
+- **Test:** bỏ `xfail` `test_same_quotation_number_allowed_across_tenants` → PASS. Suite: **21 passed, 1 xfailed** (chỉ còn B6/NR1).
+- **CÒN LẠI (W6b):** contract_number, report_number (handover), report_number (payment) vẫn unique toàn cục — sửa cùng mẫu ở vòng sau.
+- **Files:** `app/models/models.py`, `app/repositories/repository.py`, `app/services/services.py`, `app/routes/dashboard_routes.py`, `migrations/versions/acb618e15b19_*.py`, `tests/test_quotation_money.py`.
