@@ -5,7 +5,7 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 5 — ✅ Nhóm 1 & Nhóm 2 (schema) XONG
+**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 5 — ✅ Nhóm 1, 2; Nhóm 3: W9 xong
 
 **Điểm resume (đọc khi khởi động lại):** GĐ2/3/4 **đã xong**. Có `03-expert-review.md` (panel UX/Code/DBA/Security/Perf) + `04-backlog.md` (W1–W21 ưu tiên) + `NEEDS-REVIEW.md` (NR1 B6, NR2 cascade — KHÔNG tự đổi). Việc TIẾP THEO = **GĐ5 loop refactor**, theo thứ tự trong `04-backlog.md`:
 `W2 (IDOR create_order) → W7 (validate qty≥0) → W19 (xóa route trùng) → W3 (SECRET_KEY fail-fast) → W4 (session rotate) → W1 (CSRF)` rồi schema `W5 Alembic → W6 unique per-tenant → W8 index` ...
@@ -13,10 +13,15 @@
 
 **ĐÃ XONG (Nhóm 2 — schema):** W5 (Alembic + baseline `2ede8fb2868b`), W6 (quotation), W6b (contract/handover/payment) — migrations `acb618e15b19`, `e1b399a3d96d`; **B3 fix hoàn toàn cả 4 loại chứng từ**. W8 (index tổ hợp orders/customers, `68c0ef8699e4`). Suite **22 passed, 1 xfailed** (chỉ còn B6/NR1). Tất cả migration reversible + round-trip SQLite OK.
 
-**TIẾP THEO — Nhóm 3 (dọn backend, giữ hành vi):**
-1. **W9 — trích helper `parse_line_items(form) -> (items, subtotal)` dùng `Decimal`:** hiện 5+ chỗ trong `dashboard_routes.py` lặp block `getlist('item_name[]')...` + tính subtotal bằng `float`. Trích 1 helper (đặt gần đầu `dashboard_routes.py` hoặc `app/utils/`), thay validate `qty/price >= 0` (đã có ở create_quotation — gom vào helper cho cả contract/handover/payment ⇒ mở rộng W7). Test tiền hiện có (`test_quotation_money.py`) là lưới an toàn; thêm test cho 1 chỗ khác nếu tiện. **Giữ nguyên kết quả số học** (Decimal→so khớp Numeric). VERIFY suite.
-2. **W11 — thu hẹp `except Exception` (47 chỗ) + đưa import cục bộ (60) lên đầu module:** làm TỪNG BƯỚC nhỏ, mỗi commit vài chỗ, chạy suite mỗi lần. Cẩn thận KHÔNG đổi thông điệp flash/redirect (hành vi). Nếu một chỗ khó tách an toàn → để lại, ghi chú.
-Sau Nhóm 3 → Nhóm 4 UX (W14 i18n, W15 min=0/confirm, W16 vendor CDN), Nhóm 5 perf (W17 joinedload, W18 pagination), rồi W10 (tách god-controller, rủi ro cao — cân nhắc), W21 (README + FINAL-REPORT = GĐ6). NR1/NR2/NR3 KHÔNG tự làm.
+**ĐÃ XONG (Nhóm 3):** W9 — helper `parse_line_items` (Decimal + validate qty/price≥0), gom 5 block, handover giữ parser riêng. Suite **23 passed, 1 xfailed**.
+
+**TIẾP THEO:**
+1. **W11 (nhẹ, cẩn thận):** ưu tiên phần AN TOÀN & verify được: đưa import cục bộ lặp lại (`from app.repositories... import ...`) lên đầu `dashboard_routes.py` theo TỪNG batch nhỏ (verify bằng `import app` + full suite mỗi lần). Thu hẹp `except Exception` **CHỈ** ở chỗ rõ ràng (vd bọc `datetime.strptime` → `except (ValueError, TypeError)`) mà KHÔNG đổi flash/redirect. Đường lỗi phần lớn không có test → nếu không chắc verify được thì **để nguyên + ghi chú**, đừng liều. Đừng đầu tư quá nhiều vào W11.
+2. **Nhóm 4 UX (giá trị cao hơn):** W15 (`min="0"` cho input number + confirm dialog hành động phá hủy), W16 (SRI cho CDN ở base.html/admin/base.html), W14 (bọc `t()` cho heading/placeholder hardcode — làm dần theo template).
+3. **Nhóm 5 perf:** W17 (`joinedload` customer/store/lifecycle trong list_orders + template), W18 (phân trang thật `db.paginate`).
+4. **W10** (tách god-controller) — rủi ro cao, để CUỐI, chỉ làm nếu còn thời gian & có regression net.
+5. **GĐ6:** `AUDIT/FINAL-REPORT.md` + cập nhật README; đưa FINAL-REPORT lên đầu.
+NR1/NR2/NR3 KHÔNG tự làm. Mỗi W = 1 vòng nhỏ, suite xanh mỗi commit.
 
 ---
 
