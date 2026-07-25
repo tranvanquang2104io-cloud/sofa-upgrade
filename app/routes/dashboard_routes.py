@@ -345,8 +345,11 @@ def list_customers():
     if not store_id and not is_company_admin() and stores:
         store_id = str(stores[0].id)
 
+    from app.models.models import Customer as _Customer
+    per_page  = current_app.config.get('ITEMS_PER_PAGE', 20)
     customers = None
     total     = 0
+    pagination = None  # only set for the (non-search) browse paths
 
     if store_id:
         # Single store — enforce access
@@ -365,8 +368,9 @@ def list_customers():
             customers = customer_service.search_customers(store_id, search)
             total     = len(customers)
         else:
-            customers = customer_service.list_customers_for_store(store_id, page=page, per_page=20)
-            total     = customer_service.count_customers_for_store(store_id)
+            q = _Customer.query.filter_by(store_id=store_id, is_active=True).order_by(_Customer.customer_code)
+            pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
+            customers, total = pagination.items, pagination.total
     else:
         # "All Stores" — company admin sees every accessible store's customers
         from app.repositories.repository import CustomerRepository as _CustRepo
@@ -375,10 +379,14 @@ def list_customers():
             customers = _repo.search_customers_for_stores(accessible_ids, search)
             total     = len(customers)
         else:
-            per_page = 20
-            offset   = (page - 1) * per_page
-            customers = _repo.get_customers_for_stores(accessible_ids, limit=per_page, offset=offset)
-            total     = _repo.count_for_stores(accessible_ids)
+            q = _Customer.query.filter(
+                _Customer.store_id.in_(accessible_ids), _Customer.is_active == True
+            ).order_by(_Customer.customer_code)
+            pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
+            customers, total = pagination.items, pagination.total
+
+    # Preserve store/search filters across pagination links.
+    extra_query = {k: v for k, v in (('store_id', store_id), ('search', search)) if v}
 
     return render_template('customers/list.html',
                            customers=customers,
@@ -386,6 +394,8 @@ def list_customers():
                            selected_store_id=store_id,
                            page=page,
                            total=total,
+                           pagination=pagination,
+                           extra_query=extra_query,
                            search=search)
 
 

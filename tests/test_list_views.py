@@ -20,3 +20,16 @@ def test_orders_list_out_of_range_page_does_not_crash(login, client, seeded_orde
     login(username="admin")
     resp = client.get("/orders?page=999")
     assert resp.status_code == 200
+
+
+def test_customers_list_renders(login, client, seed):
+    login(username="admin")
+    resp = client.get("/customers")
+    assert resp.status_code == 200
+
+
+def test_customers_list_out_of_range_page_does_not_crash(login, client, seed):
+    """W18b: out-of-range page (and a store filter) must render, not crash."""
+    login(username="admin")
+    resp = client.get(f"/customers?store_id={seed['store_id']}&page=999")
+    assert resp.status_code == 200

@@ -120,3 +120,10 @@
 - **Suite:** **28 passed, 1 xfailed**.
 - **CÒN LẠI (W15b, UX — ghi future):** rà & thêm `confirm()` cho các form hủy/xóa còn thiếu; không có test tự động cho confirm → làm thủ công/khi review.
 - **Files:** 7 template create/edit, `tests/test_create_pages_render.py`.
+
+## W18b — Phân trang thật cho danh sách khách hàng  ✅
+- **Finding:** PF2. `list_customers` dùng `limit/offset` thủ công.
+- **Fix:** đường "browse" (không search) — single-store & all-stores — dùng `db.paginate(error_out=False)` + `order_by(customer_code)`; đường **search giữ nguyên** (trả full list, `pagination=None`). Truyền `extra_query` (store_id, search) để `_pagination.html` giữ filter khi chuyển trang.
+- **Test:** `/customers` render 200; `/customers?store_id=..&page=999` không crash.
+- **Suite:** **30 passed, 1 xfailed**.
+- **Files:** `app/routes/dashboard_routes.py`, `app/templates/customers/list.html`, `tests/test_list_views.py`.

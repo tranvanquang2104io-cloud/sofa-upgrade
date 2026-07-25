@@ -73,6 +73,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            {% include '_pagination.html' %}
         {% else %}
             <p class="text-muted">{{ t('No customers found.') }} <a href="{{ url_for('dashboard.create_customer') }}">{{ t('Add one') }}</a></p>
         {% endif %}
