@@ -44,3 +44,16 @@
 - **Files:** `app/__init__.py`, `requirements.txt`, 39 templates, `tests/test_csrf.py`.
 - **Verify:** GET `/auth/login` (có token) render 200; luồng login (test CSRF off) vẫn chạy. Suite: **20 passed, 2 xfailed**.
 - **Lưu ý bàn giao:** khi bật CSRF (prod/dev), mọi form đã có token; nếu sau này thêm `fetch(POST)` mới đổi state → cần gửi header `X-CSRFToken` (token có thể lấy từ `csrf_token()`).
+
+---
+
+## W5 — Dựng Alembic (hạ tầng migration)  ✅
+- **Finding:** DB4 (Medium). Không có công cụ migration; schema đổi bằng script tay.
+- **Fix:**
+  - Thêm `alembic` (requirements-dev.txt), `alembic init migrations`.
+  - `migrations/env.py`: lấy metadata từ `db.metadata` (import models trực tiếp, KHÔNG build app để tránh `create_all`); URL từ `DATABASE_URL`/Config; `compare_type=True`; `render_as_batch` cho SQLite.
+  - `script.py.mako` + baseline: thêm `import app.models.types` để render kiểu `GUID`.
+  - Baseline migration `2ede8fb2868b` (18 bảng) — **autogenerate**.
+- **Verify:** `alembic upgrade head` tạo đủ 18 bảng; `alembic downgrade base` xóa sạch (reversible). App suite: **20 passed, 2 xfailed** (không ảnh hưởng).
+- **Lưu ý bàn giao:** app vẫn gọi `create_all()` lúc khởi động. Với DB hiện có: chạy **`alembic stamp head`** 1 lần để đánh dấu baseline, rồi các migration W6/W8 áp lên trên. Migration Postgres-compatible.
+- **Files:** `alembic.ini`, `migrations/*`, `requirements-dev.txt`.

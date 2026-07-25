@@ -1,3 +1,4 @@
 # Development / test dependencies (not needed at runtime)
 -r requirements.txt
 pytest>=8.0
+alembic>=1.13
