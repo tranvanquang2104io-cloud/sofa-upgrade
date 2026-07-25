@@ -17,7 +17,16 @@ from app.config.database import db
 # ---------------------------------------------------------------------------
 
 def set_user_context(user: User):
-    """Persist user identity into the session after a successful login."""
+    """Persist user identity into the session after a successful login.
+
+    The session is cleared first (rotating it) so that any value an attacker may
+    have planted in a pre-authentication session cannot survive login — mitigating
+    session fixation (AUDIT S4). The language preference is preserved.
+    """
+    lang = session.get('lang')
+    session.clear()
+    if lang:
+        session['lang'] = lang
     session['user_id']    = str(user.id)
     session['company_id'] = str(user.company_id)
     session['store_id']   = str(user.store_id) if user.store_id else None

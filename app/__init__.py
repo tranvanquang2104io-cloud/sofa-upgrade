@@ -40,7 +40,17 @@ def create_app(config_name=None):
     
     # Load configuration
     app.config.from_object(config[config_name])
-    
+
+    # Fail fast in production if SECRET_KEY was not overridden via environment.
+    # (Dev/test intentionally keep a default; production MUST set its own.)
+    if config_name == 'production':
+        _default_key = 'dev-secret-key-change-in-production'
+        if app.config.get('SECRET_KEY') in (None, '', _default_key):
+            raise RuntimeError(
+                "SECRET_KEY must be set via the environment in production "
+                "(refusing to start with the built-in development key)."
+            )
+
     # Create upload directories
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['TEMPLATES_FOLDER'], exist_ok=True)
