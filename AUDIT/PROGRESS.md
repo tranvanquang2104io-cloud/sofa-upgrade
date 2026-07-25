@@ -5,11 +5,16 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟡 Đang chạy — sắp vào Giai đoạn 5 (loop refactor)
+**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 5 (loop refactor) — đã xong W2,W7,W19,W3,W4
 
 **Điểm resume (đọc khi khởi động lại):** GĐ2/3/4 **đã xong**. Có `03-expert-review.md` (panel UX/Code/DBA/Security/Perf) + `04-backlog.md` (W1–W21 ưu tiên) + `NEEDS-REVIEW.md` (NR1 B6, NR2 cascade — KHÔNG tự đổi). Việc TIẾP THEO = **GĐ5 loop refactor**, theo thứ tự trong `04-backlog.md`:
 `W2 (IDOR create_order) → W7 (validate qty≥0) → W19 (xóa route trùng) → W3 (SECRET_KEY fail-fast) → W4 (session rotate) → W1 (CSRF)` rồi schema `W5 Alembic → W6 unique per-tenant → W8 index` ...
-**Bắt đầu với W2** (đã có test xfail `test_create_order_rejects_cross_tenant_customer` — fix xong thì bỏ `xfail`). Mỗi W = 1 vòng PLAN→TEST→FIX→VERIFY→COMMIT→LOG; giữ suite xanh; backup+rollback trước migration.
+**ĐÃ XONG:** W2 (IDOR create_order), W7 (qty/price ≥ 0), W19 (route trùng), W3 (SECRET_KEY fail-fast), W4 (session rotation). Suite: **18 passed, 2 xfailed** (còn B3→W6, B6→NR1). Xem `CHANGELOG.md`.
+
+**TIẾP THEO:**
+1. **W1 — CSRF** (lớn, cẩn thận): thêm `Flask-WTF` vào requirements, `CSRFProtect(app)` trong factory, `{{ csrf_token() }}` (hidden input) vào MỌI `<form method=post>` trong `templates/`, và header `X-CSRFToken` cho các `fetch(POST)` trong JS (`static/js/main.js` + inline). `TestingConfig.WTF_CSRF_ENABLED=False` nên test cũ vẫn xanh; thêm 1 test bật CSRF chứng minh POST thiếu token bị 400. Nếu quá rủi ro/không VERIFY được trong 1 vòng → chia nhỏ hoặc revert, ghi log.
+2. **W5 → W6 → W8 (schema):** dựng Alembic (`pip install alembic`, `alembic init migrations`, cấu hình lấy URL từ config, env.py target_metadata=db.metadata), baseline migration; rồi migration đổi unique doc-number sang `(company_id, number)` + bỏ 4 filter toàn cục (bỏ xfail B3 `test_same_quotation_number_allowed_across_tenants`); rồi index tổ hợp. **Postgres-compatible, rollback được.**
+Mỗi W = 1 vòng PLAN→TEST→FIX→VERIFY→COMMIT→LOG.
 
 ---
 
