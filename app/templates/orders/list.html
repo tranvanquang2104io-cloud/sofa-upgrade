@@ -70,6 +70,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            {% include '_pagination.html' %}
         {% else %}
             <p class="text-muted">{{ t('No orders yet.') }} <a href="{{ url_for('dashboard.create_order') }}">{{ t('Create new') }}</a></p>
         {% endif %}

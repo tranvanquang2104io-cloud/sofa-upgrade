@@ -1,0 +1,22 @@
+{# Reusable pagination nav. Expects `pagination` (a Flask-SQLAlchemy Pagination).
+   Optional `extra_query` dict preserves other query params (e.g. store_id, search). #}
+{% if pagination and pagination.pages and pagination.pages > 1 %}
+{% set _q = extra_query if extra_query is defined else {} %}
+<nav aria-label="Pagination" class="mt-3">
+  <ul class="pagination justify-content-center mb-0">
+    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+      <a class="page-link" href="?{% for k, v in _q.items() %}{{ k }}={{ v }}&{% endfor %}page={{ pagination.prev_num or 1 }}">
+        <i class="bi bi-chevron-left"></i> {{ t('Previous') }}
+      </a>
+    </li>
+    <li class="page-item disabled">
+      <span class="page-link">{{ pagination.page }} / {{ pagination.pages }} ({{ pagination.total }})</span>
+    </li>
+    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+      <a class="page-link" href="?{% for k, v in _q.items() %}{{ k }}={{ v }}&{% endfor %}page={{ pagination.next_num or pagination.page }}">
+        {{ t('Next') }} <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}

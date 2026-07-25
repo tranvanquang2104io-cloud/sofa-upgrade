@@ -522,24 +522,22 @@ def list_orders():
     """List orders — scoped to accessible stores"""
     company_id = get_current_company_id()
     page = request.args.get('page', 1, type=int)
+    per_page = current_app.config.get('ITEMS_PER_PAGE', 20)
 
-    order_service = OrderService()
-    if is_company_admin():
-        orders = order_service.list_orders_for_company(company_id, page=page, per_page=20)
-    else:
+    from app.models.models import Order as _Order
+    query = _Order.query.filter(_Order.company_id == company_id, _Order.is_active == True)
+    if not is_company_admin():
         accessible_ids = get_accessible_store_ids(company_id)
-        from app.models.models import Order as _Order
-        offset = (page - 1) * 20
-        orders = _Order.query.filter(
-            _Order.company_id == company_id,
-            _Order.store_id.in_(accessible_ids),
-            _Order.is_active == True
-        ).options(
-            joinedload(_Order.customer),
-            joinedload(_Order.lifecycle),
-        ).order_by(_Order.created_at.desc()).limit(20).offset(offset).all()
+        query = query.filter(_Order.store_id.in_(accessible_ids))
+    query = query.options(
+        joinedload(_Order.customer),
+        joinedload(_Order.lifecycle),
+    ).order_by(_Order.created_at.desc())
 
-    return render_template('orders/list.html', orders=orders, page=page)
+    # error_out=False → an out-of-range page renders empty instead of 404.
+    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    return render_template('orders/list.html', orders=pagination.items,
+                           pagination=pagination, page=page)
 
 
 @dashboard_bp.route('/orders/create', methods=['GET', 'POST'])

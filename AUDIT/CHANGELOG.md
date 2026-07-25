@@ -106,3 +106,9 @@
 - **Test:** `test_list_views.py` — `/orders` render 200 có/không có đơn.
 - **Suite:** **25 passed, 1 xfailed**.
 - **Files:** `app/repositories/repository.py`, `app/routes/dashboard_routes.py`, `tests/test_list_views.py`.
+
+## W18 — Phân trang thật cho danh sách đơn hàng  ✅
+- **Finding:** PF2 (Medium). `list_orders` dùng `limit/offset` thủ công, không tổng số/next/prev.
+- **Fix:** hợp nhất 2 nhánh (admin/non-admin) thành 1 query + `db.paginate(..., error_out=False)`; dùng `ITEMS_PER_PAGE`. Partial dùng lại `templates/_pagination.html` (total + prev/next, giữ query params). Trang ngoài phạm vi → render rỗng (không 404/500).
+- **Test:** `test_orders_list_out_of_range_page_does_not_crash`. Suite: **26 passed, 1 xfailed**.
+- **Files:** `app/routes/dashboard_routes.py`, `app/templates/orders/list.html`, `app/templates/_pagination.html`, `tests/test_list_views.py`. *(list_customers: xem W18b nếu làm.)*
