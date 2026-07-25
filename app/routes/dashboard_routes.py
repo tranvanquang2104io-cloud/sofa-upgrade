@@ -15,7 +15,9 @@ from app.services.services import (
     MaterialService, SupplierService,
 )
 from app.repositories.repository import (
-    StoreRepository, CustomerRepository, OrderRepository, DocumentRepository
+    StoreRepository, CustomerRepository, OrderRepository, DocumentRepository,
+    QuotationRepository, ContractRepository, HandoverRecordRepository,
+    PaymentReportRepository, LifecycleStatusRepository, DocumentTemplateRepository,
 )
 from app.models import Order, Document
 from app.config.database import db
@@ -213,7 +215,6 @@ def company_settings():
 def list_templates():
     """List document templates for the current company"""
     company_id = get_current_company_id()
-    from app.repositories.repository import DocumentTemplateRepository
     repo = DocumentTemplateRepository()
     templates = repo.get_for_company(company_id)
     # Also include inactive ones
@@ -639,7 +640,6 @@ def create_quotation(order_id):
         try:
             # Check for duplicate quotation number
             quotation_number = request.form.get('quotation_number', '').strip()
-            from app.repositories.repository import QuotationRepository
             quotation_repo = QuotationRepository()
             from app.models.models import Quotation
             existing = quotation_repo.get_by_company_and_number(company_id, quotation_number)
@@ -871,14 +871,12 @@ def create_contract(order_id):
             contract_service = ContractService()
             
             # Create contract with items
-            from app.repositories.repository import ContractRepository
             contract_repo = ContractRepository()
             
             quotation_id = request.form.get('quotation_id') or None
             
             # If items are provided from form, use them; otherwise try to copy from quotation
             if not items and quotation_id:
-                from app.repositories.repository import QuotationRepository
                 quotation = QuotationRepository().get_by_id(quotation_id)
                 if quotation and quotation.items:
                     items = list(quotation.items)
@@ -907,7 +905,6 @@ def create_contract(order_id):
             )
             
             # Update lifecycle
-            from app.repositories.repository import LifecycleStatusRepository
             lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
             lifecycle.contract_created = True
             lifecycle.contract_created_at = datetime.utcnow()
@@ -942,7 +939,6 @@ def view_contract(contract_id):
     """View contract details"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import ContractRepository
     contract_repo = ContractRepository()
     contract = contract_repo.get_by_id(contract_id)
     
@@ -962,7 +958,6 @@ def edit_contract(contract_id):
     """Edit contract - only if not signed"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import ContractRepository
     contract_repo = ContractRepository()
     contract = contract_repo.get_by_id(contract_id)
     
@@ -1040,7 +1035,6 @@ def sign_contract(contract_id):
     """Mark contract as signed"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import ContractRepository
     contract_repo = ContractRepository()
     contract = contract_repo.get_by_id(contract_id)
     
@@ -1065,7 +1059,6 @@ def cancel_contract(contract_id):
     """Cancel contract"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import ContractRepository
     contract_repo = ContractRepository()
     contract = contract_repo.get_by_id(contract_id)
     
@@ -1106,7 +1099,6 @@ def get_contract_api(contract_id):
     """Return contract data as JSON (used by payment form to load items)"""
     company_id = get_current_company_id()
 
-    from app.repositories.repository import ContractRepository
     contract_repo = ContractRepository()
     contract = contract_repo.get_by_id(contract_id)
 
@@ -1130,7 +1122,6 @@ def cancel_order(order_id):
     """Cancel order"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import OrderRepository
     order_repo = OrderRepository()
     order = order_repo.get_by_id(order_id)
     
@@ -1296,7 +1287,6 @@ def confirm_handover(handover_id):
     """Mark handover as confirmed"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import HandoverRecordRepository
     handover_repo = HandoverRecordRepository()
     handover = handover_repo.get_by_id(handover_id)
     
@@ -1321,7 +1311,6 @@ def view_handover(handover_id):
     """View handover record details"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import HandoverRecordRepository
     handover_repo = HandoverRecordRepository()
     handover = handover_repo.get_by_id(handover_id)
     
@@ -1338,7 +1327,6 @@ def edit_handover(handover_id):
     """Edit handover record"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import HandoverRecordRepository
     handover_repo = HandoverRecordRepository()
     handover = handover_repo.get_by_id(handover_id)
     
@@ -1437,7 +1425,6 @@ def cancel_handover(handover_id):
     """Cancel handover record"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import HandoverRecordRepository
     handover_repo = HandoverRecordRepository()
     handover = handover_repo.get_by_id(handover_id)
     
@@ -1620,7 +1607,6 @@ def skip_advance_payment(order_id):
         return redirect(url_for('dashboard.view_order', order_id=order_id))
 
     try:
-        from app.repositories.repository import LifecycleStatusRepository
         lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
         lifecycle.advance_skipped = True
         lifecycle.advance_skipped_at = datetime.utcnow()
@@ -1644,7 +1630,6 @@ def confirm_payment(payment_id):
     """Mark payment as confirmed"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import PaymentReportRepository
     payment_repo = PaymentReportRepository()
     payment = payment_repo.get_by_id(payment_id)
     
@@ -1669,7 +1654,6 @@ def view_payment(payment_id):
     """View payment report details"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import PaymentReportRepository
     payment_repo = PaymentReportRepository()
     payment = payment_repo.get_by_id(payment_id)
     
@@ -1686,7 +1670,6 @@ def edit_payment(payment_id):
     """Edit payment report"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import PaymentReportRepository
     payment_repo = PaymentReportRepository()
     payment = payment_repo.get_by_id(payment_id)
     
@@ -1748,7 +1731,6 @@ def cancel_payment(payment_id):
     """Cancel payment report"""
     company_id = get_current_company_id()
     
-    from app.repositories.repository import PaymentReportRepository
     payment_repo = PaymentReportRepository()
     payment = payment_repo.get_by_id(payment_id)
     
@@ -1780,7 +1762,6 @@ def generate_document(doc_type, ref_id):
     
     try:
         if doc_type == 'quotation':
-            from app.repositories.repository import QuotationRepository
             quotation = QuotationRepository().get_by_id(ref_id)
             if not quotation or str(quotation.order.company_id) != str(company_id):
                 flash(t('Quotation not found'), 'error')
@@ -1789,7 +1770,6 @@ def generate_document(doc_type, ref_id):
             document = document_service.generate_quotation_document(ref_id, quotation.order_id, company_id, doc_format)
         
         elif doc_type == 'contract':
-            from app.repositories.repository import ContractRepository
             contract = ContractRepository().get_by_id(ref_id)
             if not contract or str(contract.order.company_id) != str(company_id):
                 flash(t('Contract not found'), 'error')
@@ -1801,7 +1781,6 @@ def generate_document(doc_type, ref_id):
             )
         
         elif doc_type == 'handover':
-            from app.repositories.repository import HandoverRecordRepository
             handover = HandoverRecordRepository().get_by_id(ref_id)
             if not handover or str(handover.order.company_id) != str(company_id):
                 flash(t('Handover record not found'), 'error')
@@ -1810,7 +1789,6 @@ def generate_document(doc_type, ref_id):
             document = document_service.generate_delivery_document(ref_id, handover.order_id, company_id, doc_format)
         
         elif doc_type == 'payment':
-            from app.repositories.repository import PaymentReportRepository
             payment = PaymentReportRepository().get_by_id(ref_id)
             if not payment or str(payment.order.company_id) != str(company_id):
                 flash(t('Payment report not found'), 'error')
@@ -1819,7 +1797,6 @@ def generate_document(doc_type, ref_id):
             document = document_service.generate_payment_document(ref_id, payment.order_id, company_id, doc_format)
             
         elif doc_type == 'payment_request':
-            from app.repositories.repository import OrderRepository
             order = OrderRepository().get_by_id(ref_id)
             if not order or str(order.company_id) != str(company_id):
                 flash(t('Order not found'), 'error')
@@ -1933,7 +1910,6 @@ def get_contract_detail(contract_id):
     """Get contract details as JSON - for AJAX calls"""
     company_id = get_current_company_id()
     try:
-        from app.repositories.repository import ContractRepository
         contract = ContractRepository().get_by_id(contract_id)
         if not contract or str(contract.order.company_id) != str(company_id):
             return {'error': 'Contract not found'}, 404
@@ -1961,7 +1937,6 @@ def get_quotation_detail(quotation_id):
     company_id = get_current_company_id()
     
     try:
-        from app.repositories.repository import QuotationRepository
         quotation_repo = QuotationRepository()
         quotation = quotation_repo.get_by_id(quotation_id)
         

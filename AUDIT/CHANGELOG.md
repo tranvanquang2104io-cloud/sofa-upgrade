@@ -92,3 +92,10 @@
 - **Giữ hành vi:** kết quả số học không đổi (`test_quotation_money.py` là lưới an toàn); chuẩn hóa `name.strip()` (bỏ khoảng trắng thừa) — thay đổi vô hại.
 - **Test:** thêm `test_negative_quantity_rejected_on_contract`. Suite: **23 passed, 1 xfailed**.
 - **Files:** `app/routes/dashboard_routes.py`, `tests/test_contract_number.py`.
+
+## W11 (một phần an toàn) — Gom import repository lên đầu module  ✅
+- **Finding:** A5 (Low). ~60 import cục bộ lặp trong hàm.
+- **Fix (phần AN TOÀN):** thêm 6 repo (Quotation/Contract/Handover/Payment/Lifecycle/DocumentTemplate) vào import đầu `dashboard_routes.py`; xóa **27 dòng import inline trùng** (không alias). Giữ import có alias (`... as _X`) và import model (nhiều alias `_CompanyQ/_Store/...`) để tránh sửa hàng loạt điểm dùng.
+- **Verify:** `import app.routes.dashboard_routes` OK; suite **23 passed, 1 xfailed**.
+- **HOÃN (ghi rõ lý do):** (a) thu hẹp 47 `except Exception` — đa số bọc cả DB + parse trong 1 try, đổi sẽ khiến lỗi bất ngờ nhảy 500 thay vì flash; **đường lỗi không có test → không verify an toàn được** → để nguyên (đưa vào "Đề xuất tương lai"). (b) gom import model có alias — rủi ro/nhiều điểm dùng, giá trị thấp. → xem FINAL-REPORT.
+- **Files:** `app/routes/dashboard_routes.py`.
