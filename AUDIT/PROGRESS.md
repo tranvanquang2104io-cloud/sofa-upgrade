@@ -7,7 +7,12 @@
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
 **Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 2 (đang dựng test & bug catalog)
 
-**Điểm resume (đọc khi khởi động lại):** GĐ2 đang mở. Harness `pytest` đã chạy (9 test xanh: smoke + tenant-isolation). Việc TIẾP THEO: đọc shape POST trong `app/routes/dashboard_routes.py` cho luồng tạo Order/Quotation/Contract/Handover/Payment → viết test luồng E2E + test tính tiền/VAT + test state machine + IDOR trên POST. Xem checklist "Đang chờ kiểm thử" trong `02-bug-catalog.md`.
+**Điểm resume (đọc khi khởi động lại):** GĐ2 đang mở. 13 test (11 xanh, 2 xfail = B2 & B3). Đã xác nhận: money math đúng cho input dương; B2 (qty âm), B3 (số hiệu unique toàn cục). Việc TIẾP THEO:
+1. **create_order access control:** `dashboard_routes.py:510` dùng `customer_repo.get_by_id(customer_id)` — kiểm xem có lọc company không (nghi IDOR: user cty A tạo order tham chiếu customer cty B nếu get_by_id không scoped). Viết test.
+2. **State machine:** create_contract có bắt buộc quotation đã duyệt không? (đọc 816-1070). approve_quotation có chặn re-approve/approve khi canceled? create_payment `final` khi chưa handover?
+3. **Role permission:** login `staff` (role user) gọi endpoint company-admin (tạo store/user, /settings/company) → phải 403/redirect.
+4. **POST IDOR:** cancel/approve/sign/confirm với id công ty khác.
+Sau đó chốt GĐ2 → sang **GĐ3** (hội đồng chuyên gia). Xem checklist trong `02-bug-catalog.md`.
 
 ---
 

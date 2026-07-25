@@ -101,6 +101,26 @@ def seed(app):
 
 
 @pytest.fixture()
+def seeded_order(app, seed):
+    """Create an Order in the seeded ACME company/store; return ids incl. order_id."""
+    from app.config import db
+    from app.models import Order
+
+    with app.app_context():
+        order = Order(
+            company_id=seed["company_id"],
+            store_id=seed["store_id"],
+            customer_id=seed["customer_id"],
+            order_code="ORD-001",
+            title="Reupholster sofa",
+        )
+        db.session.add(order)
+        db.session.commit()
+        seed = {**seed, "order_id": str(order.id)}
+    return seed
+
+
+@pytest.fixture()
 def login(client, seed):
     """Return a helper that logs a seeded user in via the real login flow."""
     def _login(username="admin", password="secret123", company_code=None):
