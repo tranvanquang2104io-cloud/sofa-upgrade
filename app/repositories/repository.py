@@ -8,6 +8,7 @@ from app.models import (
     MaterialUnit, MaterialCategory, Supplier, Material, MaterialStock,
 )
 from sqlalchemy import and_, desc
+from sqlalchemy.orm import joinedload
 from datetime import datetime
 import logging
 
@@ -266,10 +267,12 @@ class OrderRepository(BaseRepository):
         return query.all()
     
     def get_orders_for_company(self, company_id, limit=None, offset=None):
-        """Get all orders for a company"""
-        query = self.model.query.filter_by(company_id=company_id, is_active=True).order_by(
-            desc(self.model.created_at)
-        )
+        """Get all orders for a company (eager-loads customer + lifecycle to avoid
+        N+1 in the list view — AUDIT W17/PF1)."""
+        query = self.model.query.filter_by(company_id=company_id, is_active=True).options(
+            joinedload(self.model.customer),
+            joinedload(self.model.lifecycle),
+        ).order_by(desc(self.model.created_at))
         if limit:
             query = query.limit(limit)
         if offset:

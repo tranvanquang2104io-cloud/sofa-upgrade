@@ -99,3 +99,10 @@
 - **Verify:** `import app.routes.dashboard_routes` OK; suite **23 passed, 1 xfailed**.
 - **HOÃN (ghi rõ lý do):** (a) thu hẹp 47 `except Exception` — đa số bọc cả DB + parse trong 1 try, đổi sẽ khiến lỗi bất ngờ nhảy 500 thay vì flash; **đường lỗi không có test → không verify an toàn được** → để nguyên (đưa vào "Đề xuất tương lai"). (b) gom import model có alias — rủi ro/nhiều điểm dùng, giá trị thấp. → xem FINAL-REPORT.
 - **Files:** `app/routes/dashboard_routes.py`.
+
+## W17 — Chống N+1 ở danh sách đơn hàng  ✅
+- **Finding:** PF1 (Medium). `orders/list.html` truy cập `order.customer.name` + `order.lifecycle.*` mỗi dòng → lazy-load N+1.
+- **Fix:** `joinedload(customer, lifecycle)` ở `OrderRepository.get_orders_for_company` (đường company_admin) **và** ở query nhánh non-admin trong `list_orders`.
+- **Test:** `test_list_views.py` — `/orders` render 200 có/không có đơn.
+- **Suite:** **25 passed, 1 xfailed**.
+- **Files:** `app/repositories/repository.py`, `app/routes/dashboard_routes.py`, `tests/test_list_views.py`.

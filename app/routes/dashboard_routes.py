@@ -21,6 +21,7 @@ from app.repositories.repository import (
 )
 from app.models import Order, Document
 from app.config.database import db
+from sqlalchemy.orm import joinedload
 from datetime import datetime, date
 import logging
 import os
@@ -533,6 +534,9 @@ def list_orders():
             _Order.company_id == company_id,
             _Order.store_id.in_(accessible_ids),
             _Order.is_active == True
+        ).options(
+            joinedload(_Order.customer),
+            joinedload(_Order.lifecycle),
         ).order_by(_Order.created_at.desc()).limit(20).offset(offset).all()
 
     return render_template('orders/list.html', orders=orders, page=page)
