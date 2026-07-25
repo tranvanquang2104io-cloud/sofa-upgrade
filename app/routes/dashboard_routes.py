@@ -2005,7 +2005,6 @@ def get_contract_detail(contract_id):
 
 
 @dashboard_bp.route('/api/quotations/<quotation_id>')
-@dashboard_bp.route('/api/quotations/<quotation_id>')
 @login_required
 def get_quotation_detail(quotation_id):
     """Get quotation details as JSON - for AJAX calls"""
