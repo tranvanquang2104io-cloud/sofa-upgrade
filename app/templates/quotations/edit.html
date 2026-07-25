@@ -62,8 +62,8 @@
                                         <td class="stt-cell text-center align-middle">{{ loop.index }}</td>
                                         <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="{{ item.name }}" placeholder="Item name"></td>
                                         <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="{{ item.get('unit', 'pcs') }}" placeholder="pcs"></td>
-                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="{{ item.quantity }}" step="0.01"></td>
-                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1"></td>
+                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="{{ item.quantity }}" step="0.01" min="0"></td>
+                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1" min="0"></td>
                                         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly value="{{ item.get('total', 0)|int }}"></td>
                                         <td>
                                             {% if item.get('image_path') %}
@@ -289,8 +289,8 @@ function addRow() {
         <td class="stt-cell text-center align-middle"></td>
         <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / work"></td>
         <td><input type="text" class="form-control form-control-sm" name="item_unit[]" placeholder="pcs" value="pcs"></td>
-        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1"></td>
-        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1"></td>
+        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1" min="0"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1" min="0"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
         <td>
             <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">

@@ -125,7 +125,7 @@
                                         <td>{{ item.get('unit', 'Cái') }}</td>
                                         <td><input type="number" class="form-control form-control-sm delivered-qty" name="item_delivered_qty[]" value="{{ item.quantity }}" step="0.01" min="0"></td>
                                         <td><input type="number" class="form-control form-control-sm accepted-qty" name="item_accepted_qty[]" value="{{ item.quantity }}" step="0.01" min="0"></td>
-                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1"></td>
+                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1" min="0"></td>
                                         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
                                         <td>
                                             <select class="form-select form-select-sm status-select" name="item_status[]">
@@ -336,7 +336,7 @@ function addItemRow() {
         <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="Cái" placeholder="Unit"></td>
         <td><input type="number" class="form-control form-control-sm delivered-qty" name="item_delivered_qty[]" value="1" step="0.01" min="0"></td>
         <td><input type="number" class="form-control form-control-sm accepted-qty" name="item_accepted_qty[]" value="1" step="0.01" min="0"></td>
-        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" step="1" placeholder="0"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" step="1" placeholder="0" min="0"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
         <td>
             <select class="form-select form-select-sm" name="item_status[]">

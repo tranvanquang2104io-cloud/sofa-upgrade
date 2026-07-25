@@ -112,3 +112,11 @@
 - **Fix:** hợp nhất 2 nhánh (admin/non-admin) thành 1 query + `db.paginate(..., error_out=False)`; dùng `ITEMS_PER_PAGE`. Partial dùng lại `templates/_pagination.html` (total + prev/next, giữ query params). Trang ngoài phạm vi → render rỗng (không 404/500).
 - **Test:** `test_orders_list_out_of_range_page_does_not_crash`. Suite: **26 passed, 1 xfailed**.
 - **Files:** `app/routes/dashboard_routes.py`, `app/templates/orders/list.html`, `app/templates/_pagination.html`, `tests/test_list_views.py`. *(list_customers: xem W18b nếu làm.)*
+
+## W15 (một phần) — `min="0"` cho input số lượng/đơn giá  ✅
+- **Finding:** U2 (Medium). Input số cho phép nhập âm ở client (mirror B2 phía server).
+- **Fix:** thêm `min="0"` vào 22 input `item_quantity[]`/`item_price[]` (7 template) còn thiếu.
+- **Test:** `test_create_pages_render.py` — trang tạo quotation/order render 200 sau khi sửa.
+- **Suite:** **28 passed, 1 xfailed**.
+- **CÒN LẠI (W15b, UX — ghi future):** rà & thêm `confirm()` cho các form hủy/xóa còn thiếu; không có test tự động cho confirm → làm thủ công/khi review.
+- **Files:** 7 template create/edit, `tests/test_create_pages_render.py`.
