@@ -3,7 +3,7 @@ Database models for SaaS application
 """
 from datetime import datetime
 from app.config.database import db
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.types import GUID
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 
@@ -12,7 +12,7 @@ class Company(db.Model):
     """Company/Tenant model"""
     __tablename__ = 'companies'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_code = db.Column(db.String(50), unique=True, nullable=False, index=True)
     name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), nullable=False)
@@ -52,8 +52,8 @@ class Store(db.Model):
     """Store model - each company can have multiple stores"""
     __tablename__ = 'stores'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     store_code = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     manager_name = db.Column(db.String(255))
@@ -91,10 +91,10 @@ class User(db.Model):
     ROLE_STORE_ADMIN   = 'store_admin'
     ROLE_USER          = 'user'
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     # NULL for company_admin; required for store_admin and user
-    store_id = db.Column(UUID(as_uuid=True), db.ForeignKey('stores.id'), nullable=True, index=True)
+    store_id = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)
     username = db.Column(db.String(100), nullable=False, index=True)
     email = db.Column(db.String(255), nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -148,9 +148,9 @@ class Customer(db.Model):
     """Customer model"""
     __tablename__ = 'customers'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
-    store_id = db.Column(UUID(as_uuid=True), db.ForeignKey('stores.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    store_id = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=False, index=True)
     customer_code = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(255), nullable=False, index=True)
     phone = db.Column(db.String(20))
@@ -181,8 +181,8 @@ class LifecycleStatus(db.Model):
     """Order lifecycle status tracking"""
     __tablename__ = 'lifecycle_statuses'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('orders.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     
     # Lifecycle steps
     quotation_created = db.Column(db.Boolean, default=False)
@@ -223,10 +223,10 @@ class Order(db.Model):
     """Order model - represents customer lifecycle"""
     __tablename__ = 'orders'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
-    store_id = db.Column(UUID(as_uuid=True), db.ForeignKey('stores.id'), nullable=False, index=True)
-    customer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('customers.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    store_id = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=False, index=True)
+    customer_id = db.Column(GUID(), db.ForeignKey('customers.id'), nullable=False, index=True)
     
     order_code = db.Column(db.String(50), nullable=False)
     title = db.Column(db.String(255), nullable=False)
@@ -275,8 +275,8 @@ class Quotation(db.Model):
     """Quotation model"""
     __tablename__ = 'quotations'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('orders.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     
     quotation_number = db.Column(db.String(50), nullable=False, unique=True)
     quotation_date = db.Column(db.Date, nullable=False)
@@ -326,9 +326,9 @@ class Contract(db.Model):
     """Contract model"""
     __tablename__ = 'contracts'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('orders.id'), nullable=False, index=True)
-    quotation_id = db.Column(UUID(as_uuid=True), db.ForeignKey('quotations.id'))
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
+    quotation_id = db.Column(GUID(), db.ForeignKey('quotations.id'))
     
     contract_number = db.Column(db.String(50), nullable=False, unique=True)
     contract_date = db.Column(db.Date, nullable=False)
@@ -387,8 +387,8 @@ class HandoverRecord(db.Model):
     """Handover Record (Biên Bản Bàn Giao) - confirms customer acceptance of product/service"""
     __tablename__ = 'handover_records'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('orders.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     
     report_number = db.Column(db.String(50), nullable=False, unique=True)
     report_date = db.Column(db.Date, nullable=False)
@@ -449,8 +449,8 @@ class PaymentReport(db.Model):
     """Payment report model"""
     __tablename__ = 'payment_reports'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('orders.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     
     report_number = db.Column(db.String(50), nullable=False, unique=True)
     payment_type = db.Column(db.String(50), nullable=False)  # 'advance' or 'final'
@@ -511,8 +511,8 @@ class DocumentTemplate(db.Model):
     """Document template model - stores RTF templates"""
     __tablename__ = 'document_templates'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     
     name = db.Column(db.String(255), nullable=False)
     document_type = db.Column(db.String(50), nullable=False)  # quotation, contract, delivery, payment
@@ -537,14 +537,14 @@ class Document(db.Model):
     """Generated document model"""
     __tablename__ = 'documents'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
-    order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('orders.id'), nullable=False, index=True)
-    template_id = db.Column(UUID(as_uuid=True), db.ForeignKey('document_templates.id'))
-    quotation_id = db.Column(UUID(as_uuid=True), db.ForeignKey('quotations.id'))
-    contract_id = db.Column(UUID(as_uuid=True), db.ForeignKey('contracts.id'))
-    handover_record_id = db.Column(UUID(as_uuid=True), db.ForeignKey('handover_records.id'))
-    payment_report_id = db.Column(UUID(as_uuid=True), db.ForeignKey('payment_reports.id'))
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
+    template_id = db.Column(GUID(), db.ForeignKey('document_templates.id'))
+    quotation_id = db.Column(GUID(), db.ForeignKey('quotations.id'))
+    contract_id = db.Column(GUID(), db.ForeignKey('contracts.id'))
+    handover_record_id = db.Column(GUID(), db.ForeignKey('handover_records.id'))
+    payment_report_id = db.Column(GUID(), db.ForeignKey('payment_reports.id'))
     
     document_name = db.Column(db.String(255), nullable=False)
     document_type = db.Column(db.String(50), nullable=False)  # quotation, contract, delivery, payment
@@ -566,8 +566,8 @@ class MaterialUnit(db.Model):
     """Unit of measure for materials — scoped per company."""
     __tablename__ = 'material_units'
 
-    id         = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    id         = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     name         = db.Column(db.String(50), nullable=False)    # e.g. "m²", "kg", "cái", "cuộn"
     abbreviation = db.Column(db.String(20))                    # Optional short form displayed on forms
     description  = db.Column(db.String(255))
@@ -588,8 +588,8 @@ class MaterialCategory(db.Model):
     """Category / group for materials — scoped per company."""
     __tablename__ = 'material_categories'
 
-    id         = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    id         = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     name        = db.Column(db.String(100), nullable=False)   # e.g. "Vải bọc", "Da", "Mút xốp", "Gỗ khung"
     description = db.Column(db.Text)
     sort_order  = db.Column(db.Integer, default=0)
@@ -610,8 +610,8 @@ class Supplier(db.Model):
     """Supplier / Nhà cung cấp — scoped per company."""
     __tablename__ = 'suppliers'
 
-    id         = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
+    id         = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
 
     supplier_code   = db.Column(db.String(50), nullable=False)   # e.g. NCC-001
     name            = db.Column(db.String(255), nullable=False, index=True)
@@ -641,11 +641,11 @@ class Material(db.Model):
     """Raw material / nguyên vật liệu — company-level catalog with optional per-store stock."""
     __tablename__ = 'materials'
 
-    id          = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id  = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
-    category_id = db.Column(UUID(as_uuid=True), db.ForeignKey('material_categories.id'), nullable=True, index=True)
-    unit_id     = db.Column(UUID(as_uuid=True), db.ForeignKey('material_units.id'), nullable=True, index=True)
-    supplier_id = db.Column(UUID(as_uuid=True), db.ForeignKey('suppliers.id'), nullable=True, index=True)
+    id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id  = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    category_id = db.Column(GUID(), db.ForeignKey('material_categories.id'), nullable=True, index=True)
+    unit_id     = db.Column(GUID(), db.ForeignKey('material_units.id'), nullable=True, index=True)
+    supplier_id = db.Column(GUID(), db.ForeignKey('suppliers.id'), nullable=True, index=True)
 
     material_code = db.Column(db.String(50), nullable=False)
     name          = db.Column(db.String(255), nullable=False, index=True)
@@ -712,10 +712,10 @@ class MaterialStock(db.Model):
     """
     __tablename__ = 'material_stock'
 
-    id          = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    material_id = db.Column(UUID(as_uuid=True), db.ForeignKey('materials.id'), nullable=False, index=True)
-    company_id  = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False, index=True)
-    store_id    = db.Column(UUID(as_uuid=True), db.ForeignKey('stores.id'), nullable=True, index=True)
+    id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    material_id = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
+    company_id  = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    store_id    = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)
 
     current_quantity = db.Column(db.Numeric(10, 2), default=0, nullable=False)
     notes            = db.Column(db.Text)
@@ -732,7 +732,7 @@ class MasterAdmin(db.Model):
     """System-level master administrator — not tied to any company."""
     __tablename__ = 'master_admins'
 
-    id            = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id            = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     username      = db.Column(db.String(100), unique=True, nullable=False, index=True)
     email         = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)

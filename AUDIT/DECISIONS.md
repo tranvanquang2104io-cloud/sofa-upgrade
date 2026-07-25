@@ -1,0 +1,10 @@
+# AUDIT — DECISIONS LOG
+
+> Mọi quyết định tự chủ (chế độ qua đêm) được ghi ở đây kèm lý do. Chọn phương án an toàn/bảo tồn nhất khi mập mờ.
+
+| # | Ngày | Bối cảnh | Quyết định | Lý do |
+|---|------|----------|-----------|-------|
+| D1 | 2026-07-25 | Chủ dự án duyệt 3 câu hỏi mở | (1) Số hiệu chứng từ → unique theo `(company_id, number)` qua migration rollback được; (2) `advance_skipped`: GIỮ nguyên logic dòng tiền, chỉ ghi luật suy luận, không đổi ý nghĩa; (3) Postgres cho prod, SQLite cho test, migration phải tương thích Postgres | Theo phê duyệt chính thức của chủ dự án |
+| D2 | 2026-07-25 | Harness test cần DB nhưng không có Postgres/Docker | Dùng SQLite **file tạm theo từng test** (không dùng `:memory:`) | `:memory:` cấp DB riêng cho mỗi connection → Flask-SQLAlchemy mở nhiều connection sẽ thấy DB rỗng/false-fail. File tạm chia sẻ 1 DB, sạch từng test. |
+| D3 | 2026-07-25 | pytest chưa cài | Cài `pytest` vào venv + tạo `requirements-dev.txt` | Hạ tầng test là lưới an toàn được phép dựng; không phải dịch vụ trả phí |
+| D4 | 2026-07-25 | Harness lỗi trên SQLite: `postgresql.UUID` gọi `value.hex` khi nhận str (login truyền `session['user_id']` dạng str) | Thay `postgresql.UUID(as_uuid=True)` bằng `GUID` TypeDecorator (`app/models/types.py`): PostgreSQL vẫn ra `uuid` native (DDL & dữ liệu KHÔNG đổi), backend khác lưu CHAR(36) | Cần để chạy test trên SQLite; an toàn cho prod (Postgres không đổi schema). **Cần verify smoke trên Postgres thật trước khi merge** — xem FINAL-REPORT |
