@@ -2,7 +2,7 @@
 
 **Nhánh:** `refactor/full-audit` (tách từ `main` @ `22fb9eb`) · **Ngày:** 2026-07-25 → 2026-07-26
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner) — chạy tự chủ qua đêm theo spec đã duyệt.
-**Trạng thái:** ✅ Bảo mật, toàn vẹn dữ liệu/schema, refactor lõi, và 1 tối ưu perf **đã xong & verify**. Còn lại: đánh bóng UX + vài perf (liệt kê §7). **Chưa merge** — chờ bạn review.
+**Trạng thái:** ✅ Bảo mật, toàn vẹn dữ liệu/schema, refactor lõi, perf (N+1 + phân trang), UX cơ bản **đã xong & verify**. Vòng lặp refactor đã **DỪNG** — phần còn lại (§7) là long-tail giá trị thấp / rủi ro cao / cần bạn quyết. **Chưa merge** — chờ bạn review. **32 commit, 30 test pass, 1 xfail (B6/NR1).**
 
 > ĐỌC FILE NÀY TRƯỚC. Chi tiết từng bước ở `AUDIT/CHANGELOG.md`; quyết định tự chủ ở `AUDIT/DECISIONS.md`; việc cần bạn quyết ở `AUDIT/NEEDS-REVIEW.md`.
 
@@ -12,7 +12,7 @@
 
 | Hạng mục | Trước | Sau |
 |----------|-------|-----|
-| Test tự động | **0** | **26** (25 pass, 1 xfail = business rule chờ bạn) — pytest trên SQLite, không cần Docker |
+| Test tự động | **0** | **31** (30 pass, 1 xfail = business rule chờ bạn) — pytest trên SQLite, không cần Docker |
 | CSRF | Không có ở bất kỳ form nào | Bật toàn site (Flask-WTF) — 69 form/39 template |
 | IDOR ghi xuyên tenant | Có (tạo order cho tenant khác) | Đã chặn (lookup có scope company) |
 | Số hiệu chứng từ | Unique **toàn cục** (rò rỉ giữa tenant) | Unique **per-order** + enforce **per-company** ở app (cả 4 loại chứng từ) |
@@ -76,17 +76,19 @@
 ## 7. Đánh bóng — trạng thái
 
 **Đã làm thêm (verify được):**
-- ✅ **W18 (perf):** phân trang thật `db.paginate` cho danh sách **đơn hàng** (+ partial `_pagination.html` dùng lại). *(customers: W18b còn lại.)*
+- ✅ **W18 + W18b (perf):** phân trang thật `db.paginate` cho danh sách **đơn hàng** và **khách hàng** (+ partial `_pagination.html` dùng lại, giữ filter store_id/search).
 - ✅ **W15 (UX):** `min="0"` cho 22 input số lượng/đơn giá (mirror guard B2 phía server).
-- ✅ **W14 (UX/i18n):** bắt đầu — thêm khóa `Previous`/`Next`, bọc `t()` heading "Create Order".
+- ✅ **W14 (UX/i18n):** khóa `Previous`/`Next`, bọc `t()` heading "Create Order" (đa số heading khác đã dùng `t()` sẵn).
 
-**Còn lại (rủi ro thấp / long-tail / cần chủ đích):**
-- **W14 (còn):** bọc `t()` cho các heading/placeholder hardcode còn lại (long-tail nhiều template).
-- **W15b (UX):** rà & thêm `confirm()` cho form hủy/xóa còn thiếu (không có test tự động cho confirm).
-- **W18b (perf):** phân trang `db.paginate` cho `list_customers` (có search + "tất cả cửa hàng" → cần cẩn thận giữ query params).
-- **W16 (UX/security):** SRI cho CDN — **cần hash đúng** (hash sai chặn tải trang, không verify offline) → làm khi có mạng, hoặc vendor asset.
-- **W10 (kiến trúc):** tách god-controller `dashboard_routes.py` (~2900 dòng) — **rủi ro cao**, để lại làm có chủ đích với regression net.
-- **W11 (còn):** thu hẹp 47 `except Exception` — hoãn vì đường lỗi không có test (đổi → 500 thay vì flash, không verify an toàn được).
+**Còn lại — vòng lặp ĐÃ DỪNG ở đây (lý do: long-tail / không verify được tự động / rủi ro cao). Cách tiếp tục nếu bạn muốn:**
+| Mục | Việc | Vì sao chưa làm | Gợi ý resume |
+|-----|------|-----------------|--------------|
+| W14 (còn) | Bọc `t()` cho `<title>`/placeholder hardcode còn lại | Long-tail nhiều template, giá trị hiển thị thấp | Làm dần khi động vào từng template |
+| W15b | `confirm()` cho form hủy/xóa còn thiếu | Đa số đã dùng **modal xác nhận**; confirm không test tự động được | Rà thủ công lúc review UI |
+| W16 | SRI cho link CDN Bootstrap | **Cần hash đúng** — hash sai chặn tải trang, không verify offline | Chạy khi có mạng, hoặc vendor asset vào `static/` |
+| W10 | Tách god-controller `dashboard_routes.py` (~2900 dòng) thành blueprint theo domain | **Rủi ro cao**, cần regression net rộng | Làm có chủ đích, từng domain, giữ đường lui |
+| W11 (còn) | Thu hẹp 47 `except Exception` | Đường lỗi không có test → đổi (500 thay vì flash) không verify an toàn | Thêm test cho đường lỗi trước, rồi thu hẹp |
+| NR3 | Ràng buộc DB-level per-company cho số hiệu | Cần prod DB + backup để kiểm backfill | Xem NEEDS-REVIEW |
 
 ## 8. Rủi ro còn lại
 
@@ -104,4 +106,4 @@
 6. Merge (không force-push; agent chưa merge/không đụng prod theo lằn ranh đã thống nhất).
 
 ---
-*Tổng: 26 commit trên nhánh, mỗi commit build + test xanh. Không merge, không force-push, không đụng production, không thêm tính năng mới lớn.*
+*Tổng: 32 commit trên nhánh, mỗi commit build + test xanh. Không merge, không force-push, không đụng production, không thêm tính năng mới lớn.*

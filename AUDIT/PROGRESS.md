@@ -5,9 +5,9 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟢 Cốt lõi + phần lớn đánh bóng XONG. Bảo mật, Schema/migration, refactor lõi, N+1, phân trang đơn hàng (W18), min=0 (W15), i18n slice (W14). `FINAL-REPORT.md` cập nhật. Còn long-tail: W14 (i18n còn), W15b (confirm), W18b (customers), W16 (SRI), W10 (god-controller, rủi ro cao), bare-excepts. **Chưa merge.**
+**Trạng thái tổng thể:** ✅ VÒNG LẶP ĐÃ DỪNG — chờ bạn review & quyết NR1/NR2/NR3. Bảo mật, Schema/migration, refactor lõi, N+1, phân trang (đơn hàng + khách hàng), min=0, i18n slice — XONG & verify. Còn lại là long-tail giá trị thấp / rủi ro cao (xem `FINAL-REPORT.md` §7 để resume). **Suite 30 passed, 1 xfailed; 32 commit; chưa merge.**
 
-**Điểm resume:** tiếp tục polish long-tail theo thứ tự: W18b (customers pagination — verify được) → thêm W14 i18n slices (vài template/commit) → W15b confirm dialogs. Mỗi W = vòng nhỏ, suite xanh. Khi long-tail cạn/giá trị thấp → cập nhật FINAL-REPORT & dừng loop. NR1/NR2/NR3 KHÔNG tự làm. Suite hiện **28 passed, 1 xfailed**; 30 commit trên nhánh.
+**Nếu muốn tiếp:** đọc `FINAL-REPORT.md` §7 (bảng "cách resume") — mỗi mục có lý do hoãn + gợi ý. Ưu tiên bạn quyết: NR1 (contract-gating), NR2 (cascade delete), NR3 (per-company DB constraint), và xác nhận luật `advance_skipped` (§5).
 
 **Điểm resume (đọc khi khởi động lại):** GĐ2/3/4 **đã xong**. Có `03-expert-review.md` (panel UX/Code/DBA/Security/Perf) + `04-backlog.md` (W1–W21 ưu tiên) + `NEEDS-REVIEW.md` (NR1 B6, NR2 cascade — KHÔNG tự đổi). Việc TIẾP THEO = **GĐ5 loop refactor**, theo thứ tự trong `04-backlog.md`:
 `W2 (IDOR create_order) → W7 (validate qty≥0) → W19 (xóa route trùng) → W3 (SECRET_KEY fail-fast) → W4 (session rotate) → W1 (CSRF)` rồi schema `W5 Alembic → W6 unique per-tenant → W8 index` ...
