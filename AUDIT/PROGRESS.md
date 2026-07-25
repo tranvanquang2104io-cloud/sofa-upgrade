@@ -5,7 +5,7 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** 🟡 Đang chạy — Giai đoạn 5 — ✅ Nhóm 1, 2; Nhóm 3: W9 xong
+**Trạng thái tổng thể:** 🟢 Cốt lõi HOÀN THÀNH — Bảo mật + Schema + Refactor lõi + N+1 xong; `FINAL-REPORT.md` đã viết. Còn lại: đánh bóng UX/perf (W14/W15/W16/W18) + W10 (rủi ro cao). **Chưa merge.**
 
 **Điểm resume (đọc khi khởi động lại):** GĐ2/3/4 **đã xong**. Có `03-expert-review.md` (panel UX/Code/DBA/Security/Perf) + `04-backlog.md` (W1–W21 ưu tiên) + `NEEDS-REVIEW.md` (NR1 B6, NR2 cascade — KHÔNG tự đổi). Việc TIẾP THEO = **GĐ5 loop refactor**, theo thứ tự trong `04-backlog.md`:
 `W2 (IDOR create_order) → W7 (validate qty≥0) → W19 (xóa route trùng) → W3 (SECRET_KEY fail-fast) → W4 (session rotate) → W1 (CSRF)` rồi schema `W5 Alembic → W6 unique per-tenant → W8 index` ...
@@ -35,7 +35,7 @@ NR1/NR2/NR3 KHÔNG tự làm. Mỗi W = 1 vòng nhỏ, suite xanh mỗi commit.
 | 3 | Hội đồng chuyên gia | ✅ Xong | `03-expert-review.md` | 5 panel; finding U/A/DB/S/PF + tổng hợp mức |
 | 4 | Ưu tiên hóa | ✅ Xong | `04-backlog.md` | W1–W21 theo I/E; NR1/NR2 → NEEDS-REVIEW |
 | 5 | Vòng lặp refactor | ⬜ Chưa | `CHANGELOG.md` | |
-| 6 | Hoàn thiện & bàn giao | ⬜ Chưa | `FINAL-REPORT.md` | |
+| 6 | Hoàn thiện & bàn giao | ✅ Báo cáo xong | `FINAL-REPORT.md` | + README cập nhật (testing/migrations/security) |
 
 ---
 

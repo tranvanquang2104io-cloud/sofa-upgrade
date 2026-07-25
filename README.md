@@ -147,11 +147,44 @@ python create_master_admin.py --username myadmin --password "S3cur3!" --name "Ad
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` |  | PostgreSQL connection string (required) |
-| `SECRET_KEY` | `dev-secret-key` | Flask session key (change in production) |
+| `SECRET_KEY` | `dev-secret-key` | Flask session key. **Required in production** — the app refuses to start under `FLASK_ENV=production` if it is left at the built-in default. |
 | `FLASK_ENV` | `development` | Set to `production` for prod |
 | `FLASK_DEBUG` | `True` | Set to `False` in production |
 | `FLASK_HOST` | `127.0.0.1` | Bind address |
 | `FLASK_PORT` | `5000` | Bind port |
+
+## Testing
+
+The test suite runs on in-memory/file SQLite — **no PostgreSQL or Docker required**.
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Fixtures live in `tests/conftest.py` (seeded tenant + login helper). CSRF is
+disabled under `TestingConfig`; a dedicated test verifies it is enforced when on.
+
+## Database Migrations
+
+Schema changes are managed with **Alembic** (`migrations/`). Migrations are
+written to be reversible and PostgreSQL-compatible.
+
+```bash
+alembic upgrade head          # apply migrations
+alembic downgrade -1          # roll back one revision
+alembic revision --autogenerate -m "message"
+```
+
+For an existing database already created via `create_all()`, run
+`alembic stamp head` once to mark the baseline, then apply later revisions.
+
+## Security
+
+- **CSRF** protection is enabled on all POST forms (Flask-WTF).
+- Session is rotated on login (fixation mitigation).
+- Document numbers are unique per order and enforced per company at the app layer.
+- Tenant isolation is enforced on reads and writes (company-scoped lookups).
 
 ## Order Lifecycle
 
