@@ -56,8 +56,6 @@ def test_quotation_multi_item_subtotal(app, client, login, seeded_order):
     assert float(q.total_amount) == 291600.0
 
 
-@pytest.mark.xfail(strict=False, reason="B2: negative quantity is not validated "
-                   "-> negative subtotal accepted (see AUDIT/02-bug-catalog.md)")
 def test_negative_quantity_is_rejected(app, client, login, seeded_order):
     login(username="admin")
     _post_quotation(client, seeded_order["order_id"], "Q-NEG",

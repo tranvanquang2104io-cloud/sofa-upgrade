@@ -611,6 +611,8 @@ def create_quotation(order_id):
                 if name:
                     qty = float(item_quantities[i] or 0)
                     price = float(item_prices[i] or 0)
+                    if qty < 0 or price < 0:
+                        raise ValueError(t('Quantity and unit price cannot be negative'))
                     unit = item_units[i].strip() if i < len(item_units) else ''
                     item_total = qty * price
                     image_path = _save_item_image(item_images[i] if i < len(item_images) else None)
