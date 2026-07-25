@@ -554,7 +554,9 @@ class ContractService:
     def create_contract(self, order_id, quotation_id, contract_number, contract_date, 
                        contract_value, terms_and_conditions=None):
         """Create contract"""
-        existing = self.repo.get_by_number(contract_number)
+        _order = OrderRepository().get_by_id(order_id)
+        existing = self.repo.get_by_company_and_number(
+            _order.company_id if _order else None, contract_number)
         if existing:
             raise ValueError(f"Contract {contract_number} already exists")
         
@@ -698,7 +700,9 @@ class HandoverRecordService:
                               customer_representative_title=None,
                               company_representative_title=None):
         """Create handover record"""
-        existing = self.repo.get_by_number(report_number)
+        _order = OrderRepository().get_by_id(order_id)
+        existing = self.repo.get_by_company_and_number(
+            _order.company_id if _order else None, report_number)
         if existing:
             raise ValueError(f"Handover record {report_number} already exists")
         
@@ -822,7 +826,9 @@ class PaymentReportService:
                              quotation_reference_date=None,
                              bank_account_info=None):
         """Create payment report"""
-        existing = self.repo.get_by_number(report_number)
+        _order = OrderRepository().get_by_id(order_id)
+        existing = self.repo.get_by_company_and_number(
+            _order.company_id if _order else None, report_number)
         if existing:
             raise ValueError(f"Payment report {report_number} already exists")
         

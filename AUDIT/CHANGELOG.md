@@ -66,3 +66,11 @@
 - **Test:** bỏ `xfail` `test_same_quotation_number_allowed_across_tenants` → PASS. Suite: **21 passed, 1 xfailed** (chỉ còn B6/NR1).
 - **CÒN LẠI (W6b):** contract_number, report_number (handover), report_number (payment) vẫn unique toàn cục — sửa cùng mẫu ở vòng sau.
 - **Files:** `app/models/models.py`, `app/repositories/repository.py`, `app/services/services.py`, `app/routes/dashboard_routes.py`, `migrations/versions/acb618e15b19_*.py`, `tests/test_quotation_money.py`.
+
+## W6b — Áp per-order unique cho Contract/Handover/Payment  ✅
+- **Finding:** B3/DB1 (High) — nốt nốt còn lại: `contract_number`, `report_number`(handover), `report_number`(payment) vẫn unique toàn cục.
+- **Fix (cùng mẫu W6):** model bỏ `unique=True` + `UniqueConstraint(order_id, <number>)` cho 3 bảng; thêm `get_by_company_and_number` (join Order) cho 3 repo; scope lại **cả 6 chỗ check trùng** (3 route + 3 service — service create_contract/handover/payment lấy company từ order).
+- **Migration:** `e1b399a3d96d` — dialect-aware cho 3 bảng (Postgres drop `<table>_<col>_key` + add composite; SQLite batch). **Verify upgrade/downgrade round-trip SQLite OK.** Không xóa dữ liệu.
+- **Test:** `test_contract_number.py` — 2 công ty cùng số hợp đồng `C-DUP` → OK. Suite: **22 passed, 1 xfailed**.
+- **Kết quả:** B3 đã fix hoàn toàn cho cả 4 loại chứng từ (quotation+contract+handover+payment). Bản DB-level per-company chặt hơn vẫn ở **NR3**.
+- **Files:** `app/models/models.py`, `app/repositories/repository.py`, `app/services/services.py`, `app/routes/dashboard_routes.py`, `migrations/versions/e1b399a3d96d_*.py`, `tests/test_contract_number.py`.

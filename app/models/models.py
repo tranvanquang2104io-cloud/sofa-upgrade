@@ -335,7 +335,7 @@ class Contract(db.Model):
     order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     quotation_id = db.Column(GUID(), db.ForeignKey('quotations.id'))
     
-    contract_number = db.Column(db.String(50), nullable=False, unique=True)
+    contract_number = db.Column(db.String(50), nullable=False)
     contract_date = db.Column(db.Date, nullable=False)
     city = db.Column(db.String(100))          # Signing location city
     
@@ -368,6 +368,10 @@ class Contract(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Document numbers unique per order; per-company enforced at app layer (W6b/B3).
+    __table_args__ = (db.UniqueConstraint('order_id', 'contract_number',
+                                          name='uq_order_contract_number'),)
+
     # Relationships
     quotation = db.relationship('Quotation', backref='contracts', foreign_keys='Contract.quotation_id', lazy=True)
     documents = db.relationship('Document', backref='contract', lazy=True, cascade='all, delete-orphan')
@@ -395,7 +399,7 @@ class HandoverRecord(db.Model):
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     
-    report_number = db.Column(db.String(50), nullable=False, unique=True)
+    report_number = db.Column(db.String(50), nullable=False)
     report_date = db.Column(db.Date, nullable=False)
     handover_date = db.Column(db.Date, nullable=False)
     handover_location = db.Column(db.Text)    # Address where handover takes place
@@ -431,6 +435,10 @@ class HandoverRecord(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Document numbers unique per order; per-company enforced at app layer (W6b/B3).
+    __table_args__ = (db.UniqueConstraint('order_id', 'report_number',
+                                          name='uq_order_handover_report_number'),)
+
     # Relationships
     documents = db.relationship('Document', backref='handover_record', lazy=True)
     
@@ -457,7 +465,7 @@ class PaymentReport(db.Model):
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
     
-    report_number = db.Column(db.String(50), nullable=False, unique=True)
+    report_number = db.Column(db.String(50), nullable=False)
     payment_type = db.Column(db.String(50), nullable=False)  # 'advance' or 'final'
     report_date = db.Column(db.Date, nullable=False)
     payment_date = db.Column(db.Date, nullable=False)
@@ -493,6 +501,10 @@ class PaymentReport(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Document numbers unique per order; per-company enforced at app layer (W6b/B3).
+    __table_args__ = (db.UniqueConstraint('order_id', 'report_number',
+                                          name='uq_order_payment_report_number'),)
+
     # Relationships
     documents = db.relationship('Document', backref='payment_report', lazy=True)
     

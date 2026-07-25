@@ -839,7 +839,8 @@ def create_contract(order_id):
             # Check for duplicate contract number
             contract_number = request.form.get('contract_number', '').strip()
             from app.models.models import Contract
-            existing = db.session.query(Contract).filter_by(contract_number=contract_number).first()
+            from app.repositories.repository import ContractRepository as _ContractRepo
+            existing = _ContractRepo().get_by_company_and_number(company_id, contract_number)
             if existing:
                 flash(t(f'Contract number "{contract_number}" is already taken. Please use a different number.'), 'error')
                 from app.models.models import Company as _CompanyC
@@ -1223,7 +1224,8 @@ def create_handover(order_id):
             # Check for duplicate report number
             report_number = request.form.get('report_number', '').strip()
             from app.models.models import HandoverRecord
-            existing = db.session.query(HandoverRecord).filter_by(report_number=report_number).first()
+            from app.repositories.repository import HandoverRecordRepository as _HandoverRepo
+            existing = _HandoverRepo().get_by_company_and_number(company_id, report_number)
             if existing:
                 flash(t(f'Handover record number "{report_number}" is already taken. Please use a different number.'), 'error')
                 # Get contract items for re-render
@@ -1523,7 +1525,8 @@ def create_payment(order_id):
             # Check for duplicate report number
             report_number = request.form.get('report_number', '').strip()
             from app.models.models import PaymentReport
-            existing = db.session.query(PaymentReport).filter_by(report_number=report_number).first()
+            from app.repositories.repository import PaymentReportRepository as _PaymentRepo
+            existing = _PaymentRepo().get_by_company_and_number(company_id, report_number)
             if existing:
                 flash(t(f'Payment report number "{report_number}" is already taken. Please use a different number.'), 'error')
                 from app.models.models import PaymentReport as _PR

@@ -323,6 +323,14 @@ class ContractRepository(BaseRepository):
     def get_by_number(self, contract_number):
         """Get contract by number"""
         return self.model.query.filter_by(contract_number=contract_number).first()
+
+    def get_by_company_and_number(self, company_id, contract_number):
+        """Per-tenant duplicate check via the contract's order company (W6b/B3)."""
+        return (self.model.query
+                .join(Order, Order.id == self.model.order_id)
+                .filter(Order.company_id == company_id,
+                        self.model.contract_number == contract_number)
+                .first())
     
     def get_for_order(self, order_id):
         """Get all contracts for order"""
@@ -346,6 +354,14 @@ class HandoverRecordRepository(BaseRepository):
     def get_by_number(self, report_number):
         """Get handover record by number"""
         return self.model.query.filter_by(report_number=report_number).first()
+
+    def get_by_company_and_number(self, company_id, report_number):
+        """Per-tenant duplicate check via the record's order company (W6b/B3)."""
+        return (self.model.query
+                .join(Order, Order.id == self.model.order_id)
+                .filter(Order.company_id == company_id,
+                        self.model.report_number == report_number)
+                .first())
     
     def get_for_order(self, order_id):
         """Get all handover records for order"""
@@ -369,6 +385,14 @@ class PaymentReportRepository(BaseRepository):
     def get_by_number(self, report_number):
         """Get payment report by number"""
         return self.model.query.filter_by(report_number=report_number).first()
+
+    def get_by_company_and_number(self, company_id, report_number):
+        """Per-tenant duplicate check via the report's order company (W6b/B3)."""
+        return (self.model.query
+                .join(Order, Order.id == self.model.order_id)
+                .filter(Order.company_id == company_id,
+                        self.model.report_number == report_number)
+                .first())
     
     def get_for_order(self, order_id):
         """Get all payment reports for order"""
