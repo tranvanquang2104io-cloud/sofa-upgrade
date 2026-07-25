@@ -13,7 +13,10 @@ try:
 except FileNotFoundError:
     __version__ = 'unknown'
 from flask import Flask, render_template, session, g
+from flask_wtf import CSRFProtect
 from app.config import init_db, config
+
+csrf = CSRFProtect()
 from app.routes.auth_routes import auth_bp
 from app.routes.dashboard_routes import dashboard_bp
 from app.routes.admin_routes import admin_bp
@@ -64,6 +67,15 @@ def create_app(config_name=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(admin_bp)
+
+    # CSRF protection for all state-changing POST forms (AUDIT S1/W1).
+    # Disabled in TestingConfig via WTF_CSRF_ENABLED=False.
+    csrf.init_app(app)
+    # Exempt the read-only "is this code taken?" checker: it changes no state and
+    # is called via fetch(POST) from the create forms.
+    _check_code = app.view_functions.get('dashboard.check_code')
+    if _check_code is not None:
+        csrf.exempt(_check_code)
     
     # Error handlers
     @app.errorhandler(404)

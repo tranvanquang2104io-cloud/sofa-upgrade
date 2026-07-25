@@ -59,6 +59,7 @@
                         {% if cat.is_active %}
                         <form method="POST" class="d-inline"
                               onsubmit="return confirm('{{ t('Deactivate this category?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="cat_id" value="{{ cat.id }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -89,6 +90,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
                     <div class="mb-3">
@@ -122,6 +124,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="cat_id" id="editCatId">
                 <div class="modal-body">

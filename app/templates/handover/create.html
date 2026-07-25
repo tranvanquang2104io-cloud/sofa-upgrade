@@ -20,6 +20,7 @@
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="{{ url_for('dashboard.create_handover', order_id=order.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <!-- Header -->
                     <div class="row">

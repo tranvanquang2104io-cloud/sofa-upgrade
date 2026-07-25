@@ -18,6 +18,7 @@
 <div class="row">
     <div class="col-md-10 col-lg-8">
         <form method="POST" action="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <!-- Thông tin cơ bản -->
             <div class="card mb-4">
                 <div class="card-header">

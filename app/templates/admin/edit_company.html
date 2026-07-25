@@ -11,6 +11,7 @@
 <div class="row g-4">
     <div class="col-lg-7">
         <form method="POST" action="{{ url_for('admin.edit_company', company_id=company.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="card shadow-sm mb-4">
                 <div class="card-header fw-bold">Company Information</div>
                 <div class="card-body">

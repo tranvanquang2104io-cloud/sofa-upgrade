@@ -255,6 +255,7 @@
                 </div>
             </div>
             <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
                     <button type="submit" class="btn btn-success">
@@ -275,6 +276,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">{{ t('Document Format') }}</label>
@@ -304,6 +306,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_contract', contract_id=contract.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
                         {{ t('Warning:') }} {{ t('This action cannot be undone. The contract will be marked as canceled.') }}

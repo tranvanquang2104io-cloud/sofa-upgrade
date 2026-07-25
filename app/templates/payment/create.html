@@ -58,6 +58,7 @@
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="{{ url_for('dashboard.create_payment', order_id=order.id) }}" id="payment-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <div class="row">
                         <div class="col-md-4">

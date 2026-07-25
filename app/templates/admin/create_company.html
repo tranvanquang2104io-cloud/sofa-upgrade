@@ -12,6 +12,7 @@
     <!-- Company info -->
     <div class="col-lg-7">
         <form method="POST" action="{{ url_for('admin.create_company') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="card shadow-sm mb-4">
                 <div class="card-header fw-bold"><i class="bi bi-buildings me-2"></i>Company Information</div>
                 <div class="card-body">

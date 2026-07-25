@@ -73,6 +73,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Cancel') }}</button>
                 <form id="deleteForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> {{ t('Delete') }}</button>
                 </form>
             </div>

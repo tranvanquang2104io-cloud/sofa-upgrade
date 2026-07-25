@@ -59,6 +59,7 @@
                         {% if unit.is_active %}
                         <form method="POST" class="d-inline"
                               onsubmit="return confirm('{{ t('Deactivate this unit?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="unit_id" value="{{ unit.id }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -87,6 +88,7 @@
     <div class="d-flex flex-wrap gap-2 justify-content-center">
         {% for u in [('m²','m²','Mét vuông'),('m','m','Mét dài'),('kg','kg','Kilogram'),('cái','cái','Cái / Chiếc'),('bộ','bộ','Bộ'),('tấm','tấm','Tấm'),('cuộn','cuộn','Cuộn'),('lít','L','Lít')] %}
         <form method="POST" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="create">
             <input type="hidden" name="name" value="{{ u[0] }}">
             <input type="hidden" name="abbreviation" value="{{ u[1] }}">
@@ -107,6 +109,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
                     <div class="row g-3">
@@ -142,6 +145,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="unit_id" id="editUnitId">
                 <div class="modal-body">

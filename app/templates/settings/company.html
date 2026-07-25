@@ -11,6 +11,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('dashboard.company_settings') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="row">
     <!-- Basic Info -->
     <div class="col-md-8">

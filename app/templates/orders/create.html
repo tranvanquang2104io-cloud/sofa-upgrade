@@ -14,6 +14,7 @@
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="{{ url_for('dashboard.create_order') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="store_id" class="form-label">{{ t('Store *') }}</label>
                         <select class="form-select" id="store_id" name="store_id" required onchange="updateCustomers()">

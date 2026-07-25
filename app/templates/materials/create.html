@@ -15,6 +15,7 @@
 </div>
 
 <form method="POST" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="row">
         <!-- Left column: basic info -->
         <div class="col-lg-8">

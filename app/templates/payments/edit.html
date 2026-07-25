@@ -26,6 +26,7 @@
                 {% else %}
 
                 <form method="POST" action="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" id="payment-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="report_number" class="form-label">{{ t('Report Number *') }}</label>

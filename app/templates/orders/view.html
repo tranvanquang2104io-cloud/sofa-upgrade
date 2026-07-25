@@ -168,6 +168,7 @@
                                             </a>
                                             {% if quotation.can_approve() %}
                                             <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" onclick="return confirm('{{ t("Approve this quotation?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
@@ -189,6 +190,7 @@
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='quotation', ref_id=quotation.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label for="format" class="form-label">{{ t('Format') }}</label>
@@ -251,6 +253,7 @@
                                             </a>
                                             {% if contract.can_sign() %}
                                             <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" onclick="return confirm('{{ t("Sign this contract?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
@@ -272,6 +275,7 @@
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label for="format" class="form-label">{{ t('Format') }}</label>
@@ -332,6 +336,7 @@
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this payment?") }}')">
                                                         <i class="bi bi-check2"></i>
                                                     </button>
@@ -354,6 +359,7 @@
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <div class="modal-body">
                                                         <div class="mb-3">
                                                             <label for="format" class="form-label">{{ t('Format') }}</label>
@@ -419,6 +425,7 @@
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this handover?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
@@ -439,6 +446,7 @@
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label for="format" class="form-label">{{ t('Format') }}</label>
@@ -503,6 +511,7 @@
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this payment?") }}')">
                                                         <i class="bi bi-check2"></i>
                                                     </button>
@@ -525,6 +534,7 @@
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <div class="modal-body">
                                                         <div class="mb-3">
                                                             <label for="format" class="form-label">{{ t('Format') }}</label>
@@ -710,6 +720,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                 <form method="POST" action="{{ url_for('dashboard.skip_advance_payment', order_id=order.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-warning">
                         <i class="bi bi-skip-forward"></i> Xác nhận bỏ qua tạm ứng
                     </button>
@@ -730,6 +741,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_order', order_id=order.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
                         {{ t('Warning:') }} {{ t('This action cannot be undone. The order will be marked as canceled.') }}
@@ -766,6 +778,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment_request', ref_id=order.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="format" class="form-label">{{ t('Format') }}</label>

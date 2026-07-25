@@ -76,6 +76,7 @@
                             {% if tpl.is_active %}
                             <form method="POST" action="{{ url_for('dashboard.deactivate_template', template_id=tpl.id) }}"
                                   onsubmit="return confirm('{{ t('Deactivate this template?') }}');" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-x-circle"></i> {{ t('Deactivate') }}
                                 </button>
@@ -83,6 +84,7 @@
                             {% else %}
                             <form method="POST" action="{{ url_for('dashboard.activate_template', template_id=tpl.id) }}"
                                   style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-outline-success">
                                     <i class="bi bi-check-circle"></i> {{ t('Activate') }}
                                 </button>
@@ -112,6 +114,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.upload_template') }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-bold">{{ t('Template Name') }} <span class="text-danger">*</span></label>

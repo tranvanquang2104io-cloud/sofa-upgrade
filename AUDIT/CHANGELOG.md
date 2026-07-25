@@ -32,3 +32,15 @@
 - **Files:** `app/utils/auth_utils.py`, `tests/test_auth_session.py`.
 
 **Suite sau W2–W4,W7,W19:** 18 passed, 2 xfailed (còn B3, B6).
+
+## W1 — CSRF protection toàn site  ✅
+- **Finding:** S1 (High). Không có CSRF trên bất kỳ form POST nào (Flask-WTF chưa có).
+- **Fix:**
+  - Thêm `Flask-WTF` (requirements.txt), khởi tạo `CSRFProtect(app)` trong factory.
+  - Chèn `{{ csrf_token() }}` (hidden input) vào **69 form POST / 39 template** (script regex, single- & multi-line form tag).
+  - **Exempt** `dashboard.check_code` (API kiểm tra mã trùng — read-only, gọi qua fetch POST) → không cần sửa JS.
+  - `TestingConfig.WTF_CSRF_ENABLED=False` nên toàn bộ test cũ vẫn xanh.
+- **Test:** `test_csrf.py` (2) — POST thiếu token → **400**; `check_code` vẫn dùng được (exempt, không 400).
+- **Files:** `app/__init__.py`, `requirements.txt`, 39 templates, `tests/test_csrf.py`.
+- **Verify:** GET `/auth/login` (có token) render 200; luồng login (test CSRF off) vẫn chạy. Suite: **20 passed, 2 xfailed**.
+- **Lưu ý bàn giao:** khi bật CSRF (prod/dev), mọi form đã có token; nếu sau này thêm `fetch(POST)` mới đổi state → cần gửi header `X-CSRFToken` (token có thể lấy từ `csrf_token()`).

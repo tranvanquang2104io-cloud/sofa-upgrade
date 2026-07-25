@@ -26,6 +26,7 @@
                 {% else %}
 
                 <form method="POST" action="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">

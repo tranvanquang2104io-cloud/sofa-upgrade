@@ -55,6 +55,7 @@
                                   action="{{ url_for('admin.toggle_company', company_id=c.id) }}"
                                   style="display:inline"
                                   onsubmit="return confirm('{{ 'Deactivate' if c.is_active else 'Activate' }} this company?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit"
                                         class="btn btn-sm {{ 'btn-outline-danger' if c.is_active else 'btn-outline-success' }}">
                                     <i class="bi {{ 'bi-x-circle' if c.is_active else 'bi-check-circle' }}"></i>

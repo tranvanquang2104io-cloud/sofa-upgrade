@@ -22,6 +22,7 @@
             </div>
             <div class="card-body p-4">
                 <form method="POST" id="editUserForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">{{ t('Full Name') }}</label>

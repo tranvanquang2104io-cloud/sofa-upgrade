@@ -330,6 +330,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>{{ t('Are you sure you want to confirm this payment?') }}</p>
                 </div>
@@ -353,6 +354,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">{{ t('Document Format') }}</label>
@@ -382,6 +384,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_payment', payment_id=payment.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>{{ t('Are you sure you want to cancel this payment?') }}</p>
                     <div class="mb-3">

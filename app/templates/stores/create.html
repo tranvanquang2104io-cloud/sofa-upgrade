@@ -14,6 +14,7 @@
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">{{ t('Store Code') }} <span class="text-danger">*</span></label>

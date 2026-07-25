@@ -232,6 +232,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>{{ t('Are you sure you want to confirm this handover record?') }}</p>
                 </div>
@@ -255,6 +256,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">{{ t('Document Format') }}</label>
@@ -284,6 +286,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_handover', handover_id=handover.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>{{ t('Are you sure you want to cancel this handover record?') }}</p>
                     <div class="mb-3">

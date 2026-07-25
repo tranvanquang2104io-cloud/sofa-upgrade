@@ -22,6 +22,7 @@
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="{{ url_for('dashboard.create_customer') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     {% if stores and stores|length > 1 %}
                     <div class="mb-3">
                         <label for="store_id" class="form-label">{{ t('Store *') }}</label>

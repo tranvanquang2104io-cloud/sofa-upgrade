@@ -26,6 +26,7 @@
         {% if session.role == 'company_admin' and material.is_active %}
         <form method="POST" action="{{ url_for('dashboard.deactivate_material', material_id=material.id) }}"
               onsubmit="return confirm('{{ t('Deactivate this material?') }}')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-outline-danger"><i class="bi bi-x-circle"></i> {{ t('Deactivate') }}</button>
         </form>
         {% endif %}
@@ -228,6 +229,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.update_material_stock', material_id=material.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p class="text-muted small mb-2" id="modalStoreName"></p>
                     <input type="hidden" name="store_id" id="modalStoreId">

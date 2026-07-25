@@ -12,6 +12,7 @@
                     <p class="text-center text-muted mb-4">{{ t('Create a new SofaFlow account') }}</p>
 
                     <form method="POST" action="{{ url_for('auth.register') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="company_code" class="form-label">{{ t('Company Code') }}</label>
                             <input type="text" class="form-control" id="company_code" name="company_code" placeholder="e.g., SOFA-001" required>
