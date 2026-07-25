@@ -506,9 +506,14 @@ def create_order():
             store_id = request.form.get('store_id')
             customer_id = request.form.get('customer_id')
             
-            # Verify access
-            customer = customer_repo.get_by_id(customer_id)
-            if not customer or str(customer.store_id) != str(store_id):
+            # Tenant + RBAC guard (AUDIT B5/B7): the customer must belong to THIS
+            # company, to the selected store, and the store must be one the current
+            # user can access. Blocks cross-tenant / cross-store order creation.
+            accessible_store_ids = {str(s.id) for s in stores}
+            customer = customer_repo.get_for_company(customer_id, company_id)
+            if (not customer
+                    or str(store_id) not in accessible_store_ids
+                    or str(customer.store_id) != str(store_id)):
                 flash(t('Invalid customer selection'), 'error')
                 return redirect(url_for('dashboard.create_order'))
             

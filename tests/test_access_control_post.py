@@ -36,9 +36,6 @@ def test_staff_cannot_create_store(login, client):
 
 # --- B5: cross-tenant order creation (POST IDOR) -------------------------------
 
-@pytest.mark.xfail(strict=False, reason="B5: create_order uses unscoped "
-                   "get_by_id and never checks customer.company_id -> a user can "
-                   "create an order referencing another tenant's store/customer")
 def test_create_order_rejects_cross_tenant_customer(app, client, login):
     login(username="admin")  # ACME company_admin
     rival = _make_rival(app)

@@ -148,6 +148,15 @@ class CustomerRepository(BaseRepository):
     def __init__(self):
         super().__init__(Customer)
     
+    def get_for_company(self, id, company_id):
+        """Get a customer by id ONLY if it belongs to the given company.
+
+        Tenant-scoped lookup used to prevent cross-tenant IDOR (see AUDIT B5/B7):
+        unlike the unscoped BaseRepository.get_by_id, this returns None when the
+        customer belongs to another company.
+        """
+        return self.model.query.filter_by(id=id, company_id=company_id).first()
+
     def get_by_company_and_code(self, company_id, customer_code):
         """Get customer by company and code (company-wide uniqueness check)"""
         return self.model.query.filter_by(
