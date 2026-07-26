@@ -22,6 +22,7 @@ from app.repositories.repository import (
 from app.models import Order, Document
 from app.config.database import db
 from sqlalchemy.orm import joinedload
+from app.utils.extension_fields import collect_extension_values, apply_extension_values
 from datetime import datetime, date
 import logging
 import os
@@ -672,6 +673,7 @@ def create_quotation(order_id):
             amount_in_words = request.form.get('amount_in_words', '').strip() or None
             
             quotation_service = QuotationService()
+            ext_values = collect_extension_values(company_id, 'quotation', request.form)
             quotation = quotation_service.create_quotation(
                 order_id=order_id,
                 company_id=company_id,
@@ -691,6 +693,9 @@ def create_quotation(order_id):
                 notes=request.form.get('notes', '').strip() or None
             )
             
+            apply_extension_values(quotation, ext_values)
+            db.session.commit()
+
             flash(t('Quotation created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
@@ -893,6 +898,7 @@ def create_contract(order_id):
                 if quotation and quotation.items:
                     items = list(quotation.items)
             
+            ext_values = collect_extension_values(company_id, 'contract', request.form)
             contract = contract_repo.create(
                 order_id=order_id,
                 quotation_id=quotation_id,
@@ -923,6 +929,9 @@ def create_contract(order_id):
             db.session.add(lifecycle)
             db.session.commit()
             
+            apply_extension_values(contract, ext_values)
+            db.session.commit()
+
             flash(t('Contract created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
@@ -1246,6 +1255,7 @@ def create_handover(order_id):
             another_fee = float(getattr(active_contract, 'another_fee', 0) or 0)
             total_amount = subtotal + vat_amount + shipping_fee + another_fee
             
+            ext_values = collect_extension_values(company_id, 'handover', request.form)
             handover_service = HandoverRecordService()
             handover = handover_service.create_handover_record(
                 order_id=order_id,
@@ -1271,6 +1281,9 @@ def create_handover(order_id):
                 notes=request.form.get('notes', '').strip() or None
             )
             
+            apply_extension_values(handover, ext_values)
+            db.session.commit()
+
             flash(t('Handover record created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
@@ -1546,6 +1559,7 @@ def create_payment(order_id):
             quot_ref_str = request.form.get('quotation_reference_date', '').strip()
             quot_ref_date = datetime.strptime(quot_ref_str, '%Y-%m-%d').date() if quot_ref_str else None
             
+            ext_values = collect_extension_values(company_id, 'payment', request.form)
             payment = payment_service.create_payment_report(
                 order_id=order_id,
                 report_number=request.form.get('report_number', '').strip(),
@@ -1571,6 +1585,9 @@ def create_payment(order_id):
                 notes=request.form.get('notes', '').strip() or None
             )
             
+            apply_extension_values(payment, ext_values)
+            db.session.commit()
+
             flash(t('Payment report created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
