@@ -2848,3 +2848,123 @@ def extension_fields_settings():
                            entity=entity, slots=slots,
                            entity_types=ExtensionFieldConfig.ENTITY_TYPES,
                            data_types=ExtensionFieldConfig.DATA_TYPES)
+
+
+# ===== PRODUCTION PLANNING (Feature 2) =====
+
+def _owned_plan(plan_id, company_id):
+    from app.models.models import ProductionPlan
+    plan = ProductionPlan.query.get(plan_id)
+    if not plan or str(plan.company_id) != str(company_id):
+        return None
+    return plan
+
+
+@dashboard_bp.route('/orders/<order_id>/production-plan', methods=['GET'])
+@login_required
+def view_production_plan(order_id):
+    company_id = get_current_company_id()
+    from app.models.models import Material
+    from app.services.services import ProductionPlanService
+    order = OrderService().get_order(order_id, company_id)
+    if not order:
+        flash(t('Order not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    plan = ProductionPlanService().get_plan_for_order(order_id)
+    materials = Material.query.filter_by(company_id=company_id, is_active=True).order_by(Material.name).all()
+    return render_template('production/plan.html', order=order, plan=plan, materials=materials)
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/materials', methods=['POST'])
+@login_required
+def add_plan_material(plan_id):
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    from app.models.models import ProductionMaterialLine
+    try:
+        material_id = request.form.get('material_id')
+        qty = float(request.form.get('quantity_required') or 0)
+        if not material_id or qty < 0:
+            raise ValueError(t('Vui lòng chọn vật tư và số lượng hợp lệ (>= 0)'))
+        db.session.add(ProductionMaterialLine(
+            plan_id=plan.id, plan_item_id=request.form.get('plan_item_id') or None,
+            material_id=material_id, quantity_required=qty,
+            unit=request.form.get('unit', '').strip() or None))
+        db.session.commit()
+        flash(t('Đã thêm vật tư vào kế hoạch'), 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error(f'add_plan_material error: {e}')
+        db.session.rollback(); flash(t('Lỗi khi thêm vật tư'), 'error')
+    return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/material/<line_id>/delete', methods=['POST'])
+@login_required
+def delete_plan_material(plan_id, line_id):
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    from app.models.models import ProductionMaterialLine
+    line = ProductionMaterialLine.query.get(line_id)
+    if line and str(line.plan_id) == str(plan.id):
+        db.session.delete(line); db.session.commit()
+        flash(t('Đã xóa vật tư'), 'success')
+    return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/issue', methods=['POST'])
+@login_required
+def issue_plan_materials(plan_id):
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    from app.services.services import ProductionPlanService
+    try:
+        shortages = ProductionPlanService().issue_materials(plan)
+        if shortages:
+            flash(t(f'Không đủ tồn kho cho {len(shortages)} vật tư — chưa trừ kho.'), 'error')
+        else:
+            flash(t('Đã cấp phát và trừ kho vật tư thành công.'), 'success')
+    except Exception as e:
+        logger.error(f'issue_plan_materials error: {e}')
+        db.session.rollback(); flash(t('Lỗi khi cấp phát vật tư'), 'error')
+    return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/save-norm/<item_id>', methods=['POST'])
+@login_required
+def save_plan_norm(plan_id, item_id):
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    from app.models.models import ProductionPlanItem
+    from app.services.services import ProductionPlanService
+    item = ProductionPlanItem.query.get(item_id)
+    if item and str(item.plan_id) == str(plan.id):
+        try:
+            ProductionPlanService().save_as_norm(item)
+            flash(t('Đã lưu định mức để tái sử dụng'), 'success')
+        except Exception as e:
+            logger.error(f'save_plan_norm error: {e}')
+            db.session.rollback(); flash(t('Lỗi khi lưu định mức'), 'error')
+    return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
+
+
+@dashboard_bp.route('/materials/low-stock', methods=['GET'])
+@login_required
+def low_stock_materials():
+    company_id = get_current_company_id()
+    from app.services.services import ProductionPlanService
+    materials = ProductionPlanService().low_stock_materials(company_id)
+    return render_template('materials/low_stock.html', materials=materials)

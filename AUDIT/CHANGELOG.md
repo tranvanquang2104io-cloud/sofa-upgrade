@@ -145,3 +145,15 @@
 - **Test:** `test_extension_fields.py` (9: validation + config-save→hiện-trên-form + persist + required), `test_e2e_orders.py` (3 đơn E2E: full lifecycle→completed, đơn có extension field, đơn hủy).
 - **Suite:** **42 passed, 1 xfailed.**
 - **Files:** `app/models/models.py`, `app/utils/extension_fields.py`, `app/routes/dashboard_routes.py`, `app/__init__.py`, `app/templates/settings/extension_fields.html`, `app/templates/_extension_fields_form.html`, 4× create templates, `base.html`, `migrations/versions/42d15126ff2c_*.py`, tests.
+
+---
+
+# FEATURE 2 — Kế hoạch sản xuất (2026-07-27)
+
+## F2 — Production Planning (Hybrid định mức + trừ kho + cảnh báo tồn)  ✅
+- **Models:** `ProductionPlan` (1/order, auto company_id qua before_insert, unique plan_number/company), `ProductionPlanItem`, `ProductionMaterialLine`, `MaterialNorm` (định mức tái sử dụng theo product_key). Migration `276bb213979a` (reversible, round-trip OK).
+- **Service `ProductionPlanService`:** `create_from_contract` (copy item HĐ + gợi ý vật tư từ định mức = qty_per_unit × SL), `issue_materials` (kiểm tồn → nếu đủ trừ `MaterialStock` + set quantity_issued + status in_progress; nếu thiếu trả shortages, KHÔNG trừ), `save_as_norm` (upsert định mức), `low_stock_materials`.
+- **Hook:** `ContractService.mark_signed` tự tạo kế hoạch (best-effort, không chặn ký nếu lỗi).
+- **Routes/UI:** `/orders/<id>/production-plan` (xem/sửa), thêm/xóa vật tư, `/issue` (cấp phát), `/save-norm/<item>`, `/materials/low-stock`. Template `production/plan.html`, `materials/low_stock.html`; link ở order view + nav (Low Stock). CSRF token đầy đủ.
+- **Test:** `test_production_plan.py` (6) + E2E sign→auto-plan. Scope đợt 1: KH + trừ kho + cảnh báo tồn (PO để sau).
+- **VERSION → 1.4.0.**

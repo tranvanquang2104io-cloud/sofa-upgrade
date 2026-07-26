@@ -105,3 +105,33 @@ def test_low_stock_materials(app, seed):
         low = ProductionPlanService().low_stock_materials(seed["company_id"])
         codes = {m.material_code for m in low}
         assert "LOW-01" in codes and "OK-01" not in codes
+
+
+def test_plan_page_and_low_stock_render(login, client, seeded_order):
+    login(username="admin")
+    assert client.get(f"/orders/{seeded_order['order_id']}/production-plan").status_code == 200
+    assert client.get("/materials/low-stock").status_code == 200
+
+
+def test_plan_routes_add_and_issue(app, client, login, seed):
+    from app.config import db
+    from app.models.models import Order, Contract, MaterialStock, ProductionPlan
+    from app.services.services import ProductionPlanService
+    with app.app_context():
+        o = Order(company_id=seed["company_id"], store_id=seed["store_id"],
+                  customer_id=seed["customer_id"], order_code="PR-1", title="x")
+        db.session.add(o); db.session.flush()
+        c = Contract(order_id=o.id, contract_number="PR-C1", contract_date=date(2026, 7, 27),
+                     contract_value=Decimal("1"), items=[{"name": "A", "unit": "c", "quantity": 1, "total": 1}])
+        db.session.add(c); db.session.commit()
+        pid = str(ProductionPlanService().create_from_contract(c).id)
+    mat = _mk_material(app, seed, "RT-01", stock_qty=10)
+    login(username="admin")
+    client.post(f"/production-plan/{pid}/materials",
+                data={"material_id": mat, "quantity_required": "3", "unit": "kg"}, follow_redirects=True)
+    with app.app_context():
+        assert len(ProductionPlan.query.get(pid).material_lines) == 1
+    client.post(f"/production-plan/{pid}/issue", follow_redirects=True)
+    with app.app_context():
+        st = MaterialStock.query.filter_by(material_id=mat).first()
+        assert float(st.current_quantity) == 7.0

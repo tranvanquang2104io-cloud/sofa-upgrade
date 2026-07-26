@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ t('Low Stock') }} - SofaFlow{% endblock %}
+
+{% block content %}
+<h1 class="mb-3"><i class="bi bi-exclamation-triangle text-warning"></i> {{ t('Low Stock Materials') }}</h1>
+
+{% if materials %}
+<table class="table table-bordered table-sm">
+  <thead class="table-light"><tr>
+    <th>{{ t('Code') }}</th><th>{{ t('Name') }}</th>
+    <th>{{ t('In stock') }}</th><th>{{ t('Min level') }}</th>
+  </tr></thead>
+  <tbody>
+  {% for m in materials %}
+    <tr class="table-warning">
+      <td>{{ m.material_code }}</td>
+      <td><a href="{{ url_for('dashboard.view_material', material_id=m.id) }}">{{ m.name }}</a></td>
+      <td>{{ m.total_stock }}</td>
+      <td>{{ m.min_stock_level }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="alert alert-success"><i class="bi bi-check-circle"></i> {{ t('All materials are above their minimum stock level.') }}</div>
+{% endif %}
+{% endblock %}

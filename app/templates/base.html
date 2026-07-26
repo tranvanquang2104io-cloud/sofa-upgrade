@@ -83,6 +83,11 @@
                                         <i class="bi bi-input-cursor-text"></i> {{ t('Extension Fields') }}
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.low_stock_materials') }}">
+                                        <i class="bi bi-exclamation-triangle"></i> {{ t('Low Stock') }}
+                                    </a>
+                                </li>
                                 {% endif %}
                             </ul>
                         </li>
