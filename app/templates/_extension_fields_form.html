@@ -1,0 +1,30 @@
+{# Renders a company's enabled extension fields for a document form.
+   Requires `entity_type` to be set before including. See AUDIT D9. #}
+{% set _cfgs = enabled_extension_fields(entity_type) %}
+{% if _cfgs %}
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-input-cursor-text"></i> {{ t('Additional Information') }}</div>
+  <div class="card-body">
+    <div class="row">
+    {% for c in _cfgs %}
+      <div class="col-md-6 mb-3">
+        <label class="form-label" for="{{ c.field_key }}">
+          {{ c.label or c.field_key }}{% if c.is_required %} <span class="text-danger">*</span>{% endif %}
+        </label>
+        {% if c.data_type == 'boolean' %}
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="{{ c.field_key }}" name="{{ c.field_key }}" value="on">
+          </div>
+        {% elif c.data_type == 'number' %}
+          <input type="number" step="any" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" {% if c.is_required %}required{% endif %}>
+        {% elif c.data_type == 'date' %}
+          <input type="date" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" {% if c.is_required %}required{% endif %}>
+        {% else %}
+          <input type="text" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" {% if c.is_required %}required{% endif %}>
+        {% endif %}
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}

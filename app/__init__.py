@@ -102,6 +102,18 @@ def create_app(config_name=None):
         )
 
     @app.context_processor
+    def inject_extension_fields():
+        """Expose a helper so document forms can render the company's enabled
+        extension fields (see AUDIT D9)."""
+        from app.utils.extension_fields import get_enabled_configs
+
+        def enabled_extension_fields(entity_type):
+            cid = g.get('company_id')
+            return get_enabled_configs(cid, entity_type) if cid else []
+
+        return dict(enabled_extension_fields=enabled_extension_fields)
+
+    @app.context_processor
     def inject_i18n():
         """Inject i18n translation helper and current language into all templates."""
         from flask import session as _session

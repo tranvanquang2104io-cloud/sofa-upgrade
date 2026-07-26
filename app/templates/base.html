@@ -78,6 +78,11 @@
                                         <i class="bi bi-gear"></i> {{ t('Company Settings') }}
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.extension_fields_settings') }}">
+                                        <i class="bi bi-input-cursor-text"></i> {{ t('Extension Fields') }}
+                                    </a>
+                                </li>
                                 {% endif %}
                             </ul>
                         </li>

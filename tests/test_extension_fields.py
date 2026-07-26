@@ -89,6 +89,26 @@ def _q_payload(number, **extra):
     return data
 
 
+def test_config_page_rbac(login, client):
+    login(username="staff")
+    assert client.get("/settings/extension-fields").status_code == 403
+    login(username="admin")
+    assert client.get("/settings/extension-fields").status_code == 200
+
+
+def test_config_save_shows_field_on_create_form(app, client, login, seeded_order):
+    login(username="admin")
+    client.post("/settings/extension-fields?entity=quotation", data={
+        "entity_type": "quotation",
+        "extend01_enabled": "on", "extend01_label": "PO Number",
+        "extend01_type": "text", "extend01_order": "0",
+    }, follow_redirects=True)
+    resp = client.get(f"/quotations/{seeded_order['order_id']}/create")
+    assert resp.status_code == 200
+    assert b"PO Number" in resp.data
+    assert b'name="extend01"' in resp.data
+
+
 def test_extension_value_saved_and_required_enforced(app, client, login, seeded_order):
     """End-to-end: a required text extension field is enforced and stored."""
     from app.config import db

@@ -22,7 +22,10 @@ from app.repositories.repository import (
 from app.models import Order, Document
 from app.config.database import db
 from sqlalchemy.orm import joinedload
-from app.utils.extension_fields import collect_extension_values, apply_extension_values
+from app.utils.extension_fields import (
+    collect_extension_values, apply_extension_values, get_enabled_configs, FIELD_KEYS,
+)
+from app.models import ExtensionFieldConfig
 from datetime import datetime, date
 import logging
 import os
@@ -2796,3 +2799,52 @@ def update_material_stock(material_id):
         db.session.rollback()
         flash(t('Lỗi hệ thống khi cập nhật tồn kho'), 'error')
     return redirect(url_for('dashboard.view_material', material_id=material_id))
+
+
+# ===== EXTENSION FIELD CONFIGURATION (admin) =====
+
+@dashboard_bp.route('/settings/extension-fields', methods=['GET', 'POST'])
+@company_admin_required
+def extension_fields_settings():
+    """Company-admin page to configure the extend01..extend10 custom fields for
+    each document type (label, data type, required, enabled). See AUDIT D9."""
+    company_id = get_current_company_id()
+    entity = request.args.get('entity', 'quotation')
+    if entity not in ExtensionFieldConfig.ENTITY_TYPES:
+        entity = 'quotation'
+
+    if request.method == 'POST':
+        entity = request.form.get('entity_type', entity)
+        if entity not in ExtensionFieldConfig.ENTITY_TYPES:
+            entity = 'quotation'
+        existing = {c.field_key: c for c in ExtensionFieldConfig.query.filter_by(
+            company_id=company_id, entity_type=entity).all()}
+        for key in FIELD_KEYS:
+            cfg = existing.get(key)
+            if cfg is None:
+                cfg = ExtensionFieldConfig(company_id=company_id, entity_type=entity, field_key=key)
+                db.session.add(cfg)
+            cfg.is_enabled = request.form.get(f'{key}_enabled') == 'on'
+            cfg.label = request.form.get(f'{key}_label', '').strip() or None
+            dt = request.form.get(f'{key}_type', 'text')
+            cfg.data_type = dt if dt in ExtensionFieldConfig.DATA_TYPES else 'text'
+            cfg.is_required = request.form.get(f'{key}_required') == 'on'
+            try:
+                cfg.sort_order = int(request.form.get(f'{key}_order') or 0)
+            except (TypeError, ValueError):
+                cfg.sort_order = 0
+        db.session.commit()
+        flash(t('Đã lưu cấu hình trường mở rộng'), 'success')
+        return redirect(url_for('dashboard.extension_fields_settings', entity=entity))
+
+    existing = {c.field_key: c for c in ExtensionFieldConfig.query.filter_by(
+        company_id=company_id, entity_type=entity).all()}
+    slots = []
+    for key in FIELD_KEYS:
+        slots.append(existing.get(key) or ExtensionFieldConfig(
+            field_key=key, entity_type=entity, is_enabled=False,
+            data_type='text', is_required=False, sort_order=0, label=None))
+    return render_template('settings/extension_fields.html',
+                           entity=entity, slots=slots,
+                           entity_types=ExtensionFieldConfig.ENTITY_TYPES,
+                           data_types=ExtensionFieldConfig.DATA_TYPES)

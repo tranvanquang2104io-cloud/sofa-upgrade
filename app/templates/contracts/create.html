@@ -216,6 +216,9 @@
                         <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5" placeholder="Enter terms and conditions..."></textarea>
                     </div>
 
+                    {% set entity_type = 'contract' %}
+                    {% include '_extension_fields_form.html' %}
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-circle"></i> {{ t('Create Contract') }}

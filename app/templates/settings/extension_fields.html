@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ t('Extension Fields') }} - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-md-12">
+    <h1><i class="bi bi-input-cursor-text"></i> {{ t('Extension Fields') }}</h1>
+    <p class="text-muted">{{ t('Configure up to 10 custom fields per document type. Enabled fields appear on the create form.') }}</p>
+  </div>
+</div>
+
+<ul class="nav nav-tabs mb-3">
+  {% for et in entity_types %}
+  <li class="nav-item">
+    <a class="nav-link {% if et == entity %}active{% endif %}"
+       href="{{ url_for('dashboard.extension_fields_settings', entity=et) }}">{{ t(et|capitalize) }}</a>
+  </li>
+  {% endfor %}
+</ul>
+
+<form method="POST" action="{{ url_for('dashboard.extension_fields_settings', entity=entity) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="entity_type" value="{{ entity }}">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th style="width:6%">{{ t('On') }}</th>
+          <th style="width:10%">{{ t('Field') }}</th>
+          <th>{{ t('Label') }}</th>
+          <th style="width:16%">{{ t('Data Type') }}</th>
+          <th style="width:8%">{{ t('Required') }}</th>
+          <th style="width:10%">{{ t('Order') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in slots %}
+        <tr>
+          <td><input type="checkbox" class="form-check-input" name="{{ s.field_key }}_enabled" {% if s.is_enabled %}checked{% endif %}></td>
+          <td><code>{{ s.field_key }}</code></td>
+          <td><input type="text" class="form-control form-control-sm" name="{{ s.field_key }}_label" value="{{ s.label or '' }}" placeholder="{{ t('e.g. PO Number') }}"></td>
+          <td>
+            <select class="form-select form-select-sm" name="{{ s.field_key }}_type">
+              {% for dt in data_types %}
+              <option value="{{ dt }}" {% if s.data_type == dt %}selected{% endif %}>{{ t(dt|capitalize) }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td><input type="checkbox" class="form-check-input" name="{{ s.field_key }}_required" {% if s.is_required %}checked{% endif %}></td>
+          <td><input type="number" class="form-control form-control-sm" name="{{ s.field_key }}_order" value="{{ s.sort_order or 0 }}" min="0"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ t('Save') }}</button>
+</form>
+{% endblock %}
