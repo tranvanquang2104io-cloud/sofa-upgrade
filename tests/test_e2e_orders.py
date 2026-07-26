@@ -55,6 +55,10 @@ def test_full_order_lifecycle_to_completion(app, client, login, seed):
     assert c is not None, "contract not created"
     client.post(f"/contracts/{c.id}/sign", follow_redirects=True)
     assert _lifecycle(app, oid).contract_signed
+    # Feature 2: signing the contract auto-creates a production plan.
+    from app.models.models import ProductionPlan
+    with app.app_context():
+        assert ProductionPlan.query.filter_by(order_id=oid).first() is not None
 
     # 4. Advance payment + confirm (allowed once contract is signed)
     client.post(f"/payment/{oid}/create?type=advance", data={

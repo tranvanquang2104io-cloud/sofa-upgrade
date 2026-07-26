@@ -631,7 +631,14 @@ class ContractService:
             db.session.add(contract)
             db.session.add(lifecycle)
             db.session.commit()
-            
+
+            # Feature 2: auto-create a production plan once the contract is signed.
+            # Best-effort — a failure here must not break the signing flow.
+            try:
+                ProductionPlanService().create_from_contract(contract)
+            except Exception as _pp_err:
+                logger.error(f"Auto production-plan failed for contract {contract_id}: {_pp_err}")
+
             logger.info(f"Contract {contract.contract_number} signed and lifecycle updated")
             return contract
             
@@ -1557,3 +1564,118 @@ class SupplierService:
         s.is_active = False
         db.session.commit()
         logger.info(f'Supplier deactivated: {s.supplier_code}')
+
+
+# ============================================================================
+# Feature 2 — Production Planning
+# ============================================================================
+
+def _product_key(name):
+    return (name or '').strip().lower()
+
+
+class ProductionPlanService:
+    """Kế hoạch sản xuất: tạo từ hợp đồng, gợi ý vật tư từ định mức, cấp phát
+    (trừ kho), lưu định mức, cảnh báo tồn thấp. Xem AUDIT/feature2-*.md."""
+
+    def _gen_plan_number(self, company_id):
+        from app.models.models import ProductionPlan
+        n = ProductionPlan.query.filter_by(company_id=company_id).count() + 1
+        return f"KHSX-{n:05d}"
+
+    def get_plan_for_order(self, order_id):
+        from app.models.models import ProductionPlan
+        return ProductionPlan.query.filter_by(order_id=order_id).first()
+
+    def create_from_contract(self, contract):
+        """Idempotent: tạo 1 ProductionPlan (draft) cho order của hợp đồng, copy
+        item hợp đồng, và gợi ý ProductionMaterialLine từ MaterialNorm khớp tên."""
+        from decimal import Decimal
+        from app.models.models import (ProductionPlan, ProductionPlanItem,
+                                        ProductionMaterialLine, MaterialNorm)
+        from app.repositories.repository import OrderRepository
+        order = OrderRepository().get_by_id(contract.order_id)
+        if order is None:
+            return None
+        existing = ProductionPlan.query.filter_by(order_id=contract.order_id).first()
+        if existing:
+            return existing
+        plan = ProductionPlan(
+            order_id=contract.order_id, contract_id=contract.id, company_id=order.company_id,
+            plan_number=self._gen_plan_number(order.company_id),
+            status=ProductionPlan.STATUS_DRAFT)
+        db.session.add(plan)
+        db.session.flush()
+        for it in (contract.items or []):
+            qty = Decimal(str(it.get('quantity', 0) or 0))
+            pi = ProductionPlanItem(plan_id=plan.id, source_name=it.get('name', ''),
+                                    quantity=qty, unit=it.get('unit', ''))
+            db.session.add(pi)
+            db.session.flush()
+            norms = MaterialNorm.query.filter_by(
+                company_id=order.company_id, product_key=_product_key(pi.source_name)).all()
+            for nrm in norms:
+                db.session.add(ProductionMaterialLine(
+                    plan_id=plan.id, plan_item_id=pi.id, material_id=nrm.material_id,
+                    quantity_required=Decimal(str(nrm.quantity_per_unit or 0)) * qty,
+                    unit=nrm.unit))
+        db.session.commit()
+        return plan
+
+    def _stock_for(self, material_id, store_id):
+        from app.models.models import MaterialStock
+        st = MaterialStock.query.filter_by(material_id=material_id, store_id=store_id).first()
+        if st is None:
+            st = MaterialStock.query.filter_by(material_id=material_id, store_id=None).first()
+        return st
+
+    def issue_materials(self, plan):
+        """Cấp phát: kiểm tồn trước; nếu thiếu → trả danh sách shortage, KHÔNG trừ.
+        Nếu đủ → trừ MaterialStock, set quantity_issued, status=in_progress."""
+        from decimal import Decimal
+        order = plan.order
+        needs = []
+        for line in plan.material_lines:
+            need = Decimal(str(line.quantity_required or 0)) - Decimal(str(line.quantity_issued or 0))
+            if need > 0:
+                needs.append((line, need))
+        shortages = []
+        for line, need in needs:
+            st = self._stock_for(line.material_id, order.store_id)
+            avail = Decimal(str(st.current_quantity)) if st else Decimal('0')
+            if avail < need:
+                shortages.append({'material_id': str(line.material_id),
+                                  'need': float(need), 'available': float(avail)})
+        if shortages:
+            return shortages
+        for line, need in needs:
+            st = self._stock_for(line.material_id, order.store_id)
+            st.current_quantity = Decimal(str(st.current_quantity)) - need
+            line.quantity_issued = Decimal(str(line.quantity_required or 0))
+        plan.status = plan.STATUS_IN_PROGRESS
+        db.session.commit()
+        return []
+
+    def save_as_norm(self, plan_item):
+        """Lưu định mức từ các material line của 1 item để tái sử dụng (upsert)."""
+        from decimal import Decimal
+        from app.models.models import MaterialNorm
+        company_id = plan_item.plan.company_id
+        key = _product_key(plan_item.source_name)
+        qty = Decimal(str(plan_item.quantity or 0)) or Decimal('1')
+        for line in plan_item.material_lines:
+            per_unit = (Decimal(str(line.quantity_required or 0)) / qty) if qty else Decimal('0')
+            norm = MaterialNorm.query.filter_by(
+                company_id=company_id, product_key=key, material_id=line.material_id).first()
+            if norm is None:
+                norm = MaterialNorm(company_id=company_id, product_key=key,
+                                    material_id=line.material_id, unit=line.unit)
+                db.session.add(norm)
+            norm.quantity_per_unit = per_unit
+            norm.unit = line.unit
+        db.session.commit()
+
+    def low_stock_materials(self, company_id):
+        from app.models.models import Material
+        mats = Material.query.filter_by(company_id=company_id, is_active=True).all()
+        return [m for m in mats if m.is_low_stock]

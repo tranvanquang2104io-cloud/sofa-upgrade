@@ -845,6 +845,97 @@ class ExtensionFieldConfig(db.Model):
         return f'<ExtensionFieldConfig {self.entity_type}.{self.field_key}>'
 
 
+class ProductionPlan(db.Model):
+    """Kế hoạch sản xuất — 1 plan / order, tạo tự động sau khi hợp đồng ký (Feature 2)."""
+    __tablename__ = 'production_plans'
+
+    STATUS_DRAFT = 'draft'
+    STATUS_IN_PROGRESS = 'in_progress'
+    STATUS_COMPLETED = 'completed'
+    STATUS_CANCELED = 'canceled'
+
+    id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id  = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    order_id    = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, unique=True, index=True)
+    contract_id = db.Column(GUID(), db.ForeignKey('contracts.id'), nullable=True)
+    plan_number = db.Column(db.String(50), nullable=False)
+    status      = db.Column(db.String(20), default='draft', nullable=False, index=True)
+    notes       = db.Column(db.Text)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at  = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'plan_number', name='uq_company_plan_number'),)
+
+    order    = db.relationship('Order', backref=db.backref('production_plan', uselist=False), lazy=True)
+    contract = db.relationship('Contract', lazy=True)
+    items = db.relationship('ProductionPlanItem', backref='plan', lazy=True, cascade='all, delete-orphan')
+    material_lines = db.relationship('ProductionMaterialLine', backref='plan', lazy=True, cascade='all, delete-orphan')
+
+    def can_edit(self):
+        return self.status in (self.STATUS_DRAFT, self.STATUS_IN_PROGRESS)
+
+    def __repr__(self):
+        return f'<ProductionPlan {self.plan_number}>'
+
+
+class ProductionPlanItem(db.Model):
+    """Một hạng mục cần sản xuất (copy từ item hợp đồng)."""
+    __tablename__ = 'production_plan_items'
+
+    id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    plan_id     = db.Column(GUID(), db.ForeignKey('production_plans.id'), nullable=False, index=True)
+    source_name = db.Column(db.String(255), nullable=False)
+    quantity    = db.Column(db.Numeric(15, 2), default=0)
+    unit        = db.Column(db.String(50))
+    notes       = db.Column(db.Text)
+
+    material_lines = db.relationship('ProductionMaterialLine', backref='plan_item', lazy=True)
+
+    def __repr__(self):
+        return f'<ProductionPlanItem {self.source_name}>'
+
+
+class ProductionMaterialLine(db.Model):
+    """Vật tư cần cho kế hoạch (theo item hoặc overall khi plan_item_id NULL)."""
+    __tablename__ = 'production_material_lines'
+
+    id           = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    plan_id      = db.Column(GUID(), db.ForeignKey('production_plans.id'), nullable=False, index=True)
+    plan_item_id = db.Column(GUID(), db.ForeignKey('production_plan_items.id'), nullable=True, index=True)
+    material_id  = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
+    quantity_required = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    quantity_issued   = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    unit         = db.Column(db.String(50))
+    notes        = db.Column(db.Text)
+
+    material = db.relationship('Material', lazy=True)
+
+    def __repr__(self):
+        return f'<ProductionMaterialLine material={self.material_id}>'
+
+
+class MaterialNorm(db.Model):
+    """Định mức vật tư tái sử dụng theo tên sản phẩm (per company) — Hybrid."""
+    __tablename__ = 'material_norms'
+
+    id                = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id        = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    product_key       = db.Column(db.String(255), nullable=False, index=True)  # lower/strip tên SP
+    material_id       = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
+    quantity_per_unit = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    unit              = db.Column(db.String(50))
+    created_at        = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at        = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'product_key', 'material_id',
+                                          name='uq_norm_company_product_material'),)
+
+    material = db.relationship('Material', lazy=True)
+
+    def __repr__(self):
+        return f'<MaterialNorm {self.product_key}>'
+
+
 def _populate_doc_company_id(mapper, connection, target):
     """before_insert: set a document's company_id from its order (NR3/D8).
 
@@ -859,5 +950,5 @@ def _populate_doc_company_id(mapper, connection, target):
             target.company_id = row[0]
 
 
-for _doc_model in (Quotation, Contract, HandoverRecord, PaymentReport):
+for _doc_model in (Quotation, Contract, HandoverRecord, PaymentReport, ProductionPlan):
     event.listen(_doc_model, 'before_insert', _populate_doc_company_id)
