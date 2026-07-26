@@ -5,7 +5,43 @@ from datetime import datetime
 from app.config.database import db
 from app.models.types import GUID
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.orm import declared_attr
+from sqlalchemy import event, select
 import uuid
+
+
+# Number of admin-configurable extension columns per document table.
+EXTENSION_SLOTS = 10
+EXTENSION_FIELD_KEYS = [f'extend{i:02d}' for i in range(1, EXTENSION_SLOTS + 1)]
+
+
+class DocExtensionMixin:
+    """Adds a per-tenant ``company_id`` plus ``extend01``..``extend10`` columns to
+    document tables (quotations, contracts, handover_records, payment_reports).
+
+    - ``company_id`` (NR3/D8): direct tenant column so document numbers are unique
+      per company at the DB level and tenant queries need no join. It is
+      auto-populated from the document's order by a ``before_insert`` listener.
+    - ``extend01``..``extend10`` (D9): reserved "flexfield" columns. Stored as text;
+      whether each is shown, its label, data type and whether it is required are
+      configured per company via ``ExtensionFieldConfig`` and validated/cast at the
+      application layer.
+    """
+
+    @declared_attr
+    def company_id(cls):
+        return db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+
+    extend01 = db.Column(db.Text)
+    extend02 = db.Column(db.Text)
+    extend03 = db.Column(db.Text)
+    extend04 = db.Column(db.Text)
+    extend05 = db.Column(db.Text)
+    extend06 = db.Column(db.Text)
+    extend07 = db.Column(db.Text)
+    extend08 = db.Column(db.Text)
+    extend09 = db.Column(db.Text)
+    extend10 = db.Column(db.Text)
 
 
 class Company(db.Model):
@@ -279,7 +315,7 @@ class Order(db.Model):
         return True
 
 
-class Quotation(db.Model):
+class Quotation(DocExtensionMixin, db.Model):
     """Quotation model"""
     __tablename__ = 'quotations'
     
@@ -314,10 +350,9 @@ class Quotation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Document numbers are unique per order (was global — see AUDIT W6/B3).
-    # Per-company enforcement is done at the app layer (via the order's company).
-    __table_args__ = (db.UniqueConstraint('order_id', 'quotation_number',
-                                          name='uq_order_quotation_number'),)
+    # Document numbers are unique per company (NR3/D8).
+    __table_args__ = (db.UniqueConstraint('company_id', 'quotation_number',
+                                          name='uq_company_quotation_number'),)
 
     # Relationships
     documents = db.relationship('Document', backref='quotation', lazy=True, cascade='all, delete-orphan')
@@ -335,7 +370,7 @@ class Quotation(db.Model):
         return self.is_active and not self.is_canceled and not self.is_approved
 
 
-class Contract(db.Model):
+class Contract(DocExtensionMixin, db.Model):
     """Contract model"""
     __tablename__ = 'contracts'
     
@@ -376,9 +411,9 @@ class Contract(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Document numbers unique per order; per-company enforced at app layer (W6b/B3).
-    __table_args__ = (db.UniqueConstraint('order_id', 'contract_number',
-                                          name='uq_order_contract_number'),)
+    # Document numbers unique per company (NR3/D8).
+    __table_args__ = (db.UniqueConstraint('company_id', 'contract_number',
+                                          name='uq_company_contract_number'),)
 
     # Relationships
     quotation = db.relationship('Quotation', backref='contracts', foreign_keys='Contract.quotation_id', lazy=True)
@@ -400,7 +435,7 @@ class Contract(db.Model):
         return self.is_active and not self.is_canceled and not self.is_signed
 
 
-class HandoverRecord(db.Model):
+class HandoverRecord(DocExtensionMixin, db.Model):
     """Handover Record (Biên Bản Bàn Giao) - confirms customer acceptance of product/service"""
     __tablename__ = 'handover_records'
     
@@ -443,9 +478,9 @@ class HandoverRecord(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Document numbers unique per order; per-company enforced at app layer (W6b/B3).
-    __table_args__ = (db.UniqueConstraint('order_id', 'report_number',
-                                          name='uq_order_handover_report_number'),)
+    # Document numbers unique per company (NR3/D8).
+    __table_args__ = (db.UniqueConstraint('company_id', 'report_number',
+                                          name='uq_company_handover_report_number'),)
 
     # Relationships
     documents = db.relationship('Document', backref='handover_record', lazy=True)
@@ -466,7 +501,7 @@ class HandoverRecord(db.Model):
         return not self.is_confirmed and not self.is_canceled
 
 
-class PaymentReport(db.Model):
+class PaymentReport(DocExtensionMixin, db.Model):
     """Payment report model"""
     __tablename__ = 'payment_reports'
     
@@ -509,9 +544,9 @@ class PaymentReport(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Document numbers unique per order; per-company enforced at app layer (W6b/B3).
-    __table_args__ = (db.UniqueConstraint('order_id', 'report_number',
-                                          name='uq_order_payment_report_number'),)
+    # Document numbers unique per company (NR3/D8).
+    __table_args__ = (db.UniqueConstraint('company_id', 'report_number',
+                                          name='uq_company_payment_report_number'),)
 
     # Relationships
     documents = db.relationship('Document', backref='payment_report', lazy=True)
@@ -775,3 +810,54 @@ class MasterAdmin(db.Model):
 
     def __repr__(self):
         return f'<MasterAdmin {self.username}>'
+
+
+class ExtensionFieldConfig(db.Model):
+    """Per-company configuration for a document type's extend01..extend10 columns.
+
+    One row per (company, entity_type, field_key). Controls whether the slot is
+    shown on forms, its display label, its data type and whether it is required.
+    See AUDIT D9.
+    """
+    __tablename__ = 'extension_field_configs'
+
+    ENTITY_TYPES = ('quotation', 'contract', 'handover', 'payment')
+    DATA_TYPES = ('text', 'number', 'date', 'boolean')
+
+    id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id  = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    entity_type = db.Column(db.String(30), nullable=False)   # quotation|contract|handover|payment
+    field_key   = db.Column(db.String(20), nullable=False)   # extend01..extend10
+    is_enabled  = db.Column(db.Boolean, default=False, nullable=False)
+    label       = db.Column(db.String(100))
+    data_type   = db.Column(db.String(20), default='text', nullable=False)  # text|number|date|boolean
+    is_required = db.Column(db.Boolean, default=False, nullable=False)
+    sort_order  = db.Column(db.Integer, default=0)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at  = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'entity_type', 'field_key',
+                            name='uq_extfield_company_entity_key'),
+    )
+
+    def __repr__(self):
+        return f'<ExtensionFieldConfig {self.entity_type}.{self.field_key}>'
+
+
+def _populate_doc_company_id(mapper, connection, target):
+    """before_insert: set a document's company_id from its order (NR3/D8).
+
+    Runs for every insert path (route or service) so the NOT NULL company_id
+    column is always populated without touching each create call site.
+    """
+    if getattr(target, 'company_id', None) is None and getattr(target, 'order_id', None) is not None:
+        row = connection.execute(
+            select(Order.company_id).where(Order.id == target.order_id)
+        ).first()
+        if row is not None:
+            target.company_id = row[0]
+
+
+for _doc_model in (Quotation, Contract, HandoverRecord, PaymentReport):
+    event.listen(_doc_model, 'before_insert', _populate_doc_company_id)
