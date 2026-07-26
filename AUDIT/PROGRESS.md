@@ -5,7 +5,7 @@
 
 **Bắt đầu:** 2026-07-25
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner persona)
-**Trạng thái tổng thể:** ✅ VÒNG LẶP ĐÃ DỪNG — chờ bạn review & quyết NR1/NR2/NR3. Bảo mật, Schema/migration, refactor lõi, N+1, phân trang (đơn hàng + khách hàng), min=0, i18n slice — XONG & verify. Còn lại là long-tail giá trị thấp / rủi ro cao (xem `FINAL-REPORT.md` §7 để resume). **Suite 30 passed, 1 xfailed; 32 commit; chưa merge.**
+**Trạng thái tổng thể:** ✅ Phase 5–6 xong + **Phase 7 (ủy quyền 2026-07-26): NR1/NR2/NR3 đã quyết + feature cột mở rộng extend01–10 (config admin) + 3 E2E đơn hàng**. **Suite 42 passed, 1 xfailed; 39 commit; chưa merge.** Xem `FINAL-REPORT.md` (§6 NR đã giải quyết, §10 cột mở rộng). Chờ bạn review & merge.
 
 **Nếu muốn tiếp:** đọc `FINAL-REPORT.md` §7 (bảng "cách resume") — mỗi mục có lý do hoãn + gợi ý. Ưu tiên bạn quyết: NR1 (contract-gating), NR2 (cascade delete), NR3 (per-company DB constraint), và xác nhận luật `advance_skipped` (§5).
 

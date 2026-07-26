@@ -2,7 +2,9 @@
 
 **Nhánh:** `refactor/full-audit` (tách từ `main` @ `22fb9eb`) · **Ngày:** 2026-07-25 → 2026-07-26
 **Người thực hiện:** Coding agent (Principal Engineer + Product Owner) — chạy tự chủ qua đêm theo spec đã duyệt.
-**Trạng thái:** ✅ Bảo mật, toàn vẹn dữ liệu/schema, refactor lõi, perf (N+1 + phân trang), UX cơ bản **đã xong & verify**. Vòng lặp refactor đã **DỪNG** — phần còn lại (§7) là long-tail giá trị thấp / rủi ro cao / cần bạn quyết. **Chưa merge** — chờ bạn review. **32 commit, 30 test pass, 1 xfail (B6/NR1).**
+**Trạng thái:** ✅ Bảo mật, toàn vẹn dữ liệu/schema, refactor lõi, perf, UX cơ bản **đã xong & verify**. **Phase 7 (ủy quyền 2026-07-26):** đã quyết NR1/NR2/NR3 theo chuẩn ngành + xây feature **cột mở rộng extend01–10 có config admin** + test E2E vài đơn hàng. **Chưa merge** — chờ bạn review. **39 commit, 42 test pass, 1 xfail (B6 = NR1 "by design", giữ làm tài liệu).**
+
+> **Phase 7 mới nhất:** xem §10 (cột mở rộng) + §6 (NR đã giải quyết). B6/NR1 xfail được GIỮ để làm tài liệu về quyết định "không bắt buộc quotation duyệt".
 
 > ĐỌC FILE NÀY TRƯỚC. Chi tiết từng bước ở `AUDIT/CHANGELOG.md`; quyết định tự chủ ở `AUDIT/DECISIONS.md`; việc cần bạn quyết ở `AUDIT/NEEDS-REVIEW.md`.
 
@@ -12,7 +14,9 @@
 
 | Hạng mục | Trước | Sau |
 |----------|-------|-----|
-| Test tự động | **0** | **31** (30 pass, 1 xfail = business rule chờ bạn) — pytest trên SQLite, không cần Docker |
+| Test tự động | **0** | **43** (42 pass, 1 xfail) gồm 3 E2E đơn hàng — pytest trên SQLite, không cần Docker |
+| Cột mở rộng do người dùng | Không có | **extend01–10 / mỗi loại chứng từ**, admin bật/tắt + đặt nhãn + kiểu + bắt buộc |
+| Số hiệu chứng từ | Global unique | **Unique per company (DB-level, có cột company_id)** |
 | CSRF | Không có ở bất kỳ form nào | Bật toàn site (Flask-WTF) — 69 form/39 template |
 | IDOR ghi xuyên tenant | Có (tạo order cho tenant khác) | Đã chặn (lookup có scope company) |
 | Số hiệu chứng từ | Unique **toàn cục** (rò rỉ giữa tenant) | Unique **per-order** + enforce **per-company** ở app (cả 4 loại chứng từ) |
@@ -67,11 +71,12 @@
 - **`advance_skipped` (giữ nguyên logic — D1):** luật suy luận từ code (`skip_advance_payment`): *chỉ khi hợp đồng đã ký* mới được "bỏ qua tạm ứng"; khi bỏ qua, hệ thống đặt `advance_skipped=True` **và** `advance_paid=True` để mở khóa bàn giao + thanh toán cuối mà không ghi nhận một chứng từ tạm ứng. Nếu luật đúng của bạn khác (vd không coi là đã trả), cần điều chỉnh — **agent KHÔNG đổi logic dòng tiền**.
 - **Chuẩn hóa `name.strip()`** trong `parse_line_items`: item name bị bỏ khoảng trắng thừa (trước đây một số chỗ giữ nguyên). Vô hại nhưng nêu để bạn biết.
 
-## 6. NEEDS-REVIEW (chờ bạn quyết — agent KHÔNG tự làm)
+## 6. NEEDS-REVIEW — ĐÃ GIẢI QUYẾT (bạn ủy quyền 2026-07-26; xem DECISIONS D6–D8)
 
-- **NR1 — B6:** Contract có bắt buộc quotation đã duyệt? (enforce có thể phá luồng đang dùng). Mặc định đề xuất: cảnh báo mềm, không chặn.
-- **NR2 — Cascade delete vs soft-delete** Company/Order (lưu trữ hồ sơ tài chính).
-- **NR3 — Ràng buộc DB-level per-company** cho số hiệu chứng từ (cần thêm cột `company_id` + backfill trên prod — muốn có prod DB + backup để kiểm chứng). Hiện đã per-order (DB) + per-company (app), đủ chặn bug.
+- **NR1 — B6:** ✅ **KHÔNG bắt buộc quotation duyệt (by design)** — chuẩn quote-to-cash/CPQ. Không đổi code; test `test_create_contract_requires_approved_quotation` giữ `xfail` như tài liệu "đây là hành vi cố ý".
+- **NR2 — cascade vs soft-delete:** ✅ **Soft-delete là chuẩn.** Xác minh không có route hard-delete Company/Order → giữ nguyên; không expose xóa cứng.
+- **NR3 — per-company DB-level:** ✅ **ĐÃ LÀM.** Thêm cột `company_id` (auto-backfill từ order qua `before_insert`) + unique `(company_id, number)` cho cả 4 bảng chứng từ (migration `42d15126ff2c`).
+- **`advance_skipped`:** vẫn giữ nguyên logic (D1) — luật đã ghi ở §5, chờ bạn xác nhận nếu khác.
 
 ## 7. Đánh bóng — trạng thái
 
@@ -106,4 +111,17 @@
 6. Merge (không force-push; agent chưa merge/không đụng prod theo lằn ranh đã thống nhất).
 
 ---
-*Tổng: 32 commit trên nhánh, mỗi commit build + test xanh. Không merge, không force-push, không đụng production, không thêm tính năng mới lớn.*
+## 10. Feature mới — Cột mở rộng do người dùng (extend01–extend10)
+
+Mục tiêu: 1 hệ thống không cover hết nhu cầu doanh nghiệp → mỗi loại chứng từ có **10 cột mở rộng** admin tự cấu hình.
+
+- **Mô hình (D9 — chuẩn "flexfield" như Oracle/SAP/Odoo):** 4 bảng chứng từ có `extend01..extend10` (TEXT). Bảng `extension_field_configs` (per company, per entity_type, per slot) giữ: bật/tắt, **nhãn**, **kiểu dữ liệu** (text/number/date/boolean), **bắt buộc**, thứ tự.
+- **Admin cấu hình:** `/settings/extension-fields` (chỉ company_admin) — tab theo loại chứng từ, 10 slot mỗi loại.
+- **Người dùng nhập:** field đang bật tự hiện trên form tạo chứng từ (nhãn + kiểu do admin đặt); validate bắt buộc + kiểu ở server; lưu vào cột `extendNN`.
+- **Cách ly tenant:** config theo `company_id`; công ty khác không thấy field của nhau.
+- **Item-level:** item hiện lưu JSON (schemaless) → có thể thêm khóa `extendNN` vào item mà không đổi schema; UI render item-extension để **Đề xuất tương lai** (chưa làm).
+- **Test:** validation (required/number/date/boolean), config-save→hiện-trên-form, persist qua HTTP, + E2E đơn hàng có extension.
+- **Files:** `app/models/models.py` (`DocExtensionMixin`, `ExtensionFieldConfig`), `app/utils/extension_fields.py`, `app/templates/settings/extension_fields.html`, `_extension_fields_form.html`, migration `42d15126ff2c`.
+
+---
+*Tổng: 39 commit trên nhánh, mỗi commit build + test xanh (42 pass, 1 xfail). Không merge, không force-push, không đụng production. Feature cột mở rộng được thêm theo yêu cầu trực tiếp của chủ dự án.*

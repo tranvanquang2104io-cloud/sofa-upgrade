@@ -186,6 +186,19 @@ For an existing database already created via `create_all()`, run
 - Document numbers are unique per order and enforced per company at the app layer.
 - Tenant isolation is enforced on reads and writes (company-scoped lookups).
 
+## Custom (Extension) Fields
+
+Each document type (quotation, contract, handover, payment) has **10 reserved
+columns** (`extend01`–`extend10`) that a company admin can turn into custom
+fields — no schema change or code needed per company.
+
+- Configure at **Management → Extension Fields** (`/settings/extension-fields`):
+  enable a slot, give it a label, choose a data type (text / number / date /
+  boolean) and mark it required.
+- Enabled fields appear on the matching document create form; values are
+  validated server-side and stored in the `extendNN` column.
+- Configuration is per company (tenant-isolated).
+
 ## Order Lifecycle
 
 ```

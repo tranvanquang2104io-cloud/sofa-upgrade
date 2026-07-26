@@ -127,3 +127,21 @@
 - **Test:** `/customers` render 200; `/customers?store_id=..&page=999` không crash.
 - **Suite:** **30 passed, 1 xfailed**.
 - **Files:** `app/routes/dashboard_routes.py`, `app/templates/customers/list.html`, `tests/test_list_views.py`.
+
+---
+
+# PHASE 7 — NR decisions + Extension fields feature (ủy quyền 2026-07-26)
+
+## NR1/NR2/NR3 — Giải quyết (xem DECISIONS D6–D8)
+- **NR1:** Contract KHÔNG bắt buộc quotation duyệt (by design, chuẩn CPQ). Không đổi code.
+- **NR2:** Soft-delete là chuẩn; xác minh không có đường hard-delete Company/Order. Không đổi code.
+- **NR3:** Làm — số hiệu chứng từ unique per `(company_id, number)` ở tầng DB.
+
+## W-NR3 + W-EXT — company_id per-tenant + cột mở rộng extend01–10 + config
+- **Schema:** `DocExtensionMixin` thêm `company_id` (NOT NULL, auto-backfill qua `before_insert`) + `extend01..extend10 (TEXT)` cho 4 bảng chứng từ; unique đổi sang `(company_id, number)`. Model mới `ExtensionFieldConfig` (per company/entity/slot: enabled/label/data_type/required/sort_order).
+- **Migration:** `42d15126ff2c` — thêm cột (nullable) → **backfill company_id từ orders** → NOT NULL + swap unique + index + FK; tạo bảng config. Dialect-aware, reversible. **Verify với dữ liệu thật + round-trip trên SQLite.**
+- **Logic:** `app/utils/extension_fields.py` — đọc config, validate (required + data_type: text/number/date/boolean), collect + apply. Wire vào 4 luồng tạo chứng từ.
+- **UI:** trang admin `/settings/extension-fields` (company_admin) cấu hình bật/tắt + nhãn + kiểu + bắt buộc theo entity; partial `_extension_fields_form.html` render field bật trên form tạo (qua context processor); link nav.
+- **Test:** `test_extension_fields.py` (9: validation + config-save→hiện-trên-form + persist + required), `test_e2e_orders.py` (3 đơn E2E: full lifecycle→completed, đơn có extension field, đơn hủy).
+- **Suite:** **42 passed, 1 xfailed.**
+- **Files:** `app/models/models.py`, `app/utils/extension_fields.py`, `app/routes/dashboard_routes.py`, `app/__init__.py`, `app/templates/settings/extension_fields.html`, `app/templates/_extension_fields_form.html`, 4× create templates, `base.html`, `migrations/versions/42d15126ff2c_*.py`, tests.
