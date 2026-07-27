@@ -17,40 +17,26 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 def login():
     """Login page and authentication"""
     if request.method == 'POST':
-        company_code = request.form.get('company_code', '').strip()
-        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
-        
-        if not all([company_code, username, password]):
-            flash(t('Please enter company code, username, and password'), 'error')
+
+        if not all([email, password]):
+            flash(t('Please enter your email and password'), 'error')
             return redirect(url_for('auth.login'))
-        
+
         try:
-            # Get company
-            company_service = CompanyService()
-            company = company_service.repo.get_by_code(company_code)
-            
-            if not company:
-                flash(t('Invalid company code'), 'error')
-                return redirect(url_for('auth.login'))
-            
-            # Authenticate user
-            user_service = UserService()
-            user = user_service.authenticate_user(username, password, company.id)
-            
+            user = UserService().authenticate_by_email(email, password)
             if user:
                 set_user_context(user)
-                logger.info(f"User logged in: {username} ({company_code})")
+                logger.info(f"User logged in: {email}")
                 return redirect(url_for('dashboard.index'))
-            else:
-                flash(t('Invalid username or password'), 'error')
-                return redirect(url_for('auth.login'))
-                
+            flash(t('Invalid email or password'), 'error')
+            return redirect(url_for('auth.login'))
         except Exception as e:
             logger.error(f"Login error: {str(e)}")
             flash(t('Login failed. Please try again.'), 'error')
             return redirect(url_for('auth.login'))
-    
+
     return render_template('auth/login.html')
 
 

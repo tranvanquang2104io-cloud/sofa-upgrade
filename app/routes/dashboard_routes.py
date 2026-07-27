@@ -195,6 +195,8 @@ def company_settings():
             company.tax_code = request.form.get('tax_code', '').strip() or None
             company.representative_name = request.form.get('representative_name', '').strip() or None
             company.representative_title = request.form.get('representative_title', '').strip() or None
+            company.business_registration_number = request.form.get('business_registration_number', '').strip() or None
+            company.website = request.form.get('website', '').strip() or None
             vat_str = request.form.get('vat_rate', '').strip()
             company.vat_rate = float(vat_str) if vat_str else company.vat_rate
             # Bank accounts from JSON textarea

@@ -414,6 +414,8 @@ class DocumentVariableCollector:
             'company_phone':               getattr(company, 'phone', '') or '',
             'company_email':               getattr(company, 'email', '') or '',
             'company_tax_code':            getattr(company, 'tax_code', '') or '',
+            'company_business_registration_number': getattr(company, 'business_registration_number', '') or '',
+            'company_website':             getattr(company, 'website', '') or '',
             'company_representative_name': getattr(company, 'representative_name', '') or '',
             'company_representative_title': getattr(company, 'representative_title', '') or '',
             'company_vat_rate':            str(getattr(company, 'vat_rate', 8) or 8),
@@ -540,6 +542,8 @@ class DocumentVariableCollector:
             'advance_amount':     _fmt(getattr(contract, 'advance_amount', 0) or 0),
             'grand_total':        _fmt(contract.contract_value),
             # Terms, misc
+            'warranty_months':      str(getattr(contract, 'warranty_months', '') or ''),
+            'delivery_terms':       getattr(contract, 'delivery_terms', '') or '',
             'terms_and_conditions': contract.terms_and_conditions or '',
             'notes':                getattr(contract, 'notes', '') or '',
             'generated_date':       datetime.now().strftime('%d/%m/%Y %H:%M'),

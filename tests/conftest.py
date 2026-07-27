@@ -121,16 +121,18 @@ def seeded_order(app, seed):
 
 
 @pytest.fixture()
-def login(client, seed):
-    """Return a helper that logs a seeded user in via the real login flow."""
-    def _login(username="admin", password="secret123", company_code=None):
-        return client.post(
-            "/auth/login",
-            data={
-                "company_code": company_code or seed["company_code"],
-                "username": username,
-                "password": password,
-            },
-            follow_redirects=True,
-        )
+def login(client, seed, app):
+    """Log a seeded user in via the real (email + password) login flow.
+
+    Still accepts ``username=`` for convenience — it is resolved to that user's
+    email so existing callers keep working after the email-login switch.
+    """
+    def _login(username="admin", password="secret123", company_code=None, email=None):
+        if email is None:
+            from app.models.models import User
+            with app.app_context():
+                u = User.query.filter_by(username=username).first()
+                email = u.email if u else username
+        return client.post("/auth/login", data={"email": email, "password": password},
+                           follow_redirects=True)
     return _login

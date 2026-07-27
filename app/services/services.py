@@ -154,6 +154,23 @@ class UserService:
             return user
         return None
 
+    def authenticate_by_email(self, email, password):
+        """Authenticate by email + password (global — email is unique).
+
+        Email is the login identifier, so the company is derived from the user.
+        Case-insensitive email match; only active users can log in.
+        """
+        from sqlalchemy import func
+        from app.models.models import User
+        email = (email or '').strip().lower()
+        if not email:
+            return None
+        user = User.query.filter(func.lower(User.email) == email,
+                                 User.is_active == True).first()
+        if user and user.check_password(password):
+            return user
+        return None
+
     def get_user(self, user_id):
         """Get user by ID"""
         return self.repo.get_by_id(user_id)

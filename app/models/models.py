@@ -60,6 +60,9 @@ class Company(db.Model):
     tax_code = db.Column(db.String(50))   # Mã số thuế
     representative_name = db.Column(db.String(255))  # Legal representative (Giám Đốc)
     representative_title = db.Column(db.String(100), default='Giám Đốc')
+    business_registration_number = db.Column(db.String(100))  # Số ĐKKD / GPKD (cần cho hộ KD)
+    website = db.Column(db.String(255))
+    logo_path = db.Column(db.String(500))
     vat_rate = db.Column(db.Numeric(5, 2), default=8.00)  # Default VAT % (e.g. 8.00)
     # Bank accounts: [{"bank_name": ..., "account_number": ..., "account_holder": ...}]
     bank_accounts = db.Column(db.JSON, default=list)
@@ -132,7 +135,8 @@ class User(db.Model):
     # NULL for company_admin; required for store_admin and user
     store_id = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)
     username = db.Column(db.String(100), nullable=False, index=True)
-    email = db.Column(db.String(255), nullable=False, index=True)
+    # Email is the login identifier — globally unique across all companies.
+    email = db.Column(db.String(255), nullable=False, unique=True, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(255), nullable=False)
     phone = db.Column(db.String(20))
@@ -400,6 +404,8 @@ class Contract(DocExtensionMixin, db.Model):
     selected_bank_index = db.Column(db.Integer, default=0)  # Index trong company.bank_accounts
     num_date_notice_cancel = db.Column(db.Integer, default=7)  # Số ngày báo trước khi hủy
 
+    warranty_months = db.Column(db.Integer)  # Thời gian bảo hành (tháng)
+    delivery_terms = db.Column(db.Text)      # Điều khoản giao hàng
     terms_and_conditions = db.Column(db.Text)
     is_signed = db.Column(db.Boolean, default=False, index=True)
     signed_date = db.Column(db.DateTime)

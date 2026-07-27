@@ -16,13 +16,8 @@
                     <form method="POST" action="{{ url_for('auth.login') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
-                            <label for="company_code" class="form-label">{{ t('Company Code') }}</label>
-                            <input type="text" class="form-control" id="company_code" name="company_code" placeholder="e.g., SOFA-001" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="username" class="form-label">{{ t('Username') }}</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
+                            <label for="email" class="form-label">{{ t('Email') }}</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="email@example.com" required autofocus>
                         </div>
 
                         <div class="mb-3">

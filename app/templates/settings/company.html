@@ -32,6 +32,20 @@
                         </div>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Business Registration No.') }}</label>
+                            <input type="text" class="form-control" name="business_registration_number" value="{{ company.business_registration_number or '' }}" placeholder="Số ĐKKD / GPKD">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('Website') }}</label>
+                            <input type="text" class="form-control" name="website" value="{{ company.website or '' }}" placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
 
                 <div class="row">
                     <div class="col-md-6">

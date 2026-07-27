@@ -157,3 +157,19 @@
 - **Routes/UI:** `/orders/<id>/production-plan` (xem/sửa), thêm/xóa vật tư, `/issue` (cấp phát), `/save-norm/<item>`, `/materials/low-stock`. Template `production/plan.html`, `materials/low_stock.html`; link ở order view + nav (Low Stock). CSRF token đầy đủ.
 - **Test:** `test_production_plan.py` (6) + E2E sign→auto-plan. Scope đợt 1: KH + trừ kho + cảnh báo tồn (PO để sau).
 - **VERSION → 1.4.0.**
+
+---
+
+# LOGIN + TEMPLATE FIELDS (2026-07-27)
+
+## L1 — Đăng nhập bằng email + password (thay hẳn 3 trường)  ✅
+- **Model:** `User.email` → **unique toàn cục** (migration `3b58dbc4e87a`, round-trip OK). Email là định danh đăng nhập, company suy từ user.
+- **Service:** `UserService.authenticate_by_email(email, password)` — tra user theo email (case-insensitive, chỉ active).
+- **Route/UI:** `/auth/login` nhận `email`+`password`; form login còn 2 trường (bỏ company_code + username).
+- **Test:** `test_email_login.py` (5: login OK, case-insensitive, sai pass/email, email unique). Cập nhật `conftest.login` (resolve username→email) + `test_auth_session`.
+
+## L2 — Bổ sung field DB cho template chuẩn  ✅
+- **Model:** `Company.business_registration_number` (Số ĐKKD/GPKD), `Company.website`, `Company.logo_path`; `Contract.warranty_months`, `Contract.delivery_terms`. Migration `5c706597ac41` (round-trip OK).
+- **Template:** `DocumentVariableCollector` expose `company_business_registration_number`, `company_website`, `warranty_months`, `delivery_terms` (dùng được trong .docx).
+- **UI:** trang Cài đặt công ty thêm ô Số ĐKKD + Website (route lưu). Test `test_company_fields.py`.
+- **VERSION → 1.5.0.**

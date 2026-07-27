@@ -8,8 +8,7 @@ def test_login_clears_preexisting_session(client, seed):
         sess["lang"] = "en"
 
     client.post("/auth/login", data={
-        "company_code": seed["company_code"],
-        "username": "admin",
+        "email": "admin@acme.test",
         "password": "secret123",
     })
 
