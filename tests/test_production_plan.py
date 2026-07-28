@@ -135,3 +135,50 @@ def test_plan_routes_add_and_issue(app, client, login, seed):
     with app.app_context():
         st = MaterialStock.query.filter_by(material_id=mat).first()
         assert float(st.current_quantity) == 7.0
+
+
+def test_plan_lifecycle_transitions(app, seed):
+    import pytest
+    from app.models.models import Contract, ProductionPlan
+    from app.services.services import ProductionPlanService
+    _mk_contract(app, seed, [{"name": "X", "unit": "c", "quantity": 1, "total": 1}])
+    svc = ProductionPlanService()
+    with app.app_context():
+        c = Contract.query.filter_by(contract_number="PP-C1").first()
+        plan = svc.create_from_contract(c)
+        pid = str(plan.id)
+        assert plan.status == "draft"
+        with pytest.raises(ValueError):          # cannot jump to finish
+            svc.transition(plan, "finish")
+    flow = [("approve", "approved"), ("start", "processing"), ("complete", "completed"),
+            ("submit", "validating"), ("reject", "rejected"), ("start", "processing"),
+            ("complete", "completed"), ("submit", "validating"), ("validate", "validated"),
+            ("finish", "finished")]
+    for action, expected in flow:
+        with app.app_context():
+            plan = ProductionPlan.query.get(pid)
+            svc.transition(plan, action)
+            assert plan.status == expected
+
+
+def test_plan_page_ui_status_and_print(app, client, login, seed):
+    from app.config import db
+    from app.models.models import Order, Contract, ProductionPlan
+    from app.services.services import ProductionPlanService
+    with app.app_context():
+        o = Order(company_id=seed["company_id"], store_id=seed["store_id"],
+                  customer_id=seed["customer_id"], order_code="PPUI-1", title="x")
+        db.session.add(o); db.session.flush()
+        c = Contract(order_id=o.id, contract_number="PPUI-C1", contract_date=date(2026, 7, 27),
+                     contract_value=Decimal("1"), items=[{"name": "A", "unit": "c", "quantity": 1, "total": 1}])
+        db.session.add(c); db.session.commit()
+        plan = ProductionPlanService().create_from_contract(c)
+        pid, oid = str(plan.id), str(o.id)
+    login(username="admin")
+    r = client.get(f"/orders/{oid}/production-plan")
+    assert r.status_code == 200 and "Duyệt kế hoạch".encode() in r.data
+    client.post(f"/production-plan/{pid}/status/approve", follow_redirects=True)
+    with app.app_context():
+        assert ProductionPlan.query.get(pid).status == "approved"
+    rp = client.get(f"/production-plan/{pid}/print")
+    assert rp.status_code == 200 and rp.data[:2] == b"PK"   # docx = zip

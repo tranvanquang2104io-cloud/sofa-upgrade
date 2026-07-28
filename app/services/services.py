@@ -1696,3 +1696,20 @@ class ProductionPlanService:
         from app.models.models import Material
         mats = Material.query.filter_by(company_id=company_id, is_active=True).all()
         return [m for m in mats if m.is_low_stock]
+
+    def transition(self, plan, action):
+        """Move the plan through its lifecycle (validates the transition)."""
+        tr = plan.TRANSITIONS.get(action)
+        if not tr or plan.status not in tr[0]:
+            raise ValueError(f'Không thể "{action}" khi kế hoạch đang ở trạng thái "{plan.status}"')
+        plan.status = tr[1]
+        if action in ('start', 'validate', 'finish'):
+            plan.is_delayed = plan.is_delayed if action == 'start' else False
+        db.session.commit()
+        return plan
+
+    def set_delay(self, plan, delayed, reason=None):
+        plan.is_delayed = bool(delayed)
+        plan.delay_reason = (reason or None) if delayed else None
+        db.session.commit()
+        return plan

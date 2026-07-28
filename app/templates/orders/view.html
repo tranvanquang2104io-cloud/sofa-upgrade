@@ -73,9 +73,11 @@
         <p class="text-muted">{{ order.title }}</p>
     </div>
     <div class="col-md-4 text-end">
+        {% if order.production_plan %}
         <a href="{{ url_for('dashboard.view_production_plan', order_id=order.id) }}" class="btn btn-outline-primary">
-            <i class="bi bi-gear-wide-connected"></i> {{ t('Production Plan') }}
+            <i class="bi bi-gear-wide-connected"></i> Kế hoạch sản xuất
         </a>
+        {% endif %}
         <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> {{ t('Back') }}
         </a>

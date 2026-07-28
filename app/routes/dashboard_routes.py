@@ -2872,9 +2872,47 @@ def view_production_plan(order_id):
     if not order:
         flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
+    from app.models.models import MaterialUnit
     plan = ProductionPlanService().get_plan_for_order(order_id)
     materials = Material.query.filter_by(company_id=company_id, is_active=True).order_by(Material.name).all()
-    return render_template('production/plan.html', order=order, plan=plan, materials=materials)
+    units = MaterialUnit.query.filter_by(company_id=company_id, is_active=True).order_by(MaterialUnit.name).all()
+    return render_template('production/plan.html', order=order, plan=plan,
+                           materials=materials, units=units)
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/status/<action>', methods=['POST'])
+@login_required
+def production_plan_status(plan_id, action):
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    from app.services.services import ProductionPlanService
+    try:
+        ProductionPlanService().transition(plan, action)
+        flash(t('Đã cập nhật trạng thái kế hoạch sản xuất'), 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error(f'production_plan_status error: {e}')
+        db.session.rollback(); flash(t('Lỗi khi cập nhật trạng thái'), 'error')
+    return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/delay', methods=['POST'])
+@login_required
+def production_plan_delay(plan_id):
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    from app.services.services import ProductionPlanService
+    delayed = request.form.get('delayed') in ('on', '1', 'true')
+    ProductionPlanService().set_delay(plan, delayed, request.form.get('delay_reason', '').strip() or None)
+    flash(t('Đã cập nhật tình trạng tiến độ'), 'success')
+    return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
 
 
 @dashboard_bp.route('/production-plan/<plan_id>/materials', methods=['POST'])
@@ -2970,3 +3008,22 @@ def low_stock_materials():
     from app.services.services import ProductionPlanService
     materials = ProductionPlanService().low_stock_materials(company_id)
     return render_template('materials/low_stock.html', materials=materials)
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/print', methods=['GET'])
+@login_required
+def print_production_plan(plan_id):
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+    from app.models.models import Company, Customer
+    from app.utils.production_doc import build_production_plan_docx
+    company = db.session.get(Company, company_id)
+    order = plan.order
+    customer = db.session.get(Customer, order.customer_id)
+    bio = build_production_plan_docx(plan, order, customer, company)
+    return send_file(bio, as_attachment=True,
+                     download_name=f'LenhSanXuat_{plan.plan_number}.docx',
+                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')

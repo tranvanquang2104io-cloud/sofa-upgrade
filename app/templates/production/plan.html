@@ -16,19 +16,44 @@
     {{ t('The production plan is created automatically once the contract is signed.') }}
   </div>
 {% else %}
+  {% set status_labels = {'draft':'Nháp','approved':'Đã duyệt','processing':'Đang sản xuất','completed':'Đã SX xong','validating':'Đang nghiệm thu','validated':'Đạt nghiệm thu','rejected':'Bị từ chối','finished':'Hoàn tất','canceled':'Đã hủy'} %}
+  {% set status_colors = {'draft':'secondary','approved':'info','processing':'primary','completed':'primary','validating':'warning','validated':'success','rejected':'danger','finished':'success','canceled':'dark'} %}
+  {% set action_labels = {'approve':'Duyệt kế hoạch','start':'Bắt đầu sản xuất','complete':'Đã sản xuất xong','submit':'Gửi nghiệm thu','validate':'Đạt nghiệm thu','reject':'Từ chối (làm lại)','finish':'Hoàn tất','cancel':'Hủy kế hoạch'} %}
+  {% set action_colors = {'approve':'info','start':'primary','complete':'primary','submit':'warning','validate':'success','reject':'danger','finish':'success','cancel':'outline-danger'} %}
   <div class="card mb-3">
-    <div class="card-body d-flex justify-content-between align-items-center">
-      <div>
-        <span class="fw-bold">{{ t('Plan No.') }}: {{ plan.plan_number }}</span>
-        <span class="badge bg-secondary ms-2">{{ plan.status }}</span>
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <span class="fw-bold">Số KH: {{ plan.plan_number }}</span>
+          <span class="badge bg-{{ status_colors.get(plan.status,'secondary') }} ms-2">{{ status_labels.get(plan.status, plan.status) }}</span>
+          {% if plan.is_delayed %}<span class="badge bg-danger ms-1"><i class="bi bi-clock-history"></i> Trễ tiến độ</span>{% endif %}
+        </div>
+        <a href="{{ url_for('dashboard.print_production_plan', plan_id=plan.id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-printer"></i> In lệnh sản xuất
+        </a>
       </div>
-      <form method="POST" action="{{ url_for('dashboard.issue_plan_materials', plan_id=plan.id) }}"
-            onsubmit="return confirm('{{ t('Issue materials and deduct from stock?') }}');">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-primary btn-sm">
-          <i class="bi bi-box-arrow-up"></i> {{ t('Issue materials (deduct stock)') }}
-        </button>
-      </form>
+      <hr class="my-2">
+      <div class="d-flex gap-2 flex-wrap">
+        {% for action in plan.allowed_actions() %}
+        <form method="POST" action="{{ url_for('dashboard.production_plan_status', plan_id=plan.id, action=action) }}" class="d-inline"
+              {% if action == 'cancel' %}onsubmit="return confirm('Hủy kế hoạch sản xuất này?');"{% endif %}>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-{{ action_colors.get(action,'secondary') }}">{{ action_labels.get(action, action) }}</button>
+        </form>
+        {% endfor %}
+        {% if plan.can_edit() %}
+        <form method="POST" action="{{ url_for('dashboard.issue_plan_materials', plan_id=plan.id) }}" class="d-inline"
+              onsubmit="return confirm('Cấp phát vật tư và trừ kho?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up"></i> Cấp phát (trừ kho)</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('dashboard.production_plan_delay', plan_id=plan.id) }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="delayed" value="{{ '0' if plan.is_delayed else '1' }}">
+          <button class="btn btn-sm btn-outline-warning">{{ 'Bỏ đánh dấu trễ' if plan.is_delayed else 'Đánh dấu trễ tiến độ' }}</button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -108,8 +133,11 @@
           <input type="number" step="0.01" min="0" class="form-control" name="quantity_required" value="0">
         </div>
         <div class="col-md-2">
-          <label class="form-label">{{ t('Unit') }}</label>
-          <input type="text" class="form-control" name="unit">
+          <label class="form-label">ĐVT</label>
+          <select class="form-select" name="unit">
+            <option value="">--</option>
+            {% for u in units %}<option value="{{ u.name }}">{{ u.name }}</option>{% endfor %}
+          </select>
         </div>
         <div class="col-md-1">
           <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i></button>

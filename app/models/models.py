@@ -856,9 +856,28 @@ class ProductionPlan(db.Model):
     __tablename__ = 'production_plans'
 
     STATUS_DRAFT = 'draft'
-    STATUS_IN_PROGRESS = 'in_progress'
+    STATUS_APPROVED = 'approved'
+    STATUS_PROCESSING = 'processing'
     STATUS_COMPLETED = 'completed'
+    STATUS_VALIDATING = 'validating'
+    STATUS_VALIDATED = 'validated'
+    STATUS_REJECTED = 'rejected'
+    STATUS_FINISHED = 'finished'
     STATUS_CANCELED = 'canceled'
+    STATUS_IN_PROGRESS = 'processing'  # backward-compat alias
+
+    # action -> (allowed-from statuses, target status)
+    TRANSITIONS = {
+        'approve':  (('draft',), 'approved'),
+        'start':    (('approved', 'rejected'), 'processing'),
+        'complete': (('processing',), 'completed'),
+        'submit':   (('completed',), 'validating'),
+        'validate': (('validating',), 'validated'),
+        'reject':   (('validating',), 'rejected'),
+        'finish':   (('validated',), 'finished'),
+        'cancel':   (('draft', 'approved', 'processing', 'completed',
+                      'validating', 'validated', 'rejected'), 'canceled'),
+    }
 
     id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_id  = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
@@ -866,6 +885,8 @@ class ProductionPlan(db.Model):
     contract_id = db.Column(GUID(), db.ForeignKey('contracts.id'), nullable=True)
     plan_number = db.Column(db.String(50), nullable=False)
     status      = db.Column(db.String(20), default='draft', nullable=False, index=True)
+    is_delayed   = db.Column(db.Boolean, default=False, nullable=False)
+    delay_reason = db.Column(db.Text)
     notes       = db.Column(db.Text)
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at  = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -878,7 +899,16 @@ class ProductionPlan(db.Model):
     material_lines = db.relationship('ProductionMaterialLine', backref='plan', lazy=True, cascade='all, delete-orphan')
 
     def can_edit(self):
-        return self.status in (self.STATUS_DRAFT, self.STATUS_IN_PROGRESS)
+        """Materials/items editable while not yet in QC or closed."""
+        return self.status in (self.STATUS_DRAFT, self.STATUS_APPROVED,
+                               self.STATUS_PROCESSING, self.STATUS_REJECTED)
+
+    def can(self, action):
+        tr = self.TRANSITIONS.get(action)
+        return bool(tr and self.status in tr[0])
+
+    def allowed_actions(self):
+        return [a for a, (froms, _) in self.TRANSITIONS.items() if self.status in froms]
 
     def __repr__(self):
         return f'<ProductionPlan {self.plan_number}>'
