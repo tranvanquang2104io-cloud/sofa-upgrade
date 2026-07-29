@@ -899,9 +899,15 @@ class ProductionPlan(db.Model):
     material_lines = db.relationship('ProductionMaterialLine', backref='plan', lazy=True, cascade='all, delete-orphan')
 
     def can_edit(self):
-        """Materials/items editable while not yet in QC or closed."""
-        return self.status in (self.STATUS_DRAFT, self.STATUS_APPROVED,
-                               self.STATUS_PROCESSING, self.STATUS_REJECTED)
+        """BOM (danh sách vật tư/hạng mục) chỉ sửa được khi còn NHÁP.
+        'Duyệt kế hoạch' = chốt lệnh: sau khi duyệt, danh mục vật tư khóa lại,
+        chỉ còn cấp phát/nghiệm thu (muốn sửa lại thì 'Từ chối (làm lại)')."""
+        return self.status == self.STATUS_DRAFT
+
+    def can_issue(self):
+        """Cấp phát vật tư (trừ kho) sau khi đã chốt, trong lúc sản xuất."""
+        return self.status in (self.STATUS_APPROVED, self.STATUS_PROCESSING,
+                               self.STATUS_REJECTED)
 
     def can(self, action):
         tr = self.TRANSITIONS.get(action)

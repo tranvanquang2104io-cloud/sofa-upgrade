@@ -41,7 +41,7 @@
           <button class="btn btn-sm btn-{{ action_colors.get(action,'secondary') }}">{{ action_labels.get(action, action) }}</button>
         </form>
         {% endfor %}
-        {% if plan.can_edit() %}
+        {% if plan.can_issue() %}
         <form method="POST" action="{{ url_for('dashboard.issue_plan_materials', plan_id=plan.id) }}" class="d-inline"
               onsubmit="return confirm('Cấp phát vật tư và trừ kho?');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -95,11 +95,13 @@
         <td>{{ ln.plan_item.source_name if ln.plan_item else t('(overall)') }}</td>
         <td>{{ ln.quantity_required }}</td><td>{{ ln.quantity_issued }}</td><td>{{ ln.unit }}</td>
         <td class="text-end">
+          {% if plan.can_edit() %}
           <form method="POST" action="{{ url_for('dashboard.delete_plan_material', plan_id=plan.id, line_id=ln.id) }}" class="d-inline"
                 onsubmit="return confirm('{{ t('Delete this material line?') }}');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
           </form>
+          {% endif %}
         </td>
       </tr>
     {% else %}
@@ -108,7 +110,13 @@
     </tbody>
   </table>
 
-  {# Add material #}
+  {# Add material — only while the plan is still a draft (before it is approved/chốt) #}
+  {% if not plan.can_edit() %}
+    <div class="alert alert-secondary py-2 mt-3 mb-0">
+      <i class="bi bi-lock"></i> Kế hoạch đã được <strong>chốt</strong> (duyệt). Danh mục vật tư đã khóa,
+      không thể thêm/xóa. Muốn chỉnh sửa lại, hãy dùng <em>“Từ chối (làm lại)”</em> để đưa về trạng thái sản xuất.
+    </div>
+  {% else %}
   <div class="card mt-3">
     <div class="card-header">{{ t('Add material') }}</div>
     <div class="card-body">
@@ -145,5 +153,6 @@
       </form>
     </div>
   </div>
+  {% endif %}
 {% endif %}
 {% endblock %}

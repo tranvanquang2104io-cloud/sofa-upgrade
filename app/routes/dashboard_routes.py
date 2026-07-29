@@ -2923,6 +2923,9 @@ def add_plan_material(plan_id):
     if not plan:
         flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
         return redirect(url_for('dashboard.list_orders'))
+    if not plan.can_edit():
+        flash(t('Kế hoạch đã chốt (đã duyệt) — không thể sửa danh mục vật tư.'), 'error')
+        return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
     from app.models.models import ProductionMaterialLine
     try:
         material_id = request.form.get('material_id')
@@ -2951,6 +2954,9 @@ def delete_plan_material(plan_id, line_id):
     if not plan:
         flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
         return redirect(url_for('dashboard.list_orders'))
+    if not plan.can_edit():
+        flash(t('Kế hoạch đã chốt (đã duyệt) — không thể sửa danh mục vật tư.'), 'error')
+        return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
     from app.models.models import ProductionMaterialLine
     line = ProductionMaterialLine.query.get(line_id)
     if line and str(line.plan_id) == str(plan.id):
@@ -2967,6 +2973,9 @@ def issue_plan_materials(plan_id):
     if not plan:
         flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
         return redirect(url_for('dashboard.list_orders'))
+    if not plan.can_issue():
+        flash(t('Chỉ cấp phát vật tư sau khi kế hoạch đã được duyệt (chốt).'), 'error')
+        return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
     from app.services.services import ProductionPlanService
     try:
         shortages = ProductionPlanService().issue_materials(plan)
