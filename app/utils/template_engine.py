@@ -364,6 +364,17 @@ def _date_parts(d) -> tuple:
             return ('', '', '')
 
 
+def _order_city(order, fallback=''):
+    """City/province shown in the '<Tỉnh/TP>, ngày … tháng … năm …' header.
+
+    Per business rule this always comes from the STORE that created the
+    document (its tỉnh/thành), falling back to the document's own city field
+    only when the store has none set.
+    """
+    store = getattr(order, 'store', None)
+    return (getattr(store, 'city', None) or fallback or '')
+
+
 class DocumentVariableCollector:
     """
     Builds Jinja2 context dicts for each document type.
@@ -450,7 +461,8 @@ class DocumentVariableCollector:
             'quotation_month':  _date_parts(quotation.quotation_date)[1],
             'quotation_year':   _date_parts(quotation.quotation_date)[2],
             'validity_days':    str(quotation.validity_days or 30),
-            'city':             getattr(quotation, 'city', '') or '',
+            # Header city always from the store's tỉnh/thành (fallback to doc field)
+            'city':             _order_city(order, getattr(quotation, 'city', '') or ''),
             # Customer
             'customer_name':              customer.name,
             'customer_code':              customer.customer_code,
@@ -521,7 +533,14 @@ class DocumentVariableCollector:
             'contract_value':  _fmt(contract.contract_value),
             'total_amount':    _fmt(contract.contract_value),  # alias
             'amount_in_words': getattr(contract, 'amount_in_words', '') or '',
-            'city':            getattr(contract, 'city', '') or '',
+            # Header city always from the store's tỉnh/thành (fallback to doc field)
+            'city':            _order_city(order, getattr(contract, 'city', '') or ''),
+            # The contract's top '<TP>, ngày … tháng … năm …' header reuses the
+            # quotation_* date tokens — feed them the CONTRACT's own date so the
+            # header shows the contract date instead of rendering blank.
+            'quotation_day':   _date_parts(contract.contract_date)[0],
+            'quotation_month': _date_parts(contract.contract_date)[1],
+            'quotation_year':  _date_parts(contract.contract_date)[2],
             # Completion & cancellation
             'contract_days_complete': str(getattr(contract, 'contract_days_complete', 30) or 30),
             'num_date_notice_cancel': str(getattr(contract, 'num_date_notice_cancel', 7) or 7),
@@ -589,6 +608,7 @@ class DocumentVariableCollector:
             'report_day':    _date_parts(delivery_report.report_date)[0],
             'report_month':  _date_parts(delivery_report.report_date)[1],
             'report_year':   _date_parts(delivery_report.report_date)[2],
+            'city':          _order_city(order),
             'handover_date': _fmt_date(delivery_report.handover_date),
             'handover_day':  _date_parts(delivery_report.handover_date)[0],
             'handover_month': _date_parts(delivery_report.handover_date)[1],
@@ -647,6 +667,7 @@ class DocumentVariableCollector:
             'report_day':           _date_parts(payment_report.report_date)[0],
             'report_month':         _date_parts(payment_report.report_date)[1],
             'report_year':          _date_parts(payment_report.report_date)[2],
+            'city':                 _order_city(order),
             'payment_date':         _fmt_date(payment_report.payment_date),
             'payment_day':          _date_parts(payment_report.payment_date)[0],
             'payment_month':        _date_parts(payment_report.payment_date)[1],

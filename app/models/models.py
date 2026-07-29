@@ -296,7 +296,7 @@ class Order(db.Model):
         db.Index('ix_orders_company_active', 'company_id', 'is_active'),
     )
     
-    # Relationships
+    # Relationships (order.store is provided by Store.orders backref below)
     lifecycle = db.relationship('LifecycleStatus', backref='order', uselist=False, lazy=True, cascade='all, delete-orphan', foreign_keys='LifecycleStatus.order_id')
     quotations = db.relationship('Quotation', backref='order', lazy=True, cascade='all, delete-orphan')
     contracts = db.relationship('Contract', backref='order', lazy=True, cascade='all, delete-orphan')

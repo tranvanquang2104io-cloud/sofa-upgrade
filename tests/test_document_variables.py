@@ -25,6 +25,28 @@ def test_company_ctx_has_uppercase_alias():
     assert ctx['company_name'] == 'NGOCHAN'
 
 
+def test_header_city_from_store_and_contract_header_date():
+    """Header '<Tỉnh/TP>, ngày…' city comes from the store; the contract's top
+    header (which reuses quotation_* tokens) shows the CONTRACT date."""
+    store = NS(city='Tỉnh Đồng Tháp')
+    order = NS(order_code='oc', title='ot', description='d', store=store)
+    quo = NS(quotation_number='BG', quotation_date=date(2026, 7, 29), validity_days=30,
+             city='doc-city', items=[], subtotal=0, vat_rate=8, vat_amount=0, shipping_fee=0,
+             another_fee=0, total_amount=0, amount_in_words='', payment_terms='', notes='')
+    qc = C.collect_quotation_variables(quo, _cust(), order, company=_company())
+    assert qc['city'] == 'Tỉnh Đồng Tháp'   # store wins over quotation.city
+
+    contract = NS(contract_number='HD', contract_date=date(2026, 8, 15), contract_start_date=None,
+                  contract_value=0, amount_in_words='', city='doc-city', contract_days_complete=30,
+                  num_date_notice_cancel=7, items=[], subtotal=0, vat_rate=8, vat_amount=0,
+                  shipping_fee=0, another_fee=0, advance_percentage=30, advance_amount=0,
+                  warranty_months=12, delivery_terms='', terms_and_conditions='',
+                  selected_bank_index=0, quotation=quo)
+    cc = C.collect_contract_variables(contract, None, _cust(), order, company=_company())
+    assert cc['city'] == 'Tỉnh Đồng Tháp'
+    assert (cc['quotation_day'], cc['quotation_month'], cc['quotation_year']) == ('15', '08', '2026')
+
+
 def test_contract_ctx_falls_back_to_linked_quotation():
     """When no quotation is passed, quotation_number comes from contract.quotation."""
     quo = NS(quotation_number='BG-DEMO-2026', items=[])
