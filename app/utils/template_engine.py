@@ -479,6 +479,10 @@ class DocumentVariableCollector:
     @staticmethod
     def collect_contract_variables(contract, quotation, customer, order, company=None):
         """Context for contract document."""
+        # Fall back to the contract's linked quotation when the caller doesn't
+        # pass one, so {{ quotation_number }} never prints blank.
+        if quotation is None:
+            quotation = getattr(contract, 'quotation', None)
         ctx = DocumentVariableCollector._company_ctx(company)
 
         # Override company bank info with the selected bank account on this contract
