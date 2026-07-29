@@ -409,6 +409,8 @@ class DocumentVariableCollector:
         first_bank = bank_accounts[0] if bank_accounts else {}
         return {
             'company_name':                getattr(company, 'name', ''),
+            # Alias: some hand-uploaded templates use the token {{ COMPANY_NAME }}
+            'COMPANY_NAME':                getattr(company, 'name', ''),
             'company_address':             getattr(company, 'address', '') or '',
             'company_production_address':  getattr(company, 'production_address', '') or '',
             'company_phone':               getattr(company, 'phone', '') or '',
@@ -662,6 +664,7 @@ class DocumentVariableCollector:
             'another_fee':        _fmt(getattr(payment_report, 'another_fee', 0) or 0),
             'amount':             _fmt(payment_report.amount),
             'grand_total':        _fmt(payment_report.amount),
+            'total_amount':       _fmt(payment_report.amount),  # alias used by some templates
             'advance_percentage': str(getattr(payment_report, 'advance_percentage', 30) or 30),
             'advance_amount':     _fmt(getattr(payment_report, 'advance_amount', 0) or 0),
             'remaining_amount':   _fmt(getattr(payment_report, 'remaining_amount', 0) or 0),
@@ -672,6 +675,8 @@ class DocumentVariableCollector:
             # Legacy payment fields
             'payment_method':        payment_report.payment_method or '',
             'transaction_reference': payment_report.transaction_reference or '',
+            # Related quotation (via the contract) — some payment templates print it
+            'quotation_number':   getattr(getattr(contract, 'quotation', None), 'quotation_number', '') if contract else '',
             # Contract reference
             'contract_number':    getattr(contract, 'contract_number', '') if contract else '',
             'contract_date':      _fmt_date(getattr(contract, 'contract_date', None)) if contract else '',
