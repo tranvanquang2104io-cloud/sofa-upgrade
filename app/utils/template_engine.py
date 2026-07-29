@@ -135,37 +135,44 @@ class TemplateEngine:
         try:
             import subprocess
             import tempfile
-            
-            # Save DOCX temporarily
-            with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as tmp:
-                tmp.write(docx_bytes.getvalue() if isinstance(docx_bytes, BytesIO) else docx_bytes)
-                tmp_path = tmp.name
-            
+            import shutil
+
+            # Locate the LibreOffice binary (packaged as 'soffice', sometimes 'libreoffice')
+            soffice = shutil.which('soffice') or shutil.which('libreoffice')
+            if not soffice:
+                logger.error("LibreOffice (soffice) not found on PATH — cannot convert to PDF")
+                return False
+
+            # Save DOCX to an isolated working dir; give LibreOffice its own
+            # per-call user profile so concurrent Gunicorn workers don't clash
+            # on a shared profile lock.
+            work_dir = tempfile.mkdtemp(prefix='docx2pdf_')
+            tmp_path = os.path.join(work_dir, 'input.docx')
+            with open(tmp_path, 'wb') as fh:
+                fh.write(docx_bytes.getvalue() if isinstance(docx_bytes, BytesIO) else docx_bytes)
+            profile_uri = 'file://' + work_dir.replace('\\', '/') + '/profile'
+
             try:
-                # Use LibreOffice to convert
                 result = subprocess.run([
-                    'soffice',
-                    '--headless',
+                    soffice,
+                    f'-env:UserInstallation={profile_uri}',
+                    '--headless', '--nologo', '--nofirststartwizard',
                     '--convert-to', 'pdf',
                     '--outdir', os.path.dirname(output_path),
-                    tmp_path
-                ], capture_output=True, timeout=30)
-                
-                if result.returncode == 0:
-                    # LibreOffice creates PDF with same base name
-                    base_name = os.path.splitext(os.path.basename(tmp_path))[0]
-                    source_pdf = os.path.join(os.path.dirname(output_path), f'{base_name}.pdf')
-                    if os.path.exists(source_pdf):
-                        os.rename(source_pdf, output_path)
-                        logger.info(f"PDF generated successfully: {output_path}")
-                        return True
-                else:
-                    logger.error(f"LibreOffice conversion failed: {result.stderr.decode()}")
-                    return False
+                    tmp_path,
+                ], capture_output=True, timeout=60)
+
+                source_pdf = os.path.join(os.path.dirname(output_path), 'input.pdf')
+                if result.returncode == 0 and os.path.exists(source_pdf):
+                    os.replace(source_pdf, output_path)
+                    logger.info(f"PDF generated successfully: {output_path}")
+                    return True
+                logger.error("LibreOffice conversion failed (rc=%s): %s",
+                             result.returncode, result.stderr.decode('utf-8', 'ignore')[:500])
+                return False
             finally:
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-                    
+                shutil.rmtree(work_dir, ignore_errors=True)
+
         except Exception as e:
             logger.error(f"Error generating PDF: {str(e)}")
             return False

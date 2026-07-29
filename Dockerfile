@@ -20,11 +20,18 @@ RUN pip install --upgrade pip \
 # ── Runtime stage ────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
 
-# Runtime-only system libraries (libpq for psycopg, fonts for reportlab PDF)
+# Runtime-only system libraries:
+#   libpq5           — psycopg
+#   libreoffice-writer — DOCX→PDF conversion (soffice --headless) so the
+#                        "in ra PDF" option produces a real PDF, not a DOCX fallback
+#   fonts-liberation — Times New Roman-metric font with full Vietnamese coverage
+#   fonts-dejavu-core — reportlab fallback / broad glyph coverage
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         libfontconfig1 \
         fonts-dejavu-core \
+        fonts-liberation \
+        libreoffice-writer \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder

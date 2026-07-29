@@ -1841,8 +1841,15 @@ def generate_document(doc_type, ref_id):
         else:
             flash(t('Unknown document type'), 'error')
             return redirect(request.referrer)
-        
-        flash(t('Document generated successfully'), 'success')
+
+        # Tell the user the real output format. If PDF was requested but the
+        # DOCX→PDF conversion was unavailable, the service falls back to DOCX —
+        # surface that instead of a misleading "success".
+        actual = getattr(document, 'document_format', doc_format)
+        if doc_format == 'pdf' and actual != 'pdf':
+            flash(t('Đã tạo tài liệu nhưng không chuyển được sang PDF — đã lưu dạng DOCX.'), 'warning')
+        else:
+            flash(t('Đã tạo tài liệu (%(fmt)s) thành công.') % {'fmt': actual.upper()}, 'success')
         
     except Exception as e:
         logger.error(f"Error generating document: {str(e)}")
