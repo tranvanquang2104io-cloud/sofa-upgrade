@@ -194,6 +194,22 @@
 - **Reset/seed bàn giao:** `scripts/reset_company_data.py`, `scripts/seed_demo_order.py`, `scripts/seed_sofa_taxonomy.py`.
 - **W14/W15b/W16:** tiền tệ VND (`… đ`, bỏ `$X.XX` ở 11 chỗ); confirm() cho deactivate user/store; chuẩn hóa bootstrap-icons 1.11.0.
 
+---
+
+# FEATURE 3 — Vòng tuần hoàn cung ứng + Extend fields (2026-07-30) — VERSION 1.7.0
+
+## Đóng vòng vận hành: Order → SX → trừ kho → PR → PO → GR → tăng tồn → SX/bán
+- **Models mới:** `PurchaseOrder`(+`PurchaseOrderLine`), `GoodsReceipt`(+`GoodsReceiptLine`) — có máy trạng thái PO (draft→ordered→partial→received/canceled) và extend fields. Migration `a4733fe5b1e5` (4 bảng + extend01..10 cho stores/customers/orders/suppliers/materials; additive/nullable, reversible, round-trip OK).
+- **`ProcurementService`:** `create_pos_from_suggestions` (PR→PO, gộp theo NCC), `add_line/delete_line/set_header`, `transition`, và `receive` (GR) — **tăng `MaterialStock`** + đồng bộ trạng thái PO. `print_purchase_order` sinh docx "ĐƠN ĐẶT HÀNG".
+- **UI:** trang Đơn mua hàng (list + chi tiết), nút "Tạo đơn mua từ đề xuất" ở trang PR, form Nhận hàng (GR), nav links.
+- **Test:** `test_procurement.py` (service + HTTP loop), `test_full_loop.py` (E2E: order→plan→issue→shortage→PR→PO→GR→issue thành công, tồn kho khớp từng bước).
+
+## Extend fields cho master data
+- `ExtensionFieldConfig.ENTITY_TYPES` phủ customer/supplier/material/store/order/purchase_order/goods_receipt (trang cấu hình dùng chung → tự có, nhãn VI). Wire collect/apply vào create customer/supplier/material; partial pre-fill giá trị khi sửa. Test `test_extend_master.py`.
+- **Còn lại (để sẵn, cùng mẫu):** wire form store/order + các form edit — cột & cấu hình đã sẵn, chỉ cần include partial + collect/apply.
+
+---
+
 ## HOÃN (khuyến nghị làm riêng, có review)
 - **W10** tách god-controller `dashboard_routes.py` thành blueprints — rủi ro cao trên prod đang chạy; cần regression đầy đủ + đường lui.
 - **W11** thu hẹp 47 `except Exception` — đường lỗi thiếu test, đổi có thể biến flash thành 500.
