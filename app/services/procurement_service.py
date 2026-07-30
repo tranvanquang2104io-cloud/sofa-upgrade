@@ -169,6 +169,57 @@ class ProcurementService:
         db.session.commit()
         return gr, warnings
 
+    # ---- document-style create/update (single-form save) ------------------
+    def create_po(self, company_id, header, lines, pr_id=None):
+        """header: {supplier_id, store_id, order_date, expected_date, vat_rate, notes};
+        lines: [{material_id, quantity, unit, unit_price}]. Tạo PO nháp trong 1 lần lưu."""
+        from app.models.models import PurchaseOrder
+        po = PurchaseOrder(
+            company_id=company_id, pr_id=pr_id,
+            po_number=self._gen_po_number(company_id), status=PurchaseOrder.STATUS_DRAFT,
+            supplier_id=header.get('supplier_id') or None, store_id=header.get('store_id') or None,
+            order_date=header.get('order_date') or date.today(),
+            expected_date=header.get('expected_date') or None,
+            vat_rate=Decimal(str(header.get('vat_rate') or 0)), notes=header.get('notes') or None)
+        db.session.add(po); db.session.flush()
+        self._replace_lines(po, lines)
+        po.recompute_totals()
+        db.session.commit()
+        return po
+
+    def update_po(self, po, header, lines):
+        if not po.can_edit():
+            raise ValueError("Đơn mua đã gửi/hủy — không sửa được.")
+        po.supplier_id = header.get('supplier_id') or None
+        po.store_id = header.get('store_id') or None
+        po.order_date = header.get('order_date') or po.order_date
+        po.expected_date = header.get('expected_date') or None
+        po.vat_rate = Decimal(str(header.get('vat_rate') or 0))
+        po.notes = header.get('notes') or None
+        self._replace_lines(po, lines)
+        po.recompute_totals()
+        db.session.commit()
+        return po
+
+    def _replace_lines(self, po, lines):
+        from app.models.models import PurchaseOrderLine, Material
+        po.lines.clear()   # delete-orphan removes old lines
+        db.session.flush()
+        for ln in lines:
+            mid = ln.get('material_id')
+            if not mid:
+                continue
+            m = Material.query.get(mid)
+            if m is None or str(m.company_id) != str(po.company_id):
+                continue
+            qty = Decimal(str(ln.get('quantity') or 0))
+            price = Decimal(str(ln.get('unit_price'))) if ln.get('unit_price') not in (None, '') else Decimal(str(m.unit_price or 0))
+            po.lines.append(PurchaseOrderLine(
+                material_id=m.id, quantity_ordered=qty,
+                unit=ln.get('unit') or (m.unit.name if m.unit else None),
+                unit_price=price, line_total=(qty * price).quantize(Decimal('1'))))
+        db.session.flush()
+
     # ---- queries ----------------------------------------------------------
     def list_pos(self, company_id, status=None):
         from app.models.models import PurchaseOrder
@@ -181,3 +232,13 @@ class ProcurementService:
         from app.models.models import PurchaseOrder
         po = PurchaseOrder.query.get(po_id)
         return po if po and str(po.company_id) == str(company_id) else None
+
+    def list_grs(self, company_id):
+        from app.models.models import GoodsReceipt
+        return (GoodsReceipt.query.filter_by(company_id=company_id)
+                .order_by(GoodsReceipt.created_at.desc()).all())
+
+    def get_gr(self, company_id, gr_id):
+        from app.models.models import GoodsReceipt
+        gr = GoodsReceipt.query.get(gr_id)
+        return gr if gr and str(gr.company_id) == str(company_id) else None

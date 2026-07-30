@@ -848,7 +848,7 @@ class ExtensionFieldConfig(db.Model):
 
     ENTITY_TYPES = ('quotation', 'contract', 'handover', 'payment',
                     'customer', 'supplier', 'material', 'store', 'order',
-                    'purchase_order', 'goods_receipt')
+                    'purchase_requisition', 'purchase_order', 'goods_receipt')
     DATA_TYPES = ('text', 'number', 'date', 'boolean')
 
     id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -999,6 +999,82 @@ class MaterialNorm(db.Model):
         return f'<MaterialNorm {self.product_key}>'
 
 
+class PurchaseRequisition(ExtendFieldsMixin, db.Model):
+    """Đề nghị mua hàng (PR) — nhu cầu mua nội bộ, tạo tay hoặc từ đề xuất tự động.
+
+    Không phụ thuộc mức tồn kho (có thể đề nghị mua để dự phòng). Sau khi duyệt →
+    chuyển thành một hoặc nhiều Đơn mua hàng (PO) gộp theo nhà cung cấp.
+    """
+    __tablename__ = 'purchase_requisitions'
+
+    STATUS_DRAFT = 'draft'
+    STATUS_SUBMITTED = 'submitted'   # đã gửi duyệt
+    STATUS_APPROVED = 'approved'     # đã duyệt — sẵn sàng tạo PO
+    STATUS_CONVERTED = 'converted'   # đã tạo PO
+    STATUS_CANCELED = 'canceled'
+
+    TRANSITIONS = {
+        'submit':  (('draft',), 'submitted'),
+        'approve': (('submitted',), 'approved'),
+        'reject':  (('submitted',), 'draft'),
+        'cancel':  (('draft', 'submitted', 'approved'), 'canceled'),
+        'reopen':  (('submitted', 'approved'), 'draft'),
+    }
+
+    id           = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id   = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # kho/CH cần
+    pr_number    = db.Column(db.String(50), nullable=False)
+    status       = db.Column(db.String(20), default='draft', nullable=False, index=True)
+    request_date = db.Column(db.Date)
+    expected_date = db.Column(db.Date)
+    title        = db.Column(db.String(255))
+    notes        = db.Column(db.Text)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'pr_number', name='uq_company_pr_number'),)
+
+    store = db.relationship('Store', lazy=True)
+    lines = db.relationship('PurchaseRequisitionLine', backref='pr', lazy=True, cascade='all, delete-orphan')
+    purchase_orders = db.relationship('PurchaseOrder', backref='requisition', lazy=True,
+                                      foreign_keys='PurchaseOrder.pr_id')
+
+    def can_edit(self):
+        return self.status == self.STATUS_DRAFT
+
+    def can_convert(self):
+        """Tạo PO khi đã duyệt (chưa hoặc đã convert vẫn cho tạo tiếp phần còn lại)."""
+        return self.status in (self.STATUS_APPROVED, self.STATUS_CONVERTED)
+
+    def can(self, action):
+        tr = self.TRANSITIONS.get(action)
+        return bool(tr and self.status in tr[0])
+
+    def allowed_actions(self):
+        return [a for a, (froms, _) in self.TRANSITIONS.items() if self.status in froms]
+
+    def __repr__(self):
+        return f'<PurchaseRequisition {self.pr_number}>'
+
+
+class PurchaseRequisitionLine(db.Model):
+    """Dòng vật tư trên đề nghị mua hàng."""
+    __tablename__ = 'purchase_requisition_lines'
+
+    id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    pr_id       = db.Column(GUID(), db.ForeignKey('purchase_requisitions.id'), nullable=False, index=True)
+    material_id = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
+    quantity    = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    unit        = db.Column(db.String(50))
+    notes       = db.Column(db.Text)
+
+    material = db.relationship('Material', lazy=True)
+
+    def __repr__(self):
+        return f'<PurchaseRequisitionLine pr={self.pr_id} material={self.material_id}>'
+
+
 class PurchaseOrder(ExtendFieldsMixin, db.Model):
     """Đơn mua hàng (PO) gửi nhà cung cấp — khép vòng cung ứng (Feature 3)."""
     __tablename__ = 'purchase_orders'
@@ -1020,6 +1096,7 @@ class PurchaseOrder(ExtendFieldsMixin, db.Model):
     company_id   = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # kho sẽ nhập về
     supplier_id  = db.Column(GUID(), db.ForeignKey('suppliers.id'), nullable=True, index=True)
+    pr_id        = db.Column(GUID(), db.ForeignKey('purchase_requisitions.id'), nullable=True, index=True)  # nguồn PR (nếu có)
     po_number    = db.Column(db.String(50), nullable=False)
     status       = db.Column(db.String(20), default='draft', nullable=False, index=True)
     order_date   = db.Column(db.Date)
