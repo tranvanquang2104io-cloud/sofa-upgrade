@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Đơn mua hàng - SofaFlow{% endblock %}
+
+{% set labels = {'draft':'Nháp','ordered':'Đã gửi NCC','partial':'Nhập một phần','received':'Đã nhập đủ','canceled':'Đã hủy'} %}
+{% set colors = {'draft':'secondary','ordered':'info','partial':'warning','received':'success','canceled':'dark'} %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0"><i class="bi bi-bag-check text-primary"></i> Đơn mua hàng (PO)</h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('dashboard.purchase_suggestions') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-cart-plus"></i> Đề xuất mua hàng
+    </a>
+    <form method="POST" action="{{ url_for('dashboard.new_purchase_order') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i> Tạo đơn mua</button>
+    </form>
+  </div>
+</div>
+
+<div class="mb-3">
+  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-sm {{ 'btn-primary' if not status else 'btn-outline-secondary' }}">Tất cả</a>
+  {% for s, lb in labels.items() %}
+  <a href="{{ url_for('dashboard.list_purchase_orders', status=s) }}" class="btn btn-sm {{ 'btn-primary' if status == s else 'btn-outline-secondary' }}">{{ lb }}</a>
+  {% endfor %}
+</div>
+
+{% if pos %}
+<div class="table-responsive">
+<table class="table table-bordered table-sm align-middle">
+  <thead class="table-light"><tr>
+    <th>Số PO</th><th>Nhà cung cấp</th><th>Ngày đặt</th><th class="text-end">Tổng tiền</th><th>Trạng thái</th><th></th>
+  </tr></thead>
+  <tbody>
+  {% for po in pos %}
+    <tr>
+      <td><a href="{{ url_for('dashboard.view_purchase_order', po_id=po.id) }}"><strong>{{ po.po_number }}</strong></a></td>
+      <td>{{ po.supplier.name if po.supplier else '— chưa gán —' }}</td>
+      <td>{{ po.order_date.strftime('%d/%m/%Y') if po.order_date else '' }}</td>
+      <td class="text-end">{{ "{:,.0f}".format(po.total_amount|float) }} đ</td>
+      <td><span class="badge bg-{{ colors.get(po.status,'secondary') }}">{{ labels.get(po.status, po.status) }}</span></td>
+      <td class="text-end"><a href="{{ url_for('dashboard.view_purchase_order', po_id=po.id) }}" class="btn btn-outline-secondary btn-sm">{{ t('View') }}</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đơn mua nào. Tạo từ <strong>Đề xuất mua hàng</strong> hoặc bấm <strong>Tạo đơn mua</strong>.</div>
+{% endif %}
+{% endblock %}
