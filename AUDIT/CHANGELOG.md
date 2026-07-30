@@ -173,3 +173,29 @@
 - **Template:** `DocumentVariableCollector` expose `company_business_registration_number`, `company_website`, `warranty_months`, `delivery_terms` (dùng được trong .docx).
 - **UI:** trang Cài đặt công ty thêm ô Số ĐKKD + Website (route lưu). Test `test_company_fields.py`.
 - **VERSION → 1.5.0.**
+
+---
+
+# HANDOVER-PREP + POLISH (2026-07-29..30) — VERSION 1.6.0 → 1.6.6
+
+## Chứng từ & i18n
+- **i18n:** dịch 122 khóa còn thiếu → tiếng Việt phủ 100% `t()` trong template. Sửa collector: `COMPANY_NAME` alias, `quotation_number`/`total_amount` cho phiếu thanh toán, fallback quotation của hợp đồng.
+- **Header ngày/tỉnh:** dòng "`<Tỉnh/TP>, ngày … tháng … năm …`" lấy **city từ Store** (`order.store`) + ngày của chính chứng từ; sửa header hợp đồng in trống. Test `test_document_variables.py`.
+- **Rà soát 100% template:** trình audit đối chiếu mọi placeholder (body+header+footer) với context thật → **0 ô trống**. Templates thật ở `uploads/templates/NGOCHAN/` (không phải `SOFA-NGOCHAN/`).
+- **Tách phiếu tạm ứng vs thanh toán:** `scripts/create_payment_templates.py` sinh 2 mẫu `payment_advance`/`payment_final` (docxtpl, dùng đúng pattern for-row/content/endfor-row). Test `test_payment_templates.py`.
+- **PDF thật:** Dockerfile cài `libreoffice-writer` + `fonts-liberation`; convert profile-per-call; báo rõ nếu fallback DOCX.
+
+## Kế hoạch sản xuất
+- **Chốt lệnh:** `can_edit()` = draft-only (duyệt = khóa BOM), thêm `can_issue()` (approved/processing/rejected); guard route + UI. Test `test_production_plan.py`.
+- **F2 phase-2 — Đề xuất mua hàng (PO):** `ProductionPlanService.purchase_suggestions` bung định mức các kế hoạch active, trừ tồn + bù min, gộp theo NCC; trang `/materials/purchase-suggestions`. Test `test_purchase_suggestions.py`.
+
+## Vận hành & UX
+- **Backup DB:** `scripts/backup_db.sh` + cron 02:30; giữ 3 ngày + 2 tháng (max 5); kiểm tra gzip/size trước khi xoay vòng.
+- **Reset/seed bàn giao:** `scripts/reset_company_data.py`, `scripts/seed_demo_order.py`, `scripts/seed_sofa_taxonomy.py`.
+- **W14/W15b/W16:** tiền tệ VND (`… đ`, bỏ `$X.XX` ở 11 chỗ); confirm() cho deactivate user/store; chuẩn hóa bootstrap-icons 1.11.0.
+
+## HOÃN (khuyến nghị làm riêng, có review)
+- **W10** tách god-controller `dashboard_routes.py` thành blueprints — rủi ro cao trên prod đang chạy; cần regression đầy đủ + đường lui.
+- **W11** thu hẹp 47 `except Exception` — đường lỗi thiếu test, đổi có thể biến flash thành 500.
+- **W20** datetime timezone-aware — phạm vi rộng.
+- **W16 (đầy đủ):** localize toàn bộ vendor asset vào `static/` hoặc thêm SRI — cần tải + hash file, làm chủ đích.
