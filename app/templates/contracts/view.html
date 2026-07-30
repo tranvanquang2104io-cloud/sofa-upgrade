@@ -229,7 +229,7 @@
             </div>
             <div class="card-body">
                 <p class="mb-1"><strong>{{ contract.quotation.quotation_number }}</strong></p>
-                <p class="mb-1">{{ t('Amount:') }} ${{ contract.quotation.total_amount }}</p>
+                <p class="mb-1">{{ t('Amount:') }} {{ "{:,.0f}".format(contract.quotation.total_amount|float) }} đ</p>
                 <a href="{{ url_for('dashboard.view_quotation', quotation_id=contract.quotation_id) }}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-arrow-right"></i> {{ t('View Quotation') }}
                 </a>
@@ -313,7 +313,7 @@
                     </div>
                     <div class="alert alert-info">
                         <strong>{{ t('Contract Number:') }}</strong> {{ contract.contract_number }}<br>
-                        <strong>{{ t('Amount:') }}</strong> ${{ "%.2f"|format(contract.contract_value|default(0)|float) }}
+                        <strong>{{ t('Amount:') }}</strong> {{ "{:,.0f}".format(contract.contract_value|default(0)|float) }} đ
                     </div>
                     <div class="mb-3">
                         <label for="canceled_reason" class="form-label">{{ t('Cancellation Reason *') }}</label>

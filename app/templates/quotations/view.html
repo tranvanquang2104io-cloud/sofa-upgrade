@@ -36,7 +36,7 @@
                     <dd class="col-sm-8">{{ quotation.validity_days }}</dd>
                     
                     <dt class="col-sm-4">{{ t('Total Amount:') }}</dt>
-                    <dd class="col-sm-8"><strong>${{ "%.2f"|format(quotation.total_amount|default(0)|float) }}</strong></dd>
+                    <dd class="col-sm-8"><strong>{{ "{:,.0f}".format(quotation.total_amount|default(0)|float) }} đ</strong></dd>
                     
                     <dt class="col-sm-4">{{ t('Status:') }}</dt>
                     <dd class="col-sm-8">

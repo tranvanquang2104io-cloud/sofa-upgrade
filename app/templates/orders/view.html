@@ -106,11 +106,11 @@
                     <div class="col-md-6">
                         <dl class="row mb-0">
                             <dt class="col-sm-5">{{ t('Total Amount:') }}</dt>
-                            <dd class="col-sm-7"><strong>${{ "%.2f"|format(order.total_amount|default(0)|float) }}</strong></dd>
+                            <dd class="col-sm-7"><strong>{{ "{:,.0f}".format(order.total_amount|default(0)|float) }} đ</strong></dd>
                             <dt class="col-sm-5">{{ t('Advance:') }}</dt>
-                            <dd class="col-sm-7">${{ "%.2f"|format(order.advance_amount|default(0)|float) }}</dd>
+                            <dd class="col-sm-7">{{ "{:,.0f}".format(order.advance_amount|default(0)|float) }} đ</dd>
                             <dt class="col-sm-5">{{ t('Final:') }}</dt>
-                            <dd class="col-sm-7">${{ "%.2f"|format(order.final_amount|default(0)|float) }}</dd>
+                            <dd class="col-sm-7">{{ "{:,.0f}".format(order.final_amount|default(0)|float) }} đ</dd>
                         </dl>
                     </div>
                 </div>
@@ -156,7 +156,7 @@
                                 <div class="alert {% if quotation.is_approved %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <strong>{{ quotation.quotation_number }}</strong> - ${{ quotation.total_amount }} ({{ quotation.items|length }} items)
+                                            <strong>{{ quotation.quotation_number }}</strong> - {{ "{:,.0f}".format(quotation.total_amount|float) }} đ ({{ quotation.items|length }} {{ t('items') }})
                                             {% if quotation.is_approved %}
                                             <span class="badge bg-success ms-2">{{ t('Approved') }}</span>
                                             {% else %}
@@ -241,7 +241,7 @@
                                 <div class="alert {% if contract.is_signed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <strong>{{ contract.contract_number }}</strong> - ${{ contract.contract_value }}
+                                            <strong>{{ contract.contract_number }}</strong> - {{ "{:,.0f}".format(contract.contract_value|float) }} đ
                                             {% if contract.is_signed %}
                                             <span class="badge bg-success ms-2">{{ t('Signed') }}</span>
                                             {% else %}
@@ -754,7 +754,7 @@
                     <div class="alert alert-info">
                         <strong>Order Code:</strong> {{ order.order_code }}<br>
                         <strong>Customer:</strong> {{ order.customer.name }}<br>
-                        <strong>Amount:</strong> ${{ "%.2f"|format(order.total_amount|default(0)|float) }}
+                        <strong>{{ t('Amount:') }}</strong> {{ "{:,.0f}".format(order.total_amount|default(0)|float) }} đ
                     </div>
                     <div class="mb-3">
                         <label for="canceled_reason" class="form-label">{{ t('Cancellation Reason *') }}</label>

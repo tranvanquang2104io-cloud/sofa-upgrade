@@ -314,7 +314,7 @@
                     <dt class="col-sm-6">{{ t('Customer:') }}</dt>
                     <dd class="col-sm-6">{{ payment.order.customer.name }}</dd>
                     <dt class="col-sm-6">{{ t('Total:') }}</dt>
-                    <dd class="col-sm-6">${{ "%.2f"|format(payment.order.total_amount) }}</dd>
+                    <dd class="col-sm-6">{{ "{:,.0f}".format(payment.order.total_amount) }} đ</dd>
                 </dl>
             </div>
         </div>
