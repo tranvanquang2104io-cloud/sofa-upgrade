@@ -15,6 +15,25 @@ EXTENSION_SLOTS = 10
 EXTENSION_FIELD_KEYS = [f'extend{i:02d}' for i in range(1, EXTENSION_SLOTS + 1)]
 
 
+class ExtendFieldsMixin:
+    """Reserved admin-configurable flexfield columns ``extend01``..``extend10``.
+
+    Stored as text; per company an admin enables a slot, gives it a label, data
+    type and required-flag via ``ExtensionFieldConfig``. Used by master-data and
+    procurement tables that already carry their own ``company_id``.
+    """
+    extend01 = db.Column(db.Text)
+    extend02 = db.Column(db.Text)
+    extend03 = db.Column(db.Text)
+    extend04 = db.Column(db.Text)
+    extend05 = db.Column(db.Text)
+    extend06 = db.Column(db.Text)
+    extend07 = db.Column(db.Text)
+    extend08 = db.Column(db.Text)
+    extend09 = db.Column(db.Text)
+    extend10 = db.Column(db.Text)
+
+
 class DocExtensionMixin:
     """Adds a per-tenant ``company_id`` plus ``extend01``..``extend10`` columns to
     document tables (quotations, contracts, handover_records, payment_reports).
@@ -87,7 +106,7 @@ class Company(db.Model):
         return f'<Company {self.company_code}>'
 
 
-class Store(db.Model):
+class Store(ExtendFieldsMixin, db.Model):
     """Store model - each company can have multiple stores"""
     __tablename__ = 'stores'
     
@@ -184,7 +203,7 @@ class User(db.Model):
         return f'<User {self.username}>'
 
 
-class Customer(db.Model):
+class Customer(ExtendFieldsMixin, db.Model):
     """Customer model"""
     __tablename__ = 'customers'
     
@@ -263,7 +282,7 @@ class LifecycleStatus(db.Model):
         return f'<LifecycleStatus {self.order_id}>'
 
 
-class Order(db.Model):
+class Order(ExtendFieldsMixin, db.Model):
     """Order model - represents customer lifecycle"""
     __tablename__ = 'orders'
     
@@ -672,7 +691,7 @@ class MaterialCategory(db.Model):
         return f'<MaterialCategory {self.name}>'
 
 
-class Supplier(db.Model):
+class Supplier(ExtendFieldsMixin, db.Model):
     """Supplier / Nhà cung cấp — scoped per company."""
     __tablename__ = 'suppliers'
 
@@ -703,7 +722,7 @@ class Supplier(db.Model):
         return f'<Supplier {self.supplier_code}>'
 
 
-class Material(db.Model):
+class Material(ExtendFieldsMixin, db.Model):
     """Raw material / nguyên vật liệu — company-level catalog with optional per-store stock."""
     __tablename__ = 'materials'
 
@@ -827,7 +846,9 @@ class ExtensionFieldConfig(db.Model):
     """
     __tablename__ = 'extension_field_configs'
 
-    ENTITY_TYPES = ('quotation', 'contract', 'handover', 'payment')
+    ENTITY_TYPES = ('quotation', 'contract', 'handover', 'payment',
+                    'customer', 'supplier', 'material', 'store', 'order',
+                    'purchase_order', 'goods_receipt')
     DATA_TYPES = ('text', 'number', 'date', 'boolean')
 
     id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -976,6 +997,151 @@ class MaterialNorm(db.Model):
 
     def __repr__(self):
         return f'<MaterialNorm {self.product_key}>'
+
+
+class PurchaseOrder(ExtendFieldsMixin, db.Model):
+    """Đơn mua hàng (PO) gửi nhà cung cấp — khép vòng cung ứng (Feature 3)."""
+    __tablename__ = 'purchase_orders'
+
+    STATUS_DRAFT = 'draft'          # nháp — soạn/sửa được
+    STATUS_ORDERED = 'ordered'      # đã gửi NCC
+    STATUS_PARTIAL = 'partial'      # đã nhập một phần
+    STATUS_RECEIVED = 'received'    # đã nhập đủ
+    STATUS_CANCELED = 'canceled'
+
+    # action -> (allowed-from, target)
+    TRANSITIONS = {
+        'submit': (('draft',), 'ordered'),                      # gửi NCC
+        'cancel': (('draft', 'ordered', 'partial'), 'canceled'),
+        'reopen': (('ordered',), 'draft'),                      # thu hồi khi chưa nhập
+    }
+
+    id           = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id   = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # kho sẽ nhập về
+    supplier_id  = db.Column(GUID(), db.ForeignKey('suppliers.id'), nullable=True, index=True)
+    po_number    = db.Column(db.String(50), nullable=False)
+    status       = db.Column(db.String(20), default='draft', nullable=False, index=True)
+    order_date   = db.Column(db.Date)
+    expected_date = db.Column(db.Date)
+    notes        = db.Column(db.Text)
+    subtotal     = db.Column(db.Numeric(15, 2), default=0)
+    vat_rate     = db.Column(db.Numeric(5, 2), default=0)
+    vat_amount   = db.Column(db.Numeric(15, 2), default=0)
+    total_amount = db.Column(db.Numeric(15, 2), default=0)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'po_number', name='uq_company_po_number'),)
+
+    supplier = db.relationship('Supplier', lazy=True)
+    store    = db.relationship('Store', lazy=True)
+    lines    = db.relationship('PurchaseOrderLine', backref='po', lazy=True, cascade='all, delete-orphan')
+    receipts = db.relationship('GoodsReceipt', backref='po', lazy=True, cascade='all, delete-orphan')
+
+    def can_edit(self):
+        return self.status == self.STATUS_DRAFT
+
+    def can_receive(self):
+        """Nhập kho được khi đã gửi NCC và chưa nhập đủ."""
+        return self.status in (self.STATUS_ORDERED, self.STATUS_PARTIAL)
+
+    def can(self, action):
+        tr = self.TRANSITIONS.get(action)
+        return bool(tr and self.status in tr[0])
+
+    def allowed_actions(self):
+        return [a for a, (froms, _) in self.TRANSITIONS.items() if self.status in froms]
+
+    def recompute_totals(self):
+        from decimal import Decimal
+        sub = sum((Decimal(str(l.line_total or 0)) for l in self.lines), Decimal('0'))
+        self.subtotal = sub
+        rate = Decimal(str(self.vat_rate or 0))
+        self.vat_amount = (sub * rate / Decimal('100')).quantize(Decimal('1'))
+        self.total_amount = sub + self.vat_amount
+
+    def sync_receipt_status(self):
+        """After a goods receipt, move to partial/received based on line fulfilment.
+        Never overrides draft/canceled."""
+        if self.status in (self.STATUS_DRAFT, self.STATUS_CANCELED):
+            return
+        lines = self.lines
+        if lines and all((l.quantity_received or 0) >= (l.quantity_ordered or 0) for l in lines):
+            self.status = self.STATUS_RECEIVED
+        elif any((l.quantity_received or 0) > 0 for l in lines):
+            self.status = self.STATUS_PARTIAL
+
+    def __repr__(self):
+        return f'<PurchaseOrder {self.po_number}>'
+
+
+class PurchaseOrderLine(db.Model):
+    """Dòng vật tư trên đơn mua."""
+    __tablename__ = 'purchase_order_lines'
+
+    id            = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    po_id         = db.Column(GUID(), db.ForeignKey('purchase_orders.id'), nullable=False, index=True)
+    material_id   = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
+    quantity_ordered  = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    quantity_received = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    unit          = db.Column(db.String(50))
+    unit_price    = db.Column(db.Numeric(15, 2), default=0)
+    line_total    = db.Column(db.Numeric(15, 2), default=0)
+    notes         = db.Column(db.Text)
+
+    material = db.relationship('Material', lazy=True)
+
+    @property
+    def outstanding(self):
+        from decimal import Decimal
+        return Decimal(str(self.quantity_ordered or 0)) - Decimal(str(self.quantity_received or 0))
+
+    def __repr__(self):
+        return f'<PurchaseOrderLine po={self.po_id} material={self.material_id}>'
+
+
+class GoodsReceipt(ExtendFieldsMixin, db.Model):
+    """Phiếu nhập kho (GR) — nhận hàng theo đơn mua, tăng tồn kho (Feature 3)."""
+    __tablename__ = 'goods_receipts'
+
+    id           = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id   = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
+    po_id        = db.Column(GUID(), db.ForeignKey('purchase_orders.id'), nullable=True, index=True)
+    store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # kho nhập vào
+    gr_number    = db.Column(db.String(50), nullable=False)
+    receipt_date = db.Column(db.Date)
+    notes        = db.Column(db.Text)
+    is_posted    = db.Column(db.Boolean, default=False, nullable=False, index=True)  # đã ghi tăng tồn
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'gr_number', name='uq_company_gr_number'),)
+
+    store = db.relationship('Store', lazy=True)
+    lines = db.relationship('GoodsReceiptLine', backref='gr', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<GoodsReceipt {self.gr_number}>'
+
+
+class GoodsReceiptLine(db.Model):
+    """Dòng nhập kho — số lượng thực nhận cho một vật tư."""
+    __tablename__ = 'goods_receipt_lines'
+
+    id           = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    gr_id        = db.Column(GUID(), db.ForeignKey('goods_receipts.id'), nullable=False, index=True)
+    po_line_id   = db.Column(GUID(), db.ForeignKey('purchase_order_lines.id'), nullable=True, index=True)
+    material_id  = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
+    quantity_received = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    unit         = db.Column(db.String(50))
+    notes        = db.Column(db.Text)
+
+    material = db.relationship('Material', lazy=True)
+    po_line  = db.relationship('PurchaseOrderLine', lazy=True)
+
+    def __repr__(self):
+        return f'<GoodsReceiptLine gr={self.gr_id} material={self.material_id}>'
 
 
 def _populate_doc_company_id(mapper, connection, target):
