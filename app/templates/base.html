@@ -88,6 +88,11 @@
                                         <i class="bi bi-exclamation-triangle"></i> {{ t('Low Stock') }}
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.purchase_suggestions') }}">
+                                        <i class="bi bi-cart-plus"></i> {{ t('Purchase Suggestions') }}
+                                    </a>
+                                </li>
                                 {% endif %}
                             </ul>
                         </li>

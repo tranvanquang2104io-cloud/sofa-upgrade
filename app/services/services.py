@@ -1697,6 +1697,73 @@ class ProductionPlanService:
         mats = Material.query.filter_by(company_id=company_id, is_active=True).all()
         return [m for m in mats if m.is_low_stock]
 
+    def purchase_suggestions(self, company_id):
+        """Đề xuất mua hàng (PO): bung định mức của các kế hoạch SX đang hoạt động
+        (BOM explosion), trừ tồn kho hiện có + bù lên mức tối thiểu, gộp theo NCC.
+
+        Đề xuất mua = max(0, (nhu cầu chưa cấp phát) - tồn + mức tối thiểu).
+        Trả về {'groups': [...], 'total': Decimal, 'count': n} — chỉ đọc, không ghi.
+        """
+        from decimal import Decimal
+        from app.models.models import Material, ProductionPlan
+        active = (ProductionPlan.STATUS_DRAFT, ProductionPlan.STATUS_APPROVED,
+                  ProductionPlan.STATUS_PROCESSING, ProductionPlan.STATUS_REJECTED)
+        plans = ProductionPlan.query.filter(
+            ProductionPlan.company_id == company_id,
+            ProductionPlan.status.in_(active)).all()
+
+        # 1) Aggregate un-issued material requirement across active plans.
+        required = {}
+        for plan in plans:
+            for line in plan.material_lines:
+                need = Decimal(str(line.quantity_required or 0)) - Decimal(str(line.quantity_issued or 0))
+                if need > 0:
+                    required[line.material_id] = required.get(line.material_id, Decimal('0')) + need
+
+        mats = {m.id: m for m in Material.query.filter_by(company_id=company_id, is_active=True).all()}
+        # Candidate materials: needed by a plan OR below their min stock level.
+        candidates = set(required) | {mid for mid, m in mats.items() if m.is_low_stock}
+
+        by_supplier = {}
+        total = Decimal('0')
+        count = 0
+        for mid in candidates:
+            m = mats.get(mid)
+            if not m:
+                continue
+            avail = Decimal(str(m.total_stock or 0))
+            need = required.get(mid, Decimal('0'))
+            min_level = Decimal(str(m.min_stock_level or 0))
+            suggest = need - avail + min_level
+            if suggest <= 0:
+                continue
+            unit_price = Decimal(str(m.unit_price or 0))
+            est = (suggest * unit_price).quantize(Decimal('1'))
+            total += est
+            count += 1
+            sup = m.supplier
+            key = str(sup.id) if sup else '__none__'
+            grp = by_supplier.setdefault(key, {'supplier': sup, 'lines': [], 'subtotal': Decimal('0')})
+            grp['subtotal'] += est
+            grp['lines'].append({
+                'material': m,
+                'unit': (m.unit.name if m.unit else ''),
+                'required': float(need),
+                'available': float(avail),
+                'min_level': float(min_level),
+                'suggested': float(suggest),
+                'unit_price': float(unit_price),
+                'est_cost': float(est),
+            })
+
+        # Sort: named suppliers first (by name), "no supplier" last; lines by material code.
+        groups = sorted(by_supplier.values(),
+                        key=lambda g: (g['supplier'] is None, (g['supplier'].name if g['supplier'] else '')))
+        for g in groups:
+            g['lines'].sort(key=lambda ln: ln['material'].material_code)
+            g['subtotal'] = float(g['subtotal'])
+        return {'groups': groups, 'total': float(total), 'count': count}
+
     def transition(self, plan, action):
         """Move the plan through its lifecycle (validates the transition)."""
         tr = plan.TRANSITIONS.get(action)

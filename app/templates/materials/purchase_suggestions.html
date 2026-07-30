@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Đề xuất mua hàng - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="mb-0"><i class="bi bi-cart-plus text-primary"></i> Đề xuất mua hàng (PO)</h1>
+  <a href="{{ url_for('dashboard.low_stock_materials') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-exclamation-triangle"></i> {{ t('Low Stock Materials') }}
+  </a>
+</div>
+<p class="text-muted">
+  Tổng hợp nhu cầu vật tư từ các kế hoạch sản xuất đang hoạt động (bung định mức),
+  trừ tồn kho hiện có và bù lên mức tối thiểu. Gộp theo nhà cung cấp.
+</p>
+
+{% if data.count == 0 %}
+  <div class="alert alert-success"><i class="bi bi-check-circle"></i>
+    Không có vật tư nào cần mua thêm — tồn kho đủ cho các kế hoạch hiện tại.</div>
+{% else %}
+  <div class="alert alert-info py-2">
+    <i class="bi bi-info-circle"></i> Cần mua <strong>{{ data.count }}</strong> loại vật tư —
+    ước tính chi phí <strong>{{ "{:,.0f}".format(data.total) }} đ</strong>.
+  </div>
+
+  {% for g in data.groups %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+          <i class="bi bi-truck"></i>
+          <strong>{{ g.supplier.name if g.supplier else 'Chưa gán nhà cung cấp' }}</strong>
+          {% if g.supplier and g.supplier.phone %}<span class="text-muted small ms-2">{{ g.supplier.phone }}</span>{% endif %}
+          {% if g.supplier and g.supplier.lead_time_days %}<span class="badge bg-light text-dark ms-2">Giao ~{{ g.supplier.lead_time_days }} ngày</span>{% endif %}
+        </span>
+        <span class="fw-bold">{{ "{:,.0f}".format(g.subtotal) }} đ</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered mb-0 align-middle">
+          <thead class="table-light"><tr>
+            <th>Mã NVL</th><th>Tên vật tư</th><th>ĐVT</th>
+            <th class="text-end">Cần</th><th class="text-end">Tồn</th><th class="text-end">Tối thiểu</th>
+            <th class="text-end">Đề xuất mua</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th>
+          </tr></thead>
+          <tbody>
+          {% for ln in g.lines %}
+            <tr>
+              <td>{{ ln.material.material_code }}</td>
+              <td><a href="{{ url_for('dashboard.view_material', material_id=ln.material.id) }}">{{ ln.material.name }}</a></td>
+              <td>{{ ln.unit }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(ln.required).rstrip('0').rstrip('.') }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(ln.available).rstrip('0').rstrip('.') }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(ln.min_level).rstrip('0').rstrip('.') }}</td>
+              <td class="text-end fw-bold text-primary">{{ "{:,.2f}".format(ln.suggested).rstrip('0').rstrip('.') }}</td>
+              <td class="text-end">{{ "{:,.0f}".format(ln.unit_price) }}</td>
+              <td class="text-end">{{ "{:,.0f}".format(ln.est_cost) }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
+
+  <div class="d-flex justify-content-end">
+    <h5>Tổng ước tính: <span class="text-primary">{{ "{:,.0f}".format(data.total) }} đ</span></h5>
+  </div>
+{% endif %}
+{% endblock %}

@@ -3026,6 +3026,16 @@ def low_stock_materials():
     return render_template('materials/low_stock.html', materials=materials)
 
 
+@dashboard_bp.route('/materials/purchase-suggestions', methods=['GET'])
+@login_required
+def purchase_suggestions():
+    """Đề xuất mua hàng (PO) — bung định mức kế hoạch SX, trừ tồn, gộp theo NCC."""
+    company_id = get_current_company_id()
+    from app.services.services import ProductionPlanService
+    data = ProductionPlanService().purchase_suggestions(company_id)
+    return render_template('materials/purchase_suggestions.html', data=data)
+
+
 @dashboard_bp.route('/production-plan/<plan_id>/print', methods=['GET'])
 @login_required
 def print_production_plan(plan_id):
