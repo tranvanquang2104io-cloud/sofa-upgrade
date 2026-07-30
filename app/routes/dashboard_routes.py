@@ -104,6 +104,31 @@ def parse_line_items(form, files=None, with_images=False):
     return items, float(subtotal)
 
 
+def parse_material_lines(form, with_price=False):
+    """Parse repeated line_* fields (procurement docs: PR/PO) into dicts.
+
+    Reads line_material_id[]/line_quantity[]/line_unit[] (+ line_price[] when
+    with_price). Rows with no material are skipped.
+    """
+    mids = form.getlist('line_material_id[]')
+    qtys = form.getlist('line_quantity[]')
+    units = form.getlist('line_unit[]')
+    prices = form.getlist('line_price[]') if with_price else []
+    out = []
+    for i, mid in enumerate(mids):
+        if not mid:
+            continue
+        row = {
+            'material_id': mid,
+            'quantity': (qtys[i] if i < len(qtys) else 0) or 0,
+            'unit': (units[i].strip() if i < len(units) and units[i] else None),
+        }
+        if with_price:
+            row['unit_price'] = (prices[i] if i < len(prices) else '') or ''
+        out.append(row)
+    return out
+
+
 # ===== LANGUAGE SWITCHER =====
 
 @dashboard_bp.route('/set-language/<lang>')
@@ -3076,13 +3101,39 @@ def list_purchase_orders():
     return render_template('procurement/po_list.html', pos=pos, status=request.args.get('status') or '')
 
 
-@dashboard_bp.route('/purchase-orders/new', methods=['POST'])
+def _po_header_from_form():
+    return {
+        'supplier_id': request.form.get('supplier_id') or None,
+        'store_id': request.form.get('store_id') or None,
+        'order_date': _parse_date(request.form.get('order_date')),
+        'expected_date': _parse_date(request.form.get('expected_date')),
+        'vat_rate': request.form.get('vat_rate') or 0,
+        'notes': request.form.get('notes') or None,
+    }
+
+
+@dashboard_bp.route('/purchase-orders/create', methods=['GET', 'POST'])
 @login_required
-def new_purchase_order():
+def create_purchase_order():
+    """Document-style PO create — fill header + lines, save once."""
     company_id = get_current_company_id()
     from app.services.procurement_service import ProcurementService
-    po = ProcurementService().create_manual_po(company_id, supplier_id=request.form.get('supplier_id') or None)
-    return redirect(url_for('dashboard.view_purchase_order', po_id=po.id))
+    from app.utils.extension_fields import collect_extension_values, apply_extension_values
+    if request.method == 'POST':
+        try:
+            ext = collect_extension_values(company_id, 'purchase_order', request.form)
+            lines = parse_material_lines(request.form, with_price=True)
+            po = ProcurementService().create_po(company_id, _po_header_from_form(), lines)
+            if apply_extension_values(po, ext):
+                db.session.commit()
+            flash(t('Đã tạo đơn mua %(po)s.') % {'po': po.po_number}, 'success')
+            return redirect(url_for('dashboard.view_purchase_order', po_id=po.id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error(f'create_purchase_order error: {e}'); db.session.rollback()
+            flash(t('Lỗi khi tạo đơn mua.'), 'error')
+    return render_template('procurement/po_form.html', po=None, existing_lines=[], **_po_lists(company_id))
 
 
 @dashboard_bp.route('/purchase-orders/from-suggestions', methods=['POST'])
@@ -3118,61 +3169,31 @@ def view_purchase_order(po_id):
     return render_template('procurement/po_view.html', po=po, **_po_lists(company_id))
 
 
-@dashboard_bp.route('/purchase-orders/<po_id>/header', methods=['POST'])
+@dashboard_bp.route('/purchase-orders/<po_id>/edit', methods=['GET', 'POST'])
 @login_required
-def update_purchase_order_header(po_id):
+def edit_purchase_order(po_id):
     company_id = get_current_company_id()
     po = _owned_po(po_id, company_id)
     if not po:
         return redirect(url_for('dashboard.list_purchase_orders'))
+    if not po.can_edit():
+        flash(t('Đơn mua đã gửi/hủy — không sửa được.'), 'error')
+        return redirect(url_for('dashboard.view_purchase_order', po_id=po.id))
     from app.services.procurement_service import ProcurementService
     from app.utils.extension_fields import collect_extension_values, apply_extension_values
-    try:
-        ext = collect_extension_values(company_id, 'purchase_order', request.form)
-        ProcurementService().set_header(
-            po, supplier_id=request.form.get('supplier_id', ''),
-            store_id=request.form.get('store_id', ''),
-            expected_date=(_parse_date(request.form.get('expected_date')) if request.form.get('expected_date') else None),
-            vat_rate=request.form.get('vat_rate') or 0, notes=request.form.get('notes'))
-        apply_extension_values(po, ext); db.session.commit()
-        flash(t('Đã cập nhật đơn mua.'), 'success')
-    except ValueError as e:
-        flash(str(e), 'error')
-    return redirect(url_for('dashboard.view_purchase_order', po_id=po.id))
-
-
-@dashboard_bp.route('/purchase-orders/<po_id>/line', methods=['POST'])
-@login_required
-def add_purchase_order_line(po_id):
-    company_id = get_current_company_id()
-    po = _owned_po(po_id, company_id)
-    if not po:
-        return redirect(url_for('dashboard.list_purchase_orders'))
-    from app.services.procurement_service import ProcurementService
-    try:
-        ProcurementService().add_line(po, request.form.get('material_id'),
-                                      request.form.get('quantity_ordered'),
-                                      unit=request.form.get('unit') or None,
-                                      unit_price=request.form.get('unit_price') or None)
-        flash(t('Đã thêm dòng vật tư.'), 'success')
-    except ValueError as e:
-        flash(str(e), 'error')
-    return redirect(url_for('dashboard.view_purchase_order', po_id=po.id))
-
-
-@dashboard_bp.route('/purchase-orders/<po_id>/line/<line_id>/delete', methods=['POST'])
-@login_required
-def delete_purchase_order_line(po_id, line_id):
-    company_id = get_current_company_id()
-    po = _owned_po(po_id, company_id)
-    if not po:
-        return redirect(url_for('dashboard.list_purchase_orders'))
-    from app.services.procurement_service import ProcurementService
-    try:
-        ProcurementService().delete_line(po, line_id)
-    except ValueError as e:
-        flash(str(e), 'error')
-    return redirect(url_for('dashboard.view_purchase_order', po_id=po.id))
+    if request.method == 'POST':
+        try:
+            ext = collect_extension_values(company_id, 'purchase_order', request.form)
+            lines = parse_material_lines(request.form, with_price=True)
+            ProcurementService().update_po(po, _po_header_from_form(), lines)
+            apply_extension_values(po, ext); db.session.commit()
+            flash(t('Đã cập nhật đơn mua.'), 'success')
+            return redirect(url_for('dashboard.view_purchase_order', po_id=po.id))
+        except ValueError as e:
+            flash(str(e), 'error')
+    existing = [{'material_id': str(l.material_id), 'quantity': float(l.quantity_ordered or 0),
+                 'unit': l.unit, 'unit_price': float(l.unit_price or 0)} for l in po.lines]
+    return render_template('procurement/po_form.html', po=po, existing_lines=existing, **_po_lists(company_id))
 
 
 @dashboard_bp.route('/purchase-orders/<po_id>/status/<action>', methods=['POST'])
@@ -3231,6 +3252,153 @@ def print_purchase_order(po_id):
     bio = build_purchase_order_docx(po, company)
     return send_file(bio, as_attachment=True, download_name=f'{po.po_number}.docx',
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+
+# ===== PROCUREMENT: Purchase Requisitions (PR) =====
+
+def _pr_header_from_form():
+    return {
+        'store_id': request.form.get('store_id') or None,
+        'request_date': _parse_date(request.form.get('request_date')),
+        'expected_date': _parse_date(request.form.get('expected_date')),
+        'title': request.form.get('title') or None,
+        'notes': request.form.get('notes') or None,
+    }
+
+
+def _owned_pr(pr_id, company_id):
+    from app.services.requisition_service import RequisitionService
+    return RequisitionService().get_pr(company_id, pr_id)
+
+
+@dashboard_bp.route('/requisitions', methods=['GET'])
+@login_required
+def list_requisitions():
+    company_id = get_current_company_id()
+    from app.services.requisition_service import RequisitionService
+    prs = RequisitionService().list_prs(company_id, status=request.args.get('status') or None)
+    return render_template('procurement/pr_list.html', prs=prs, status=request.args.get('status') or '')
+
+
+@dashboard_bp.route('/requisitions/create', methods=['GET', 'POST'])
+@login_required
+def create_requisition():
+    company_id = get_current_company_id()
+    from app.services.requisition_service import RequisitionService
+    from app.utils.extension_fields import collect_extension_values, apply_extension_values
+    svc = RequisitionService()
+    if request.method == 'POST':
+        try:
+            ext = collect_extension_values(company_id, 'purchase_requisition', request.form)
+            lines = parse_material_lines(request.form, with_price=False)
+            pr = svc.create_pr(company_id, _pr_header_from_form(), lines)
+            if apply_extension_values(pr, ext):
+                db.session.commit()
+            flash(t('Đã tạo đề nghị mua %(pr)s.') % {'pr': pr.pr_number}, 'success')
+            return redirect(url_for('dashboard.view_requisition', pr_id=pr.id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error(f'create_requisition error: {e}'); db.session.rollback()
+            flash(t('Lỗi khi tạo đề nghị mua.'), 'error')
+    # optional prefill from auto-suggestions (?from=suggestions)
+    prefill = svc.suggest_lines(company_id) if request.args.get('from') == 'suggestions' else []
+    existing = [{'material_id': str(x['material_id']), 'quantity': x['quantity'], 'unit': x['unit']} for x in prefill]
+    return render_template('procurement/pr_form.html', pr=None, existing_lines=existing, **_po_lists(company_id))
+
+
+@dashboard_bp.route('/requisitions/<pr_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_requisition(pr_id):
+    company_id = get_current_company_id()
+    pr = _owned_pr(pr_id, company_id)
+    if not pr:
+        return redirect(url_for('dashboard.list_requisitions'))
+    if not pr.can_edit():
+        flash(t('PR đã gửi/duyệt/hủy — không sửa được.'), 'error')
+        return redirect(url_for('dashboard.view_requisition', pr_id=pr.id))
+    from app.services.requisition_service import RequisitionService
+    from app.utils.extension_fields import collect_extension_values, apply_extension_values
+    if request.method == 'POST':
+        try:
+            ext = collect_extension_values(company_id, 'purchase_requisition', request.form)
+            lines = parse_material_lines(request.form, with_price=False)
+            RequisitionService().update_pr(pr, _pr_header_from_form(), lines)
+            apply_extension_values(pr, ext); db.session.commit()
+            flash(t('Đã cập nhật đề nghị mua.'), 'success')
+            return redirect(url_for('dashboard.view_requisition', pr_id=pr.id))
+        except ValueError as e:
+            flash(str(e), 'error')
+    existing = [{'material_id': str(l.material_id), 'quantity': float(l.quantity or 0), 'unit': l.unit}
+                for l in pr.lines]
+    return render_template('procurement/pr_form.html', pr=pr, existing_lines=existing, **_po_lists(company_id))
+
+
+@dashboard_bp.route('/requisitions/<pr_id>', methods=['GET'])
+@login_required
+def view_requisition(pr_id):
+    company_id = get_current_company_id()
+    pr = _owned_pr(pr_id, company_id)
+    if not pr:
+        return redirect(url_for('dashboard.list_requisitions'))
+    return render_template('procurement/pr_view.html', pr=pr)
+
+
+@dashboard_bp.route('/requisitions/<pr_id>/status/<action>', methods=['POST'])
+@login_required
+def requisition_status(pr_id, action):
+    company_id = get_current_company_id()
+    pr = _owned_pr(pr_id, company_id)
+    if not pr:
+        return redirect(url_for('dashboard.list_requisitions'))
+    from app.services.requisition_service import RequisitionService
+    try:
+        RequisitionService().transition(pr, action)
+        flash(t('Đã cập nhật trạng thái đề nghị mua.'), 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    return redirect(url_for('dashboard.view_requisition', pr_id=pr.id))
+
+
+@dashboard_bp.route('/requisitions/<pr_id>/convert', methods=['POST'])
+@login_required
+def convert_requisition(pr_id):
+    company_id = get_current_company_id()
+    pr = _owned_pr(pr_id, company_id)
+    if not pr:
+        return redirect(url_for('dashboard.list_requisitions'))
+    from app.services.requisition_service import RequisitionService
+    try:
+        pos = RequisitionService().convert_to_pos(pr)
+        flash(t('Đã tạo %(n)s đơn mua từ đề nghị.') % {'n': len(pos)}, 'success')
+        if len(pos) == 1:
+            return redirect(url_for('dashboard.view_purchase_order', po_id=pos[0].id))
+        return redirect(url_for('dashboard.list_purchase_orders'))
+    except ValueError as e:
+        flash(str(e), 'error'); db.session.rollback()
+    return redirect(url_for('dashboard.view_requisition', pr_id=pr.id))
+
+
+# ===== PROCUREMENT: Goods Receipts (GR) management =====
+
+@dashboard_bp.route('/goods-receipts', methods=['GET'])
+@login_required
+def list_goods_receipts():
+    company_id = get_current_company_id()
+    from app.services.procurement_service import ProcurementService
+    grs = ProcurementService().list_grs(company_id)
+    return render_template('procurement/gr_list.html', grs=grs)
+
+
+@dashboard_bp.route('/goods-receipts/<gr_id>', methods=['GET'])
+@login_required
+def view_goods_receipt(gr_id):
+    company_id = get_current_company_id()
+    from app.services.procurement_service import ProcurementService
+    gr = ProcurementService().get_gr(company_id, gr_id)
+    if not gr:
+        return redirect(url_for('dashboard.list_goods_receipts'))
+    return render_template('procurement/gr_view.html', gr=gr)
 
 
 @dashboard_bp.route('/production-plan/<plan_id>/print', methods=['GET'])

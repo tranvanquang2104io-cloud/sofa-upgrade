@@ -15,6 +15,9 @@
 </div>
 
 <div class="d-flex gap-2 flex-wrap mb-3">
+  {% if po.can_edit() %}
+  <a href="{{ url_for('dashboard.edit_purchase_order', po_id=po.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> {{ t('Edit') }}</a>
+  {% endif %}
   {% for a in po.allowed_actions() %}
   <form method="POST" action="{{ url_for('dashboard.purchase_order_status', po_id=po.id, action=a) }}"
         {% if a == 'cancel' %}onsubmit="return confirm('Hủy đơn mua này?');"{% endif %}>
@@ -22,58 +25,26 @@
     <button class="btn btn-sm btn-{{ act_colors.get(a,'secondary') }}">{{ act_labels.get(a, a) }}</button>
   </form>
   {% endfor %}
-  <a href="{{ url_for('dashboard.print_purchase_order', po_id=po.id) }}" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-printer"></i> In đơn đặt hàng
-  </a>
+  <a href="{{ url_for('dashboard.print_purchase_order', po_id=po.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i> In đơn đặt hàng</a>
 </div>
 
-{# ---- Header ---- #}
-<form method="POST" action="{{ url_for('dashboard.update_purchase_order_header', po_id=po.id) }}" class="card mb-3">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div class="card-body row g-3">
-    <div class="col-md-4">
-      <label class="form-label">{{ t('Supplier') }}</label>
-      <select class="form-select" name="supplier_id" {% if not po.can_edit() %}disabled{% endif %}>
-        <option value="">— chưa gán —</option>
-        {% for s in suppliers %}<option value="{{ s.id }}" {% if po.supplier_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Kho nhập về</label>
-      <select class="form-select" name="store_id" {% if not po.can_edit() %}disabled{% endif %}>
-        <option value="">Kho chính (công ty)</option>
-        {% for s in stores %}<option value="{{ s.id }}" {% if po.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Ngày giao dự kiến</label>
-      <input type="date" class="form-control" name="expected_date" value="{{ po.expected_date.isoformat() if po.expected_date else '' }}" {% if not po.can_edit() %}disabled{% endif %}>
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">VAT %</label>
-      <input type="number" step="0.01" min="0" class="form-control" name="vat_rate" value="{{ po.vat_rate|float }}" {% if not po.can_edit() %}disabled{% endif %}>
-    </div>
-    <div class="col-12">
-      <label class="form-label">{{ t('Notes') }}</label>
-      <textarea class="form-control" name="notes" rows="1" {% if not po.can_edit() %}disabled{% endif %}>{{ po.notes or '' }}</textarea>
-    </div>
-    {% if enabled_extension_fields('purchase_order') %}
-    <div class="col-12">{% set ext_obj = po %}{% set entity_type = 'purchase_order' %}{% include '_extension_fields_form.html' %}</div>
-    {% endif %}
-    {% if po.can_edit() %}
-    <div class="col-12 text-end"><button class="btn btn-primary btn-sm">{{ t('Save Changes') }}</button></div>
-    {% endif %}
-  </div>
-</form>
+<div class="card mb-3"><div class="card-body row">
+  <div class="col-md-4"><strong>{{ t('Supplier') }}:</strong> {{ po.supplier.name if po.supplier else '— chưa gán —' }}</div>
+  <div class="col-md-3"><strong>Kho nhập:</strong> {{ po.store.name if po.store else 'Kho chính' }}</div>
+  <div class="col-md-2"><strong>Ngày đặt:</strong> {{ po.order_date.strftime('%d/%m/%Y') if po.order_date else '—' }}</div>
+  <div class="col-md-3"><strong>Giao dự kiến:</strong> {{ po.expected_date.strftime('%d/%m/%Y') if po.expected_date else '—' }}</div>
+  {% if po.requisition %}<div class="col-12 mt-2"><strong>Nguồn:</strong>
+    <a href="{{ url_for('dashboard.view_requisition', pr_id=po.requisition.id) }}">Đề nghị mua {{ po.requisition.pr_number }}</a></div>
+  {% else %}<div class="col-12 mt-2 text-muted"><em>Đơn mua tạo trực tiếp (không từ đề nghị mua).</em></div>{% endif %}
+  {% if po.notes %}<div class="col-12 mt-1"><strong>{{ t('Notes') }}:</strong> {{ po.notes }}</div>{% endif %}
+</div></div>
 
-{# ---- Lines ---- #}
 <h5>Vật tư đặt mua</h5>
 <div class="table-responsive">
 <table class="table table-bordered table-sm align-middle">
   <thead class="table-light"><tr>
     <th>Mã</th><th>Tên vật tư</th><th>ĐVT</th><th class="text-end">SL đặt</th>
-    <th class="text-end">Đã nhận</th><th class="text-end">Còn lại</th>
-    <th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th><th></th>
+    <th class="text-end">Đã nhận</th><th class="text-end">Còn lại</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th>
   </tr></thead>
   <tbody>
   {% for ln in po.lines %}
@@ -86,59 +57,29 @@
       <td class="text-end">{{ "{:,.2f}".format(ln.outstanding|float).rstrip('0').rstrip('.') }}</td>
       <td class="text-end">{{ "{:,.0f}".format(ln.unit_price|float) }}</td>
       <td class="text-end">{{ "{:,.0f}".format(ln.line_total|float) }}</td>
-      <td class="text-end">
-        {% if po.can_edit() %}
-        <form method="POST" action="{{ url_for('dashboard.delete_purchase_order_line', po_id=po.id, line_id=ln.id) }}" onsubmit="return confirm('Xóa dòng này?');">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
-        </form>
-        {% endif %}
-      </td>
     </tr>
   {% else %}
-    <tr><td colspan="9" class="text-muted">Chưa có dòng vật tư nào.</td></tr>
+    <tr><td colspan="8" class="text-muted">Chưa có dòng vật tư nào.</td></tr>
   {% endfor %}
   </tbody>
   <tfoot>
-    <tr><th colspan="7" class="text-end">Cộng tiền hàng</th><th class="text-end">{{ "{:,.0f}".format(po.subtotal|float) }} đ</th><th></th></tr>
-    <tr><th colspan="7" class="text-end">VAT ({{ po.vat_rate|float }}%)</th><th class="text-end">{{ "{:,.0f}".format(po.vat_amount|float) }} đ</th><th></th></tr>
-    <tr><th colspan="7" class="text-end">TỔNG CỘNG</th><th class="text-end text-primary">{{ "{:,.0f}".format(po.total_amount|float) }} đ</th><th></th></tr>
+    <tr><th colspan="7" class="text-end">Cộng tiền hàng</th><th class="text-end">{{ "{:,.0f}".format(po.subtotal|float) }} đ</th></tr>
+    <tr><th colspan="7" class="text-end">VAT ({{ po.vat_rate|float }}%)</th><th class="text-end">{{ "{:,.0f}".format(po.vat_amount|float) }} đ</th></tr>
+    <tr><th colspan="7" class="text-end">TỔNG CỘNG</th><th class="text-end text-primary">{{ "{:,.0f}".format(po.total_amount|float) }} đ</th></tr>
   </tfoot>
 </table>
 </div>
-
-{% if po.can_edit() %}
-<div class="card mt-2 mb-3">
-  <div class="card-header">Thêm vật tư</div>
-  <div class="card-body">
-    <form method="POST" action="{{ url_for('dashboard.add_purchase_order_line', po_id=po.id) }}" class="row g-2 align-items-end">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="col-md-5">
-        <label class="form-label">{{ t('Material') }}</label>
-        <select class="form-select" name="material_id" required>
-          <option value="">{{ t('Select a material') }}</option>
-          {% for m in materials %}<option value="{{ m.id }}">{{ m.material_code }} — {{ m.name }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="col-md-2"><label class="form-label">SL đặt</label><input type="number" step="0.01" min="0" class="form-control" name="quantity_ordered" value="0"></div>
-      <div class="col-md-2"><label class="form-label">Đơn giá</label><input type="number" step="1" min="0" class="form-control" name="unit_price" placeholder="mặc định giá NVL"></div>
-      <div class="col-md-2"><label class="form-label">ĐVT</label><input type="text" class="form-control" name="unit"></div>
-      <div class="col-md-1"><button class="btn btn-success w-100"><i class="bi bi-plus-lg"></i></button></div>
-    </form>
-  </div>
-</div>
-{% endif %}
 
 {# ---- Goods Receipt (GR) ---- #}
 {% if po.can_receive() %}
 <div class="card mb-3 border-success">
   <div class="card-header bg-success text-white"><i class="bi bi-box-arrow-in-down"></i> Nhận hàng &amp; nhập kho (GR)</div>
   <div class="card-body">
-    <form method="POST" action="{{ url_for('dashboard.receive_purchase_order', po_id=po.id) }}">
+    <form method="POST" action="{{ url_for('dashboard.receive_purchase_order', po_id=po.id) }}" onsubmit="return confirm('Xác nhận nhập kho? Tồn kho sẽ tăng.');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <p class="text-muted">Nhập số lượng thực nhận cho từng vật tư — tồn kho sẽ tăng tương ứng.</p>
+      <p class="text-muted">Nhập số lượng thực nhận đợt này — có thể nhận <strong>một phần</strong> và nhận thành <strong>nhiều đợt</strong>.</p>
       <table class="table table-sm align-middle">
-        <thead class="table-light"><tr><th>Vật tư</th><th class="text-end">Còn lại</th><th style="width:160px">SL nhận</th></tr></thead>
+        <thead class="table-light"><tr><th>Vật tư</th><th class="text-end">Còn lại</th><th style="width:160px">SL nhận đợt này</th></tr></thead>
         <tbody>
         {% for ln in po.lines %}
           {% if ln.outstanding|float > 0 %}
@@ -161,7 +102,7 @@
         </div>
         <div class="col-md-3"><label class="form-label">Ngày nhận</label><input type="date" class="form-control form-control-sm" name="receipt_date"></div>
         <div class="col-md-3"><label class="form-label">{{ t('Notes') }}</label><input type="text" class="form-control form-control-sm" name="notes"></div>
-        <div class="col-md-2"><button class="btn btn-success w-100" onsubmit="return confirm('Xác nhận nhập kho?');"><i class="bi bi-check-lg"></i> Nhập kho</button></div>
+        <div class="col-md-2"><button class="btn btn-success w-100"><i class="bi bi-check-lg"></i> Nhập kho</button></div>
       </div>
     </form>
   </div>
@@ -174,10 +115,9 @@
 <ul class="list-group mb-3">
   {% for gr in po.receipts %}
   <li class="list-group-item d-flex justify-content-between">
-    <span><i class="bi bi-box-seam"></i> <strong>{{ gr.gr_number }}</strong>
-      — {{ gr.receipt_date.strftime('%d/%m/%Y') if gr.receipt_date else '' }}
-      {% if gr.store %}→ {{ gr.store.name }}{% else %}→ Kho chính{% endif %}</span>
-    <span class="text-muted">{{ gr.lines|length }} dòng</span>
+    <a href="{{ url_for('dashboard.view_goods_receipt', gr_id=gr.id) }}"><i class="bi bi-box-seam"></i> <strong>{{ gr.gr_number }}</strong></a>
+    <span>{{ gr.receipt_date.strftime('%d/%m/%Y') if gr.receipt_date else '' }}
+      · {% if gr.store %}{{ gr.store.name }}{% else %}Kho chính{% endif %} · {{ gr.lines|length }} dòng</span>
   </li>
   {% endfor %}
 </ul>

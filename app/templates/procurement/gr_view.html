@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ gr.gr_number }} - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="mb-0"><i class="bi bi-box-seam text-success"></i> {{ gr.gr_number }}
+    {% if gr.is_posted %}<span class="badge bg-success ms-2">Đã ghi tăng tồn</span>{% endif %}</h1>
+  <a href="{{ url_for('dashboard.list_goods_receipts') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ t('Back') }}</a>
+</div>
+
+<div class="card mb-3"><div class="card-body row">
+  <div class="col-md-3"><strong>Ngày nhận:</strong> {{ gr.receipt_date.strftime('%d/%m/%Y') if gr.receipt_date else '—' }}</div>
+  <div class="col-md-3"><strong>Kho nhập:</strong> {{ gr.store.name if gr.store else 'Kho chính (công ty)' }}</div>
+  <div class="col-md-3"><strong>Đơn mua:</strong>
+    {% if gr.po %}<a href="{{ url_for('dashboard.view_purchase_order', po_id=gr.po.id) }}">{{ gr.po.po_number }}</a>{% else %}—{% endif %}</div>
+  <div class="col-md-3"><strong>NCC:</strong> {{ gr.po.supplier.name if gr.po and gr.po.supplier else '—' }}</div>
+  {% if gr.notes %}<div class="col-12 mt-2"><strong>{{ t('Notes') }}:</strong> {{ gr.notes }}</div>{% endif %}
+</div></div>
+
+<h5>Vật tư đã nhận</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm align-middle">
+  <thead class="table-light"><tr><th>Mã</th><th>Tên vật tư</th><th class="text-end">SL nhận</th><th>ĐVT</th></tr></thead>
+  <tbody>
+  {% for ln in gr.lines %}
+    <tr>
+      <td>{{ ln.material.material_code if ln.material else '' }}</td>
+      <td>{{ ln.material.name if ln.material else ln.material_id }}</td>
+      <td class="text-end">{{ "{:,.2f}".format(ln.quantity_received|float).rstrip('0').rstrip('.') }}</td>
+      <td>{{ ln.unit }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

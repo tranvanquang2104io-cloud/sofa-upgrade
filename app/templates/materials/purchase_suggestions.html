@@ -3,17 +3,15 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-2">
-  <h1 class="mb-0"><i class="bi bi-cart-plus text-primary"></i> Đề xuất mua hàng (PR)</h1>
+  <h1 class="mb-0"><i class="bi bi-lightbulb text-primary"></i> Đề xuất mua hàng (tự động)</h1>
   <div class="d-flex gap-2">
-    <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-bag-check"></i> Đơn mua hàng
+    <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-clipboard-check"></i> Đề nghị mua (PR)
     </a>
     {% if data.count > 0 %}
-    <form method="POST" action="{{ url_for('dashboard.create_pos_from_suggestions') }}"
-          onsubmit="return confirm('Tạo đơn mua (PO) từ các đề xuất này, gộp theo nhà cung cấp?');">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn-primary btn-sm"><i class="bi bi-cart-check"></i> Tạo đơn mua từ đề xuất</button>
-    </form>
+    <a href="{{ url_for('dashboard.create_requisition', **{'from':'suggestions'}) }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-clipboard-plus"></i> Tạo đề nghị mua từ đề xuất
+    </a>
     {% endif %}
   </div>
 </div>

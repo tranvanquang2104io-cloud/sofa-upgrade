@@ -28,24 +28,30 @@ def reset_company_data(company_id):
         ProductionPlan, ProductionPlanItem, ProductionMaterialLine, MaterialNorm,
         Document, Quotation, Contract, HandoverRecord, PaymentReport, LifecycleStatus,
         PurchaseOrder, PurchaseOrderLine, GoodsReceipt, GoodsReceiptLine,
+        PurchaseRequisition, PurchaseRequisitionLine,
     )
 
     order_ids = [o.id for o in Order.query.filter_by(company_id=company_id).all()]
     plan_ids = [p.id for p in ProductionPlan.query.filter_by(company_id=company_id).all()]
     po_ids = [p.id for p in PurchaseOrder.query.filter_by(company_id=company_id).all()]
     gr_ids = [g.id for g in GoodsReceipt.query.filter_by(company_id=company_id).all()]
+    pr_ids = [p.id for p in PurchaseRequisition.query.filter_by(company_id=company_id).all()]
     counts = {}
 
     def _del(model, crit):
         counts[model.__tablename__] = crit.delete(synchronize_session=False)
 
-    # 0. Procurement (children → PO/GR)
+    # 0. Procurement (children → GR/PO/PR). GR & PO reference PR, so drop them first.
     if gr_ids:
         _del(GoodsReceiptLine, GoodsReceiptLine.query.filter(GoodsReceiptLine.gr_id.in_(gr_ids)))
     if po_ids:
         _del(PurchaseOrderLine, PurchaseOrderLine.query.filter(PurchaseOrderLine.po_id.in_(po_ids)))
     _del(GoodsReceipt, GoodsReceipt.query.filter_by(company_id=company_id))
     _del(PurchaseOrder, PurchaseOrder.query.filter_by(company_id=company_id))
+    if pr_ids:
+        _del(PurchaseRequisitionLine, PurchaseRequisitionLine.query.filter(
+            PurchaseRequisitionLine.pr_id.in_(pr_ids)))
+    _del(PurchaseRequisition, PurchaseRequisition.query.filter_by(company_id=company_id))
 
     # 1. Production (children → plan)
     if plan_ids:

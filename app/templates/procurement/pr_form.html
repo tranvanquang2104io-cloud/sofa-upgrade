@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Sửa' if pr else 'Tạo' }} đề nghị mua - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0"><i class="bi bi-clipboard-plus text-primary"></i>
+    {{ 'Sửa đề nghị mua ' + pr.pr_number if pr else 'Tạo đề nghị mua hàng (PR)' }}</h1>
+  <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ t('Back') }}</a>
+</div>
+
+<form method="POST" action="{{ url_for('dashboard.edit_requisition', pr_id=pr.id) if pr else url_for('dashboard.create_requisition') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card mb-3"><div class="card-body row g-3">
+    <div class="col-md-5">
+      <label class="form-label">Tiêu đề / lý do</label>
+      <input type="text" class="form-control" name="title" value="{{ pr.title if pr else '' }}" placeholder="VD: Bổ sung vật tư dự phòng Q3">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Kho / cửa hàng cần</label>
+      <select class="form-select" name="store_id">
+        <option value="">— không xác định —</option>
+        {% for s in stores %}<option value="{{ s.id }}" {% if pr and pr.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Ngày đề nghị</label>
+      <input type="date" class="form-control" name="request_date" value="{{ pr.request_date.isoformat() if pr and pr.request_date else '' }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Cần trước ngày</label>
+      <input type="date" class="form-control" name="expected_date" value="{{ pr.expected_date.isoformat() if pr and pr.expected_date else '' }}">
+    </div>
+    <div class="col-12">
+      <label class="form-label">{{ t('Notes') }}</label>
+      <textarea class="form-control" name="notes" rows="1">{{ pr.notes if pr else '' }}</textarea>
+    </div>
+  </div></div>
+
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Vật tư đề nghị mua</span>
+      {% if not pr %}
+      <a href="{{ url_for('dashboard.create_requisition', **{'from':'suggestions'}) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-magic"></i> Điền từ đề xuất tự động
+      </a>{% endif %}
+    </div>
+    <div class="card-body">
+      <p class="text-muted small">Có thể đề nghị mua bất kỳ vật tư nào (kể cả khi tồn kho chưa chạm mức cảnh báo) để dự phòng.</p>
+      {% set with_price = False %}
+      {% include 'procurement/_material_lines_editor.html' %}
+    </div>
+  </div>
+
+  {% if enabled_extension_fields('purchase_requisition') %}
+    {% set entity_type = 'purchase_requisition' %}{% set ext_obj = pr %}{% include '_extension_fields_form.html' %}
+  {% endif %}
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ t('Save') }}</button>
+    <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
+  </div>
+</form>
+{% endblock %}

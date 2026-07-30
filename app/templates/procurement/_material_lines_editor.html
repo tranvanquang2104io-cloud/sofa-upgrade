@@ -1,0 +1,54 @@
+{# Reusable material-line editor for PR/PO document forms.
+   Params: materials (list), with_price (bool), existing_lines (list of dicts:
+   {material_id, quantity, unit, unit_price?}). Field names: line_material_id[],
+   line_quantity[], line_unit[], line_price[]. #}
+
+{% macro line_row(materials, with_price, ln) %}
+<tr class="line-row">
+  <td>
+    <select name="line_material_id[]" class="form-select form-select-sm line-mat" onchange="lineMatChanged(this)">
+      <option value="">— chọn vật tư —</option>
+      {% for m in materials %}
+        <option value="{{ m.id }}" data-unit="{{ m.unit.name if m.unit else '' }}" data-price="{{ m.unit_price|float }}"
+          {% if ln and (ln.material_id|string) == (m.id|string) %}selected{% endif %}>{{ m.material_code }} — {{ m.name }}</option>
+      {% endfor %}
+    </select>
+  </td>
+  <td><input type="number" step="0.01" min="0" name="line_quantity[]" class="form-control form-control-sm"
+             style="width:100px" value="{{ ln.quantity if ln else '' }}"></td>
+  <td><input type="text" name="line_unit[]" class="form-control form-control-sm line-unit"
+             style="width:90px" value="{{ ln.unit if ln else '' }}"></td>
+  {% if with_price %}
+  <td><input type="number" step="1" min="0" name="line_price[]" class="form-control form-control-sm line-price"
+             style="width:130px" placeholder="giá NVL" value="{{ (ln.unit_price if ln and ln.unit_price is defined else '') }}"></td>
+  {% endif %}
+  <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()"><i class="bi bi-x-lg"></i></button></td>
+</tr>
+{% endmacro %}
+
+<div class="table-responsive">
+<table class="table table-sm align-middle" id="lineTable">
+  <thead class="table-light"><tr>
+    <th>Vật tư</th><th style="width:110px">Số lượng</th><th style="width:100px">ĐVT</th>
+    {% if with_price %}<th style="width:140px">Đơn giá</th>{% endif %}<th style="width:40px"></th>
+  </tr></thead>
+  <tbody id="lineBody">
+    {% for ln in existing_lines %}{{ line_row(materials, with_price, ln) }}{% endfor %}
+  </tbody>
+</table>
+</div>
+<button type="button" class="btn btn-outline-primary btn-sm" onclick="addLine()"><i class="bi bi-plus-lg"></i> Thêm dòng</button>
+
+<template id="lineTpl">{{ line_row(materials, with_price, none) }}</template>
+<script>
+function addLine(){ document.getElementById('lineBody').appendChild(document.getElementById('lineTpl').content.cloneNode(true)); }
+function lineMatChanged(sel){
+  const opt = sel.options[sel.selectedIndex];
+  const row = sel.closest('tr');
+  const unit = row.querySelector('.line-unit');
+  const price = row.querySelector('.line-price');
+  if (unit && !unit.value) unit.value = opt.getAttribute('data-unit') || '';
+  if (price && !price.value) price.value = opt.getAttribute('data-price') || '';
+}
+if(!document.querySelector('#lineBody .line-row')) addLine();
+</script>

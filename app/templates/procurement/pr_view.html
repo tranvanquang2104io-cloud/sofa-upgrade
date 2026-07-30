@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ pr.pr_number }} - SofaFlow{% endblock %}
+
+{% set labels = {'draft':'Nháp','submitted':'Chờ duyệt','approved':'Đã duyệt','converted':'Đã tạo PO','canceled':'Đã hủy'} %}
+{% set colors = {'draft':'secondary','submitted':'info','approved':'success','converted':'primary','canceled':'dark'} %}
+{% set act_labels = {'submit':'Gửi duyệt','approve':'Duyệt','reject':'Trả lại (sửa)','cancel':'Hủy','reopen':'Mở lại'} %}
+{% set act_colors = {'submit':'primary','approve':'success','reject':'outline-warning','cancel':'outline-danger','reopen':'outline-secondary'} %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="mb-0"><i class="bi bi-clipboard-check"></i> {{ pr.pr_number }}
+    <span class="badge bg-{{ colors.get(pr.status,'secondary') }} ms-2">{{ labels.get(pr.status, pr.status) }}</span>
+  </h1>
+  <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ t('Back') }}</a>
+</div>
+
+<div class="d-flex gap-2 flex-wrap mb-3">
+  {% if pr.can_edit() %}
+  <a href="{{ url_for('dashboard.edit_requisition', pr_id=pr.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> {{ t('Edit') }}</a>
+  {% endif %}
+  {% for a in pr.allowed_actions() %}
+  <form method="POST" action="{{ url_for('dashboard.requisition_status', pr_id=pr.id, action=a) }}"
+        {% if a == 'cancel' %}onsubmit="return confirm('Hủy đề nghị mua này?');"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-{{ act_colors.get(a,'secondary') }}">{{ act_labels.get(a, a) }}</button>
+  </form>
+  {% endfor %}
+  {% if pr.can_convert() %}
+  <form method="POST" action="{{ url_for('dashboard.convert_requisition', pr_id=pr.id) }}"
+        onsubmit="return confirm('Tạo đơn mua (PO) từ đề nghị này, gộp theo nhà cung cấp?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-primary"><i class="bi bi-cart-check"></i> Tạo đơn mua (PO)</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card mb-3"><div class="card-body">
+  <div class="row">
+    <div class="col-md-6"><strong>Tiêu đề:</strong> {{ pr.title or '—' }}</div>
+    <div class="col-md-3"><strong>Kho cần:</strong> {{ pr.store.name if pr.store else '—' }}</div>
+    <div class="col-md-3"><strong>Ngày đề nghị:</strong> {{ pr.request_date.strftime('%d/%m/%Y') if pr.request_date else '—' }}</div>
+  </div>
+  {% if pr.notes %}<div class="mt-2"><strong>{{ t('Notes') }}:</strong> {{ pr.notes }}</div>{% endif %}
+</div></div>
+
+<h5>Vật tư đề nghị</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm align-middle">
+  <thead class="table-light"><tr><th>Mã</th><th>Tên vật tư</th><th class="text-end">Số lượng</th><th>ĐVT</th><th>Ghi chú</th></tr></thead>
+  <tbody>
+  {% for ln in pr.lines %}
+    <tr>
+      <td>{{ ln.material.material_code if ln.material else '' }}</td>
+      <td>{{ ln.material.name if ln.material else ln.material_id }}</td>
+      <td class="text-end">{{ "{:,.2f}".format(ln.quantity|float).rstrip('0').rstrip('.') }}</td>
+      <td>{{ ln.unit }}</td>
+      <td>{{ ln.notes or '' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="text-muted">Chưa có dòng vật tư nào.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if pr.purchase_orders %}
+<h5 class="mt-3">Đơn mua đã tạo từ đề nghị này</h5>
+<ul class="list-group mb-3">
+  {% for po in pr.purchase_orders %}
+  <li class="list-group-item d-flex justify-content-between">
+    <a href="{{ url_for('dashboard.view_purchase_order', po_id=po.id) }}"><i class="bi bi-bag-check"></i> {{ po.po_number }}</a>
+    <span>{{ po.supplier.name if po.supplier else '— chưa gán NCC —' }} · {{ "{:,.0f}".format(po.total_amount|float) }} đ</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -90,12 +90,22 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('dashboard.purchase_suggestions') }}">
-                                        <i class="bi bi-cart-plus"></i> {{ t('Purchase Suggestions') }}
+                                        <i class="bi bi-lightbulb"></i> {{ t('Purchase Suggestions') }}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.list_requisitions') }}">
+                                        <i class="bi bi-clipboard-check"></i> {{ t('Purchase Requisitions') }}
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('dashboard.list_purchase_orders') }}">
                                         <i class="bi bi-bag-check"></i> {{ t('Purchase Orders') }}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard.list_goods_receipts') }}">
+                                        <i class="bi bi-box-seam"></i> {{ t('Goods Receipts') }}
                                     </a>
                                 </li>
                                 {% endif %}

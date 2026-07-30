@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Phiếu nhập kho - SofaFlow{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0"><i class="bi bi-box-seam text-success"></i> Phiếu nhập kho (GR)</h1>
+  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bag-check"></i> Đơn mua hàng</a>
+</div>
+<p class="text-muted">Phiếu nhập kho được tạo khi <strong>nhận hàng</strong> từ một đơn mua. Mỗi lần nhận (kể cả nhận một phần) là một phiếu.</p>
+
+{% if grs %}
+<div class="table-responsive">
+<table class="table table-bordered table-sm align-middle">
+  <thead class="table-light"><tr><th>Số phiếu</th><th>Ngày nhận</th><th>Đơn mua</th><th>Kho nhập</th><th class="text-center">Số dòng</th><th></th></tr></thead>
+  <tbody>
+  {% for gr in grs %}
+    <tr>
+      <td><a href="{{ url_for('dashboard.view_goods_receipt', gr_id=gr.id) }}"><strong>{{ gr.gr_number }}</strong></a></td>
+      <td>{{ gr.receipt_date.strftime('%d/%m/%Y') if gr.receipt_date else '' }}</td>
+      <td>{% if gr.po %}<a href="{{ url_for('dashboard.view_purchase_order', po_id=gr.po.id) }}">{{ gr.po.po_number }}</a>{% else %}—{% endif %}</td>
+      <td>{{ gr.store.name if gr.store else 'Kho chính' }}</td>
+      <td class="text-center">{{ gr.lines|length }}</td>
+      <td class="text-end"><a href="{{ url_for('dashboard.view_goods_receipt', gr_id=gr.id) }}" class="btn btn-outline-secondary btn-sm">{{ t('View') }}</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có phiếu nhập kho nào. Vào một <strong>đơn mua đã gửi NCC</strong> và bấm <strong>Nhập kho</strong>.</div>
+{% endif %}
+{% endblock %}
