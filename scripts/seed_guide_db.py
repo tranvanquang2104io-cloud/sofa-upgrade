@@ -87,6 +87,17 @@ with app.app_context():
     _clean_demo(co.id)
     seed_demo_order(co.id, store.id)
 
+    # a FRESH order (no documents yet) so the guide can show empty/pending state
+    # and each "create document" form for a clean order.
+    from app.models.models import Order, LifecycleStatus, Customer
+    cust = Customer.query.filter_by(company_id=co.id).first()
+    fresh = Order(company_id=co.id, store_id=store.id, customer_id=cust.id,
+                  order_code='DH-2026-002', title='Bộ Sofa Văng 3 Chỗ Bọc Da (đơn mới)',
+                  description='Gia công sofa văng 3 chỗ, khung gỗ sồi, bọc da simili cao cấp.')
+    db.session.add(fresh); db.session.flush()
+    db.session.add(LifecycleStatus(order_id=fresh.id))
+    db.session.commit()
+
     # procurement demo: PR → PO → partial GR
     from app.services.requisition_service import RequisitionService
     from app.services.procurement_service import ProcurementService

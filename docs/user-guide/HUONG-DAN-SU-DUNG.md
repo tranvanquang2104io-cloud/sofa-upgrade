@@ -63,32 +63,152 @@ Mã số thuế, Địa chỉ, Người đại diện…* rồi bấm **Lưu**.
 
 \newpage
 
-# 4. Đơn hàng & vòng đời chứng từ
+# 4. Đơn hàng & vòng đời chứng từ (chi tiết)
 
-Đơn hàng là trung tâm — mọi chứng từ (báo giá, hợp đồng, bàn giao, thanh toán) đều gắn với
-một đơn hàng.
+Đơn hàng là **trung tâm** của phần mềm. Mọi chứng từ đều gắn với một đơn hàng và đi theo
+**trình tự bắt buộc**:
 
-**Bước 1.** Vào menu **Đơn Hàng** để xem danh sách.
+> **Tạo đơn hàng → Báo giá (duyệt) → Hợp đồng (ký) → Tạm ứng (xác nhận) → Biên bản bàn
+> giao (xác nhận) → Thanh toán cuối (xác nhận) → Hoàn tất.**
 
-![Danh sách đơn hàng](images/04-don-hang/01-danh-sach.png)
+Ở mỗi bước, phần mềm **chỉ mở khóa bước kế tiếp** khi bước trước đã hoàn tất (ví dụ: phải
+**duyệt báo giá** mới nên lập hợp đồng; phải **ký hợp đồng** mới lập được phiếu tạm ứng…).
+Phần dưới hướng dẫn **từng chứng từ, từng nút bấm**.
 
-**Bước 2.** Bấm vào một đơn để xem **chi tiết**. Màn hình chi tiết thể hiện **tiến trình
-đơn hàng** theo thứ tự và trạng thái từng bước:
+## 4.1. Cách tạo đơn hàng
 
-1. **Báo giá** → *Đã duyệt*
-2. **Hợp đồng** → *Đã ký* (khi ký, phần mềm tự tạo **Kế hoạch sản xuất**)
-3. **Tạm ứng** → *Đã xác nhận*
-4. **Biên bản bàn giao** → *Đã xác nhận*
-5. **Thanh toán cuối** → *Chờ xác nhận / Đã xác nhận*
+**Bước 1.** Vào menu **Đơn Hàng** trên thanh trên cùng để xem danh sách. Bấm nút **+ Tạo
+Đơn Hàng** (góc trên bên phải).
 
-Mỗi dòng chứng từ có nút **Xem** và **In** (biểu tượng ✎/📄). Cột phải là bảng **Trạng
-thái** tổng hợp.
+![Danh sách đơn hàng — nút Tạo Đơn Hàng](images/04-don-hang/01-danh-sach.png)
 
-![Chi tiết đơn hàng và tiến trình chứng từ](images/04-don-hang/02-chi-tiet.png)
+**Bước 2.** Điền biểu mẫu: **Cửa hàng**, **Khách hàng** (chọn từ danh sách), **Mã đơn**,
+**Tiêu đề**, **Mô tả**. Bấm **Tạo Đơn Hàng**.
 
-> **Ghi chú về chứng từ in ra:** phần mềm in được **Báo giá, Hợp đồng, Biên bản bàn giao,
-> Giấy đề nghị tạm ứng, Giấy đề nghị thanh toán** ra **PDF** hoặc **DOCX**. Dòng tiêu đề
-> "*…, ngày … tháng … năm …*" tự lấy **tỉnh/thành của cửa hàng** và **ngày của chứng từ**.
+![Biểu mẫu tạo đơn hàng](images/04-don-hang/02-form-tao-don.png)
+
+**Bước 3.** Đơn hàng mới hiện ra ở trạng thái **đang chờ** — các chứng từ đều là *Chưa có /
+Pending*. Từ đây bạn lần lượt tạo Báo giá → Hợp đồng → …
+
+![Đơn hàng mới — các bước đang chờ](images/04-don-hang/03-don-moi-pending.png)
+
+\newpage
+
+## 4.2. Cách tạo Báo giá
+
+**Bước 1.** Trong trang chi tiết đơn hàng, tại khối **Báo giá**, bấm **Tạo báo giá**.
+
+**Bước 2.** Điền: **Số báo giá** (tự sinh, sửa được), **Ngày báo giá**, **Địa điểm**, **Thời
+hạn hiệu lực**. Ở **Bảng Hạng Mục**, nhập từng dòng (Hạng mục, ĐVT, SL, Đơn giá) — bấm
+**+ Thêm Dòng** để thêm. Nhập **VAT %**, phí (nếu có), **điều khoản thanh toán**. Bấm **Tạo
+Báo Giá**.
+
+![Biểu mẫu tạo báo giá](images/04b-bao-gia/01-form-tao.png)
+
+**Bước 3.** Trang **xem báo giá** hiện ra với đầy đủ hạng mục, VAT, tổng tiền. Kiểm tra lại;
+nếu cần **sửa** thì bấm **Sửa** (chỉ sửa được khi *chưa duyệt*).
+
+**Bước 4.** Nếu đúng, bấm **Duyệt** (Approve) để chốt báo giá. Sau khi duyệt, báo giá
+**khóa** (không sửa) và mở khóa bước **Hợp đồng**.
+
+![Xem báo giá — nút Sửa / Duyệt / Tạo tài liệu](images/04b-bao-gia/02-xem-va-duyet.png)
+
+**Bước 5.** **In & tải báo giá:** bấm **Tạo Tài Liệu**, chọn định dạng **PDF** hoặc **DOCX**,
+bấm **Tạo**. File xuất hiện ở mục **Tài Liệu Đã Tạo** — bấm để **tải về**.
+
+![Tạo tài liệu — chọn PDF/DOCX](images/04b-bao-gia/03-in-tai-modal.png)
+
+\newpage
+
+## 4.3. Cách tạo Hợp đồng
+
+**Bước 1.** Sau khi **duyệt báo giá**, tại khối **Hợp đồng** trên trang đơn hàng, bấm **Tạo
+hợp đồng**.
+
+**Bước 2.** Điền: **Số hợp đồng**, **Ngày ký**, **Địa điểm ký**, **Ngày bắt đầu**, **Số ngày
+hoàn thành**. Chọn **Báo giá tham chiếu** — hệ thống **tự sao chép hạng mục** từ báo giá.
+Nhập **% Tạm ứng**, chọn **tài khoản ngân hàng** nhận thanh toán, **điều khoản hợp đồng**.
+Bấm **Tạo Hợp Đồng**.
+
+![Biểu mẫu tạo hợp đồng](images/04c-hop-dong/01-form-tao.png)
+
+**Bước 3.** Ở trang **xem hợp đồng**, kiểm tra nội dung. Bấm **Sửa** nếu cần (khi *chưa ký*).
+
+**Bước 4.** Bấm **Ký hợp đồng** (Sign). ⭐ *Khi ký, phần mềm **tự tạo Kế hoạch sản xuất** cho
+đơn — xem Mục 5.* Hợp đồng đã ký sẽ **khóa**.
+
+![Xem hợp đồng — nút Ký / Sửa / Tạo tài liệu](images/04c-hop-dong/02-xem-va-ky.png)
+
+**Bước 5.** **In hợp đồng:** bấm **Tạo Tài Liệu** → chọn PDF/DOCX → **Tạo** → tải về (giống
+Bước 5 của Báo giá).
+
+\newpage
+
+## 4.4. Cách tạo phiếu Tạm ứng
+
+**Bước 1.** Sau khi **ký hợp đồng**, tại khối **Tạm ứng** (hoặc nút **Đề Nghị Thanh Toán**),
+bấm **Tạo phiếu tạm ứng**.
+
+**Bước 2.** Điền: **Số phiếu**, **Ngày lập / Ngày thanh toán**, **% tạm ứng** và **số tiền
+tạm ứng** (thường 30% giá trị hợp đồng), **hình thức thanh toán**. Bấm **Lưu**.
+
+![Biểu mẫu tạo phiếu thanh toán / tạm ứng](images/04d-tam-ung/01-form-tao.png)
+
+**Bước 3.** Ở trang **xem phiếu**, bấm **Xác nhận** khi đã nhận được tiền tạm ứng. Sau khi
+xác nhận, mở khóa bước **Bàn giao**.
+
+![Xem phiếu tạm ứng — nút Xác nhận / Sửa / In](images/04d-tam-ung/02-xem-xac-nhan.png)
+
+**Bước 4.** **In giấy đề nghị tạm ứng:** bấm **Tạo Tài Liệu** → PDF/DOCX → **Tạo**.
+
+\newpage
+
+## 4.5. Cách tạo Biên bản bàn giao
+
+**Bước 1.** Sau khi **xác nhận tạm ứng**, tại khối **Biên bản bàn giao**, bấm **Tạo biên
+bản bàn giao**.
+
+**Bước 2.** Điền: **Số biên bản**, **Ngày lập**, **Ngày bàn giao**, **Địa điểm**, **giờ bắt
+đầu/kết thúc**, **người đại diện** hai bên, **tình trạng sản phẩm**. Với mỗi hạng mục, ghi
+**SL giao / SL nghiệm thu** và **Đạt / Không đạt**. Bấm **Lưu**.
+
+![Biểu mẫu tạo biên bản bàn giao](images/04e-ban-giao/01-form-tao.png)
+
+**Bước 3.** Ở trang **xem biên bản**, bấm **Xác nhận** khi khách đã nhận hàng. Sau khi xác
+nhận, mở khóa bước **Thanh toán cuối**.
+
+![Xem biên bản bàn giao — nút Xác nhận / Sửa / In](images/04e-ban-giao/02-xem-xac-nhan.png)
+
+**Bước 4.** **In biên bản:** bấm **Tạo Tài Liệu** → PDF/DOCX → **Tạo**.
+
+\newpage
+
+## 4.6. Cách tạo phiếu Thanh toán cuối
+
+**Bước 1.** Sau khi **xác nhận bàn giao**, bấm **Tạo Biên Bản Thanh Toán Cuối** (nút xanh ở
+khối **Thao Tác Nhanh** trên trang đơn hàng). Biểu mẫu giống phiếu tạm ứng nhưng **loại =
+Thanh toán cuối**; số tiền là **phần còn lại phải trả**.
+
+**Bước 2.** Ở trang **xem phiếu thanh toán cuối**, kiểm tra: *Tổng giá trị – Đã tạm ứng =
+Còn lại phải thanh toán*. Bấm **Xác nhận** khi thu đủ; đơn hàng chuyển **Hoàn tất**.
+
+![Xem phiếu thanh toán cuối](images/04f-thanh-toan/01-xem.png)
+
+**Bước 3.** **In giấy đề nghị thanh toán:** bấm **Tạo Tài Liệu** → PDF/DOCX → **Tạo**.
+
+\newpage
+
+## 4.7. Toàn cảnh tiến trình trên trang đơn hàng
+
+Khi đã đủ chứng từ, trang chi tiết đơn hàng hiển thị **toàn bộ tiến trình** với trạng thái
+từng bước (Đã duyệt / Đã ký / Đã xác nhận…) và bảng **Trạng thái** tổng hợp bên phải. Mỗi
+dòng chứng từ có nút **Xem** và **Tạo tài liệu (In)**.
+
+![Chi tiết đơn hàng đầy đủ — tiến trình & trạng thái](images/04-don-hang/04-chi-tiet-day-du.png)
+
+> **Ghi chú về chứng từ in ra:** in được **Báo giá, Hợp đồng, Biên bản bàn giao, Giấy đề
+> nghị tạm ứng, Giấy đề nghị thanh toán** ra **PDF** hoặc **DOCX**. Dòng tiêu đề "*…, ngày
+> … tháng … năm …*" tự lấy **tỉnh/thành của cửa hàng** và **ngày của chứng từ**.
 
 \newpage
 
