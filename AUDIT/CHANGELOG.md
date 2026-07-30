@@ -204,6 +204,12 @@
 - **UI:** trang Đơn mua hàng (list + chi tiết), nút "Tạo đơn mua từ đề xuất" ở trang PR, form Nhận hàng (GR), nav links.
 - **Test:** `test_procurement.py` (service + HTTP loop), `test_full_loop.py` (E2E: order→plan→issue→shortage→PR→PO→GR→issue thành công, tồn kho khớp từng bước).
 
+## Redesign CRUD tài liệu PR/PO/GR (ERP-lite, 1.7.1)
+- **PR (Đề nghị mua hàng)** trở thành tài liệu đầy đủ CRUD: model `PurchaseRequisition`(+lines), tạo tay không phụ thuộc tồn kho (mua dự phòng), điền sẵn từ đề xuất tự động; vòng đời draft→submitted→approved→converted/canceled; duyệt xong **convert → PO** (gộp theo NCC). `PurchaseOrder.pr_id` (ref PR hoặc đứng độc lập). Migration `61397f4c3104` (named FK, round-trip OK).
+- **PO** đổi sang CRUD kiểu tài liệu: form tạo/sửa gồm header + nhiều dòng, **lưu một lần** (bỏ kiểu tạo-PO-rỗng-rồi-tự-lưu-từng-dòng). View chỉ đọc + hành động (gửi NCC/hủy/in/nhận hàng) + hiển thị nguồn PR.
+- **GR (Nhập kho)** thành đối tượng quản lý riêng: danh sách `/goods-receipts` + chi tiết. Hỗ trợ **nhận một phần** (PO→partial), **nhiều đợt** (mỗi đợt 1 GR), **nhận đủ** (PO→received); mỗi GR tăng `MaterialStock`.
+- Partial `_material_lines_editor.html` (JS thêm dòng + tự điền ĐVT/đơn giá). Nav: Đề xuất tự động → PR → PO → GR. Test `test_requisition.py` + `test_procurement_crud.py` (CRUD HTTP đầy đủ).
+
 ## Extend fields cho master data
 - `ExtensionFieldConfig.ENTITY_TYPES` phủ customer/supplier/material/store/order/purchase_order/goods_receipt (trang cấu hình dùng chung → tự có, nhãn VI). Wire collect/apply vào create customer/supplier/material; partial pre-fill giá trị khi sửa. Test `test_extend_master.py`.
 - **Còn lại (để sẵn, cùng mẫu):** wire form store/order + các form edit — cột & cấu hình đã sẵn, chỉ cần include partial + collect/apply.
