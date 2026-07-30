@@ -1,5 +1,6 @@
-{# Renders a company's enabled extension fields for a document form.
-   Requires `entity_type` to be set before including. See AUDIT D9. #}
+{# Renders a company's enabled extension fields for a form.
+   Requires `entity_type` to be set before including. Optionally set `ext_obj`
+   to the ORM object being edited to pre-fill current values. See AUDIT D9. #}
 {% set _cfgs = enabled_extension_fields(entity_type) %}
 {% if _cfgs %}
 <div class="card mb-3">
@@ -7,20 +8,21 @@
   <div class="card-body">
     <div class="row">
     {% for c in _cfgs %}
+      {% set _val = (ext_obj[c.field_key] if ext_obj else '') or '' %}
       <div class="col-md-6 mb-3">
         <label class="form-label" for="{{ c.field_key }}">
           {{ c.label or c.field_key }}{% if c.is_required %} <span class="text-danger">*</span>{% endif %}
         </label>
         {% if c.data_type == 'boolean' %}
           <div class="form-check">
-            <input type="checkbox" class="form-check-input" id="{{ c.field_key }}" name="{{ c.field_key }}" value="on">
+            <input type="checkbox" class="form-check-input" id="{{ c.field_key }}" name="{{ c.field_key }}" value="on"{% if _val == 'true' %} checked{% endif %}>
           </div>
         {% elif c.data_type == 'number' %}
-          <input type="number" step="any" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" {% if c.is_required %}required{% endif %}>
+          <input type="number" step="any" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" value="{{ _val }}" {% if c.is_required %}required{% endif %}>
         {% elif c.data_type == 'date' %}
-          <input type="date" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" {% if c.is_required %}required{% endif %}>
+          <input type="date" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" value="{{ _val }}" {% if c.is_required %}required{% endif %}>
         {% else %}
-          <input type="text" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" {% if c.is_required %}required{% endif %}>
+          <input type="text" class="form-control" id="{{ c.field_key }}" name="{{ c.field_key }}" value="{{ _val }}" {% if c.is_required %}required{% endif %}>
         {% endif %}
       </div>
     {% endfor %}

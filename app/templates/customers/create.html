@@ -119,6 +119,8 @@
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                     </div>
 
+                    {% set entity_type = 'customer' %}{% include '_extension_fields_form.html' %}
+
                     <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-circle"></i> Create Customer
