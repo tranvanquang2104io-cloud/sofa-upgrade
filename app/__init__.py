@@ -114,6 +114,19 @@ def create_app(config_name=None):
         return dict(enabled_extension_fields=enabled_extension_fields)
 
     @app.context_processor
+    def inject_material_units():
+        """Expose the current company's active units of measure so document
+        line-item forms can offer a standardized ĐVT dropdown instead of free text."""
+        def material_units():
+            from app.models.models import MaterialUnit
+            cid = g.get('company_id')
+            if not cid:
+                return []
+            return (MaterialUnit.query.filter_by(company_id=cid, is_active=True)
+                    .order_by(MaterialUnit.name).all())
+        return dict(material_units=material_units)
+
+    @app.context_processor
     def inject_i18n():
         """Inject i18n translation helper and current language into all templates."""
         from flask import session as _session

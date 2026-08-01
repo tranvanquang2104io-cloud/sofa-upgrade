@@ -2,7 +2,9 @@
 
 {% block title %}Create Handover Record - SofaFlow{% endblock %}
 
+{% from '_unit_select.html' import unit_select, unit_template_select with context %}
 {% block content %}
+{{ unit_template_select() }}
 <div class="row mb-4">
     <div class="col-md-8">
         <h1><i class="bi bi-file-earmark-check"></i> {{ t('Create Handover Record') }}</h1>
@@ -336,7 +338,7 @@ function addItemRow() {
     row.innerHTML = `
         <td class="stt-cell text-center align-middle"></td>
         <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name"></td>
-        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="Cái" placeholder="Unit"></td>
+        <td><select class="form-select form-select-sm" name="item_unit[]">${unitOptions('Cái')}</select></td>
         <td><input type="number" class="form-control form-control-sm delivered-qty" name="item_delivered_qty[]" value="1" step="0.01" min="0"></td>
         <td><input type="number" class="form-control form-control-sm accepted-qty" name="item_accepted_qty[]" value="1" step="0.01" min="0"></td>
         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" step="1" placeholder="0" min="0"></td>

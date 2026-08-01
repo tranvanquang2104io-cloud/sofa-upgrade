@@ -502,6 +502,8 @@ class DocumentVariableCollector:
         # pass one, so {{ quotation_number }} never prints blank.
         if quotation is None:
             quotation = getattr(contract, 'quotation', None)
+        # Ngày bắt đầu thực hiện: ưu tiên contract_start_date, bỏ trống thì lấy ngày ký.
+        _contract_start = getattr(contract, 'contract_start_date', None) or getattr(contract, 'contract_date', None)
         ctx = DocumentVariableCollector._company_ctx(company)
 
         # Override company bank info with the selected bank account on this contract
@@ -525,10 +527,12 @@ class DocumentVariableCollector:
             'contract_month':  _date_parts(contract.contract_date)[1],
             'contract_year':   _date_parts(contract.contract_date)[2],
             # Contract start date (ngày bắt đầu thực hiện)
-            'contract_start_date':       _fmt_date(getattr(contract, 'contract_start_date', None)),
-            'contract_start_day':        _date_parts(getattr(contract, 'contract_start_date', None))[0],
-            'contract_start_month':      _date_parts(getattr(contract, 'contract_start_date', None))[1],
-            'contract_start_year':       _date_parts(getattr(contract, 'contract_start_date', None))[2],
+            # Ngày bắt đầu thực hiện HĐ; nếu bỏ trống → dùng ngày ký (contract_date)
+            # để dòng "kể từ ngày …" không bị trống.
+            'contract_start_date':       _fmt_date(_contract_start),
+            'contract_start_day':        _date_parts(_contract_start)[0],
+            'contract_start_month':      _date_parts(_contract_start)[1],
+            'contract_start_year':       _date_parts(_contract_start)[2],
             # Financials
             'contract_value':  _fmt(contract.contract_value),
             'total_amount':    _fmt(contract.contract_value),  # alias

@@ -2,7 +2,9 @@
 
 {% block title %}Create Quotation - SofaFlow{% endblock %}
 
+{% from '_unit_select.html' import unit_select, unit_template_select with context %}
 {% block content %}
+{{ unit_template_select() }}
 <div class="row mb-4">
     <div class="col-md-12">
         <h1><i class="bi bi-plus-circle"></i> {{ t('Create New Quotation') }}</h1>
@@ -71,7 +73,7 @@
                                     <tr class="item-row">
                                         <td class="stt-cell text-center align-middle">1</td>
                                         <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / work"></td>
-                                        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" placeholder="pcs" value="pcs"></td>
+                                        <td>{{ unit_select() }}</td>
                                         <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1" min="0"></td>
                                         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1" min="0"></td>
                                         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
@@ -321,7 +323,7 @@ function addRow() {
     row.innerHTML = `
         <td class="stt-cell text-center align-middle"></td>
         <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / work"></td>
-        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" placeholder="pcs" value="pcs"></td>
+        <td><select class="form-select form-select-sm" name="item_unit[]">${document.getElementById('unitTemplate').innerHTML}</select></td>
         <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1" min="0"></td>
         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1" min="0"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>

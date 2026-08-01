@@ -1,0 +1,32 @@
+{# ĐVT (unit of measure) dropdown for document line items — standardized from
+   the company's Units master data (see material_units() context helper).
+   Usage:
+     {% from '_unit_select.html' import unit_select, unit_template_select %}
+     {{ unit_select(selected) }}         → a <select name="item_unit[]">
+     {{ unit_template_select() }}        → a hidden <select id="unitTemplate"> for JS row cloning
+   `selected` = the current unit value (for edit forms); falls back to a plain
+   option when the value isn't in the master list (so old data still shows). #}
+
+{% macro unit_select(selected='') %}
+{% set _units = material_units() %}
+<select class="form-select form-select-sm" name="item_unit[]">
+  <option value="">--</option>
+  {% set _names = _units | map(attribute='name') | list %}
+  {% for u in _units %}<option value="{{ u.name }}"{% if u.name == selected %} selected{% endif %}>{{ u.name }}</option>{% endfor %}
+  {% if selected and selected not in _names %}<option value="{{ selected }}" selected>{{ selected }}</option>{% endif %}
+</select>
+{% endmacro %}
+
+{% macro unit_template_select() %}
+{% set _units = material_units() %}
+<select id="unitTemplate" class="d-none"><option value="">--</option>{% for u in _units %}<option value="{{ u.name }}">{{ u.name }}</option>{% endfor %}</select>
+<script>
+// Returns the ĐVT <option> list with `sel` pre-selected (for JS-cloned rows).
+function unitOptions(sel){
+  var t = document.createElement('select');
+  t.innerHTML = document.getElementById('unitTemplate').innerHTML;
+  for (var i = 0; i < t.options.length; i++){ if (t.options[i].value === (sel || '')) t.options[i].selected = true; }
+  return t.innerHTML;
+}
+</script>
+{% endmacro %}

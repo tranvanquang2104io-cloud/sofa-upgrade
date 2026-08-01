@@ -2,7 +2,9 @@
 
 {% block title %}Create Contract - SofaFlow{% endblock %}
 
+{% from '_unit_select.html' import unit_select, unit_template_select with context %}
 {% block content %}
+{{ unit_template_select() }}
 <div class="row mb-4">
     <div class="col-md-12">
         <h1><i class="bi bi-plus-circle"></i> {{ t('Create New Contract') }}</h1>
@@ -394,7 +396,7 @@ function addItemRow(name='', unit='pcs', quantity='1', price='') {
     row.innerHTML = `
         <td class="stt-cell text-center align-middle">${tbody.querySelectorAll('.item-row').length + 1}</td>
         <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="${name}" placeholder="Item name / work"></td>
-        <td><input type="text" class="form-control form-control-sm" name="item_unit[]" value="${unit}" placeholder="pcs"></td>
+        <td><select class="form-select form-select-sm" name="item_unit[]">${unitOptions(unit)}</select></td>
         <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="${quantity}" step="0.01" placeholder="0" min="0"></td>
         <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="${price}" step="1" placeholder="0" min="0"></td>
         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
