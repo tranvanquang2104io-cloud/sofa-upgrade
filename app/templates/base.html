@@ -76,6 +76,13 @@
                             </ul>
                         </li>
                         {% endif %}
+                        {% if can_feature('reports') %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'report' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.reports') }}">
+                                <i class="bi bi-graph-up-arrow"></i> {{ t('Reports') }}
+                            </a>
+                        </li>
+                        {% endif %}
                         {# ── Quản trị ── #}
                         {% if session.role in ('company_admin', 'store_admin') %}
                         <li class="nav-item dropdown">

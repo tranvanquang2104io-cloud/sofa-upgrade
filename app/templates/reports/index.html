@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('Reports') }} - SofaFlow{% endblock %}
+
+{% macro kpi(label, value, money=True, sub='') %}
+<div class="col-6 col-md-3 mb-3">
+  <div class="border rounded p-3 h-100 bg-white">
+    <div class="text-muted small">{{ label }}</div>
+    <div class="fs-5 fw-bold">{% if money %}{{ "{:,.0f}".format(value) }} ₫{% else %}{{ value }}{% endif %}</div>
+    {% if sub %}<div class="text-muted small">{{ sub }}</div>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <h1 class="h3 mb-4"><i class="bi bi-graph-up-arrow"></i> {{ t('Reports') }}</h1>
+
+  <!-- ── Sales ─────────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white"><i class="bi bi-cart-check"></i> {{ t('Sales') }}</div>
+    <div class="card-body">
+      <div class="row">
+        {{ kpi(t('Orders'), sales.orders_total, money=False) }}
+        {{ kpi(t('In progress'), sales.in_progress, money=False, sub=t('Completed') ~ ': ' ~ sales.completed) }}
+        {{ kpi(t('Booked (signed)'), sales.booked_value) }}
+        {{ kpi(t('Cash collected'), sales.collected) }}
+      </div>
+      {% if sales.top_customers %}
+      <h6 class="mt-2">{{ t('Top customers') }}</h6>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>{{ t('Customer') }}</th><th class="text-end">{{ t('Value') }}</th></tr></thead>
+          <tbody>
+            {% for c in sales.top_customers %}
+            <tr><td>{{ c.name }}</td><td class="text-end">{{ "{:,.0f}".format(c.value) }} ₫</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Purchasing ────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white"><i class="bi bi-truck"></i> {{ t('Purchasing') }}</div>
+    <div class="card-body">
+      <div class="row">
+        {{ kpi(t('Requisitions'), purchasing.pr_count, money=False) }}
+        {{ kpi(t('Purchase orders'), purchasing.po_count, money=False, sub=t('Open') ~ ': ' ~ purchasing.open_pos) }}
+        {{ kpi(t('Goods receipts'), purchasing.gr_count, money=False) }}
+        {{ kpi(t('PO value'), purchasing.po_value) }}
+        {{ kpi(t('Received value'), purchasing.received_value) }}
+        {{ kpi(t('Outstanding (not received)'), purchasing.outstanding) }}
+      </div>
+      {% if purchasing.top_suppliers %}
+      <h6 class="mt-2">{{ t('Top suppliers') }}</h6>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>{{ t('Supplier') }}</th><th class="text-end">{{ t('Value') }}</th></tr></thead>
+          <tbody>
+            {% for s in purchasing.top_suppliers %}
+            <tr><td>{{ s.name }}</td><td class="text-end">{{ "{:,.0f}".format(s.value) }} ₫</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Accounting ────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white"><i class="bi bi-cash-coin"></i> {{ t('Accounting') }}</div>
+    <div class="card-body">
+      <div class="row">
+        {{ kpi(t('Cash in'), accounting.cash_in) }}
+        {{ kpi(t('Receivable outstanding'), accounting.receivable) }}
+        {{ kpi(t('Advance collected'), accounting.advance_collected) }}
+        {{ kpi(t('Final collected'), accounting.final_collected) }}
+        {{ kpi(t('Pending confirmation'), accounting.pending_amount, sub=accounting.pending_count ~ ' ' ~ t('document(s)')) }}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

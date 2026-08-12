@@ -2016,6 +2016,16 @@ def download_document(document_id):
         return redirect(request.referrer)
 
 
+@dashboard_bp.route('/reports')
+@login_required
+def reports():
+    """Admin BI/KPI dashboard split by domain (sales / purchasing / accounting) — item 9."""
+    from app.services.report_service import ReportService
+    company_id = get_current_company_id()
+    data = ReportService().dashboard(company_id)
+    return render_template('reports/index.html', **data)
+
+
 @dashboard_bp.route('/uploads/items/<path:filename>')
 @login_required
 def serve_item_image(filename):
