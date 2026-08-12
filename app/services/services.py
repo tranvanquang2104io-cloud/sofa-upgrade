@@ -129,11 +129,17 @@ class UserService:
                     role='user', store_id=None, phone=None, position=None,
                     allowed_features=None):
         """Create new user"""
+        from app.models.models import User
         existing = self.repo.get_by_username(username, company_id)
         if existing:
             raise ValueError(f"User with username {username} already exists")
+        if not password:
+            raise ValueError("Mật khẩu là bắt buộc")
 
-        user = self.repo.create(
+        # Build the user WITH its password before insert — password_hash is NOT NULL,
+        # so we must not flush/commit an incomplete row (the repo.create helper commits
+        # immediately, which would fail on password_hash).
+        user = User(
             company_id=company_id,
             username=username,
             email=email,
@@ -145,6 +151,7 @@ class UserService:
             allowed_features=list(allowed_features or []),
         )
         user.set_password(password)
+        db.session.add(user)
         db.session.commit()
         logger.info(f"User created: {username} for company {company_id}")
         return user

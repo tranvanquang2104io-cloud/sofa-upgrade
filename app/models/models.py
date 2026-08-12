@@ -579,10 +579,12 @@ class PaymentReport(DocExtensionMixin, db.Model):
     transaction_reference = db.Column(db.String(100))
     # Bank accounts for this payment: [{bank_name, account_number, account_holder}]
     bank_account_info = db.Column(db.JSON, default=list)
-    
+
     notes = db.Column(db.Text)
     is_confirmed = db.Column(db.Boolean, default=False, index=True)
     confirmed_date = db.Column(db.DateTime)
+    # Proof of received payment (image/PDF) uploaded at confirmation time — item 5
+    proof_path = db.Column(db.String(300))
     is_canceled = db.Column(db.Boolean, default=False, index=True)
     canceled_at = db.Column(db.DateTime)
     canceled_reason = db.Column(db.Text)

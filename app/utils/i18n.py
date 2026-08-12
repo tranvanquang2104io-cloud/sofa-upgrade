@@ -484,6 +484,17 @@ TRANSLATIONS = {
         'Confirm this payment?':    'Xác nhận thanh toán này?',
         'Confirm this handover?':   'Xác nhận biên bản bàn giao này?',
         'Confirm this handover record?': 'Xác nhận biên bản bàn giao này?',
+        'Confirm Payment':          'Xác Nhận Thanh Toán',
+        'Confirm that this payment has been received?': 'Xác nhận đã nhận được khoản thanh toán này?',
+        'Payment proof (image/PDF)': 'Ảnh/PDF chứng từ thanh toán',
+        'optional':                 'không bắt buộc',
+        'Payment proof:':           'Chứng từ thanh toán:',
+        'View proof':               'Xem chứng từ',
+        'Also create the final payment now': 'Tạo luôn phiếu thanh toán cuối',
+        'Confirms this handover and creates a draft final payment report from these items (remaining balance after advance). You can confirm and attach proof later.':
+            'Xác nhận biên bản bàn giao này và tạo phiếu thanh toán cuối (nháp) từ các hạng mục (số còn lại sau tạm ứng). Bạn có thể xác nhận và đính kèm chứng từ sau.',
+        'Handover record and final payment created successfully': 'Đã tạo biên bản bàn giao và phiếu thanh toán cuối',
+        'Handover created, but final payment could not be created automatically': 'Đã tạo biên bản bàn giao, nhưng không thể tự động tạo phiếu thanh toán cuối',
 
         # ── Orders view – order sidebar ───────────────────────────────────
         'Handover':               'Bàn Giao',

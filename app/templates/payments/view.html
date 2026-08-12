@@ -120,6 +120,15 @@
                             {{ t('Draft (not yet confirmed)') }}
                         {% endif %}
                     </dd>
+
+                    {% if payment.proof_path %}
+                    <dt class="col-sm-4">{{ t('Payment proof:') }}</dt>
+                    <dd class="col-sm-8">
+                        <a href="{{ url_for('dashboard.serve_item_image', filename=payment.proof_path.split('/')[-1]) }}" target="_blank">
+                            <i class="bi bi-paperclip"></i> {{ t('View proof') }}
+                        </a>
+                    </dd>
+                    {% endif %}
                 </dl>
             </div>
         </div>

@@ -68,6 +68,72 @@ def _save_item_image(file_storage, existing_path: str = None) -> str | None:
     return existing_path or None
 
 
+def _create_final_payment_from_handover(order_id, company_id, handover):
+    """Create a draft final payment report derived from a just-confirmed handover.
+
+    Used by the "create both at once" option on the handover form (item 4). Amounts come
+    from the handover totals; the advance already collected is subtracted so the report
+    shows the true remaining balance. The report is left unconfirmed (draft) — the user
+    confirms it later, optionally attaching payment proof.
+    """
+    from app.models.models import Company as _Company, PaymentReport as _PR
+    from app.repositories.repository import PaymentReportRepository as _PaymentRepo
+
+    # Map handover items to the payment item schema
+    pay_items = []
+    for it in (handover.items or []):
+        qty = float(it.get('accepted_qty') or it.get('quantity') or 0)
+        price = float(it.get('unit_price') or 0)
+        pay_items.append({
+            'name': it.get('name', ''),
+            'unit': it.get('unit', ''),
+            'quantity': qty,
+            'unit_price': price,
+            'total': qty * price,
+        })
+
+    # Advance already confirmed for this order
+    confirmed_adv = db.session.query(_PR).filter(
+        _PR.order_id == order_id, _PR.payment_type == 'advance',
+        _PR.is_confirmed == True, _PR.is_canceled == False).all()
+    advance_amount = float(sum(p.advance_amount or 0 for p in confirmed_adv))
+
+    amount = float(handover.total_amount or 0)
+    remaining_amount = amount - advance_amount
+
+    # Derive a unique report number from the handover number
+    base_number = f"TT-{handover.report_number}"
+    report_number = base_number
+    repo = _PaymentRepo()
+    if repo.get_by_company_and_number(company_id, report_number):
+        report_number = f"{base_number}-{datetime.utcnow().strftime('%H%M%S')}"
+
+    company = db.session.get(_Company, company_id)
+    bank_info = getattr(company, 'bank_accounts', None) or []
+
+    today = datetime.utcnow().date()
+    payment_service = PaymentReportService()
+    payment = payment_service.create_payment_report(
+        order_id=order_id,
+        report_number=report_number,
+        payment_type='final',
+        report_date=today,
+        payment_date=today,
+        items=pay_items,
+        subtotal=float(handover.subtotal or 0),
+        vat_rate=float(handover.vat_rate or 8),
+        vat_amount=float(handover.vat_amount or 0),
+        shipping_fee=float(handover.shipping_fee or 0),
+        another_fee=float(handover.another_fee or 0),
+        amount=amount,
+        advance_amount=advance_amount,
+        remaining_amount=remaining_amount,
+        bank_account_info=bank_info,
+    )
+    db.session.commit()
+    return payment
+
+
 def parse_line_items(form, files=None, with_images=False):
     """Parse repeated item_* form fields into a list of item dicts and the subtotal.
 
@@ -1332,6 +1398,19 @@ def create_handover(order_id):
             apply_extension_values(handover, ext_values)
             db.session.commit()
 
+            # Item 4: optionally create the final payment at the same time. Mirrors the
+            # "skip advance" shortcut — confirm the handover and spin up a draft final
+            # payment report from the handover items so the two documents are made together.
+            if request.form.get('create_final_payment'):
+                try:
+                    handover_service.confirm_handover(handover.id, order_id)
+                    _create_final_payment_from_handover(order_id, company_id, handover)
+                    flash(t('Handover record and final payment created successfully'), 'success')
+                except Exception as e:
+                    logger.error(f"Error creating combined final payment: {str(e)}")
+                    flash(t('Handover created, but final payment could not be created automatically'), 'warning')
+                return redirect(url_for('dashboard.view_order', order_id=order_id))
+
             flash(t('Handover record created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
@@ -1715,13 +1794,21 @@ def confirm_payment(payment_id):
         return redirect(url_for('dashboard.list_orders'))
     
     try:
+        # Optional proof of received payment (image/PDF) uploaded from the confirm popup
+        proof = request.files.get('proof_file')
+        proof_path = _save_item_image(proof) if (proof and proof.filename) else None
+
         payment_service = PaymentReportService()
         payment_service.mark_confirmed(payment_id, payment.order_id)
+        if proof_path:
+            payment.proof_path = proof_path
+            db.session.add(payment)
+            db.session.commit()
         flash(t('Payment marked as confirmed'), 'success')
     except Exception as e:
         logger.error(f"Error confirming payment: {str(e)}")
         flash(t('Error confirming payment'), 'error')
-    
+
     return redirect(url_for('dashboard.view_order', order_id=payment.order_id))
 
 

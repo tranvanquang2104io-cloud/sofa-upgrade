@@ -340,12 +340,36 @@
                                                 <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this payment?") }}')">
-                                                        <i class="bi bi-check2"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
+                                                    <i class="bi bi-check2"></i>
+                                                </button>
+                                                <div class="modal fade" id="confirmPayModal{{ payment.id }}" tabindex="-1">
+                                                  <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                      <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" enctype="multipart/form-data">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                        <div class="modal-header">
+                                                          <h5 class="modal-title">{{ t('Confirm Payment') }}</h5>
+                                                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body text-start">
+                                                          <p>{{ t('Confirm that this payment has been received?') }}</p>
+                                                          <div class="alert alert-info py-2 px-3 small">
+                                                            <strong>{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
+                                                          </div>
+                                                          <div class="mb-2">
+                                                            <label class="form-label">{{ t('Payment proof (image/PDF)') }} <span class="text-muted">({{ t('optional') }})</span></label>
+                                                            <input type="file" name="proof_file" class="form-control form-control-sm" accept="image/*,application/pdf">
+                                                          </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                                                          <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check2"></i> {{ t('Confirm') }}</button>
+                                                        </div>
+                                                      </form>
+                                                    </div>
+                                                  </div>
+                                                </div>
                                                 {% endif %}
                                                 {% if not payment.is_canceled %}
                                                 <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="Generate">
@@ -515,12 +539,36 @@
                                                 <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" style="display:inline;">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this payment?") }}')">
-                                                        <i class="bi bi-check2"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
+                                                    <i class="bi bi-check2"></i>
+                                                </button>
+                                                <div class="modal fade" id="confirmPayModal{{ payment.id }}" tabindex="-1">
+                                                  <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                      <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}" enctype="multipart/form-data">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                        <div class="modal-header">
+                                                          <h5 class="modal-title">{{ t('Confirm Payment') }}</h5>
+                                                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body text-start">
+                                                          <p>{{ t('Confirm that this payment has been received?') }}</p>
+                                                          <div class="alert alert-info py-2 px-3 small">
+                                                            <strong>{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
+                                                          </div>
+                                                          <div class="mb-2">
+                                                            <label class="form-label">{{ t('Payment proof (image/PDF)') }} <span class="text-muted">({{ t('optional') }})</span></label>
+                                                            <input type="file" name="proof_file" class="form-control form-control-sm" accept="image/*,application/pdf">
+                                                          </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                                                          <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check2"></i> {{ t('Confirm') }}</button>
+                                                        </div>
+                                                      </form>
+                                                    </div>
+                                                  </div>
+                                                </div>
                                                 {% endif %}
                                                 {% if not payment.is_canceled %}
                                                 <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate">
