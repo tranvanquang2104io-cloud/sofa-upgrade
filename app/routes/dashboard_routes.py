@@ -533,19 +533,21 @@ def edit_customer(customer_id):
     if request.method == 'POST':
         try:
             customer_service = CustomerService()
+            # On update, pass empty strings through (not `or None`) so that CLEARING
+            # an optional field actually saves it as empty. `name` stays required.
             customer_service.update_customer(
                 customer_id=customer_id,
                 name=request.form.get('name', '').strip() or None,
-                phone=request.form.get('phone', '').strip() or None,
-                email=request.form.get('email', '').strip() or None,
-                tax_code=request.form.get('tax_code', '').strip() or None,
-                representative_name=request.form.get('representative_name', '').strip() or None,
-                representative_title=request.form.get('representative_title', '').strip() or None,
-                address=request.form.get('address', '').strip() or None,
-                city=request.form.get('city', '').strip() or None,
-                postal_code=request.form.get('postal_code', '').strip() or None,
-                country=request.form.get('country', '').strip() or None,
-                notes=request.form.get('notes', '').strip() or None,
+                phone=request.form.get('phone', '').strip(),
+                email=request.form.get('email', '').strip(),
+                tax_code=request.form.get('tax_code', '').strip(),
+                representative_name=request.form.get('representative_name', '').strip(),
+                representative_title=request.form.get('representative_title', '').strip(),
+                address=request.form.get('address', '').strip(),
+                city=request.form.get('city', '').strip(),
+                postal_code=request.form.get('postal_code', '').strip(),
+                country=request.form.get('country', '').strip(),
+                notes=request.form.get('notes', '').strip(),
             )
             flash(t('Cập nhật thông tin khách hàng thành công!'), 'success')
             return redirect(url_for('dashboard.view_customer', customer_id=customer_id))
@@ -2259,10 +2261,11 @@ def edit_store(store_id):
             store_svc.update_store(
                 store_id     = store_id,
                 name         = request.form.get('name', '').strip() or None,
-                manager_name = request.form.get('manager_name', '').strip() or None,
-                phone        = request.form.get('phone', '').strip() or None,
-                address      = request.form.get('address', '').strip() or None,
-                city         = request.form.get('city', '').strip() or None,
+                # empty strings pass through so clearing an optional field saves it
+                manager_name = request.form.get('manager_name', '').strip(),
+                phone        = request.form.get('phone', '').strip(),
+                address      = request.form.get('address', '').strip(),
+                city         = request.form.get('city', '').strip(),
             )
             flash(t('Cập nhật cửa hàng thành công'), 'success')
             return redirect(url_for('dashboard.list_stores'))

@@ -25,7 +25,11 @@
 function unitOptions(sel){
   var t = document.createElement('select');
   t.innerHTML = document.getElementById('unitTemplate').innerHTML;
-  for (var i = 0; i < t.options.length; i++){ if (t.options[i].value === (sel || '')) t.options[i].selected = true; }
+  var found = false;
+  for (var i = 0; i < t.options.length; i++){ if (t.options[i].value === (sel || '')){ t.options[i].selected = true; found = true; } }
+  // Preserve a referenced unit (e.g. copied from a quotation) even if it isn't
+  // in the master list, so ĐVT is never lost when loading items.
+  if (sel && !found){ var o = document.createElement('option'); o.value = sel; o.textContent = sel; o.selected = true; t.appendChild(o); }
   return t.innerHTML;
 }
 </script>
