@@ -36,6 +36,19 @@ logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/')
 
 
+@dashboard_bp.before_request
+def _enforce_feature_permissions():
+    """RBAC: block a logged-in regular user from feature areas they weren't granted.
+    Admins and unmapped endpoints pass through; unauthenticated requests are handled
+    by each view's login_required."""
+    from app.utils.auth_utils import feature_for_endpoint, current_user_can
+    if 'user_id' not in session:
+        return
+    feature = feature_for_endpoint(request.endpoint)
+    if feature and not current_user_can(feature):
+        abort(403)
+
+
 def _save_item_image(file_storage, existing_path: str = None) -> str | None:
     """
     Save an uploaded item image to uploads/items/ and return its relative path.
@@ -2350,6 +2363,8 @@ def create_user():
             # store_admin always creates inside their own store
             if not is_company_admin():
                 store_id = get_current_store_id()
+            from app.models.models import FEATURE_KEYS
+            feats = [f for f in request.form.getlist('features') if f in FEATURE_KEYS]
             UserService().create_user(
                 company_id = company_id,
                 username   = request.form.get('username', '').strip(),
@@ -2360,6 +2375,7 @@ def create_user():
                 store_id   = uuid.UUID(str(store_id)) if store_id else None,
                 phone      = request.form.get('phone', '').strip() or None,
                 position   = request.form.get('position', '').strip() or None,
+                allowed_features = feats,
             )
             flash(t('Tạo người dùng thành công'), 'success')
             return redirect(url_for('dashboard.list_users'))
@@ -2369,7 +2385,8 @@ def create_user():
             logger.error(f"Error creating user: {e}", exc_info=True)
             db.session.rollback()
             flash(t('Lỗi khi tạo người dùng'), 'error')
-    return render_template('users/create.html', stores=stores)
+    from app.models.models import FEATURE_LABELS
+    return render_template('users/create.html', stores=stores, feature_labels=FEATURE_LABELS)
 
 
 @dashboard_bp.route('/users/<user_id>/edit', methods=['GET', 'POST'])
@@ -2410,6 +2427,8 @@ def edit_user(user_id):
             if not is_company_admin():
                 store_id = get_current_store_id()
             password = request.form.get('password', '').strip() or None
+            from app.models.models import FEATURE_KEYS
+            feats = [f for f in request.form.getlist('features') if f in FEATURE_KEYS]
             UserService().update_user(
                 user_id   = user_id,
                 full_name = request.form.get('full_name', '').strip() or None,
@@ -2419,6 +2438,7 @@ def edit_user(user_id):
                 role      = role,
                 store_id  = uuid.UUID(str(store_id)) if store_id else None,
                 password  = password,
+                allowed_features = feats,
             )
             flash(t('Cập nhật người dùng thành công'), 'success')
             return redirect(url_for('dashboard.list_users'))
@@ -2426,7 +2446,8 @@ def edit_user(user_id):
             logger.error(f"Error updating user: {e}", exc_info=True)
             db.session.rollback()
             flash(t('Lỗi khi cập nhật người dùng'), 'error')
-    return render_template('users/edit.html', target=target, stores=stores)
+    from app.models.models import FEATURE_LABELS
+    return render_template('users/edit.html', target=target, stores=stores, feature_labels=FEATURE_LABELS)
 
 
 @dashboard_bp.route('/users/<user_id>/deactivate', methods=['POST'])

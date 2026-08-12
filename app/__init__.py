@@ -114,6 +114,12 @@ def create_app(config_name=None):
         return dict(enabled_extension_fields=enabled_extension_fields)
 
     @app.context_processor
+    def inject_permissions():
+        """Expose can_feature() so templates (nav) hide areas a user can't access."""
+        from app.utils.auth_utils import current_user_can
+        return dict(can_feature=current_user_can)
+
+    @app.context_processor
     def inject_material_units():
         """Expose the current company's active units of measure so document
         line-item forms can offer a standardized ĐVT dropdown instead of free text."""

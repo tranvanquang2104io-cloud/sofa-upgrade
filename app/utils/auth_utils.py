@@ -33,8 +33,46 @@ def set_user_context(user: User):
     session['username']   = user.username
     session['full_name']  = user.full_name
     session['role']       = user.role
+    session['features']   = list(user.allowed_features or [])
     user.last_login = db.func.now()
     db.session.commit()
+
+
+# ---------------------------------------------------------------------------
+# Feature-level access control (RBAC) — see User.can_feature / FEATURE_KEYS
+# ---------------------------------------------------------------------------
+
+# Map a route endpoint (dashboard.<name>) to the feature that gates it. Endpoints
+# not listed here are ungated (dashboard home, language, profile) OR gated by their
+# own role decorators (stores/users/settings/templates).
+def feature_for_endpoint(endpoint):
+    if not endpoint or not endpoint.startswith('dashboard.'):
+        return None
+    name = endpoint.split('.', 1)[1]
+    # Order matters: 'purchase'/'requisition'/'goods_receipt' MUST be tested before
+    # 'order' (else 'purchase_orders' matches 'order').
+    rules = (
+        ('customer', 'customers'),
+        ('purchase', 'purchasing'), ('requisition', 'purchasing'), ('goods_receipt', 'purchasing'),
+        ('material', 'inventory'), ('supplier', 'inventory'), ('low_stock', 'inventory'),
+        ('quotation', 'orders'), ('contract', 'orders'), ('handover', 'orders'),
+        ('payment', 'orders'), ('production', 'orders'), ('document', 'orders'), ('order', 'orders'),
+        ('report', 'reports'),
+    )
+    # admin areas are handled by role decorators, never feature-gated here
+    if any(k in name for k in ('store', 'user', 'setting', 'template', 'extension')):
+        return None
+    for key, feature in rules:
+        if key in name:
+            return feature
+    return None
+
+
+def current_user_can(feature):
+    """Session-based RBAC check (no DB hit): admins pass; users need the grant."""
+    if session.get('role') in (User.ROLE_COMPANY_ADMIN, User.ROLE_STORE_ADMIN):
+        return True
+    return feature in (session.get('features') or [])
 
 
 def clear_user_context():

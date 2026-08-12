@@ -126,7 +126,8 @@ class UserService:
         self.repo = UserRepository()
     
     def create_user(self, company_id, username, email, password, full_name,
-                    role='user', store_id=None, phone=None, position=None):
+                    role='user', store_id=None, phone=None, position=None,
+                    allowed_features=None):
         """Create new user"""
         existing = self.repo.get_by_username(username, company_id)
         if existing:
@@ -141,6 +142,7 @@ class UserService:
             store_id=store_id,
             phone=phone,
             position=position,
+            allowed_features=list(allowed_features or []),
         )
         user.set_password(password)
         db.session.commit()
@@ -184,7 +186,8 @@ class UserService:
         return self.repo.get_users_for_store(store_id)
 
     def update_user(self, user_id, full_name=None, email=None, phone=None,
-                    position=None, role=None, store_id=None, password=None):
+                    position=None, role=None, store_id=None, password=None,
+                    allowed_features=None):
         """Update user profile / role / store assignment"""
         user = self.repo.get_by_id(user_id)
         if not user:
@@ -195,6 +198,7 @@ class UserService:
         if position   is not None: user.position   = position
         if role       is not None: user.role       = role
         if store_id   is not None: user.store_id   = store_id
+        if allowed_features is not None: user.allowed_features = list(allowed_features)
         if password:
             user.set_password(password)
         db.session.commit()

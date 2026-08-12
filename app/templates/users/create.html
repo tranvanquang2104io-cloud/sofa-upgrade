@@ -76,6 +76,22 @@
                     </div>
 
                     <hr class="my-4">
+                    <div id="featureBox">
+                        <label class="form-label fw-semibold"><i class="bi bi-shield-lock"></i> Quyền truy cập chức năng</label>
+                        <p class="text-muted small mb-2">Chỉ áp dụng cho <strong>Nhân viên</strong>. Quản trị luôn có toàn quyền.</p>
+                        <div class="row">
+                        {% for key, label in feature_labels.items() %}
+                            <div class="col-md-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="features" value="{{ key }}" id="feat_{{ key }}">
+                                    <label class="form-check-label" for="feat_{{ key }}">{{ label }}</label>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
                     <div class="d-flex gap-2 justify-content-end">
                         <a href="{{ url_for('dashboard.list_users') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
                         <button type="submit" class="btn btn-primary px-4">

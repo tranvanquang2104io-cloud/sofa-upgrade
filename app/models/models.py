@@ -10,6 +10,18 @@ from sqlalchemy import event, select
 import uuid
 
 
+# Per-user feature permissions (RBAC). Admins (company/store) always have all;
+# regular users only get the features an admin grants them.
+FEATURE_KEYS = ('customers', 'orders', 'inventory', 'purchasing', 'reports')
+FEATURE_LABELS = {
+    'customers':  'Khách hàng',
+    'orders':     'Đơn hàng & chứng từ',
+    'inventory':  'Kho & Vật tư',
+    'purchasing': 'Mua hàng (PR/PO/GR)',
+    'reports':    'Báo cáo',
+}
+
+
 # Number of admin-configurable extension columns per document table.
 EXTENSION_SLOTS = 10
 EXTENSION_FIELD_KEYS = [f'extend{i:02d}' for i in range(1, EXTENSION_SLOTS + 1)]
@@ -161,6 +173,9 @@ class User(db.Model):
     phone = db.Column(db.String(20))
     position = db.Column(db.String(100))  # Job title / chức vụ
     role = db.Column(db.String(50), default='user')  # company_admin | store_admin | user
+    # Per-user feature permissions (JSON list of feature keys). Only meaningful for
+    # role='user'; admins have full access. See FEATURE_KEYS.
+    allowed_features = db.Column(db.JSON, default=list)
     is_active = db.Column(db.Boolean, default=True, index=True)
     last_login = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -189,6 +204,12 @@ class User(db.Model):
     def is_admin(self):
         """True for both company_admin and store_admin"""
         return self.role in (self.ROLE_COMPANY_ADMIN, self.ROLE_STORE_ADMIN)
+
+    def can_feature(self, feature):
+        """RBAC check: admins have every feature; regular users only granted ones."""
+        if self.is_admin:
+            return True
+        return feature in (self.allowed_features or [])
 
     @property
     def role_label(self):

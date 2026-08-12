@@ -35,17 +35,22 @@
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a>
                         </li>
+                        {% if can_feature('customers') %}
                         <li class="nav-item">
                             <a class="nav-link {% if 'customer' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_customers') }}">
                                 <i class="bi bi-people"></i> {{ t('Customers') }}
                             </a>
                         </li>
+                        {% endif %}
+                        {% if can_feature('orders') %}
                         <li class="nav-item">
                             <a class="nav-link {% if 'order' in (request.endpoint or '') or 'quotation' in (request.endpoint or '') or 'contract' in (request.endpoint or '') or 'handover' in (request.endpoint or '') or 'payment' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_orders') }}">
                                 <i class="bi bi-boxes"></i> {{ t('Orders') }}
                             </a>
                         </li>
+                        {% endif %}
                         {# ── Kho & Vật tư ── #}
+                        {% if can_feature('inventory') %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle {% if 'material' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-box-seam"></i> {{ t('Inventory') }}
@@ -56,8 +61,9 @@
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.material_suppliers') }}"><i class="bi bi-truck"></i> {{ t('Suppliers') }}</a></li>
                             </ul>
                         </li>
+                        {% endif %}
                         {# ── Mua hàng (cung ứng) ── #}
-                        {% if session.role in ('company_admin', 'store_admin') %}
+                        {% if can_feature('purchasing') %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle {% if 'purchase' in (request.endpoint or '') or 'requisition' in (request.endpoint or '') or 'goods_receipt' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-cart"></i> {{ t('Purchasing') }}
