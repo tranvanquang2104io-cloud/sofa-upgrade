@@ -1,5 +1,5 @@
 # ── Build stage: install Python dependencies ────────────────────────
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim-bookworm AS builder
 
 WORKDIR /build
 
@@ -18,7 +18,7 @@ RUN pip install --upgrade pip \
 
 
 # ── Runtime stage ────────────────────────────────────────────────────
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim-bookworm AS runtime
 
 # Runtime-only system libraries:
 #   libpq5           — psycopg
