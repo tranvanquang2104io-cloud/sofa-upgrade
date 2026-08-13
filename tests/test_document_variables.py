@@ -76,3 +76,28 @@ def test_payment_ctx_has_quotation_number_and_total():
                                       company=_company(), contract=contract)
     assert ctx['quotation_number'] == 'BG-DEMO-001'
     assert ctx['total_amount']  # non-empty (alias of amount)
+
+
+def test_extend_fields_injected_into_context():
+    """extend01..extend10 from the source entity must reach the docx context so
+    hand-edited templates can print {{ extendNN }} (was previously missing)."""
+    ext = {f'extend{i:02d}': f'v{i:02d}' for i in range(1, 11)}
+    quo = NS(quotation_number='BG', quotation_date=date(2026, 7, 29), validity_days=30,
+             city='', items=[], subtotal=0, vat_rate=8, vat_amount=0, shipping_fee=0,
+             another_fee=0, total_amount=0, amount_in_words='', payment_terms='',
+             notes='', **ext)
+    ctx = C.collect_quotation_variables(quo, _cust(),
+                                        NS(order_code='oc', title='ot', store=NS(city='HN')),
+                                        company=_company())
+    for i in range(1, 11):
+        assert ctx[f'extend{i:02d}'] == f'v{i:02d}'
+    # All 10 slots present even when unset
+    empty = NS(report_number='PR', payment_type='final', report_date=date.today(),
+               payment_date=date.today(), quotation_reference_date=None, items=[],
+               subtotal=0, vat_rate=8, vat_amount=0, shipping_fee=0, another_fee=0,
+               amount=0, advance_percentage=0, advance_amount=0, remaining_amount=0,
+               amount_in_words='', work_completed_summary='', bank_account_info=[],
+               payment_method='', transaction_reference='', notes='')
+    pctx = C.collect_payment_variables(empty, _cust(), NS(order_code='oc', title='ot'),
+                                       company=_company())
+    assert all(f'extend{i:02d}' in pctx for i in range(1, 11))

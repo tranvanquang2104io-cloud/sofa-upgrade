@@ -408,6 +408,20 @@ class DocumentVariableCollector:
         return result
 
     @staticmethod
+    def _extend_ctx(entity) -> dict:
+        """Expose the source entity's admin flexfields as ``extend01``..``extend10``.
+
+        Every document entity (quotation/contract/handover/payment) carries ten
+        reserved ``extendNN`` text columns (see EXTENSION_SLOTS). They are surfaced
+        here so hand-edited templates can print them with ``{{ extend01 }}`` … The
+        value is the raw stored text (empty string when unset)."""
+        ctx = {}
+        for i in range(1, 11):
+            key = f'extend{i:02d}'
+            ctx[key] = getattr(entity, key, '') or ''
+        return ctx
+
+    @staticmethod
     def _company_ctx(company) -> dict:
         if company is None:
             return {
@@ -453,6 +467,7 @@ class DocumentVariableCollector:
     def collect_quotation_variables(quotation, customer, order, company=None):
         """Context for quotation document."""
         ctx = DocumentVariableCollector._company_ctx(company)
+        ctx.update(DocumentVariableCollector._extend_ctx(quotation))
         ctx.update({
             # Quotation header
             'quotation_number': quotation.quotation_number,
@@ -518,6 +533,7 @@ class DocumentVariableCollector:
         ctx['company_bank_name']           = selected_bank.get('bank_name', '')
         ctx['company_bank_account_number'] = selected_bank.get('account_number', '')
         ctx['company_bank_account_holder'] = selected_bank.get('account_holder', '')
+        ctx.update(DocumentVariableCollector._extend_ctx(contract))
 
         ctx.update({
             # Contract header
@@ -590,6 +606,7 @@ class DocumentVariableCollector:
     def collect_delivery_variables(delivery_report, customer, order, company=None):
         """Context for handover / delivery record."""
         ctx = DocumentVariableCollector._company_ctx(company)
+        ctx.update(DocumentVariableCollector._extend_ctx(delivery_report))
         # Build items with acceptance columns
         raw_items = delivery_report.items or []
         handover_items = []
@@ -662,6 +679,7 @@ class DocumentVariableCollector:
         }.get(payment_report.payment_type, payment_report.payment_type)
 
         ctx = DocumentVariableCollector._company_ctx(company)
+        ctx.update(DocumentVariableCollector._extend_ctx(payment_report))
         ctx.update({
             # Report header
             'report_number':        payment_report.report_number,
