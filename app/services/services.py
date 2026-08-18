@@ -1048,6 +1048,45 @@ class DocumentService:
         # 3. flat folder fallback
         return os.path.join(templates_dir, template.template_file)
 
+    @staticmethod
+    def _build_doc_basename(document_type, context, timestamp):
+        """Build the document file base name per the business naming convention.
+
+            BaoGia_{mã báo giá}_{ngày}_{giờ}      (quotation)
+            HopDong_{mã hợp đồng}_{ngày}_{giờ}    (contract)
+            TamUng_{mã hợp đồng}_{ngày}_{giờ}     (payment, advance)
+            ThanhToan_{mã hợp đồng}_{ngày}_{giờ}  (payment, final)
+            BanGiao_{mã hợp đồng}_{ngày}_{giờ}    (delivery / handover)
+
+        The code is written "liền" (whitespace and path-unsafe characters removed).
+        Advance/final payments and the handover all key off the CONTRACT number; the
+        quotation keys off its own number, the contract off its own number.
+        """
+        import re as _re
+
+        def _tidy(code):
+            code = str(code or '').strip()
+            code = _re.sub(r'\s+', '', code)                 # viết liền: no spaces
+            code = _re.sub(r'[\\/:*?"<>|]', '-', code)       # path-safe
+            return code or 'NA'
+
+        if document_type == 'quotation':
+            prefix, code = 'BaoGia', context.get('quotation_number')
+        elif document_type == 'contract':
+            prefix, code = 'HopDong', context.get('contract_number')
+        elif document_type == 'delivery':
+            prefix, code = 'BanGiao', context.get('contract_number') or context.get('report_number')
+        elif document_type == 'payment':
+            if context.get('payment_type') == 'final':
+                prefix = 'ThanhToan'
+            else:
+                prefix = 'TamUng'
+            code = context.get('contract_number') or context.get('report_number')
+        else:
+            prefix, code = (document_type or 'ChungTu'), context.get('report_number')
+
+        return f"{prefix}_{_tidy(code)}_{timestamp}"
+
     def _save_document(self, *, company_id, order_id, template, document_type,
                        document_format, context,
                        quotation_id=None, contract_id=None,
@@ -1061,7 +1100,7 @@ class DocumentService:
         from io import BytesIO as _BytesIO
 
         timestamp  = datetime.now().strftime('%Y%m%d_%H%M%S')
-        doc_name   = f"{document_type}_{timestamp}"
+        doc_name   = self._build_doc_basename(document_type, context, timestamp)
         # Build hierarchical output path: documents/{customer_code}/{order_code}/{doc_type}/
         _safe = lambda s: str(s or 'unknown').replace('/', '_').replace('\\', '_')
         customer_code = _safe(context.get('customer_code'))

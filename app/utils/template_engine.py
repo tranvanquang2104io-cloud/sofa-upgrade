@@ -651,6 +651,11 @@ class DocumentVariableCollector:
             # Order
             'order_code':  order.order_code,
             'order_title': order.title,
+            # Related contract number (used for file naming + optional display)
+            'contract_number': next(
+                (c.contract_number for c in (getattr(order, 'contracts', None) or [])
+                 if getattr(c, 'is_active', False) and not getattr(c, 'is_canceled', False)),
+                ''),
             # Items list
             'items': handover_items,
             # Financials
