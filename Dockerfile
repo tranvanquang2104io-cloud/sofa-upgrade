@@ -26,12 +26,21 @@ FROM python:3.11-slim-bookworm AS runtime
 #                        "in ra PDF" option produces a real PDF, not a DOCX fallback
 #   fonts-liberation — Times New Roman-metric font with full Vietnamese coverage
 #   fonts-dejavu-core — reportlab fallback / broad glyph coverage
-RUN apt-get update && apt-get install -y --no-install-recommends \
+#   ttf-mscorefonts-installer — REAL Times New Roman so DOCX→PDF renders the exact
+#     DN-standard font (not the Liberation/DejaVu substitute mix that caused
+#     inconsistent Vietnamese glyphs / "lỗi font khi in"). Needs contrib + EULA.
+RUN sed -i 's/Components: main/Components: main contrib/' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         libfontconfig1 \
         fonts-dejavu-core \
         fonts-liberation \
         libreoffice-writer \
+        cabextract \
+        wget \
+    && echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer \
+    && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder

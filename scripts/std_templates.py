@@ -15,6 +15,7 @@ Usage:  venv/Scripts/python.exe scripts/std_templates.py <out_dir> [<src_dir>]
 """
 import os
 import sys
+import copy
 from docx import Document
 from docx.shared import Pt, RGBColor, Twips
 from docx.enum.text import WD_ALIGN_PARAGRAPH as AL
@@ -154,6 +155,26 @@ def _setup_page(doc):
 
 
 # ── shared blocks ─────────────────────────────────────────────────────────────
+_HEADER_SRC = None   # path to the quotation template used as the header reference
+
+
+def clone_header(doc, date_prefix='report'):
+    """Insert the EXACT báo giá header table at the top, swapping only the date tokens.
+
+    Guarantees the header (company info | quốc hiệu-tiêu ngữ-ngày tháng) is pixel-
+    identical to the quotation. The quotation date tokens (quotation_day/month/year)
+    are rewritten to this document's own date field (e.g. report_day)."""
+    src = Document(_HEADER_SRC)
+    tbl = copy.deepcopy(src.tables[0]._tbl)
+    for t in tbl.iter(qn('w:t')):
+        if t.text:
+            t.text = (t.text.replace('quotation_day', f'{date_prefix}_day')
+                            .replace('quotation_month', f'{date_prefix}_month')
+                            .replace('quotation_year', f'{date_prefix}_year'))
+    doc.element.body.insert(0, tbl)
+    return tbl
+
+
 def header_block(doc, date_tokens):
     """2-column header: company info (left) | national header + place/date (right)."""
     d, m, y = date_tokens
@@ -258,7 +279,7 @@ def signature_block(doc, left_label, right_label, left_sub='(Ký, ghi rõ họ t
 # ── document builders ─────────────────────────────────────────────────────────
 def build_delivery(path):
     doc = Document(); _setup_page(doc)
-    header_block(doc, ('report_day', 'report_month', 'report_year'))
+    clone_header(doc, 'report')
     title_block(doc, 'BIÊN BẢN BÀN GIAO & NGHIỆM THU')
     _para(doc, 'Căn cứ hợp đồng/đơn hàng số {{ order_code }} - {{ order_title }};')
     _para(doc, 'Hôm nay, ngày {{ handover_day }} tháng {{ handover_month }} năm '
@@ -292,7 +313,7 @@ def build_delivery(path):
 
 
 def _payment_common(doc, title, subtitle, lead):
-    header_block(doc, ('report_day', 'report_month', 'report_year'))
+    clone_header(doc, 'report')
     title_block(doc, title, subtitle=subtitle)
     _para(doc, 'Kính gửi: Quý khách hàng {{ customer_name }}', bold=True)
     _para(doc, lead)
@@ -387,18 +408,22 @@ def normalize_inplace(src, dst):
 
 
 def main():
+    global _HEADER_SRC
     out = sys.argv[1] if len(sys.argv) > 1 else '.'
     src = sys.argv[2] if len(sys.argv) > 2 else out
     os.makedirs(out, exist_ok=True)
-    build_delivery(os.path.join(out, 'delivery_45babaf8.docx'))
-    build_payment_advance(os.path.join(out, 'payment_advance_template.docx'))
-    build_payment_final(os.path.join(out, 'payment_final_template.docx'))
-    print('built: delivery, payment_advance, payment_final')
+    # Normalize quotation/contract FIRST so the header reference is the 13pt version,
+    # then clone that exact header into the three rebuilt documents.
     for fn in ('quotation_2d1aefda.docx', 'contract_ac649e49.docx'):
         s = os.path.join(src, fn)
         if os.path.exists(s):
             normalize_inplace(s, os.path.join(out, fn))
             print('normalized:', fn)
+    _HEADER_SRC = os.path.join(out, 'quotation_2d1aefda.docx')
+    build_delivery(os.path.join(out, 'delivery_45babaf8.docx'))
+    build_payment_advance(os.path.join(out, 'payment_advance_template.docx'))
+    build_payment_final(os.path.join(out, 'payment_final_template.docx'))
+    print('built: delivery, payment_advance, payment_final')
 
 
 if __name__ == '__main__':
