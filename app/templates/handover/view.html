@@ -146,26 +146,7 @@
         </div>
         {% endif %}
 
-        {% if handover.documents %}
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-file-pdf"></i> {{ t('Generated Documents') }}</h5>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    {% for doc in handover.documents %}
-                    <a href="{{ url_for('dashboard.download_document', document_id=doc.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-0">{{ doc.document_name }}</h6>
-                            <small>{{ doc.document_format.upper() }}</small>
-                        </div>
-                        <small class="text-muted">Generated: {{ doc.generated_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
+        {% with documents = handover.documents %}{% include '_generated_documents.html' %}{% endwith %}
     </div>
 
     <div class="col-md-4">

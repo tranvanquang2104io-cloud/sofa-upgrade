@@ -161,31 +161,7 @@
         </div>
         {% endif %}
 
-        <!-- Documents -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-file-pdf"></i> {{ t('Generated Documents') }}</h5>
-            </div>
-            <div class="card-body">
-                {% if contract.documents and contract.documents|length > 0 %}
-                    <div class="list-group">
-                        {% for doc in contract.documents %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-0">{{ doc.document_name }}</h6>
-                                <small class="text-muted">{{ doc.document_type }} ({{ doc.document_format.upper() }}) - {{ doc.generated_at.strftime('%Y-%m-%d') }}</small>
-                            </div>
-                            <a href="{{ url_for('dashboard.download_document', document_id=doc.id) }}" class="btn btn-sm btn-info">
-                                <i class="bi bi-download"></i> {{ t('Download') }}
-                            </a>
-                        </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-muted">{{ t('No documents generated yet') }}</p>
-                {% endif %}
-            </div>
-        </div>
+        {% with documents = contract.documents %}{% include '_generated_documents.html' %}{% endwith %}
     </div>
 
     <div class="col-md-4">

@@ -125,29 +125,7 @@
             </div>
         </div>
 
-        <!-- Documents -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-file-pdf"></i> {{ t('Generated Documents') }}</h5>
-            </div>
-            <div class="card-body">
-                {% if quotation.documents %}
-                    <div class="list-group">
-                        {% for doc in quotation.documents %}
-                        <div class="list-group-item">
-                            <h6 class="mb-1">{{ doc.document_name }}</h6>
-                            <p class="mb-1 small text-muted">{{ doc.document_format.upper() }} - {{ doc.generated_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                            <a href="{{ url_for('dashboard.download_document', document_id=doc.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download"></i> {{ t('Download') }}
-                            </a>
-                        </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-muted">{{ t('No documents generated yet') }}</p>
-                {% endif %}
-            </div>
-        </div>
+        {% with documents = quotation.documents %}{% include '_generated_documents.html' %}{% endwith %}
     </div>
 
     <div class="col-md-4">

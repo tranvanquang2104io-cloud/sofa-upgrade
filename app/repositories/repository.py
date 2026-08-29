@@ -420,24 +420,32 @@ class DocumentRepository(BaseRepository):
     def get_for_order(self, order_id):
         """Get all documents for order"""
         return self.model.query.filter_by(order_id=order_id).order_by(
-            desc(self.model.created_at)
+            desc(self.model.generated_at)
         ).all()
     
     def get_for_quotation(self, quotation_id):
         """Get documents for quotation"""
-        return self.model.query.filter_by(quotation_id=quotation_id).all()
+        return self.model.query.filter_by(quotation_id=quotation_id).order_by(
+            desc(self.model.generated_at)
+        ).all()
     
     def get_for_contract(self, contract_id):
         """Get documents for contract"""
-        return self.model.query.filter_by(contract_id=contract_id).all()
+        return self.model.query.filter_by(contract_id=contract_id).order_by(
+            desc(self.model.generated_at)
+        ).all()
     
     def get_for_delivery(self, handover_record_id):
         """Get documents for handover record"""
-        return self.model.query.filter_by(handover_record_id=handover_record_id).all()
+        return self.model.query.filter_by(handover_record_id=handover_record_id).order_by(
+            desc(self.model.generated_at)
+        ).all()
     
     def get_for_payment(self, payment_report_id):
         """Get documents for payment report"""
-        return self.model.query.filter_by(payment_report_id=payment_report_id).all()
+        return self.model.query.filter_by(payment_report_id=payment_report_id).order_by(
+            desc(self.model.generated_at)
+        ).all()
 
 
 class DocumentTemplateRepository(BaseRepository):

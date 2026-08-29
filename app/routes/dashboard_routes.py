@@ -30,10 +30,30 @@ from datetime import datetime, date
 import logging
 import os
 import uuid
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/')
+
+
+def _is_safe_redirect_url(target):
+    """Chỉ cho phép quay lại đường dẫn nội bộ của chính site.
+
+    Dùng cho các route nhận `next`/referrer từ trình duyệt: nếu không kiểm,
+    kẻ tấn công có thể dựng link đưa người dùng ra site ngoài sau khi thao
+    tác (open redirect). Chỉ nhận đường dẫn tương đối bắt đầu bằng một dấu
+    '/' — loại luôn '//evil.com' và mọi thứ có scheme.
+    """
+    if not target:
+        return False
+    parsed = urlparse(target)
+    return (
+        not parsed.scheme
+        and not parsed.netloc
+        and target.startswith('/')
+        and not target.startswith('//')
+    )
 
 
 @dashboard_bp.before_request
@@ -2073,6 +2093,16 @@ def delete_document(document_id):
         return redirect(request.referrer or url_for('dashboard.list_orders'))
 
     order_id = document.order_id
+    # Nút xoá giờ có mặt cả trên màn hình xem báo giá / hợp đồng / bàn giao /
+    # thanh toán, nên phải quay lại đúng chỗ vừa bấm thay vì luôn nhảy về danh
+    # sách tài liệu của đơn hàng. `next` do template gửi kèm; referrer là dự
+    # phòng; danh sách tài liệu là chốt cuối.
+    return_to = request.form.get('next')
+    if not return_to and request.referrer:
+        ref = urlparse(request.referrer)
+        if ref.netloc == urlparse(request.host_url).netloc:
+            return_to = ref.path + (('?' + ref.query) if ref.query else '')
+
     try:
         # Remove file from disk if it still exists
         if document.file_path and os.path.exists(document.file_path):
@@ -2085,7 +2115,11 @@ def delete_document(document_id):
         logger.error(f"Error deleting document {document_id}: {str(e)}")
         flash(t('Error deleting document'), 'error')
 
+    if return_to and _is_safe_redirect_url(return_to):
+        return redirect(return_to)
     return redirect(url_for('dashboard.list_documents', order_id=order_id))
+
+
 @login_required
 def get_contract_detail(contract_id):
     """Get contract details as JSON - for AJAX calls"""

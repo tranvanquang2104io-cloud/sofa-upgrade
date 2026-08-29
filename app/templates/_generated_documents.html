@@ -1,0 +1,102 @@
+{# ---------------------------------------------------------------------------
+   Khối "Tài liệu đã tạo" dùng chung cho màn hình xem Báo giá / Hợp đồng /
+   Bàn giao / Thanh toán.
+
+   Trước đây mỗi màn hình tự viết markup riêng nên hiển thị mỗi nơi một kiểu và
+   không nơi nào xoá được tài liệu in hỏng. Gom về một chỗ để cả bốn màn hình
+   cùng một quy chuẩn: mới nhất nằm trên cùng (thứ tự do quan hệ `documents`
+   trong model quy định), có nhãn đánh dấu bản mới nhất, và có nút xoá.
+
+   Tham số:
+     documents  — danh sách Document, đã sắp mới nhất trước.
+--------------------------------------------------------------------------- #}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> {{ t('Generated Documents') }}</h5>
+    </div>
+    <div class="card-body">
+        {% if documents and documents|length > 0 %}
+            <div class="list-group">
+                {% for doc in documents %}
+                <div class="list-group-item {% if loop.first %}border-primary border-2{% endif %}">
+                    <div class="d-flex w-100 justify-content-between align-items-start gap-2">
+                        <div class="min-w-0">
+                            <h6 class="mb-1 text-break">
+                                {{ doc.document_name }}
+                                {% if loop.first %}
+                                <span class="badge bg-primary ms-1">{{ t('Latest') }}</span>
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">
+                                <span class="badge bg-light text-dark border">{{ doc.document_format.upper() }}</span>
+                                {% if doc.file_size %}
+                                &bull; {{ (doc.file_size / 1024) | round(1) }} KB
+                                {% endif %}
+                                &bull; {{ doc.generated_at.strftime('%Y-%m-%d %H:%M') }}
+                            </small>
+                        </div>
+                        <div class="btn-group flex-shrink-0">
+                            <a href="{{ url_for('dashboard.download_document', document_id=doc.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> {{ t('Download') }}
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#docDeleteModal"
+                                    data-doc-id="{{ doc.id }}"
+                                    data-doc-name="{{ doc.document_name }}"
+                                    title="{{ t('Delete') }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">{{ t('No documents generated yet') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if documents and documents|length > 0 %}
+<!-- Hộp thoại xác nhận xoá -->
+<div class="modal fade" id="docDeleteModal" tabindex="-1" aria-labelledby="docDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="docDeleteModalLabel">
+                    <i class="bi bi-trash text-danger"></i> {{ t('Delete Document') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Cancel') }}"></button>
+            </div>
+            <div class="modal-body">
+                {{ t('Are you sure you want to delete') }} <strong id="docDeleteName"></strong>?
+                <div class="text-muted small mt-1">
+                    {{ t('This action cannot be undone. The file will be permanently removed.') }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Cancel') }}</button>
+                {# `next` để route quay lại đúng màn hình này thay vì nhảy về danh sách tài liệu của đơn hàng. #}
+                <form id="docDeleteForm" method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> {{ t('Delete') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('docDeleteModal').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('docDeleteName').textContent = btn.dataset.docName;
+    document.getElementById('docDeleteForm').action =
+        '{{ url_for("dashboard.delete_document", document_id="__ID__") }}'.replace('__ID__', btn.dataset.docId);
+});
+</script>
+{% endif %}

@@ -342,7 +342,7 @@ class Order(ExtendFieldsMixin, db.Model):
     contracts = db.relationship('Contract', backref='order', lazy=True, cascade='all, delete-orphan')
     handover_records = db.relationship('HandoverRecord', backref='order', lazy=True, cascade='all, delete-orphan')
     payment_reports = db.relationship('PaymentReport', backref='order', lazy=True, cascade='all, delete-orphan')
-    documents = db.relationship('Document', backref='order', lazy=True, cascade='all, delete-orphan')
+    documents = db.relationship('Document', backref='order', order_by='Document.generated_at.desc()', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Order {self.order_code}>'
@@ -399,7 +399,7 @@ class Quotation(DocExtensionMixin, db.Model):
                                           name='uq_company_quotation_number'),)
 
     # Relationships
-    documents = db.relationship('Document', backref='quotation', lazy=True, cascade='all, delete-orphan')
+    documents = db.relationship('Document', backref='quotation', order_by='Document.generated_at.desc()', lazy=True, cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Quotation {self.quotation_number}>'
@@ -463,7 +463,7 @@ class Contract(DocExtensionMixin, db.Model):
 
     # Relationships
     quotation = db.relationship('Quotation', backref='contracts', foreign_keys='Contract.quotation_id', lazy=True)
-    documents = db.relationship('Document', backref='contract', lazy=True, cascade='all, delete-orphan')
+    documents = db.relationship('Document', backref='contract', order_by='Document.generated_at.desc()', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Contract {self.contract_number}>'
@@ -529,7 +529,7 @@ class HandoverRecord(DocExtensionMixin, db.Model):
                                           name='uq_company_handover_report_number'),)
 
     # Relationships
-    documents = db.relationship('Document', backref='handover_record', lazy=True)
+    documents = db.relationship('Document', backref='handover_record', order_by='Document.generated_at.desc()', lazy=True)
     
     def __repr__(self):
         return f'<HandoverRecord {self.report_number}>'
@@ -597,7 +597,7 @@ class PaymentReport(DocExtensionMixin, db.Model):
                                           name='uq_company_payment_report_number'),)
 
     # Relationships
-    documents = db.relationship('Document', backref='payment_report', lazy=True)
+    documents = db.relationship('Document', backref='payment_report', order_by='Document.generated_at.desc()', lazy=True)
     
     def __repr__(self):
         return f'<PaymentReport {self.report_number}>'
