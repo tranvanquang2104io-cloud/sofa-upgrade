@@ -1,0 +1,46 @@
+# docker-compose.qas.yml  —  QAS (staging / bản sao của production)
+# Chạy: docker compose -f docker-compose.qas.yml --env-file .env.qas up -d
+#
+# Stack độc lập hoàn toàn với prod: project name, DB, volume uploads riêng.
+# Không expose port ra ngoài — ingress Caddy dùng chung proxy tới app:5000.
+
+name: sofa-flow-qas
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-sofa_flow_qas}
+      POSTGRES_USER:     ${POSTGRES_USER:-sofa_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_qas_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sofa_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      target: runtime
+    image: sofa-flow:${APP_VERSION:-latest}
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV:    production
+      FLASK_DEBUG:  "false"
+      APP_ENV_NAME: QAS
+      SECRET_KEY:   ${SECRET_KEY:?SECRET_KEY is required}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-sofa_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sofa_flow_qas}
+    volumes:
+      - uploads_qas:/app/app/uploads
+
+volumes:
+  postgres_qas_data:
+  uploads_qas:

@@ -19,6 +19,7 @@ ENV/
 # Environment / secrets
 .env
 .env.prod
+.env.qas
 *.env.local
 
 # Docker runtime volumes (data lives outside repo)
