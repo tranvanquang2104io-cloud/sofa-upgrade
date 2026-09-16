@@ -27,7 +27,7 @@ services:
     build:
       context: .
       target: runtime
-    image: sofa-flow:${APP_VERSION:-latest}
+    image: sofa-flow-qas:${APP_VERSION:-latest}
     restart: always
     depends_on:
       db:
