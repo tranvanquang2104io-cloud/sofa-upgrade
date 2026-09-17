@@ -1185,6 +1185,9 @@ class PurchaseOrderLine(db.Model):
     material_id   = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
     quantity_ordered  = db.Column(db.Numeric(15, 2), default=0, nullable=False)
     quantity_received = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    # Third leg of the 3-way match (PO / GR / invoice). Cumulative across all
+    # supplier invoices billing this line.
+    quantity_invoiced = db.Column(db.Numeric(15, 2), default=0, nullable=False)
     unit          = db.Column(db.String(50))
     unit_price    = db.Column(db.Numeric(15, 2), default=0)
     line_total    = db.Column(db.Numeric(15, 2), default=0)
@@ -1654,6 +1657,222 @@ class OrderConfirmation(DocExtensionMixin, db.Model):
 
     def __repr__(self):
         return f'<OrderConfirmation {self.confirmation_number}>'
+
+
+class SupplierInvoice(db.Model):
+    """Hóa đơn GTGT received from a supplier — the "Invoice" of Procure-to-Pay.
+
+    The procurement chain previously stopped at goods receipt: there was no
+    supplier invoice, no payable and no payment, so "P2P" was really
+    Procure-to-Receive.
+
+    Fields follow what NĐ 123/2020 requires to be captured for input-VAT
+    purposes: ký hiệu (series), số hóa đơn, ngày lập, MST người bán, tiền
+    hàng, thuế suất, tiền thuế, tổng thanh toán. The seller's tax code is
+    FROZEN here rather than only joined to ``Supplier``, because the supplier
+    record can change later while the invoice must keep saying what it said.
+
+    ``match_status`` is informational, never a hard block. SAP blocks an
+    out-of-tolerance invoice for payment; for an SME that is hostile, because
+    the usual cause is paperwork arriving in a different order rather than
+    fraud. We surface the discrepancy and let a human decide.
+    """
+
+    __tablename__ = 'supplier_invoices'
+
+    STATUS_DRAFT = 'draft'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_CANCELED = 'canceled'
+
+    MATCH_OK = 'ok'
+    MATCH_NO_RECEIPT = 'no_receipt'        # invoiced more than was received
+    MATCH_PRICE_VARIANCE = 'price_variance'
+    MATCH_OVER_INVOICED = 'over_invoiced'  # invoiced more than was ordered
+
+    # Deliberately hardcoded rather than a configurable tolerance table:
+    # one SME does not need SAP's tolerance-key machinery.
+    PRICE_TOLERANCE_PCT = 2.0
+    QTY_TOLERANCE_PCT = 5.0
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    supplier_id = db.Column(GUID(), db.ForeignKey('suppliers.id'),
+                            nullable=False, index=True)
+    po_id = db.Column(GUID(), db.ForeignKey('purchase_orders.id'),
+                      nullable=False, index=True)
+
+    invoice_series = db.Column(db.String(20))       # ký hiệu
+    invoice_number = db.Column(db.String(50), nullable=False)  # số hóa đơn
+    invoice_date = db.Column(db.Date, nullable=False)          # ngày lập
+    seller_tax_code = db.Column(db.String(50))                 # MST người bán
+
+    subtotal = db.Column(db.Numeric(15, 2), default=0)   # tiền hàng
+    vat_rate = db.Column(db.Numeric(5, 2), default=0)    # thuế suất
+    vat_amount = db.Column(db.Numeric(15, 2), default=0)  # tiền thuế
+    total_amount = db.Column(db.Numeric(15, 2), default=0)
+
+    status = db.Column(db.String(16), nullable=False, default=STATUS_DRAFT,
+                       index=True)
+    match_status = db.Column(db.String(24), default=MATCH_OK)
+    match_notes = db.Column(db.Text)
+
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    supplier = db.relationship('Supplier', lazy=True)
+    po = db.relationship('PurchaseOrder', backref='invoices', lazy=True)
+    lines = db.relationship('SupplierInvoiceLine', backref='invoice',
+                            lazy=True, cascade='all, delete-orphan')
+    allocations = db.relationship('SupplierPaymentAllocation',
+                                  backref='invoice', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'supplier_id', 'invoice_series',
+                            'invoice_number', name='uq_supplier_invoice_number'),
+    )
+
+    def can_edit(self):
+        return self.status == self.STATUS_DRAFT
+
+    @property
+    def amount_paid(self):
+        from decimal import Decimal
+        return sum((Decimal(str(a.allocated_amount or 0))
+                    for a in self.allocations
+                    if a.payment and a.payment.status == SupplierPayment.STATUS_CONFIRMED),
+                   Decimal('0'))
+
+    @property
+    def amount_outstanding(self):
+        from decimal import Decimal
+        return Decimal(str(self.total_amount or 0)) - self.amount_paid
+
+    @property
+    def is_paid(self):
+        return self.amount_outstanding <= 0
+
+    def __repr__(self):
+        return f'<SupplierInvoice {self.invoice_series}/{self.invoice_number}>'
+
+
+class SupplierInvoiceLine(db.Model):
+    """One invoiced line, matched back to the PO line it bills."""
+
+    __tablename__ = 'supplier_invoice_lines'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    invoice_id = db.Column(GUID(), db.ForeignKey('supplier_invoices.id'),
+                           nullable=False, index=True)
+    po_line_id = db.Column(GUID(), db.ForeignKey('purchase_order_lines.id'),
+                           nullable=False, index=True)
+    material_id = db.Column(GUID(), db.ForeignKey('materials.id'), index=True)
+
+    quantity = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    unit = db.Column(db.String(50))
+    unit_price = db.Column(db.Numeric(15, 2), default=0)
+    line_total = db.Column(db.Numeric(15, 2), default=0)
+
+    po_line = db.relationship('PurchaseOrderLine', lazy=True)
+    material = db.relationship('Material', lazy=True)
+
+    def __repr__(self):
+        return f'<SupplierInvoiceLine inv={self.invoice_id}>'
+
+
+class SupplierPayment(db.Model):
+    """Money paid to a supplier.
+
+    ``method`` matters for tax, not just bookkeeping: input-VAT deduction in
+    Vietnam depends on non-cash payment evidence. The threshold rules have
+    changed recently, so the system RECORDS the method and flags cash payments
+    rather than trying to enforce a rule that may move again — the accountant
+    decides, we make the fact visible.
+    """
+
+    __tablename__ = 'supplier_payments'
+
+    STATUS_DRAFT = 'draft'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_CANCELED = 'canceled'
+
+    METHOD_CASH = 'cash'
+    METHOD_TRANSFER = 'bank_transfer'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    supplier_id = db.Column(GUID(), db.ForeignKey('suppliers.id'),
+                            nullable=False, index=True)
+
+    payment_number = db.Column(db.String(50), nullable=False)
+    payment_date = db.Column(db.Date, nullable=False)
+    amount = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    method = db.Column(db.String(20), default=METHOD_TRANSFER, nullable=False)
+    reference_number = db.Column(db.String(100))   # số UNC / bank ref
+
+    status = db.Column(db.String(16), nullable=False, default=STATUS_DRAFT)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    supplier = db.relationship('Supplier', lazy=True)
+    allocations = db.relationship('SupplierPaymentAllocation',
+                                  backref='payment', lazy=True,
+                                  cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'payment_number',
+                            name='uq_company_supplier_payment_number'),
+    )
+
+    @property
+    def allocated_amount(self):
+        from decimal import Decimal
+        return sum((Decimal(str(a.allocated_amount or 0))
+                    for a in self.allocations), Decimal('0'))
+
+    @property
+    def unallocated_amount(self):
+        from decimal import Decimal
+        return Decimal(str(self.amount or 0)) - self.allocated_amount
+
+    @property
+    def is_cash(self):
+        return self.method == self.METHOD_CASH
+
+    def __repr__(self):
+        return f'<SupplierPayment {self.payment_number}>'
+
+
+class SupplierPaymentAllocation(db.Model):
+    """Links a payment to the invoice(s) it settles.
+
+    Necessary, not incidental: one payment can cover several invoices and one
+    invoice can be settled in instalments, so "is this invoice paid?" is
+    otherwise unanswerable.
+    """
+
+    __tablename__ = 'supplier_payment_allocations'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    payment_id = db.Column(GUID(), db.ForeignKey('supplier_payments.id'),
+                           nullable=False, index=True)
+    invoice_id = db.Column(GUID(), db.ForeignKey('supplier_invoices.id'),
+                           nullable=False, index=True)
+    allocated_amount = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('payment_id', 'invoice_id',
+                            name='uq_payment_invoice_allocation'),
+    )
+
+    def __repr__(self):
+        return f'<SupplierPaymentAllocation {self.allocated_amount}>'
 
 
 def _populate_doc_company_id(mapper, connection, target):
