@@ -29,8 +29,31 @@ class BaseRepository:
         return instance
     
     def get_by_id(self, id):
-        """Get record by ID"""
+        """Get a record by id, WITHOUT any tenant check.
+
+        Tenant safety is therefore the caller's responsibility. A sweep in
+        tests/test_tenant_isolation_sweep.py confirms every current detail
+        route does check ownership, but this default is a standing hazard:
+        the next route that forgets leaks another company's data, and nothing
+        in the type signature warns about it.
+
+        Prefer :meth:`get_for_company` in new code.
+        """
         return self.model.query.get(id)
+
+    def get_for_company(self, id, company_id):
+        """Get a record by id ONLY if it belongs to ``company_id``.
+
+        Returns None for another tenant's record, so a forgotten ownership
+        check cannot become a data leak. Available on every repository whose
+        model carries ``company_id``.
+        """
+        if not hasattr(self.model, 'company_id'):
+            raise AttributeError(
+                f'{self.model.__name__} has no company_id; use a scoped query '
+                f'via its parent instead'
+            )
+        return self.model.query.filter_by(id=id, company_id=company_id).first()
     
     def get_all(self, limit=None, offset=None):
         """Get all records"""
