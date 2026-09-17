@@ -99,13 +99,16 @@ exists as the result of receiving against a purchase order, and a free-standing
 one would bypass the 3-way match.
 
 
-**T13-remainder (open):** three classes of Vietnamese string are still not
-translated, and each needs a judgement rather than a mechanical wrap:
-`status_labels`/`action_labels` dicts built in `production/plan.html` and in
-view functions; JavaScript `confirm()` messages; and prose split across inline
-tags, where translating a fragment like "và bấm" alone would be nonsense
-because word order differs between the languages — those sentences must be
-rewritten to hold a single `t()` call, which is a copy decision.
+**T13-remainder: ✅ DONE.** The label dicts are gone — status labels now come
+from `status_meta()` like the colours do, and action labels (`Gửi duyệt`,
+`Duyệt`, `Từ chối (làm lại)`…) have their own keys. Every JavaScript
+`confirm()` message goes through `t()`. Two more guard tests: no template may
+define a status→label dict, and no `confirm()` may hold bare Vietnamese.
+
+Still open by design: prose split across inline tags (`… <strong>và bấm</strong> …`).
+Translating a fragment like "và bấm" alone is nonsense because word order
+differs between the languages; those sentences need rewriting to hold one
+`t()` call, which is a copy decision for whoever owns the wording.
 
 
 One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 feature lands on an unstable base.**
@@ -126,7 +129,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T17 | Shared status vocabulary + UI macro library; orders list converted (F16, F24, F23-display) | `status_tokens.py`, `macros/ui.html`, `style.css` | `test_status_tokens.py` (29) | ✅ Done |
 | T11 | Pagination + search on PO/PR/GR (F17): service-level `page`/`search`, shared `search_bar` macro, `_pagination.html`. Search on PO covers number **and supplier name**; verified still tenant-scoped | services + routes + templates | `test_procurement_lists.py` (8) | 🟡 PO/PR/GR done; materials/documents/stores remain |
 | T12 | Responsive wrapper on the 11 tables actually missing it + lint test so no new screen can opt out (F18) | 11 templates | `test_ui_consistency.py` (7) | ✅ Done |
-| T13 | i18n pass on procurement/production (F19): **53 keys added, 99 strings wrapped**; one sentence split across `<strong>`/`<em>` rewritten as a single key. Guard test scans every template for bare Vietnamese labels | 10 templates + `i18n.py` | `test_ui_consistency.py` (22) | ✅ Labels done |
+| T13 | i18n pass on procurement/production (F19): **74 keys added, 114 strings wrapped**; one sentence split across `<strong>`/`<em>` rewritten as a single key. Guard test scans every template for bare Vietnamese labels | 10 templates + `i18n.py` | `test_ui_consistency.py` (28) | ✅ Labels, actions, confirms done |
 | T14 | Merge `payment/` into `payments/` via `git mv` (history preserved); guard test fails if any singular/plural directory pair reappears (F20) | templates + routes | `test_ui_consistency.py` (26) | ✅ Done |
 | T15 | Triage missing screens (F21): built **order edit** (descriptive fields only — money is derived from documents, customer/store would invalidate them) and **agreement edit** (draft/active only — terminated is history that orders cite). Everything else deliberately NOT added | routes + 2 templates | `test_edit_screens.py` (11) | ✅ Done |
 | D1 | Refresh `CLAUDE.md` — CSRF/Alembic corrected, plus the new house rules (money module, status tokens, workflow engine, normalization chokepoint), real test commands, current data model and branch | `CLAUDE.md` | — | ✅ Done |

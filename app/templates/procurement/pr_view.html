@@ -2,8 +2,8 @@
 {% from "macros/ui.html" import status_badge with context %}
 {% block title %}{{ pr.pr_number }} - SofaFlow{% endblock %}
 
-{% set labels = {'draft':'Nháp','submitted':'Chờ duyệt','approved':'Đã duyệt','converted':'Đã tạo PO','canceled':'Đã hủy'} %}
-{% set act_labels = {'submit':'Gửi duyệt','approve':'Duyệt','reject':'Trả lại (sửa)','cancel':'Hủy','reopen':'Mở lại'} %}
+
+{% set act_labels = {'submit': t('Submit for approval'), 'approve': t('Approve'), 'reject': t('Send back for edit'), 'cancel': t('Cancel'), 'reopen': t('Reopen')} %}
 {% set act_colors = {'submit':'primary','approve':'success','reject':'outline-warning','cancel':'outline-danger','reopen':'outline-secondary'} %}
 
 {% block content %}
@@ -20,14 +20,14 @@
   {% endif %}
   {% for a in pr.allowed_actions() %}
   <form method="POST" action="{{ url_for('dashboard.requisition_status', pr_id=pr.id, action=a) }}"
-        {% if a == 'cancel' %}onsubmit="return confirm('Hủy đề nghị mua này?');"{% endif %}>
+        {% if a == 'cancel' %}onsubmit="return confirm('{{ t('Cancel this requisition?') }}');"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-sm btn-{{ act_colors.get(a,'secondary') }}">{{ act_labels.get(a, a) }}</button>
   </form>
   {% endfor %}
   {% if pr.can_convert() %}
   <form method="POST" action="{{ url_for('dashboard.convert_requisition', pr_id=pr.id) }}"
-        onsubmit="return confirm('Tạo đơn mua (PO) từ đề nghị này, gộp theo nhà cung cấp?');">
+        onsubmit="return confirm('{{ t('Create purchase orders from this requisition, grouped by supplier?') }}');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-sm btn-primary"><i class="bi bi-cart-check"></i> {{ t('Create Purchase Order') }}</button>
   </form>

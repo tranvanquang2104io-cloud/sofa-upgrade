@@ -266,3 +266,46 @@ def test_no_singular_plural_duplicate_template_directories():
 def test_payment_templates_live_together_and_parse(app, template):
     with app.app_context():
         app.jinja_env.get_template(template)
+
+
+def test_no_bare_vietnamese_in_javascript_confirm_dialogs():
+    """A confirm() message is UI text like any other.
+
+    These were missed by the first i18n pass because they live inside an HTML
+    attribute rather than in a text node, which is exactly the kind of place a
+    language gap hides.
+    """
+    import re
+
+    diacritics = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđĐ'
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        for msg in re.findall(r"confirm\('([^']*)'\)", text):
+            if '{{' in msg:
+                continue
+            if any(ch in diacritics for ch in msg):
+                offenders.append(f"{path.relative_to(TEMPLATES)}: {msg!r}")
+
+    assert offenders == [], (
+        f"these confirm() dialogs are hardcoded Vietnamese: {offenders}"
+    )
+
+
+def test_no_template_builds_its_own_status_label_dict():
+    """Status LABELS belong to status_tokens.py, like status colours.
+
+    Local `{% set labels = {'draft':'Nháp', ...} %}` dicts were the last place
+    a status could be worded differently on one screen than another.
+    """
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        for marker in ('{% set labels', '{% set status_labels'):
+            if marker in text:
+                offenders.append(str(path.relative_to(TEMPLATES)))
+
+    assert offenders == [], (
+        "these templates define their own status->label map instead of using "
+        f"status_meta(): {offenders}"
+    )

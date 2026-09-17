@@ -738,6 +738,29 @@ TRANSLATIONS = {
         'Stock increased':                      'Đã ghi tăng tồn',
         'The plan is approved and locked. The material list can no longer be changed. To edit it again, use "Reject (rework)" to return it to production status.':
             'Kế hoạch đã được chốt (duyệt). Danh mục vật tư đã khóa, không thể thêm/xóa. Muốn chỉnh sửa lại, hãy dùng “Từ chối (làm lại)” để đưa về trạng thái sản xuất.',
+
+        # -- Procurement/production actions & confirmations --
+        'Approve plan':                           'Duyệt kế hoạch',
+        'Cancel order':                           'Hủy đơn',
+        'Cancel plan':                            'Hủy kế hoạch',
+        'Cancel this production plan?':           'Hủy kế hoạch sản xuất này?',
+        'Cancel this purchase order?':            'Hủy đơn mua này?',
+        'Cancel this requisition?':               'Hủy đề nghị mua này?',
+        'Clear late flag':                        'Bỏ đánh dấu trễ',
+        'Complete':                               'Hoàn tất',
+        'Confirm goods receipt? Stock will increase.':'Xác nhận nhập kho? Tồn kho sẽ tăng.',
+        'Create purchase orders from this requisition, grouped by supplier?':'Tạo đơn mua (PO) từ đề nghị này, gộp theo nhà cung cấp?',
+        'Issue materials and deduct stock?':      'Cấp phát vật tư và trừ kho?',
+        'Mark as behind schedule':                'Đánh dấu trễ tiến độ',
+        'Production finished':                    'Đã sản xuất xong',
+        'Reject (rework)':                        'Từ chối (làm lại)',
+        'Reopen':                                 'Mở lại',
+        'Send back for edit':                     'Trả lại (sửa)',
+        'Send to supplier':                       'Gửi nhà cung cấp',
+        'Start production':                       'Bắt đầu sản xuất',
+        'Submit for acceptance':                  'Gửi nghiệm thu',
+        'Submit for approval':                    'Gửi duyệt',
+        'Withdraw to draft':                      'Thu hồi về nháp',
     }
 }
 

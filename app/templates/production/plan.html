@@ -17,9 +17,8 @@
     {{ t('The production plan is created automatically once the contract is signed.') }}
   </div>
 {% else %}
-  {% set status_labels = {'draft':'Nháp','approved':'Đã duyệt','processing':'Đang sản xuất','completed':'Đã SX xong','validating':'Đang nghiệm thu','validated':'Đạt nghiệm thu','rejected':'Bị từ chối','finished':'Hoàn tất','canceled':'Đã hủy'} %}
   {% set status_colors = {'draft':'secondary','approved':'info','processing':'primary','completed':'primary','validating':'warning','validated':'success','rejected':'danger','finished':'success','canceled':'dark'} %}
-  {% set action_labels = {'approve':'Duyệt kế hoạch','start':'Bắt đầu sản xuất','complete':'Đã sản xuất xong','submit':'Gửi nghiệm thu','validate':'Đạt nghiệm thu','reject':'Từ chối (làm lại)','finish':'Hoàn tất','cancel':'Hủy kế hoạch'} %}
+  {% set action_labels = {'approve': t('Approve plan'), 'start': t('Start production'), 'complete': t('Production finished'), 'submit': t('Submit for acceptance'), 'validate': t('Accepted'), 'reject': t('Reject (rework)'), 'finish': t('Complete'), 'cancel': t('Cancel plan')} %}
   {% set action_colors = {'approve':'info','start':'primary','complete':'primary','submit':'warning','validate':'success','reject':'danger','finish':'success','cancel':'outline-danger'} %}
   <div class="card mb-3">
     <div class="card-body">
@@ -37,14 +36,14 @@
       <div class="d-flex gap-2 flex-wrap">
         {% for action in plan.allowed_actions() %}
         <form method="POST" action="{{ url_for('dashboard.production_plan_status', plan_id=plan.id, action=action) }}" class="d-inline"
-              {% if action == 'cancel' %}onsubmit="return confirm('Hủy kế hoạch sản xuất này?');"{% endif %}>
+              {% if action == 'cancel' %}onsubmit="return confirm('{{ t('Cancel this production plan?') }}');"{% endif %}>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-{{ action_colors.get(action,'secondary') }}">{{ action_labels.get(action, action) }}</button>
         </form>
         {% endfor %}
         {% if plan.can_issue() %}
         <form method="POST" action="{{ url_for('dashboard.issue_plan_materials', plan_id=plan.id) }}" class="d-inline"
-              onsubmit="return confirm('Cấp phát vật tư và trừ kho?');">
+              onsubmit="return confirm('{{ t('Issue materials and deduct stock?') }}');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up"></i> {{ t('Issue materials (deduct stock)') }}</button>
         </form>
@@ -52,7 +51,7 @@
         <form method="POST" action="{{ url_for('dashboard.production_plan_delay', plan_id=plan.id) }}" class="d-inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="delayed" value="{{ '0' if plan.is_delayed else '1' }}">
-          <button class="btn btn-sm btn-outline-warning">{{ 'Bỏ đánh dấu trễ' if plan.is_delayed else 'Đánh dấu trễ tiến độ' }}</button>
+          <button class="btn btn-sm btn-outline-warning">{{ t('Clear late flag') if plan.is_delayed else t('Mark as behind schedule') }}</button>
         </form>
       </div>
     </div>

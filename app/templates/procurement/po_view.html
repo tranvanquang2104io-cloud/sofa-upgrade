@@ -2,8 +2,8 @@
 {% from "macros/ui.html" import status_badge with context %}
 {% block title %}{{ po.po_number }} - SofaFlow{% endblock %}
 
-{% set labels = {'draft':'Nháp','ordered':'Đã gửi NCC','partial':'Nhập một phần','received':'Đã nhập đủ','canceled':'Đã hủy'} %}
-{% set act_labels = {'submit':'Gửi nhà cung cấp','cancel':'Hủy đơn','reopen':'Thu hồi về nháp'} %}
+
+{% set act_labels = {'submit': t('Send to supplier'), 'cancel': t('Cancel order'), 'reopen': t('Withdraw to draft')} %}
 {% set act_colors = {'submit':'primary','cancel':'outline-danger','reopen':'outline-secondary'} %}
 
 {% block content %}
@@ -20,7 +20,7 @@
   {% endif %}
   {% for a in po.allowed_actions() %}
   <form method="POST" action="{{ url_for('dashboard.purchase_order_status', po_id=po.id, action=a) }}"
-        {% if a == 'cancel' %}onsubmit="return confirm('Hủy đơn mua này?');"{% endif %}>
+        {% if a == 'cancel' %}onsubmit="return confirm('{{ t('Cancel this purchase order?') }}');"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-sm btn-{{ act_colors.get(a,'secondary') }}">{{ act_labels.get(a, a) }}</button>
   </form>
@@ -75,7 +75,7 @@
 <div class="card mb-3 border-success">
   <div class="card-header bg-success text-white"><i class="bi bi-box-arrow-in-down"></i> Nhận hàng &amp; nhập kho (GR)</div>
   <div class="card-body">
-    <form method="POST" action="{{ url_for('dashboard.receive_purchase_order', po_id=po.id) }}" onsubmit="return confirm('Xác nhận nhập kho? Tồn kho sẽ tăng.');">
+    <form method="POST" action="{{ url_for('dashboard.receive_purchase_order', po_id=po.id) }}" onsubmit="return confirm('{{ t('Confirm goods receipt? Stock will increase.') }}');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p class="text-muted">Nhập số lượng thực nhận đợt này — có thể nhận <strong>một phần</strong> và nhận thành <strong>nhiều đợt</strong>.</p>
       <table class="table table-sm align-middle">
