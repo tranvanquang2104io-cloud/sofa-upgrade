@@ -19,6 +19,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from app.services.workflow_service import (  # noqa: E402  (after logger by convention)
+    ACTION_HANDOVER_CREATE,
+    ACTION_PAYMENT_ADVANCE,
+    ACTION_PAYMENT_FINAL,
+    WorkflowService,
+)
+
 
 class CompanyService:
     """Service for company management"""
@@ -41,6 +48,14 @@ class CompanyService:
             city=city,
             country=country
         )
+
+        # Install the default workflow rules so the new tenant starts with the
+        # standard order flow, editable from day one.
+        try:
+            WorkflowService.seed_defaults(company.id)
+        except Exception as exc:  # never block company creation on this
+            logger.warning("Could not seed workflow rules for %s: %s",
+                           company_code, exc)
 
         # Auto-create company template subfolder
         try:
@@ -741,10 +756,14 @@ class HandoverRecordService:
         if existing:
             raise ValueError(f"Handover record {report_number} already exists")
         
-        # Check workflow: advance payment must be confirmed before handover
+        # Workflow sequencing is owned by WorkflowService (see
+        # app/services/workflow_service.py). The default rule set reproduces
+        # the requirement that used to be hardcoded here — an advance payment
+        # before a handover — but a company can now relax or waive it.
         order = OrderRepository().get_by_id(order_id)
-        if not order or not order.lifecycle or not order.lifecycle.advance_paid:
-            raise ValueError("Advance payment must be confirmed before creating handover record")
+        if not order:
+            raise ValueError("Order not found")
+        WorkflowService.require(order, ACTION_HANDOVER_CREATE)
         
         record = self.repo.create(
             order_id=order_id,
@@ -872,12 +891,13 @@ class PaymentReportService:
         if not order or not order.lifecycle:
             raise ValueError("Order not found")
         
+        # Sequencing delegated to WorkflowService; defaults reproduce the
+        # previously hardcoded rules (advance needs a signed contract, final
+        # needs a confirmed handover).
         if payment_type == 'advance':
-            if not order.lifecycle.contract_signed:
-                raise ValueError("Advance payment can only be created after contract is signed")
+            WorkflowService.require(order, ACTION_PAYMENT_ADVANCE)
         elif payment_type == 'final':
-            if not order.lifecycle.handover_confirmed:
-                raise ValueError("Final payment can only be created after handover record is confirmed")
+            WorkflowService.require(order, ACTION_PAYMENT_FINAL)
         
         report = self.repo.create(
             order_id=order_id,

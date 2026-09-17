@@ -10,6 +10,7 @@ from app.utils.auth_utils import (
     get_accessible_store_ids, is_company_admin,
 )
 from app.services.money import compute_totals, subtotal_from_items, totals_from_form
+from app.services.workflow_service import ACTION_HANDOVER_CREATE, WorkflowService
 from app.services.services import (
     StoreService, UserService, CustomerService, OrderService, QuotationService,
     ContractService, HandoverRecordService, PaymentReportService, DocumentService,
@@ -1843,10 +1844,30 @@ def skip_advance_payment(order_id):
         return redirect(url_for('dashboard.view_order', order_id=order_id))
 
     try:
+        # Record an audited waiver first: who skipped the step, when, and why.
+        # This is the workflow engine's first-class replacement for the bare
+        # `advance_skipped` boolean, which recorded that a step was skipped but
+        # never by whom or for what reason.
+        reason = (request.form.get('skip_reason') or '').strip()             or t('Advance payment skipped by agreement with the customer')
+        try:
+            WorkflowService.waive(
+                order, ACTION_HANDOVER_CREATE, 'advance_paid',
+                reason=reason, user_id=session.get('user_id'),
+            )
+        except ValueError as waiver_error:
+            # A company that has configured advance_paid as `required` has
+            # deliberately disallowed skipping; respect that configuration.
+            flash(t(f'Cannot skip advance payment: {waiver_error}'), 'error')
+            return redirect(url_for('dashboard.view_order', order_id=order_id))
+
         lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
         lifecycle.advance_skipped = True
         lifecycle.advance_skipped_at = datetime.utcnow()
-        # Set advance_paid = True so the rest of the workflow (handover, final payment) unlocks
+        # NOTE (2026-09): advance_paid is also set so that everything already
+        # reading this flag (templates, reports, the old guards) keeps working.
+        # It overstates reality — no money was received — so advance-payment
+        # reporting counts skipped orders as paid. Superseding this with the
+        # waiver alone is a business decision; see REFACTOR-2026Q3.md F23.
         lifecycle.advance_paid = True
         lifecycle.advance_paid_at = datetime.utcnow()
         db.session.add(lifecycle)

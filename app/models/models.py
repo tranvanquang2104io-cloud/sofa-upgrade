@@ -1244,6 +1244,97 @@ class GoodsReceiptLine(db.Model):
         return f'<GoodsReceiptLine gr={self.gr_id} material={self.material_id}>'
 
 
+class WorkflowRule(db.Model):
+    """One prerequisite of one workflow action, for one company.
+
+    This table is the single place the order graph lives. Before it, the
+    sequencing rules were spread across three layers — boolean flags on
+    ``LifecycleStatus``, per-document ``can_*`` guards that could only see
+    their own document, and hardcoded ``if/raise`` checks inside individual
+    service methods — so no one place described the legal order of events.
+
+    A rule reads: "before ACTION, PREREQUISITE must hold", qualified by MODE:
+
+    * ``required``  — hard block; the action is refused.
+    * ``waivable``  — may be bypassed, but only with a recorded reason
+                      (this generalises the old ``advance_skipped`` flag).
+    * ``optional``  — advisory only; surfaced as a warning, never blocks.
+                      (Used for quotation-before-contract, which AUDIT D6
+                      deliberately decided NOT to enforce.)
+
+    Rules are seeded per company from ``WorkflowService.DEFAULT_RULES``, which
+    reproduces the behaviour that used to be hardcoded, so installing this
+    table changes nothing until an administrator edits it.
+    """
+
+    __tablename__ = 'workflow_rules'
+
+    MODE_REQUIRED = 'required'
+    MODE_WAIVABLE = 'waivable'
+    MODE_OPTIONAL = 'optional'
+    MODES = (MODE_REQUIRED, MODE_WAIVABLE, MODE_OPTIONAL)
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+
+    # e.g. 'handover.create', 'payment.advance', 'contract.sign'
+    action = db.Column(db.String(64), nullable=False)
+    # a LifecycleStatus boolean column name, e.g. 'contract_signed'
+    prerequisite = db.Column(db.String(64), nullable=False)
+    mode = db.Column(db.String(16), nullable=False, default=MODE_REQUIRED)
+
+    # Shown to the user when the rule blocks an action. Optional: a readable
+    # default is derived from the prerequisite when this is empty.
+    message = db.Column(db.String(255))
+
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'action', 'prerequisite',
+                            name='uq_workflow_rule'),
+        db.Index('ix_workflow_rules_company_action', 'company_id', 'action'),
+    )
+
+    def __repr__(self):
+        return f'<WorkflowRule {self.action} needs {self.prerequisite} ({self.mode})>'
+
+
+class WorkflowWaiver(db.Model):
+    """An audited bypass of a ``waivable`` workflow rule.
+
+    Replaces the untracked ``LifecycleStatus.advance_skipped`` boolean, which
+    recorded that a step was skipped but not by whom or why.
+    """
+
+    __tablename__ = 'workflow_waivers'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'),
+                         nullable=False, index=True)
+
+    action = db.Column(db.String(64), nullable=False)
+    prerequisite = db.Column(db.String(64), nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+
+    waived_by_user_id = db.Column(GUID(), db.ForeignKey('users.id'))
+    waived_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_workflow_waivers_order_action', 'order_id', 'action'),
+    )
+
+    def __repr__(self):
+        return f'<WorkflowWaiver {self.action}/{self.prerequisite} order={self.order_id}>'
+
+
 def _populate_doc_company_id(mapper, connection, target):
     """before_insert: set a document's company_id from its order (NR3/D8).
 

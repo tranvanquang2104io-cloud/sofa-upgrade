@@ -48,7 +48,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F5 | S2 | `Company.vat_rate` exists in the schema but **no code ever read it** — the literal `8` shadowed it | `models.py:97` | ✅ **FIXED** (T3) |
 | F6 | S2 | Contract created from a quotation with no form items stored the quotation's items but **`contract_value` 0.00** — proven by test | `dashboard_routes.py:1036` | ✅ **FIXED** (T4) |
 | F22 | S2 | The create-contract route **bypasses `ContractService`** and writes via the repository, skipping the documented **single-active-contract invariant** → two active contracts on one order; downstream fee lookups then pick an arbitrary one | `dashboard_routes.py:979` vs `services.py:591-601` | ✅ **FIXED** (T4) |
-| F7 | S2 | Handover `total_amount` is never recalculated from **accepted** quantities, so item-level rejections don't change the total | `models.py:508` | Open — T5 |
+| F7 | — | ~~Handover total ignores accepted quantities~~ — **NOT A DEFECT.** Verified: both the create and edit paths price each line as `accepted_qty * unit_price` | `dashboard_routes.py:1410`, `:1600` | ❌ Withdrawn |
 | F8 | S1 | **No workflow engine.** Sequencing split 3 ways: `LifecycleStatus` booleans, per-document `can_*` guards that can't see other documents, and hardcoded `if/raise` inside individual services | `models.py:264`, `services.py:745`, `:875-880` | Open — **Phase 2A** |
 | F9 | S1 | `skip_advance_payment` is a **second, parallel** lifecycle-mutation path that bypasses `PaymentReportService` entirely | `dashboard_routes.py:1765-1799` | Open — Phase 2A |
 | F10 | S2 | **P2P dead-ends at goods receipt.** No supplier invoice, no AP, no payment-to-supplier entity. `PurchaseOrder` has no `paid_amount`/payment status | no such model | Open — **Phase 2C** |
@@ -62,6 +62,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F18 | S4 | No `table-responsive` on materials, PO, PR, GR, production lists → horizontal overflow on mobile with no scroll affordance | templates | Open — T12 |
 | F19 | S4 | 264 template lines carry un-`t()`-wrapped Vietnamese; whole procurement/production modules bypass i18n | templates | Open — T13 |
 | F20 | S4 | `payment/` (singular) and `payments/` (plural) template directories both exist for the same concept | dirs | Open — T14 |
+| F23 | S2 | `skip_advance_payment` sets `lifecycle.advance_paid = True` when **no money was received**, so advance-payment reporting counts skipped orders as paid. Now accompanied by an audited waiver; removing the false flag is a **business decision** — see §6 | `dashboard_routes.py:1844` | ⚠️ **Needs your decision** |
 | F21 | S4 | Missing screens: Orders has no edit; quotations/contracts/handover/payments have no list; GR has no create/edit form; stores/users have no view | inventory | Open — T15 (triage, not blanket CRUD) |
 
 ---
@@ -95,7 +96,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T2 | Scope `check_code` to the company | `dashboard_routes.py` | same file (2) | ✅ Done |
 | T3 | Extract `services/money.py`; wire all 7 call sites; honour `Company.vat_rate` | `money.py`, `dashboard_routes.py`, `auth_utils.py` | `test_money.py` (12) | ✅ Done |
 | T4 | Re-derive totals from copied items + restore single-active-contract invariant (F6, F22) | `dashboard_routes.py` | `test_contract_integrity.py` (2) | ✅ Done |
-| T5 | Recalculate handover total from **accepted** qty (F7) | `services.py` | new | Next |
+| T5 | ~~Handover accepted-qty total~~ — withdrawn, verified already correct | — | — | ❌ N/A |
 | T6 | Unique constraint on `MaterialStock(material_id, store_id)` + migration (F12) | model + migration | new | |
 | T7 | Tighten nullable FKs: PO→supplier, GR→PO (F13) | model + migration | new | |
 | T8 | Make tenant-scoped lookup the default in `BaseRepository` (F14) | `repository.py` | extend isolation tests | |
@@ -112,7 +113,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 
 | T | Task | Depends on |
 |---|---|---|
-| **2A** | **Workflow engine** (DA): `workflow_rules` table (per company: doc type, prerequisite, REQUIRED/OPTIONAL/WAIVABLE), `WorkflowService.can(order, action)`, migrate every scattered guard onto it, fold `skip_advance_payment` into an audited waiver, admin config screen | T8 |
+| **2A** | **Workflow engine** (DA) — ✅ **engine + rules + waivers + migration + 11 tests DONE**; service guards migrated; `skip_advance_payment` now records an audited waiver. ⬜ Remaining: admin config screen, order-view surfacing of warnings | T8 |
 | **2B** | **Data standardization** (4.1): `standardization_rules` per company/entity/field (UPPERCASE, Title Case, sentence case, trim, collapse spaces, phone/tax format); applied at the service boundary so every write path is covered; auto-apply vs confirm-on-apply flag | T3 |
 | **2C** | **HĐNT + Đơn đặt hàng** (DB): `master_agreements` table (validity, price list, payment terms, penalty cap ≤8% per LTM 2005 Đ.301, dispute clause, renewal), order→agreement reference, covered orders emit an Đơn đặt hàng citing the HĐNT instead of a full contract, DOCX template | 2A |
 | **2D** | **P2P close-the-loop** (DC): `supplier_invoices` + `supplier_payments`, 3-way match PO/GR/invoice, PO payment status, plus the F11/F13 integrity fixes | T6, T7 |
@@ -128,3 +129,33 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 4. **Preserve the product** — no feature removed without a stated reason.
 5. **Config over hardcoding**, but only where a real second case exists or is imminent.
 6. Schema changes are **reversible Alembic migrations**, Postgres-compatible, verified round-trip on SQLite.
+
+
+---
+
+## 6. Open decision for the owner
+
+### F23 — `advance_skipped` records a payment that never happened
+
+When an operator skips the advance payment, the code sets **both**
+`advance_skipped = True` **and** `advance_paid = True`
+([`dashboard_routes.py:1844`](app/routes/dashboard_routes.py)). The second flag is
+what unlocks the rest of the flow, but it is factually false — no money arrived.
+
+Consequence: any report or query that counts `advance_paid` treats a skipped
+order as a paid one. The advance-payment figures are overstated by exactly the
+number of skipped orders.
+
+The workflow engine now records an **audited waiver** (who, when, why) alongside
+these flags, which is additive and safe. Removing the false `advance_paid` is
+the correct fix, but it changes what existing templates and reports display, so
+it is your call:
+
+| Option | Effect |
+|---|---|
+| **A — Leave as is** | Nothing changes. Advance reporting stays overstated. |
+| **B — Stop setting `advance_paid`; let the waiver unlock the flow** | Reports become truthful. Requires auditing every reader of `advance_paid` (templates, reports, `can_*` guards) and a data migration to correct historical rows. |
+| **C — Keep the flag but exclude skipped orders from money reports** | Smallest truthful fix: reporting filters `advance_skipped == False`. Flow logic untouched. |
+
+Recommendation: **C** now (cheap, makes the numbers correct), **B** later if the
+lifecycle flags are ever normalised.
