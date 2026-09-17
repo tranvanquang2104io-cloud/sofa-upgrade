@@ -7,7 +7,7 @@
 <tr class="line-row">
   <td>
     <select name="line_material_id[]" class="form-select form-select-sm line-mat" onchange="lineMatChanged(this)">
-      <option value="">— chọn vật tư —</option>
+      <option value="">{{ t('-- select material --') }}</option>
       {% for m in materials %}
         <option value="{{ m.id }}" data-unit="{{ m.unit.name if m.unit else '' }}" data-price="{{ m.unit_price|float }}"
           {% if ln and (ln.material_id|string) == (m.id|string) %}selected{% endif %}>{{ m.material_code }} — {{ m.name }}</option>
@@ -29,15 +29,15 @@
 <div class="table-responsive">
 <table class="table table-sm align-middle" id="lineTable">
   <thead class="table-light"><tr>
-    <th>Vật tư</th><th style="width:110px">Số lượng</th><th style="width:100px">ĐVT</th>
-    {% if with_price %}<th style="width:140px">Đơn giá</th>{% endif %}<th style="width:40px"></th>
+    <th>{{ t('Material') }}</th><th style="width:110px">{{ t('Quantity') }}</th><th style="width:100px">{{ t('Unit') }}</th>
+    {% if with_price %}<th style="width:140px">{{ t('Unit Price') }}</th>{% endif %}<th style="width:40px"></th>
   </tr></thead>
   <tbody id="lineBody">
     {% for ln in existing_lines %}{{ line_row(materials, with_price, ln) }}{% endfor %}
   </tbody>
 </table>
 </div>
-<button type="button" class="btn btn-outline-primary btn-sm" onclick="addLine()"><i class="bi bi-plus-lg"></i> Thêm dòng</button>
+<button type="button" class="btn btn-outline-primary btn-sm" onclick="addLine()"><i class="bi bi-plus-lg"></i> {{ t('Add Line') }}</button>
 
 <template id="lineTpl">{{ line_row(materials, with_price, none) }}</template>
 <script>

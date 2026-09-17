@@ -27,10 +27,10 @@
         <div>
           <span class="fw-bold">Số KH: {{ plan.plan_number }}</span>
           {{ status_badge(plan.status, 'production') }}
-          {% if plan.is_delayed %}<span class="badge bg-danger ms-1"><i class="bi bi-clock-history"></i> Trễ tiến độ</span>{% endif %}
+          {% if plan.is_delayed %}<span class="badge bg-danger ms-1"><i class="bi bi-clock-history"></i> {{ t('Behind schedule') }}</span>{% endif %}
         </div>
         <a href="{{ url_for('dashboard.print_production_plan', plan_id=plan.id) }}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-printer"></i> In lệnh sản xuất
+          <i class="bi bi-printer"></i> {{ t('Print production order') }}
         </a>
       </div>
       <hr class="my-2">
@@ -46,7 +46,7 @@
         <form method="POST" action="{{ url_for('dashboard.issue_plan_materials', plan_id=plan.id) }}" class="d-inline"
               onsubmit="return confirm('Cấp phát vật tư và trừ kho?');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up"></i> Cấp phát (trừ kho)</button>
+          <button class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up"></i> {{ t('Issue materials (deduct stock)') }}</button>
         </form>
         {% endif %}
         <form method="POST" action="{{ url_for('dashboard.production_plan_delay', plan_id=plan.id) }}" class="d-inline">
@@ -114,8 +114,7 @@
   {# Add material — only while the plan is still a draft (before it is approved/chốt) #}
   {% if not plan.can_edit() %}
     <div class="alert alert-secondary py-2 mt-3 mb-0">
-      <i class="bi bi-lock"></i> Kế hoạch đã được <strong>chốt</strong> (duyệt). Danh mục vật tư đã khóa,
-      không thể thêm/xóa. Muốn chỉnh sửa lại, hãy dùng <em>“Từ chối (làm lại)”</em> để đưa về trạng thái sản xuất.
+      <i class="bi bi-lock"></i> {{ t('The plan is approved and locked. The material list can no longer be changed. To edit it again, use "Reject (rework)" to return it to production status.') }}
     </div>
   {% else %}
   <div class="card mt-3">
@@ -142,7 +141,7 @@
           <input type="number" step="0.01" min="0" class="form-control" name="quantity_required" value="0">
         </div>
         <div class="col-md-2">
-          <label class="form-label">ĐVT</label>
+          <label class="form-label">{{ t('Unit') }}</label>
           <select class="form-select" name="unit">
             <option value="">--</option>
             {% for u in units %}<option value="{{ u.name }}">{{ u.name }}</option>{% endfor %}

@@ -3,15 +3,15 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="mb-0"><i class="bi bi-box-seam text-success"></i> Phiếu nhập kho (GR)</h1>
-  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bag-check"></i> Đơn mua hàng</a>
+  <h1 class="mb-0"><i class="bi bi-box-seam text-success"></i> {{ t('Goods Receipt (GR)') }}</h1>
+  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bag-check"></i> {{ t('Purchase Orders') }}</a>
 </div>
 <p class="text-muted">Phiếu nhập kho được tạo khi <strong>nhận hàng</strong> từ một đơn mua. Mỗi lần nhận (kể cả nhận một phần) là một phiếu.</p>
 
 {% if grs %}
 <div class="table-responsive">
 <table class="table table-bordered table-sm align-middle">
-  <thead class="table-light"><tr><th>Số phiếu</th><th>Ngày nhận</th><th>Đơn mua</th><th>Kho nhập</th><th class="text-center">Số dòng</th><th></th></tr></thead>
+  <thead class="table-light"><tr><th>{{ t('Document No.') }}</th><th>{{ t('Received Date') }}</th><th>{{ t('Purchase Order') }}</th><th>{{ t('Receiving Store') }}</th><th class="text-center">{{ t('Lines') }}</th><th></th></tr></thead>
   <tbody>
   {% for gr in grs %}
     <tr>
@@ -28,6 +28,6 @@
 {% include '_pagination.html' %}
 </div>
 {% else %}
-<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có phiếu nhập kho nào. Vào một <strong>đơn mua đã gửi NCC</strong> và bấm <strong>Nhập kho</strong>.</div>
+<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có phiếu nhập kho nào. Vào một <strong>đơn mua đã gửi NCC</strong> và bấm <strong>{{ t('Receive Goods') }}</strong>.</div>
 {% endif %}
 {% endblock %}

@@ -14,23 +14,23 @@
     <div class="col-md-4">
       <label class="form-label">{{ t('Supplier') }}</label>
       <select class="form-select" name="supplier_id">
-        <option value="">— chưa gán —</option>
+        <option value="">{{ t('-- not assigned --') }}</option>
         {% for s in suppliers %}<option value="{{ s.id }}" {% if po and po.supplier_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-3">
-      <label class="form-label">Kho nhập về</label>
+      <label class="form-label">{{ t('Receiving Store') }}</label>
       <select class="form-select" name="store_id">
-        <option value="">Kho chính (công ty)</option>
+        <option value="">{{ t('Main warehouse (company)') }}</option>
         {% for s in stores %}<option value="{{ s.id }}" {% if po and po.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-2">
-      <label class="form-label">Ngày đặt</label>
+      <label class="form-label">{{ t('Order Date') }}</label>
       <input type="date" class="form-control" name="order_date" value="{{ po.order_date.isoformat() if po and po.order_date else '' }}">
     </div>
     <div class="col-md-2">
-      <label class="form-label">Giao dự kiến</label>
+      <label class="form-label">{{ t('Expected Delivery') }}</label>
       <input type="date" class="form-control" name="expected_date" value="{{ po.expected_date.isoformat() if po and po.expected_date else '' }}">
     </div>
     <div class="col-md-1">
@@ -44,7 +44,7 @@
   </div></div>
 
   <div class="card mb-3">
-    <div class="card-header">Vật tư đặt mua</div>
+    <div class="card-header">{{ t('Materials ordered') }}</div>
     <div class="card-body">
       {% set with_price = True %}
       {% include 'procurement/_material_lines_editor.html' %}

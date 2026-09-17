@@ -29,24 +29,24 @@
   <form method="POST" action="{{ url_for('dashboard.convert_requisition', pr_id=pr.id) }}"
         onsubmit="return confirm('Tạo đơn mua (PO) từ đề nghị này, gộp theo nhà cung cấp?');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn-sm btn-primary"><i class="bi bi-cart-check"></i> Tạo đơn mua (PO)</button>
+    <button class="btn btn-sm btn-primary"><i class="bi bi-cart-check"></i> {{ t('Create Purchase Order') }}</button>
   </form>
   {% endif %}
 </div>
 
 <div class="card mb-3"><div class="card-body">
   <div class="row">
-    <div class="col-md-6"><strong>Tiêu đề:</strong> {{ pr.title or '—' }}</div>
-    <div class="col-md-3"><strong>Kho cần:</strong> {{ pr.store.name if pr.store else '—' }}</div>
-    <div class="col-md-3"><strong>Ngày đề nghị:</strong> {{ pr.request_date.strftime('%d/%m/%Y') if pr.request_date else '—' }}</div>
+    <div class="col-md-6"><strong>{{ t('Title') }}:</strong> {{ pr.title or '—' }}</div>
+    <div class="col-md-3"><strong>{{ t('Requesting Store') }}:</strong> {{ pr.store.name if pr.store else '—' }}</div>
+    <div class="col-md-3"><strong>{{ t('Requested Date') }}:</strong> {{ pr.request_date.strftime('%d/%m/%Y') if pr.request_date else '—' }}</div>
   </div>
   {% if pr.notes %}<div class="mt-2"><strong>{{ t('Notes') }}:</strong> {{ pr.notes }}</div>{% endif %}
 </div></div>
 
-<h5>Vật tư đề nghị</h5>
+<h5>{{ t('Materials requested') }}</h5>
 <div class="table-responsive">
 <table class="table table-bordered table-sm align-middle">
-  <thead class="table-light"><tr><th>Mã</th><th>Tên vật tư</th><th class="text-end">Số lượng</th><th>ĐVT</th><th>Ghi chú</th></tr></thead>
+  <thead class="table-light"><tr><th>{{ t('Code') }}</th><th>{{ t('Material Name') }}</th><th class="text-end">{{ t('Quantity') }}</th><th>{{ t('Unit') }}</th><th>{{ t('Notes') }}</th></tr></thead>
   <tbody>
   {% for ln in pr.lines %}
     <tr>
@@ -57,7 +57,7 @@
       <td>{{ ln.notes or '' }}</td>
     </tr>
   {% else %}
-    <tr><td colspan="5" class="text-muted">Chưa có dòng vật tư nào.</td></tr>
+    <tr><td colspan="5" class="text-muted">{{ t('No material lines yet.') }}</td></tr>
   {% endfor %}
   </tbody>
 </table>

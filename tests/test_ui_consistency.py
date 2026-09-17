@@ -176,3 +176,67 @@ def test_ui_macros_are_imported_with_context():
         "macros/ui.html must be imported `with context`, or the helpers it "
         f"calls (t, status_meta, token_class) are undefined: {offenders}"
     )
+
+
+# --- i18n -----------------------------------------------------------------
+
+def test_procurement_templates_have_no_bare_vietnamese_headings():
+    """Procurement/production were built outside the i18n discipline.
+
+    This catches a LABEL left as raw Vietnamese — a heading, column header,
+    button or field label that sits alone inside an element.
+
+    Deliberately NOT covered: sentence FRAGMENTS, i.e. prose split across
+    inline tags such as `... đơn mua đã gửi NCC <strong>và bấm</strong> ...`.
+    Those cannot be translated piece by piece, because word order differs
+    between the two languages — translating "và bấm" alone would produce
+    nonsense in English. Fixing them means rewriting the sentence to hold a
+    single t() call, which is a copy change, not a mechanical one. Tracked as
+    T13-remainder.
+    """
+    import re
+
+    diacritics = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđĐ'
+    # text that is the WHOLE content of an element and is short (a label)
+    pattern = re.compile(r'>\s*([^<>{}]{1,24})\s*<')
+
+    offenders = []
+    for sub in ('procurement', 'production'):
+        for path in sorted((TEMPLATES / sub).glob('*.html')):
+            text = io.open(path, encoding='utf-8').read()
+            for match in pattern.finditer(text):
+                label = match.group(1).strip()
+                if not label or '{{' in label:
+                    continue
+                if not any(ch in diacritics for ch in label):
+                    continue
+                # A fragment continues a sentence started outside this tag:
+                # it begins lower-case and is not a standalone label.
+                if label[0].islower():
+                    continue
+                offenders.append(f"{path.name}: {label!r}")
+
+    assert offenders == [], (
+        "these short labels are still hardcoded Vietnamese instead of going "
+        f"through t(): {offenders}"
+    )
+
+
+def test_every_translation_key_used_in_procurement_templates_exists():
+    """A t('...') call with no entry renders the English key to a VI user."""
+    import re
+    from app.utils.i18n import TRANSLATIONS
+
+    vi = TRANSLATIONS['vi']
+    missing = []
+    for sub in ('procurement', 'production'):
+        for path in sorted((TEMPLATES / sub).glob('*.html')):
+            text = io.open(path, encoding='utf-8').read()
+            # only Jinja calls, not JS like createElement('tr')
+            for key in re.findall(r"\{\{-?\s*t\('([^']+)'\)", text):
+                if key not in vi:
+                    missing.append(f"{path.name}: {key!r}")
+
+    assert missing == [], (
+        f"these t() keys have no Vietnamese translation registered: {missing}"
+    )

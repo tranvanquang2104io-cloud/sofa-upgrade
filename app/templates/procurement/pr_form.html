@@ -12,22 +12,22 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="card mb-3"><div class="card-body row g-3">
     <div class="col-md-5">
-      <label class="form-label">Tiêu đề / lý do</label>
+      <label class="form-label">{{ t('Title / Reason') }}</label>
       <input type="text" class="form-control" name="title" value="{{ pr.title if pr else '' }}" placeholder="VD: Bổ sung vật tư dự phòng Q3">
     </div>
     <div class="col-md-3">
-      <label class="form-label">Kho / cửa hàng cần</label>
+      <label class="form-label">{{ t('Requesting Store') }}</label>
       <select class="form-select" name="store_id">
-        <option value="">— không xác định —</option>
+        <option value="">{{ t('-- not specified --') }}</option>
         {% for s in stores %}<option value="{{ s.id }}" {% if pr and pr.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-2">
-      <label class="form-label">Ngày đề nghị</label>
+      <label class="form-label">{{ t('Requested Date') }}</label>
       <input type="date" class="form-control" name="request_date" value="{{ pr.request_date.isoformat() if pr and pr.request_date else '' }}">
     </div>
     <div class="col-md-2">
-      <label class="form-label">Cần trước ngày</label>
+      <label class="form-label">{{ t('Needed By') }}</label>
       <input type="date" class="form-control" name="expected_date" value="{{ pr.expected_date.isoformat() if pr and pr.expected_date else '' }}">
     </div>
     <div class="col-12">
@@ -38,10 +38,10 @@
 
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <span>Vật tư đề nghị mua</span>
+      <span>{{ t('Materials requested') }}</span>
       {% if not pr %}
       <a href="{{ url_for('dashboard.create_requisition', **{'from':'suggestions'}) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-magic"></i> Điền từ đề xuất tự động
+        <i class="bi bi-magic"></i> {{ t('Fill from auto suggestions') }}
       </a>{% endif %}
     </div>
     <div class="card-body">

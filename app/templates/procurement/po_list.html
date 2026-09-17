@@ -6,22 +6,22 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="mb-0"><i class="bi bi-bag-check text-primary"></i> Đơn mua hàng (PO)</h1>
+  <h1 class="mb-0"><i class="bi bi-bag-check text-primary"></i> {{ t('Purchase Orders (PO)') }}</h1>
   <div class="d-flex gap-2">
     <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-clipboard-check"></i> Đề nghị mua (PR)
+      <i class="bi bi-clipboard-check"></i> {{ t('Requisitions (PR)') }}
     </a>
     <a href="{{ url_for('dashboard.list_goods_receipts') }}" class="btn btn-outline-success btn-sm">
-      <i class="bi bi-box-seam"></i> Nhập kho (GR)
+      <i class="bi bi-box-seam"></i> {{ t('Goods Receipts (GR)') }}
     </a>
     <a href="{{ url_for('dashboard.create_purchase_order') }}" class="btn btn-success btn-sm">
-      <i class="bi bi-plus-lg"></i> Tạo đơn mua
+      <i class="bi bi-plus-lg"></i> {{ t('Create Purchase Order') }}
     </a>
   </div>
 </div>
 
 <div class="mb-3">
-  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-sm {{ 'btn-primary' if not status else 'btn-outline-secondary' }}">Tất cả</a>
+  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-sm {{ 'btn-primary' if not status else 'btn-outline-secondary' }}">{{ t('All') }}</a>
   {% for s, lb in labels.items() %}
   <a href="{{ url_for('dashboard.list_purchase_orders', status=s) }}" class="btn btn-sm {{ 'btn-primary' if status == s else 'btn-outline-secondary' }}">{{ lb }}</a>
   {% endfor %}
@@ -35,7 +35,7 @@
 <div class="table-responsive">
 <table class="table table-bordered table-sm align-middle">
   <thead class="table-light"><tr>
-    <th>Số PO</th><th>Nhà cung cấp</th><th>Ngày đặt</th><th class="text-end">Tổng tiền</th><th>Trạng thái</th><th></th>
+    <th>{{ t('PO No.') }}</th><th>{{ t('Supplier') }}</th><th>{{ t('Order Date') }}</th><th class="text-end">{{ t('Total Amount') }}</th><th>{{ t('Status') }}</th><th></th>
   </tr></thead>
   <tbody>
   {% for po in pos %}
@@ -53,6 +53,6 @@
 </div>
 {% include '_pagination.html' %}
 {% else %}
-<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đơn mua nào. Tạo từ <strong>Đề xuất mua hàng</strong> hoặc bấm <strong>Tạo đơn mua</strong>.</div>
+<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đơn mua nào. Tạo từ <strong>{{ t('Purchase suggestions') }}</strong> hoặc bấm <strong>{{ t('Create Purchase Order') }}</strong>.</div>
 {% endif %}
 {% endblock %}

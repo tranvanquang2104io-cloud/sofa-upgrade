@@ -25,26 +25,26 @@
     <button class="btn btn-sm btn-{{ act_colors.get(a,'secondary') }}">{{ act_labels.get(a, a) }}</button>
   </form>
   {% endfor %}
-  <a href="{{ url_for('dashboard.print_purchase_order', po_id=po.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i> In đơn đặt hàng</a>
+  <a href="{{ url_for('dashboard.print_purchase_order', po_id=po.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i> {{ t('Print Purchase Order') }}</a>
 </div>
 
 <div class="card mb-3"><div class="card-body row">
   <div class="col-md-4"><strong>{{ t('Supplier') }}:</strong> {{ po.supplier.name if po.supplier else '— chưa gán —' }}</div>
-  <div class="col-md-3"><strong>Kho nhập:</strong> {{ po.store.name if po.store else 'Kho chính' }}</div>
-  <div class="col-md-2"><strong>Ngày đặt:</strong> {{ po.order_date.strftime('%d/%m/%Y') if po.order_date else '—' }}</div>
-  <div class="col-md-3"><strong>Giao dự kiến:</strong> {{ po.expected_date.strftime('%d/%m/%Y') if po.expected_date else '—' }}</div>
-  {% if po.requisition %}<div class="col-12 mt-2"><strong>Nguồn:</strong>
+  <div class="col-md-3"><strong>{{ t('Receiving Store') }}:</strong> {{ po.store.name if po.store else 'Kho chính' }}</div>
+  <div class="col-md-2"><strong>{{ t('Order Date') }}:</strong> {{ po.order_date.strftime('%d/%m/%Y') if po.order_date else '—' }}</div>
+  <div class="col-md-3"><strong>{{ t('Expected Delivery') }}:</strong> {{ po.expected_date.strftime('%d/%m/%Y') if po.expected_date else '—' }}</div>
+  {% if po.requisition %}<div class="col-12 mt-2"><strong>{{ t('Source') }}:</strong>
     <a href="{{ url_for('dashboard.view_requisition', pr_id=po.requisition.id) }}">Đề nghị mua {{ po.requisition.pr_number }}</a></div>
   {% else %}<div class="col-12 mt-2 text-muted"><em>Đơn mua tạo trực tiếp (không từ đề nghị mua).</em></div>{% endif %}
   {% if po.notes %}<div class="col-12 mt-1"><strong>{{ t('Notes') }}:</strong> {{ po.notes }}</div>{% endif %}
 </div></div>
 
-<h5>Vật tư đặt mua</h5>
+<h5>{{ t('Materials ordered') }}</h5>
 <div class="table-responsive">
 <table class="table table-bordered table-sm align-middle">
   <thead class="table-light"><tr>
-    <th>Mã</th><th>Tên vật tư</th><th>ĐVT</th><th class="text-end">SL đặt</th>
-    <th class="text-end">Đã nhận</th><th class="text-end">Còn lại</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th>
+    <th>{{ t('Code') }}</th><th>{{ t('Material Name') }}</th><th>{{ t('Unit') }}</th><th class="text-end">{{ t('Qty Ordered') }}</th>
+    <th class="text-end">{{ t('Received') }}</th><th class="text-end">{{ t('Outstanding') }}</th><th class="text-end">{{ t('Unit Price') }}</th><th class="text-end">{{ t('Line Total') }}</th>
   </tr></thead>
   <tbody>
   {% for ln in po.lines %}
@@ -59,13 +59,13 @@
       <td class="text-end">{{ "{:,.0f}".format(ln.line_total|float) }}</td>
     </tr>
   {% else %}
-    <tr><td colspan="8" class="text-muted">Chưa có dòng vật tư nào.</td></tr>
+    <tr><td colspan="8" class="text-muted">{{ t('No material lines yet.') }}</td></tr>
   {% endfor %}
   </tbody>
   <tfoot>
-    <tr><th colspan="7" class="text-end">Cộng tiền hàng</th><th class="text-end">{{ "{:,.0f}".format(po.subtotal|float) }} đ</th></tr>
+    <tr><th colspan="7" class="text-end">{{ t('Subtotal') }}</th><th class="text-end">{{ "{:,.0f}".format(po.subtotal|float) }} đ</th></tr>
     <tr><th colspan="7" class="text-end">VAT ({{ po.vat_rate|float }}%)</th><th class="text-end">{{ "{:,.0f}".format(po.vat_amount|float) }} đ</th></tr>
-    <tr><th colspan="7" class="text-end">TỔNG CỘNG</th><th class="text-end text-primary">{{ "{:,.0f}".format(po.total_amount|float) }} đ</th></tr>
+    <tr><th colspan="7" class="text-end">{{ t('GRAND TOTAL') }}</th><th class="text-end text-primary">{{ "{:,.0f}".format(po.total_amount|float) }} đ</th></tr>
   </tfoot>
 </table>
 </div>
@@ -79,7 +79,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p class="text-muted">Nhập số lượng thực nhận đợt này — có thể nhận <strong>một phần</strong> và nhận thành <strong>nhiều đợt</strong>.</p>
       <table class="table table-sm align-middle">
-        <thead class="table-light"><tr><th>Vật tư</th><th class="text-end">Còn lại</th><th style="width:160px">SL nhận đợt này</th></tr></thead>
+        <thead class="table-light"><tr><th>{{ t('Material') }}</th><th class="text-end">{{ t('Outstanding') }}</th><th style="width:160px">{{ t('Qty Received Now') }}</th></tr></thead>
         <tbody>
         {% for ln in po.lines %}
           {% if ln.outstanding|float > 0 %}
@@ -94,15 +94,15 @@
       </table>
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
-          <label class="form-label">Nhập vào kho</label>
+          <label class="form-label">{{ t('Into Store') }}</label>
           <select class="form-select form-select-sm" name="store_id">
             <option value="">Kho chính (công ty){% if not po.store_id %} — mặc định{% endif %}</option>
             {% for s in stores %}<option value="{{ s.id }}" {% if po.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
           </select>
         </div>
-        <div class="col-md-3"><label class="form-label">Ngày nhận</label><input type="date" class="form-control form-control-sm" name="receipt_date"></div>
+        <div class="col-md-3"><label class="form-label">{{ t('Received Date') }}</label><input type="date" class="form-control form-control-sm" name="receipt_date"></div>
         <div class="col-md-3"><label class="form-label">{{ t('Notes') }}</label><input type="text" class="form-control form-control-sm" name="notes"></div>
-        <div class="col-md-2"><button class="btn btn-success w-100"><i class="bi bi-check-lg"></i> Nhập kho</button></div>
+        <div class="col-md-2"><button class="btn btn-success w-100"><i class="bi bi-check-lg"></i> {{ t('Receive Goods') }}</button></div>
       </div>
     </form>
   </div>
@@ -111,7 +111,7 @@
 
 {# ---- Receipts history ---- #}
 {% if po.receipts %}
-<h5>Lịch sử nhập kho</h5>
+<h5>{{ t('Goods receipt history') }}</h5>
 <ul class="list-group mb-3">
   {% for gr in po.receipts %}
   <li class="list-group-item d-flex justify-content-between">

@@ -60,7 +60,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F16 | S4 | Status badges rendered two different ways: inline `if/elif` chains (sales screens) vs a `colors.get()` dict from the view (procurement) | both | ✅ **FIXED** (T17) — one token map + macros |
 | F17 | S4 | Procurement lists returned `.all()` — every PO/PR/GR ever created on one page, no search | `procurement_service.py:232`, `requisition_service.py:118` | ✅ **FIXED** (T11) for PO/PR/GR; materials/documents/stores still open |
 | F18 | S4 | Tables with no `table-responsive` wrapper → horizontal overflow on phones. **Audit list was inaccurate** — `po_list`/`pr_list`/`gr_list`/`materials/list` already had it; `customers/list`, `customers/view`, `documents/list`, `dashboard/index`, `admin/admins`, 4× materials pages and `production/plan` did not (11 files, re-measured) | measured | ✅ **FIXED** (T12) + guard test |
-| F19 | S4 | 264 template lines carry un-`t()`-wrapped Vietnamese; whole procurement/production modules bypass i18n | templates | Open — T13 |
+| F19 | S4 | Procurement/production bypassed i18n entirely | templates | ✅ **Labels FIXED** (T13). ⬜ Remaining: `status_labels`/`action_labels` dicts passed from views, JS `confirm()` strings, and prose fragments split across inline tags — see T13-remainder |
 | F20 | S4 | `payment/` (singular) and `payments/` (plural) template directories both exist for the same concept | dirs | Open — T14 |
 | F23 | S4 | `skip_advance_payment` sets `lifecycle.advance_paid = True` when no money was received. **Scope corrected 2026-09-18:** money reports sum confirmed `PaymentReport` rows, NOT this flag, so financial figures were never wrong. The real defect is **display only** — the order timeline shows a green "advance paid ✓" for a skipped advance | `report_service.py:133-145` (correct), `orders/view.html:315`, `orders/list.html:46` | Open — T16 |
 | F24 | S2 | **Unreachable status badges.** `orders/list.html` tested `advance_paid` before `handover_confirmed`; every delivered order also has `advance_paid`, so the "Delivered" and "Contract Signed" branches were dead code — an order showed "Advance Paid" from delivery until fully paid | `orders/list.html:44-53` | ✅ **FIXED** (T17) |
@@ -87,6 +87,15 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 
 ## 4. Task ledger
 
+**T13-remainder (open):** three classes of Vietnamese string are still not
+translated, and each needs a judgement rather than a mechanical wrap:
+`status_labels`/`action_labels` dicts built in `production/plan.html` and in
+view functions; JavaScript `confirm()` messages; and prose split across inline
+tags, where translating a fragment like "và bấm" alone would be nonsense
+because word order differs between the languages — those sentences must be
+rewritten to hold a single `t()` call, which is a copy decision.
+
+
 One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 feature lands on an unstable base.**
 
 ### Phase 1 — Refactor the existing app
@@ -105,7 +114,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T17 | Shared status vocabulary + UI macro library; orders list converted (F16, F24, F23-display) | `status_tokens.py`, `macros/ui.html`, `style.css` | `test_status_tokens.py` (29) | ✅ Done |
 | T11 | Pagination + search on PO/PR/GR (F17): service-level `page`/`search`, shared `search_bar` macro, `_pagination.html`. Search on PO covers number **and supplier name**; verified still tenant-scoped | services + routes + templates | `test_procurement_lists.py` (8) | 🟡 PO/PR/GR done; materials/documents/stores remain |
 | T12 | Responsive wrapper on the 11 tables actually missing it + lint test so no new screen can opt out (F18) | 11 templates | `test_ui_consistency.py` (7) | ✅ Done |
-| T13 | i18n pass on procurement/production (F19) — status labels now route through `t()` via `status_badge`; remaining headings/buttons still hardcoded | templates + `i18n.py` | — | 🟡 Partial |
+| T13 | i18n pass on procurement/production (F19): **53 keys added, 99 strings wrapped**; one sentence split across `<strong>`/`<em>` rewritten as a single key. Guard test scans every template for bare Vietnamese labels | 10 templates + `i18n.py` | `test_ui_consistency.py` (22) | ✅ Labels done |
 | T14 | Merge `payment/` into `payments/` (F20) | templates | render tests | |
 | T15 | Triage missing screens (F21) — add only what the entity's lifecycle justifies | various | per screen | |
 | D1 | Refresh `CLAUDE.md` — CSRF/Alembic corrected, plus the new house rules (money module, status tokens, workflow engine, normalization chokepoint), real test commands, current data model and branch | `CLAUDE.md` | — | ✅ Done |
