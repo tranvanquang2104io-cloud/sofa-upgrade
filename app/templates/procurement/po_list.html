@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import status_badge with context %}
+{% from "macros/ui.html" import status_badge, search_bar, empty_state with context %}
 {% block title %}Đơn mua hàng - SofaFlow{% endblock %}
 
 {% set labels = {'draft':'Nháp','ordered':'Đã gửi NCC','partial':'Nhập một phần','received':'Đã nhập đủ','canceled':'Đã hủy'} %}
@@ -27,6 +27,10 @@
   {% endfor %}
 </div>
 
+{{ search_bar(url_for('dashboard.list_purchase_orders'), search_value=search,
+              placeholder='Search by PO number or supplier',
+              reset_url=url_for('dashboard.list_purchase_orders')) }}
+
 {% if pos %}
 <div class="table-responsive">
 <table class="table table-bordered table-sm align-middle">
@@ -47,6 +51,7 @@
   </tbody>
 </table>
 </div>
+{% include '_pagination.html' %}
 {% else %}
 <div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đơn mua nào. Tạo từ <strong>Đề xuất mua hàng</strong> hoặc bấm <strong>Tạo đơn mua</strong>.</div>
 {% endif %}

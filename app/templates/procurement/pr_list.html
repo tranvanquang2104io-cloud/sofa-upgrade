@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import status_badge with context %}
+{% from "macros/ui.html" import status_badge, search_bar with context %}
 {% block title %}Đề nghị mua hàng - SofaFlow{% endblock %}
 
 {% set labels = {'draft':'Nháp','submitted':'Chờ duyệt','approved':'Đã duyệt','converted':'Đã tạo PO','canceled':'Đã hủy'} %}
@@ -20,6 +20,10 @@
   {% endfor %}
 </div>
 
+{{ search_bar(url_for('dashboard.list_requisitions'), search_value=search,
+              placeholder='Search by PR number',
+              reset_url=url_for('dashboard.list_requisitions')) }}
+
 {% if prs %}
 <div class="table-responsive">
 <table class="table table-bordered table-sm align-middle">
@@ -38,6 +42,7 @@
   </tbody>
 </table>
 </div>
+{% include '_pagination.html' %}
 {% else %}
 <div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đề nghị mua nào. Bấm <strong>Tạo đề nghị mua</strong> hoặc điền từ <strong>Đề xuất tự động</strong>.</div>
 {% endif %}

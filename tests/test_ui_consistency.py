@@ -133,3 +133,46 @@ def test_shared_helpers_load_before_the_content_block():
         "sofa-doc-utils.js must be loaded before {% block content %}, since "
         "templates put their inline scripts inside that block"
     )
+
+
+UI_MACROS = ('page_header', 'status_badge', 'order_badge', 'process_stepper',
+             'search_bar', 'empty_state', 'table_open', 'table_close')
+
+
+def test_templates_import_every_ui_macro_they_call():
+    """Calling a macro without importing it is a render-time crash.
+
+    Jinja resolves macro names lazily, so a missing `{% from ... import %}`
+    only shows up when a user opens that exact page. This catches it at build
+    time instead.
+    """
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        if 'macros' in path.parts:      # the macro library defines them
+            continue
+        import_lines = '\n'.join(
+            l for l in text.splitlines() if 'macros/ui.html' in l)
+        for macro in UI_MACROS:
+            if f'{macro}(' in text and macro not in import_lines:
+                offenders.append(f"{path.relative_to(TEMPLATES)}:{macro}")
+
+    assert offenders == [], (
+        "these templates call a UI macro they never imported, so the page "
+        f"crashes when opened: {offenders}"
+    )
+
+
+def test_ui_macros_are_imported_with_context():
+    """`with context` is required: the macros use context-injected helpers."""
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        for line in text.splitlines():
+            if 'macros/ui.html' in line and 'import' in line \
+                    and 'with context' not in line:
+                offenders.append(str(path.relative_to(TEMPLATES)))
+    assert offenders == [], (
+        "macros/ui.html must be imported `with context`, or the helpers it "
+        f"calls (t, status_meta, token_class) are undefined: {offenders}"
+    )

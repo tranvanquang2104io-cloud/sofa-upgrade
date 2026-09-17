@@ -3346,8 +3346,14 @@ def _po_lists(company_id):
 def list_purchase_orders():
     company_id = get_current_company_id()
     from app.services.procurement_service import ProcurementService
-    pos = ProcurementService().list_pos(company_id, status=request.args.get('status') or None)
-    return render_template('procurement/po_list.html', pos=pos, status=request.args.get('status') or '')
+    status = request.args.get('status') or None
+    search = request.args.get('search') or None
+    page = request.args.get('page', 1, type=int)
+    pagination = ProcurementService().list_pos(
+        company_id, status=status, search=search, page=page)
+    return render_template('procurement/po_list.html',
+                           pos=pagination.items, pagination=pagination,
+                           status=status or '', search=search or '')
 
 
 def _po_header_from_form():
@@ -3525,8 +3531,14 @@ def _owned_pr(pr_id, company_id):
 def list_requisitions():
     company_id = get_current_company_id()
     from app.services.requisition_service import RequisitionService
-    prs = RequisitionService().list_prs(company_id, status=request.args.get('status') or None)
-    return render_template('procurement/pr_list.html', prs=prs, status=request.args.get('status') or '')
+    status = request.args.get('status') or None
+    search = request.args.get('search') or None
+    page = request.args.get('page', 1, type=int)
+    pagination = RequisitionService().list_prs(
+        company_id, status=status, search=search, page=page)
+    return render_template('procurement/pr_list.html',
+                           prs=pagination.items, pagination=pagination,
+                           status=status or '', search=search or '')
 
 
 @dashboard_bp.route('/requisitions/create', methods=['GET', 'POST'])
@@ -3635,7 +3647,9 @@ def convert_requisition(pr_id):
 def list_goods_receipts():
     company_id = get_current_company_id()
     from app.services.procurement_service import ProcurementService
-    grs = ProcurementService().list_grs(company_id)
+    page = request.args.get('page', 1, type=int)
+    gr_pagination = ProcurementService().list_grs(company_id, page=page)
+    grs = gr_pagination.items
     return render_template('procurement/gr_list.html', grs=grs)
 
 

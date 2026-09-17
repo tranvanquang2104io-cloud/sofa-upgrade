@@ -115,12 +115,23 @@ class RequisitionService:
         db.session.commit()
         return created
 
-    def list_prs(self, company_id, status=None):
+    def list_prs(self, company_id, status=None, search=None, page=None,
+                 per_page=20):
+        """Purchase requisitions for a company.
+
+        Returns a Pagination when ``page`` is given, else a plain list.
+        """
         from app.models.models import PurchaseRequisition
         q = PurchaseRequisition.query.filter_by(company_id=company_id)
         if status:
             q = q.filter_by(status=status)
-        return q.order_by(PurchaseRequisition.created_at.desc()).all()
+        if search:
+            term = f'%{search.strip()}%'
+            q = q.filter(PurchaseRequisition.pr_number.ilike(term))
+        q = q.order_by(PurchaseRequisition.created_at.desc())
+        if page:
+            return q.paginate(page=page, per_page=per_page, error_out=False)
+        return q.all()
 
     def get_pr(self, company_id, pr_id):
         from app.models.models import PurchaseRequisition

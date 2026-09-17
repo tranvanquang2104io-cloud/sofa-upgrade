@@ -58,7 +58,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F14 | S3 | `BaseRepository.get_by_id` is unscoped `query.get(id)`; a scoped variant exists for `Customer` only. Tenant safety depends entirely on every caller remembering | `repository.py:31-33` vs `:159` | Open — T8 |
 | F15 | S4 | Copy-pasted front-end helpers. **Measured:** `fmtNum` ×7, `numberToWordsVi` ×4, `parseRawFee` ×4 — all byte-identical (the two `parseRawFee` 'variants' differed only in a parameter name) | measured | ✅ **FIXED** (T9) — 15 inline copies removed |
 | F16 | S4 | Status badges rendered two different ways: inline `if/elif` chains (sales screens) vs a `colors.get()` dict from the view (procurement) | both | ✅ **FIXED** (T17) — one token map + macros |
-| F17 | S4 | No pagination on materials, PO, PR, GR, documents, stores lists; no search on orders, procurement, stores | templates | Open — T11 |
+| F17 | S4 | Procurement lists returned `.all()` — every PO/PR/GR ever created on one page, no search | `procurement_service.py:232`, `requisition_service.py:118` | ✅ **FIXED** (T11) for PO/PR/GR; materials/documents/stores still open |
 | F18 | S4 | Tables with no `table-responsive` wrapper → horizontal overflow on phones. **Audit list was inaccurate** — `po_list`/`pr_list`/`gr_list`/`materials/list` already had it; `customers/list`, `customers/view`, `documents/list`, `dashboard/index`, `admin/admins`, 4× materials pages and `production/plan` did not (11 files, re-measured) | measured | ✅ **FIXED** (T12) + guard test |
 | F19 | S4 | 264 template lines carry un-`t()`-wrapped Vietnamese; whole procurement/production modules bypass i18n | templates | Open — T13 |
 | F20 | S4 | `payment/` (singular) and `payments/` (plural) template directories both exist for the same concept | dirs | Open — T14 |
@@ -103,7 +103,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T8 | Make tenant-scoped lookup the default in `BaseRepository` (F14) | `repository.py` | extend isolation tests | |
 | T9 | Extract `static/js/sofa-doc-utils.js` (fmtNum · parseRawFee · numberToWordsVi); remove 15 inline copies; load in `<head>` to kill the ordering hazard (F15). `recalcAll` deliberately NOT extracted — its body genuinely differs per document type | 8 templates + js | `test_ui_consistency.py` (20) | ✅ Done |
 | T17 | Shared status vocabulary + UI macro library; orders list converted (F16, F24, F23-display) | `status_tokens.py`, `macros/ui.html`, `style.css` | `test_status_tokens.py` (29) | ✅ Done |
-| T11 | Pagination + search on the 6 lists that lack them (F17) | templates + routes | list tests | |
+| T11 | Pagination + search on PO/PR/GR (F17): service-level `page`/`search`, shared `search_bar` macro, `_pagination.html`. Search on PO covers number **and supplier name**; verified still tenant-scoped | services + routes + templates | `test_procurement_lists.py` (8) | 🟡 PO/PR/GR done; materials/documents/stores remain |
 | T12 | Responsive wrapper on the 11 tables actually missing it + lint test so no new screen can opt out (F18) | 11 templates | `test_ui_consistency.py` (7) | ✅ Done |
 | T13 | i18n pass on procurement/production (F19) — status labels now route through `t()` via `status_badge`; remaining headings/buttons still hardcoded | templates + `i18n.py` | — | 🟡 Partial |
 | T14 | Merge `payment/` into `payments/` (F20) | templates | render tests | |

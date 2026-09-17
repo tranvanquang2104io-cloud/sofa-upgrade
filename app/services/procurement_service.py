@@ -229,22 +229,43 @@ class ProcurementService:
         db.session.flush()
 
     # ---- queries ----------------------------------------------------------
-    def list_pos(self, company_id, status=None):
-        from app.models.models import PurchaseOrder
+    def list_pos(self, company_id, status=None, search=None, page=None,
+                 per_page=20):
+        """Purchase orders for a company.
+
+        Returns a Flask-SQLAlchemy Pagination when ``page`` is given, else a
+        plain list (kept so any other caller keeps working). Listing every row
+        was fine with a handful of POs and stops being fine well before a year
+        of real use.
+        """
+        from app.models.models import PurchaseOrder, Supplier
         q = PurchaseOrder.query.filter_by(company_id=company_id)
         if status:
             q = q.filter_by(status=status)
-        return q.order_by(PurchaseOrder.created_at.desc()).all()
+        if search:
+            term = f'%{search.strip()}%'
+            q = q.outerjoin(Supplier, PurchaseOrder.supplier_id == Supplier.id).filter(
+                db.or_(PurchaseOrder.po_number.ilike(term),
+                       Supplier.name.ilike(term))
+            )
+        q = q.order_by(PurchaseOrder.created_at.desc())
+        if page:
+            return q.paginate(page=page, per_page=per_page, error_out=False)
+        return q.all()
 
     def get_po(self, company_id, po_id):
         from app.models.models import PurchaseOrder
         po = PurchaseOrder.query.get(po_id)
         return po if po and str(po.company_id) == str(company_id) else None
 
-    def list_grs(self, company_id):
+    def list_grs(self, company_id, page=None, per_page=20):
+        """Goods receipts for a company; Pagination when ``page`` is given."""
         from app.models.models import GoodsReceipt
-        return (GoodsReceipt.query.filter_by(company_id=company_id)
-                .order_by(GoodsReceipt.created_at.desc()).all())
+        q = (GoodsReceipt.query.filter_by(company_id=company_id)
+             .order_by(GoodsReceipt.created_at.desc()))
+        if page:
+            return q.paginate(page=page, per_page=per_page, error_out=False)
+        return q.all()
 
     def get_gr(self, company_id, gr_id):
         from app.models.models import GoodsReceipt
