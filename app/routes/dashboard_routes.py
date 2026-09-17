@@ -763,8 +763,84 @@ def view_order(order_id):
     if not order_details:
         flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
-    
+
+    # Does a framework agreement (HĐNT) cover this customer? If so the order's
+    # "contract" step issues an Đơn đặt hàng citing it, instead of a whole new
+    # contract. No agreement => nothing changes for this order.
+    from app.models.models import OrderConfirmation
+    from app.services.agreement_service import (
+        DOC_ORDER_CONFIRMATION, AgreementService,
+    )
+    _order = order_details.get('order')
+    doc_kind, agreement = AgreementService.resolve_document_kind(_order)
+    order_details['document_kind'] = doc_kind
+    order_details['master_agreement'] = agreement
+    order_details['uses_agreement'] = (doc_kind == DOC_ORDER_CONFIRMATION)
+    order_details['order_confirmation'] = OrderConfirmation.query.filter_by(
+        order_id=_order.id, is_active=True).first()
+
     return render_template('orders/view.html', **order_details)
+
+
+@dashboard_bp.route('/orders/<order_id>/order-confirmation', methods=['POST'])
+@login_required
+def issue_order_confirmation(order_id):
+    """Issue an ĐƠN ĐẶT HÀNG for an order covered by a framework agreement.
+
+    Replaces the full-contract step for that order. Item prices come from the
+    agreement's price list where it covers them, and are snapshotted onto the
+    document so a later price revision cannot rewrite it.
+    """
+    from app.services.agreement_service import (
+        DOC_ORDER_CONFIRMATION, AgreementService,
+    )
+
+    company_id = get_current_company_id()
+    order = OrderService().get_order(order_id, company_id)
+    if not order:
+        flash(t('Order not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+
+    doc_kind, agreement = AgreementService.resolve_document_kind(order)
+    if doc_kind != DOC_ORDER_CONFIRMATION or agreement is None:
+        flash(t('This customer has no active framework agreement — create a contract instead'),
+              'error')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
+
+    quotation = next((q for q in order.quotations
+                      if q.is_active and not q.is_canceled and q.is_approved), None)
+    if quotation is None:
+        flash(t('An approved quotation is needed to issue an order confirmation'),
+              'error')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
+
+    try:
+        confirmation = AgreementService.create_confirmation(
+            order=order,
+            agreement=agreement,
+            items=list(quotation.items or []),
+            confirmation_number=(request.form.get('confirmation_number') or '').strip()
+                                or f"DDH-{order.order_code}",
+            confirmation_date=_parse_date(request.form.get('confirmation_date')),
+            quotation_id=quotation.id,
+            vat_rate=quotation.vat_rate,
+            shipping_fee=quotation.shipping_fee or 0,
+            another_fee=quotation.another_fee or 0,
+            delivery_date=_parse_date(request.form.get('delivery_date')),
+            delivery_address=request.form.get('delivery_address') or None,
+            company=get_current_company(),
+        )
+        AgreementService.confirm(confirmation)
+        flash(t('Order confirmation issued under framework agreement %(n)s')
+              .replace('%(n)s', agreement.agreement_number), 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error("Error issuing order confirmation: %s", e)
+        db.session.rollback()
+        flash(t('Error issuing order confirmation'), 'error')
+
+    return redirect(url_for('dashboard.view_order', order_id=order_id))
 
 
 # ===== QUOTATIONS =====

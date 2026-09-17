@@ -637,9 +637,35 @@
                     
                     {% set active_contract = order.contracts|selectattr('is_active')|list|first %}
                     {% if lifecycle.quotation_approved and not active_contract %}
-                    <a href="{{ url_for('dashboard.create_contract', order_id=order.id) }}" class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Create Contract
-                    </a>
+                      {% if uses_agreement and not order_confirmation %}
+                      {# A framework agreement covers this customer, so the order
+                         is executed by an Don dat hang citing it rather than by
+                         a second full contract. #}
+                      <div class="alert alert-info py-2 px-3 mb-2 small">
+                        <i class="bi bi-file-earmark-text"></i>
+                        {{ t('Covered by framework agreement') }}
+                        <a href="{{ url_for('dashboard.view_agreement', agreement_id=master_agreement.id) }}">
+                          {{ master_agreement.agreement_number }}</a>
+                      </div>
+                      <form method="POST" action="{{ url_for('dashboard.issue_order_confirmation', order_id=order.id) }}" class="d-grid">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary">
+                          <i class="bi bi-plus"></i> {{ t('Issue Order Confirmation') }}
+                        </button>
+                      </form>
+                      {% elif not uses_agreement %}
+                      <a href="{{ url_for('dashboard.create_contract', order_id=order.id) }}" class="btn btn-primary">
+                          <i class="bi bi-plus"></i> {{ t('Create Contract') }}
+                      </a>
+                      {% endif %}
+                    {% endif %}
+
+                    {% if order_confirmation %}
+                    <div class="alert alert-success py-2 px-3 mb-2 small">
+                      <i class="bi bi-check-circle"></i>
+                      {{ t('Order Confirmation') }} <strong>{{ order_confirmation.confirmation_number }}</strong>
+                      &mdash; {{ order_confirmation.cited_agreement_number }}
+                    </div>
                     {% endif %}
                     
                     {% if lifecycle.contract_signed and not lifecycle.advance_paid %}
