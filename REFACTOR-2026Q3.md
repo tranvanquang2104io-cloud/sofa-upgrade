@@ -1,8 +1,56 @@
 # SofaFlow — Refactor & Product Enhancement (2026 Q3)
 
-> Master plan + task ledger for the refactor/enhancement program.
-> Branch: `refactor/sofa-upgrade-2026q3`. Baseline: v1.8.0, suite **107 passed / 1 xfailed**.
-> Prior work in `AUDIT/` (security, CSRF, Alembic, per-tenant numbering) is **done and preserved** — this program builds on it, it does not redo it.
+## STATUS: Phase 1 and Phase 2 complete, except F11 phase 2 (awaiting your review)
+
+| | |
+|---|---|
+| Branch | `refactor/sofa-upgrade-2026q3` — 24 commits, not merged |
+| Tests | **108 → 409**, 0 failures at every commit |
+| Migrations | 6 added (19 total); a fresh database builds all 42 tables from empty |
+| Code | 95 files, +10,783 / −400 |
+
+**Verified, not assumed** (re-checked against the code after the work, not from
+these notes): the two tenant filters are present, zero hardcoded VAT rates
+remain in the routes, zero inline `fmtNum` copies remain in templates, zero
+local status-colour maps remain, the duplicate `payment/` directory is gone,
+and `alembic upgrade head` on an empty database produces the full schema.
+
+### Requirements
+
+| # | Requirement | State |
+|---|---|---|
+| 4.1 | Configurable data standardization | ✅ engine + rules + admin screen with live preview |
+| 4.2 | Flexible / configurable workflow | ✅ per-company rules table + audited waivers + admin screen |
+| 4.3 | HỢP ĐỒNG NGUYÊN TẮC | ✅ agreement + price list + ĐƠN ĐẶT HÀNG, reachable from the order |
+| 4.4 | P2P review & completion | ✅ supplier invoice + payment + 3-way match + screens |
+| 4.5 | Other SME capabilities | ✅ [`SME-GAPS.md`](SME-GAPS.md) — 10 gaps, evidence-based |
+
+### Defects found and fixed (each reproduced by a failing test first)
+
+1. **Cross-tenant document numbering** — `/api/next-code` computed the next number across *all* companies; `/api/check-code` reported a number taken when another company used it.
+2. **PostgreSQL-only SQL** in the same endpoint — 500 on any other backend, and untestable on the SQLite suite.
+3. **Contract value 0.00** against items worth 10,000,000 when created from a quotation with no form items.
+4. **Single-active-contract invariant bypassed** — the route wrote via the repository, so an order could hold two active contracts and fee lookups picked an arbitrary one.
+5. **Unreachable status badges** — `advance_paid` tested before `handover_confirmed`, so "Delivered" and "Contract Signed" were dead branches.
+6. **Duplicate company-level stock rows** — the unique constraint never covered `store_id IS NULL`; proven with a live probe.
+7. **A purchase order could be sent with no supplier**, and could then never be invoiced.
+8. **`Company.vat_rate` was dead configuration** — every call site hardcoded `or 8`.
+
+### Corrections I made to my own earlier claims
+
+* **F23** — I reported that skipped advances inflated the payment reports. Wrong: every money figure sums confirmed `PaymentReport` rows and never reads the lifecycle flag. The defect was display-only.
+* **F12** — the audit said `MaterialStock` had no unique constraint. It has one; the real gap was that SQL treats NULLs as distinct.
+* **F14** — the audit implied active IDOR. A sweep of all 14 detail routes found **zero leaks**; it is a latent hazard, so I added the safe lookup and a permanent sweep instead of a risky mass refactor.
+* **F18** — the reported list of tables missing `table-responsive` was wrong in both directions; I re-measured.
+* **F7** — withdrawn entirely; handover totals already price by accepted quantity.
+
+### Conventions now enforced by tests, not documentation
+
+No template may define its own status colour map or status label dict · every
+table must sit in a responsive wrapper · every template must import the UI
+macros it calls, `with context` · no `confirm()` may hold bare Vietnamese · no
+template may redefine a shared JS helper · no singular/plural duplicate
+directories · no detail route may leak another tenant's record.
 
 ---
 
