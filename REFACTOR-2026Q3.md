@@ -188,7 +188,9 @@ migration usually goes wrong: a bulk auto-merge quietly combines two real
 products, and un-merging afterwards means editing historical documents. So the
 order is deliberate.
 
-**Phase 1 — shipped, changes nothing.** The `products` table exists and
+**Phase 1 — shipped, changes nothing.** The `products` table exists, the
+report is visible at **`/products/reconcile`** (company-admin only, since it
+exposes every product name and price the company has quoted), and
 `product_service.reconcile(company_id)` reports what is actually in the data:
 every distinct product name across quotations, contracts, handover records and
 order confirmations, plus every `MaterialNorm.product_key`, grouped by a fuzzy
@@ -204,6 +206,13 @@ touched.
   or one product typed carelessly, and guessing wrong is expensive.
 * Where a group shows a price spread, is that a price change over time, a
   customer-specific price, or a typo?
+
+The screen answers both visually: spelling variants are listed with their
+counts, a price range shows in amber when one product has been sold at more
+than one price, and a "needs review" filter narrows to just the ambiguous
+groups. Creating a product is one row at a time, and the suggested name is
+editable before it becomes master data — the most common spelling is a good
+guess, not necessarily the right one.
 
 Once the list is agreed, phase 2 points line items and material norms at
 `product_id`, keeping the free-text name on each line for one-off custom work.

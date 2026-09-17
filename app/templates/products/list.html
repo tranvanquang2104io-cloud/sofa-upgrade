@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, search_bar, empty_state, table_open, table_close with context %}
+{% block title %}{{ t('Products') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Products'), icon='bi-box',
+               count=(pagination.total if pagination else 0),
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Products'), None)],
+               action_url=url_for('dashboard.reconcile_products'),
+               action_label=t('Reconcile from documents'),
+               action_icon='bi-search') }}
+
+{{ search_bar(url_for('dashboard.list_products'), search_value=search,
+              placeholder='Search by name or code',
+              reset_url=url_for('dashboard.list_products')) }}
+
+{% if products %}
+{{ table_open() }}
+  <thead class="table-light">
+    <tr>
+      <th>{{ t('Code') }}</th>
+      <th>{{ t('Product name') }}</th>
+      <th>{{ t('Unit') }}</th>
+      <th class="text-end">{{ t('Default price') }}</th>
+      <th>{{ t('Source') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in products %}
+    <tr>
+      <td><code>{{ p.product_code }}</code></td>
+      <td>{{ p.name }}</td>
+      <td>{{ p.unit or '' }}</td>
+      <td class="text-end">
+        {% if p.default_price %}{{ "{:,.0f}".format(p.default_price|float) }} đ{% else %}—{% endif %}
+      </td>
+      <td>
+        {% if p.source == 'reconciled' %}
+          <span class="badge bg-secondary">{{ t('From documents') }}</span>
+        {% else %}
+          <span class="badge bg-light text-dark">{{ t('Manual') }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+{{ table_close() }}
+{% include '_pagination.html' %}
+{% else %}
+{{ empty_state('No products yet. Start from the names already in your documents.',
+               icon='bi-box',
+               action_url=url_for('dashboard.reconcile_products'),
+               action_label='Reconcile from documents') }}
+{% endif %}
+{% endblock %}
