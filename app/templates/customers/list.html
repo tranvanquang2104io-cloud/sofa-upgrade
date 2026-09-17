@@ -42,7 +42,7 @@
 <div class="card">
     <div class="card-body">
         {% if customers %}
-            <table class="table table-hover">
+            <div class="table-responsive"><table class="table table-hover">
                 <thead>
                     <tr>
                         <th>{{ t('Customer Code') }}</th>
@@ -72,7 +72,7 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+            </table></div>
             {% include '_pagination.html' %}
         {% else %}
             <p class="text-muted">{{ t('No customers found.') }} <a href="{{ url_for('dashboard.create_customer') }}">{{ t('Add one') }}</a></p>

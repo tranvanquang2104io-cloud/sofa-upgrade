@@ -59,7 +59,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F15 | S4 | `recalcAll()` copy-pasted across 7 templates; image-preview logic across 6; 3 separate line-editor implementations. `static/js/main.js` is 25 lines and effectively unused | templates | Open — T9 |
 | F16 | S4 | Status badges rendered two different ways: inline `if/elif` chains (sales screens) vs a `colors.get()` dict from the view (procurement) | both | ✅ **FIXED** (T17) — one token map + macros |
 | F17 | S4 | No pagination on materials, PO, PR, GR, documents, stores lists; no search on orders, procurement, stores | templates | Open — T11 |
-| F18 | S4 | No `table-responsive` on materials, PO, PR, GR, production lists → horizontal overflow on mobile with no scroll affordance | templates | Open — T12 |
+| F18 | S4 | Tables with no `table-responsive` wrapper → horizontal overflow on phones. **Audit list was inaccurate** — `po_list`/`pr_list`/`gr_list`/`materials/list` already had it; `customers/list`, `customers/view`, `documents/list`, `dashboard/index`, `admin/admins`, 4× materials pages and `production/plan` did not (11 files, re-measured) | measured | ✅ **FIXED** (T12) + guard test |
 | F19 | S4 | 264 template lines carry un-`t()`-wrapped Vietnamese; whole procurement/production modules bypass i18n | templates | Open — T13 |
 | F20 | S4 | `payment/` (singular) and `payments/` (plural) template directories both exist for the same concept | dirs | Open — T14 |
 | F23 | S4 | `skip_advance_payment` sets `lifecycle.advance_paid = True` when no money was received. **Scope corrected 2026-09-18:** money reports sum confirmed `PaymentReport` rows, NOT this flag, so financial figures were never wrong. The real defect is **display only** — the order timeline shows a green "advance paid ✓" for a skipped advance | `report_service.py:133-145` (correct), `orders/view.html:315`, `orders/list.html:46` | Open — T16 |
@@ -104,8 +104,8 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T9 | Extract shared `static/js/sofa-lineitems.js` (recalc + line rows + image preview); delete 7 copies (F15) | templates + js | render tests | |
 | T17 | Shared status vocabulary + UI macro library; orders list converted (F16, F24, F23-display) | `status_tokens.py`, `macros/ui.html`, `style.css` | `test_status_tokens.py` (29) | ✅ Done |
 | T11 | Pagination + search on the 6 lists that lack them (F17) | templates + routes | list tests | |
-| T12 | `table-responsive` on the 5 overflowing tables (F18) | templates | — | |
-| T13 | i18n pass on procurement/production (F19) | templates + `i18n.py` | — | |
+| T12 | Responsive wrapper on the 11 tables actually missing it + lint test so no new screen can opt out (F18) | 11 templates | `test_ui_consistency.py` (7) | ✅ Done |
+| T13 | i18n pass on procurement/production (F19) — status labels now route through `t()` via `status_badge`; remaining headings/buttons still hardcoded | templates + `i18n.py` | — | 🟡 Partial |
 | T14 | Merge `payment/` into `payments/` (F20) | templates | render tests | |
 | T15 | Triage missing screens (F21) — add only what the entity's lifecycle justifies | various | per screen | |
 | D1 | Refresh `CLAUDE.md` (Alembic + CSRF now exist) | `CLAUDE.md` | — | |

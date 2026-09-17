@@ -2,14 +2,13 @@
 {% block title %}{{ po.po_number }} - SofaFlow{% endblock %}
 
 {% set labels = {'draft':'Nháp','ordered':'Đã gửi NCC','partial':'Nhập một phần','received':'Đã nhập đủ','canceled':'Đã hủy'} %}
-{% set colors = {'draft':'secondary','ordered':'info','partial':'warning','received':'success','canceled':'dark'} %}
 {% set act_labels = {'submit':'Gửi nhà cung cấp','cancel':'Hủy đơn','reopen':'Thu hồi về nháp'} %}
 {% set act_colors = {'submit':'primary','cancel':'outline-danger','reopen':'outline-secondary'} %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h1 class="mb-0"><i class="bi bi-bag-check"></i> {{ po.po_number }}
-    <span class="badge bg-{{ colors.get(po.status,'secondary') }} ms-2">{{ labels.get(po.status, po.status) }}</span>
+    {{ status_badge(po.status, 'procurement') }}
   </h1>
   <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ t('Back') }}</a>
 </div>

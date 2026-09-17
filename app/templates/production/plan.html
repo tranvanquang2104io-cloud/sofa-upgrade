@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import status_badge with context %}
 {% block title %}{{ t('Production Plan') }} - SofaFlow{% endblock %}
 
 {% block content %}
@@ -25,7 +26,7 @@
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
           <span class="fw-bold">Số KH: {{ plan.plan_number }}</span>
-          <span class="badge bg-{{ status_colors.get(plan.status,'secondary') }} ms-2">{{ status_labels.get(plan.status, plan.status) }}</span>
+          {{ status_badge(plan.status, 'production') }}
           {% if plan.is_delayed %}<span class="badge bg-danger ms-1"><i class="bi bi-clock-history"></i> Trễ tiến độ</span>{% endif %}
         </div>
         <a href="{{ url_for('dashboard.print_production_plan', plan_id=plan.id) }}" class="btn btn-outline-secondary btn-sm">
@@ -59,7 +60,7 @@
 
   {# Items to produce #}
   <h5>{{ t('Items to produce') }}</h5>
-  <table class="table table-sm table-bordered">
+  <div class="table-responsive"><table class="table table-sm table-bordered">
     <thead class="table-light"><tr>
       <th>{{ t('Product / Work') }}</th><th>{{ t('Quantity') }}</th><th>{{ t('Unit') }}</th><th></th>
     </tr></thead>
@@ -79,11 +80,11 @@
       </tr>
     {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 
   {# Materials needed #}
   <h5 class="mt-4">{{ t('Materials needed') }}</h5>
-  <table class="table table-sm table-bordered">
+  <div class="table-responsive"><table class="table table-sm table-bordered">
     <thead class="table-light"><tr>
       <th>{{ t('Material') }}</th><th>{{ t('For item') }}</th><th>{{ t('Required') }}</th>
       <th>{{ t('Issued') }}</th><th>{{ t('Unit') }}</th><th></th>
@@ -108,7 +109,7 @@
       <tr><td colspan="6" class="text-muted">{{ t('No materials yet. Add materials below or save/apply a norm.') }}</td></tr>
     {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 
   {# Add material — only while the plan is still a draft (before it is approved/chốt) #}
   {% if not plan.can_edit() %}
