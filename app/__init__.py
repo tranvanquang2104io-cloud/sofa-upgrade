@@ -133,6 +133,18 @@ def create_app(config_name=None):
         return dict(material_units=material_units)
 
     @app.context_processor
+    def inject_status_tokens():
+        """Expose the shared status vocabulary so no template decides colour
+        for itself (see app/utils/status_tokens.py)."""
+        from app.utils import status_tokens
+        return dict(
+            status_meta=status_tokens.status_meta,
+            order_status_meta=status_tokens.order_status_meta,
+            order_process_steps=status_tokens.order_process_steps,
+            token_class=status_tokens.token_class,
+        )
+
+    @app.context_processor
     def inject_i18n():
         """Inject i18n translation helper and current language into all templates."""
         from flask import session as _session

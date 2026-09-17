@@ -1,23 +1,17 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, order_badge, empty_state, table_open, table_close with context %}
 
 {% block title %}Orders - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1><i class="bi bi-boxes"></i> {{ t('Orders') }}</h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.create_order') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> {{ t('Create Order') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Orders'), icon='bi-boxes', count=(orders|length if orders else 0),
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')), (t('Orders'), None)],
+               action_url=url_for('dashboard.create_order'), action_label=t('Create Order')) }}
 
 <div class="card">
     <div class="card-body">
         {% if orders %}
-            <table class="table table-hover">
+            {{ table_open() }}
                 <thead>
                     <tr>
                         <th>{{ t('Order Code') }}</th>
@@ -37,23 +31,7 @@
                         <td>{{ order.title }}</td>
                         <td>{{ "{:,.0f}".format(order.total_amount|default(0)|float) }} ₫</td>
                         <td>
-                            {% if order.is_canceled %}
-                                <span class="badge bg-danger">{{ t('Cancelled') }}</span>
-                            {% elif order.lifecycle.completed %}
-                                <span class="badge bg-success">{{ t('Completed') }}</span>
-                            {% elif order.lifecycle.fully_paid %}
-                                <span class="badge bg-info text-dark">{{ t('Fully Paid') }}</span>
-                            {% elif order.lifecycle.advance_paid %}
-                                <span class="badge bg-info text-dark">{{ t('Advance Paid') }}</span>
-                            {% elif order.lifecycle.handover_confirmed %}
-                                <span class="badge bg-warning text-dark">{{ t('Delivered') }}</span>
-                            {% elif order.lifecycle.contract_signed %}
-                                <span class="badge bg-warning text-dark">{{ t('Contract Signed') }}</span>
-                            {% elif order.lifecycle.quotation_approved %}
-                                <span class="badge bg-secondary">{{ t('Quotation Approved') }}</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ t('New') }}</span>
-                            {% endif %}
+                            {{ order_badge(order) }}
                         </td>
                         <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
                         <td>
@@ -69,10 +47,12 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+            {{ table_close() }}
             {% include '_pagination.html' %}
         {% else %}
-            <p class="text-muted">{{ t('No orders yet.') }} <a href="{{ url_for('dashboard.create_order') }}">{{ t('Create new') }}</a></p>
+            {{ empty_state('No orders yet.', icon='bi-boxes',
+                           action_url=url_for('dashboard.create_order'),
+                           action_label='Create Order') }}
         {% endif %}
     </div>
 </div>

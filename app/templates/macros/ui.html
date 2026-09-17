@@ -1,0 +1,172 @@
+{#
+  Shared UI components — the single implementation of each screen pattern.
+
+  Before these, every screen decided for itself how to render a page header, a
+  status badge, an empty table or a set of filters, which is why the app read
+  as three separately-built subsystems. These macros are the Bootstrap/Jinja
+  equivalent of what SAP Fiori achieves with floorplans and Odoo with view
+  inheritance: one canonical implementation per pattern, configured by data.
+
+  Import at the top of a template — NOTE THE `with context`:
+      {% from "macros/ui.html" import page_header, status_badge, ... with context %}
+
+  `with context` is REQUIRED. These macros call helpers injected by context
+  processors (`t`, `status_meta`, `order_status_meta`, `token_class`), and a
+  plain Jinja `import` gives the macro an empty context, so those names come
+  out undefined at render time.
+#}
+
+{# ---------------------------------------------------------------- breadcrumb #}
+{% macro breadcrumb(items) %}
+  {# items: list of (label, url); the last entry renders as the active page. #}
+  {% if items %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+      {% for label, url in items %}
+        {% if loop.last or not url %}
+          <li class="breadcrumb-item active" aria-current="page">{{ label }}</li>
+        {% else %}
+          <li class="breadcrumb-item"><a href="{{ url }}">{{ label }}</a></li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+  </nav>
+  {% endif %}
+{% endmacro %}
+
+
+{# -------------------------------------------------------------- page header #}
+{% macro page_header(title, icon=None, count=None, crumbs=None,
+                     action_url=None, action_label=None, action_icon='bi-plus-lg') %}
+  {#
+    The canonical top of every list/detail page: breadcrumb, title (+ record
+    count), and ONE primary action on the right. Keeping the primary action
+    here — rather than in a per-page toolbar — is what makes navigation feel
+    the same everywhere.
+  #}
+  {{ breadcrumb(crumbs) }}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">
+      {% if icon %}<i class="bi {{ icon }}"></i>{% endif %}
+      {{ title }}
+      {% if count is not none %}
+        <span class="badge bg-light text-dark align-middle">{{ count }}</span>
+      {% endif %}
+    </h1>
+    {% if action_url and action_label %}
+      <a href="{{ action_url }}" class="btn btn-primary">
+        <i class="bi {{ action_icon }}"></i> {{ action_label }}
+      </a>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+
+{# ------------------------------------------------------------- status badge #}
+{% macro status_badge(status, entity='document') %}
+  {#
+    Never decide colour in a template. `status_meta` maps the business state
+    onto one of five semantic tokens; the token maps to a Bootstrap class.
+    Colour always ships with its label (Fiori rule: colour is never the only
+    carrier of meaning).
+  #}
+  {% set meta = status_meta(status, entity) %}
+  <span class="badge {{ token_class(meta[0]) }}">{{ t(meta[1]) }}</span>
+{% endmacro %}
+
+
+{% macro order_badge(order) %}
+  {# Overall order stage, derived from the lifecycle in one shared place. #}
+  {% set meta = order_status_meta(order) %}
+  <span class="badge {{ token_class(meta[0]) }}">{{ t(meta[1]) }}</span>
+{% endmacro %}
+
+
+{# ---------------------------------------------------------------- stepper #}
+{% macro process_stepper(order) %}
+  {#
+    Salesforce-Path-style progress indicator: shows both the current state and
+    the trajectory, which a single badge cannot. Degrades to a wrapping row of
+    pills on narrow screens.
+  #}
+  {% set steps = order_process_steps(order) %}
+  <ol class="sf-stepper list-unstyled d-flex flex-wrap gap-2 mb-3">
+    {% for step in steps %}
+      <li class="sf-step sf-step--{{ step.state }} flex-fill text-center px-2 py-1 rounded">
+        <span class="sf-step__icon">
+          {% if step.state == 'done' %}<i class="bi bi-check-circle-fill"></i>
+          {% elif step.state == 'skipped' %}<i class="bi bi-slash-circle"></i>
+          {% elif step.state == 'current' %}<i class="bi bi-record-circle"></i>
+          {% else %}<i class="bi bi-circle"></i>{% endif %}
+        </span>
+        <span class="sf-step__label small">{{ t(step.label) }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+{% endmacro %}
+
+
+{# ------------------------------------------------------------- search bar #}
+{% macro search_bar(action_url, search_value='', placeholder='Search',
+                    filters=None, reset_url=None) %}
+  {#
+    filters: list of dicts {name, label, options:[(value,label)], selected}
+    Every list page gets the same search affordance — no page opts out.
+  #}
+  <form method="GET" action="{{ action_url }}" class="row g-2 align-items-end mb-3">
+    <div class="col-12 col-md">
+      <label class="form-label small text-muted mb-1">{{ t('Search') }}</label>
+      <input type="search" name="search" value="{{ search_value or '' }}"
+             class="form-control" placeholder="{{ t(placeholder) }}">
+    </div>
+    {% for f in (filters or []) %}
+      <div class="col-6 col-md-auto">
+        <label class="form-label small text-muted mb-1">{{ t(f.label) }}</label>
+        <select name="{{ f.name }}" class="form-select">
+          <option value="">{{ t('All') }}</option>
+          {% for value, label in f.options %}
+            <option value="{{ value }}" {% if f.selected == value %}selected{% endif %}>{{ t(label) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endfor %}
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-secondary">
+        <i class="bi bi-search"></i> {{ t('Search') }}
+      </button>
+      {% if reset_url %}
+        <a href="{{ reset_url }}" class="btn btn-link">{{ t('Reset') }}</a>
+      {% endif %}
+    </div>
+  </form>
+{% endmacro %}
+
+
+{# ------------------------------------------------------------ empty state #}
+{% macro empty_state(message, icon='bi-inbox', action_url=None, action_label=None) %}
+  {# A blank table tells the user nothing. Always say why it's empty and what
+     they can do about it. #}
+  <div class="text-center text-muted py-5">
+    <i class="bi {{ icon }} fs-1 d-block mb-2"></i>
+    <p class="mb-3">{{ t(message) }}</p>
+    {% if action_url and action_label %}
+      <a href="{{ action_url }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> {{ t(action_label) }}
+      </a>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+
+{# ------------------------------------------------------- responsive table #}
+{% macro table_open(classes='table table-hover align-middle mb-0') %}
+  {# Guarantees the responsive wrapper that several tables were missing, so a
+     long table scrolls instead of breaking the page on a phone. #}
+  <div class="table-responsive">
+    <table class="{{ classes }}">
+{% endmacro %}
+
+{% macro table_close() %}
+    </table>
+  </div>
+{% endmacro %}

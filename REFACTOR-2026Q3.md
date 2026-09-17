@@ -62,7 +62,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F18 | S4 | No `table-responsive` on materials, PO, PR, GR, production lists → horizontal overflow on mobile with no scroll affordance | templates | Open — T12 |
 | F19 | S4 | 264 template lines carry un-`t()`-wrapped Vietnamese; whole procurement/production modules bypass i18n | templates | Open — T13 |
 | F20 | S4 | `payment/` (singular) and `payments/` (plural) template directories both exist for the same concept | dirs | Open — T14 |
-| F23 | S2 | `skip_advance_payment` sets `lifecycle.advance_paid = True` when **no money was received**, so advance-payment reporting counts skipped orders as paid. Now accompanied by an audited waiver; removing the false flag is a **business decision** — see §6 | `dashboard_routes.py:1844` | ⚠️ **Needs your decision** |
+| F23 | S4 | `skip_advance_payment` sets `lifecycle.advance_paid = True` when no money was received. **Scope corrected 2026-09-18:** money reports sum confirmed `PaymentReport` rows, NOT this flag, so financial figures were never wrong. The real defect is **display only** — the order timeline shows a green "advance paid ✓" for a skipped advance | `report_service.py:133-145` (correct), `orders/view.html:315`, `orders/list.html:46` | Open — T16 |
 | F21 | S4 | Missing screens: Orders has no edit; quotations/contracts/handover/payments have no list; GR has no create/edit form; stores/users have no view | inventory | Open — T15 (triage, not blanket CRUD) |
 
 ---
@@ -133,29 +133,22 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 
 ---
 
-## 6. Open decision for the owner
+## 6. F23 — corrected scope
 
-### F23 — `advance_skipped` records a payment that never happened
+My first pass claimed skipped advances inflated the advance-payment reports.
+**That was wrong, and the correction matters**: every money figure in
+`report_service.py` is summed from confirmed, non-canceled `PaymentReport`
+rows — `cash_in`, `advance_collected`, `final_collected`, `booked_value` all
+join real payment documents, never `LifecycleStatus`. The financial reporting
+is correct as written.
 
-When an operator skips the advance payment, the code sets **both**
-`advance_skipped = True` **and** `advance_paid = True`
-([`dashboard_routes.py:1844`](app/routes/dashboard_routes.py)). The second flag is
-what unlocks the rest of the flow, but it is factually false — no money arrived.
+What `advance_paid = True` actually corrupts is the **timeline display**: an
+order whose advance was skipped shows the same green completed marker as one
+that was actually paid (`orders/view.html:315`, `orders/list.html:46`). A user
+looking at the order cannot tell "paid" from "skipped".
 
-Consequence: any report or query that counts `advance_paid` treats a skipped
-order as a paid one. The advance-payment figures are overstated by exactly the
-number of skipped orders.
+Fix (T16, no business decision needed): render a distinct state for a skipped
+advance, driven by `advance_skipped` and the new waiver record — so the
+timeline tells the truth and the waiver's reason is visible on hover. The
+lifecycle flag keeps its gating role untouched.
 
-The workflow engine now records an **audited waiver** (who, when, why) alongside
-these flags, which is additive and safe. Removing the false `advance_paid` is
-the correct fix, but it changes what existing templates and reports display, so
-it is your call:
-
-| Option | Effect |
-|---|---|
-| **A — Leave as is** | Nothing changes. Advance reporting stays overstated. |
-| **B — Stop setting `advance_paid`; let the waiver unlock the flow** | Reports become truthful. Requires auditing every reader of `advance_paid` (templates, reports, `can_*` guards) and a data migration to correct historical rows. |
-| **C — Keep the flag but exclude skipped orders from money reports** | Smallest truthful fix: reporting filters `advance_skipped == False`. Flow logic untouched. |
-
-Recommendation: **C** now (cheap, makes the numbers correct), **B** later if the
-lifecycle flags are ever normalised.
