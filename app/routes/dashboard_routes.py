@@ -6,9 +6,10 @@ from app.utils.i18n import t
 from app.utils.auth_utils import (
     login_required, company_admin_required, store_admin_required,
     ensure_tenant_access, ensure_store_access,
-    get_current_company_id, get_current_store_id,
+    get_current_company_id, get_current_store_id, get_current_company,
     get_accessible_store_ids, is_company_admin,
 )
+from app.services.money import compute_totals, subtotal_from_items, totals_from_form
 from app.services.services import (
     StoreService, UserService, CustomerService, OrderService, QuotationService,
     ContractService, HandoverRecordService, PaymentReportService, DocumentService,
@@ -797,11 +798,13 @@ def create_quotation(order_id):
             # Parse items from request
             items, subtotal = parse_line_items(request.form, request.files, with_images=True)
 
-            vat_rate = float(request.form.get('vat_rate') or 8)
-            vat_amount = round(subtotal * vat_rate / 100, 2)
-            shipping_fee = float(request.form.get('shipping_fee') or 0)
-            another_fee = float(request.form.get('another_fee') or 0)
-            total = subtotal + vat_amount + shipping_fee + another_fee
+            totals = totals_from_form(request.form, company=get_current_company(),
+                                      subtotal=subtotal)
+            vat_rate = totals['vat_rate']
+            vat_amount = totals['vat_amount']
+            shipping_fee = totals['shipping_fee']
+            another_fee = totals['another_fee']
+            total = totals['total_amount']
             city = request.form.get('city', '').strip() or None
             payment_terms = request.form.get('payment_terms', '').strip() or None
             amount_in_words = request.form.get('amount_in_words', '').strip() or None
@@ -880,11 +883,13 @@ def edit_quotation(quotation_id):
             # Parse items from request
             items, subtotal = parse_line_items(request.form, request.files, with_images=True)
 
-            vat_rate = float(request.form.get('vat_rate') or 8)
-            vat_amount = round(subtotal * vat_rate / 100, 2)
-            shipping_fee = float(request.form.get('shipping_fee') or 0)
-            another_fee = float(request.form.get('another_fee') or 0)
-            total = subtotal + vat_amount + shipping_fee + another_fee
+            totals = totals_from_form(request.form, company=get_current_company(),
+                                      subtotal=subtotal)
+            vat_rate = totals['vat_rate']
+            vat_amount = totals['vat_amount']
+            shipping_fee = totals['shipping_fee']
+            another_fee = totals['another_fee']
+            total = totals['total_amount']
             
             quotation_service.update_quotation(
                 quotation_id=quotation_id,
@@ -1000,12 +1005,14 @@ def create_contract(order_id):
             # Parse items from form
             items, subtotal = parse_line_items(request.form)
 
-            vat_rate = float(request.form.get('vat_rate') or 8)
-            vat_amount = round(subtotal * vat_rate / 100, 2)
             # Shipping/other fees come from quotation when referenced
-            shipping_fee = float(request.form.get('shipping_fee') or 0)
-            another_fee = float(request.form.get('another_fee') or 0)
-            contract_value = subtotal + vat_amount + shipping_fee + another_fee
+            totals = totals_from_form(request.form, company=get_current_company(),
+                                      subtotal=subtotal)
+            vat_rate = totals['vat_rate']
+            vat_amount = totals['vat_amount']
+            shipping_fee = totals['shipping_fee']
+            another_fee = totals['another_fee']
+            contract_value = totals['total_amount']
 
             advance_percentage = float(request.form.get('advance_percentage') or 30)
             advance_amount = round(contract_value * advance_percentage / 100, 2)
@@ -1031,6 +1038,38 @@ def create_contract(order_id):
                 quotation = QuotationRepository().get_by_id(quotation_id)
                 if quotation and quotation.items:
                     items = list(quotation.items)
+                    # The totals above were derived from the (empty) form, so they
+                    # must be re-derived from the items actually being stored —
+                    # otherwise the contract carries line items worth X while its
+                    # contract_value column says 0.
+                    totals = compute_totals(
+                        subtotal=subtotal_from_items(items),
+                        vat_rate=request.form.get('vat_rate'),
+                        shipping_fee=shipping_fee,
+                        another_fee=another_fee,
+                        company=get_current_company(),
+                    )
+                    subtotal = totals['subtotal']
+                    vat_rate = totals['vat_rate']
+                    vat_amount = totals['vat_amount']
+                    contract_value = totals['total_amount']
+                    advance_amount = round(contract_value * advance_percentage / 100, 2)
+
+            # Single-active-contract invariant (mirrors ContractService.create_contract,
+            # which this route bypasses by writing through the repository): a new
+            # contract supersedes any previously active one on the same order.
+            # Without this, downstream fee lookups — `next((c for c in
+            # order.contracts if c.is_active ...))` — pick an arbitrary contract.
+            superseded = db.session.query(Contract).filter(
+                Contract.order_id == order_id,
+                Contract.is_active == True,  # noqa: E712  (SQLAlchemy column comparison)
+            ).all()
+            for old_contract in superseded:
+                old_contract.is_active = False
+                logger.info(
+                    "Deactivated previous contract %s superseded by %s",
+                    old_contract.contract_number, contract_number,
+                )
             
             ext_values = collect_extension_values(company_id, 'contract', request.form)
             contract = contract_repo.create(
@@ -1135,11 +1174,13 @@ def edit_contract(contract_id):
             # Parse items from form
             items, subtotal = parse_line_items(request.form)
 
-            vat_rate = float(request.form.get('vat_rate') or 8)
-            vat_amount = round(subtotal * vat_rate / 100, 2)
-            shipping_fee = float(request.form.get('shipping_fee') or 0)
-            another_fee = float(request.form.get('another_fee') or 0)
-            contract_value = subtotal + vat_amount + shipping_fee + another_fee
+            totals = totals_from_form(request.form, company=get_current_company(),
+                                      subtotal=subtotal)
+            vat_rate = totals['vat_rate']
+            vat_amount = totals['vat_amount']
+            shipping_fee = totals['shipping_fee']
+            another_fee = totals['another_fee']
+            contract_value = totals['total_amount']
             advance_percentage = float(request.form.get('advance_percentage') or 30)
             advance_amount = round(contract_value * advance_percentage / 100, 2)
             
@@ -1382,12 +1423,19 @@ def create_handover(order_id):
                     })
                     subtotal += item_total
             
-            vat_rate = float(request.form.get('vat_rate') or 8)
-            vat_amount = round(subtotal * vat_rate / 100, 2)
             active_contract = next((c for c in order.contracts if c.is_active and not c.is_canceled), None)
-            shipping_fee = float(getattr(active_contract, 'shipping_fee', 0) or 0)
-            another_fee = float(getattr(active_contract, 'another_fee', 0) or 0)
-            total_amount = subtotal + vat_amount + shipping_fee + another_fee
+            totals = compute_totals(
+                subtotal=subtotal,
+                vat_rate=request.form.get('vat_rate'),
+                shipping_fee=getattr(active_contract, 'shipping_fee', 0) or 0,
+                another_fee=getattr(active_contract, 'another_fee', 0) or 0,
+                company=get_current_company(),
+            )
+            vat_rate = totals['vat_rate']
+            vat_amount = totals['vat_amount']
+            shipping_fee = totals['shipping_fee']
+            another_fee = totals['another_fee']
+            total_amount = totals['total_amount']
             
             ext_values = collect_extension_values(company_id, 'handover', request.form)
             handover_service = HandoverRecordService()
@@ -1567,14 +1615,17 @@ def edit_handover(handover_id):
                         })
                         subtotal += item_total
                 handover.items = items
-                vat_rate = float(request.form.get('vat_rate') or 8)
-                vat_amount = round(subtotal * vat_rate / 100, 2)
-                handover.subtotal = subtotal
-                handover.vat_rate = vat_rate
-                handover.vat_amount = vat_amount
-                ship_fee = float(handover.shipping_fee or 0)
-                other_fee = float(handover.another_fee or 0)
-                handover.total_amount = subtotal + vat_amount + ship_fee + other_fee
+                totals = compute_totals(
+                    subtotal=subtotal,
+                    vat_rate=request.form.get('vat_rate'),
+                    shipping_fee=handover.shipping_fee or 0,
+                    another_fee=handover.another_fee or 0,
+                    company=get_current_company(),
+                )
+                handover.subtotal = totals['subtotal']
+                handover.vat_rate = totals['vat_rate']
+                handover.vat_amount = totals['vat_amount']
+                handover.total_amount = totals['total_amount']
             
             db.session.add(handover)
             db.session.commit()
@@ -1682,11 +1733,20 @@ def create_payment(order_id):
             # Parse work items
             items, subtotal = parse_line_items(request.form)
 
-            vat_rate = float(request.form.get('vat_rate') or 8)
-            vat_amount = round(subtotal * vat_rate / 100, 2)
-            shipping_fee = float(getattr(active_contract, 'shipping_fee', 0) or 0)
-            another_fee = float(getattr(active_contract, 'another_fee', 0) or 0)
-            base_amount = subtotal + vat_amount if items else float(request.form.get('amount') or 0)
+            totals = compute_totals(
+                subtotal=subtotal,
+                vat_rate=request.form.get('vat_rate'),
+                shipping_fee=getattr(active_contract, 'shipping_fee', 0) or 0,
+                another_fee=getattr(active_contract, 'another_fee', 0) or 0,
+                company=get_current_company(),
+            )
+            vat_rate = totals['vat_rate']
+            vat_amount = totals['vat_amount']
+            shipping_fee = totals['shipping_fee']
+            another_fee = totals['another_fee']
+            # A payment report may be raised with no line items, in which case
+            # the operator types the amount directly.
+            base_amount = (totals['subtotal'] + vat_amount) if items                 else float(request.form.get('amount') or 0)
             amount = base_amount + shipping_fee + another_fee
             
             advance_pct = request.form.get('advance_percentage')
@@ -2244,21 +2304,29 @@ def get_next_code(doc_type):
         field_name = config['field']
         prefix = config['prefix']
         
-        # Get the highest number for this type
-        result = db.session.query(
-            func.max(func.cast(
-                func.regexp_replace(
-                    getattr(model_class, field_name),
-                    f'^{prefix}',
-                    ''
-                ),
-                db.Integer
-            ))
-        ).filter(
-            getattr(model_class, field_name).like(f'{prefix}%')
-        ).scalar()
-        
-        next_number = (result or 0) + 1
+        # Highest number for this type, WITHIN THE CALLER'S COMPANY ONLY.
+        #
+        # Two defects fixed here (2026-09):
+        #  1. the company filter was loaded above but never applied, so the
+        #     suggestion was computed across every tenant in the database;
+        #  2. `regexp_replace` is PostgreSQL-only, so this endpoint raised 500
+        #     on any other backend (and could not be covered by the test
+        #     suite, which runs on SQLite).
+        # The numeric suffix is therefore parsed in Python: portable, and
+        # tolerant of legacy numbers whose suffix is not a plain integer.
+        field_col = getattr(model_class, field_name)
+        rows = db.session.query(field_col).filter(
+            model_class.company_id == company_id,
+            field_col.like(f'{prefix}%'),
+        ).all()
+
+        highest = 0
+        for (value,) in rows:
+            suffix = (value or '')[len(prefix):]
+            if suffix.isdigit():
+                highest = max(highest, int(suffix))
+
+        next_number = highest + 1
         next_code = f'{prefix}{next_number:03d}'
         
         return {'next_code': next_code}, 200
@@ -2319,9 +2387,14 @@ def check_code(doc_type):
         model_class = config['repo'].model
         field_name = config['field']
         
-        # Check if code exists
+        # Check if code exists — WITHIN THE CALLER'S COMPANY ONLY.
+        # Document numbers are unique per company (see AUDIT D8), so an
+        # unscoped check both leaked the existence of another tenant's
+        # documents and wrongly rejected numbers this company may legitimately
+        # use.
         exists = db.session.query(model_class).filter(
-            getattr(model_class, field_name) == code
+            model_class.company_id == company_id,
+            getattr(model_class, field_name) == code,
         ).first() is not None
         
         return {'exists': exists}, 200

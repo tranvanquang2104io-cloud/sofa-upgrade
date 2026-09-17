@@ -92,6 +92,24 @@ def get_current_company_id() -> str | None:
     return session.get('company_id')
 
 
+def get_current_company():
+    """Return the current user's Company row, or None.
+
+    Used where company-level *settings* are needed rather than just the id —
+    e.g. the configured default VAT rate. Cached on ``g`` so a request that
+    needs it several times issues one query.
+    """
+    company_id = get_current_company_id()
+    if not company_id:
+        return None
+    cached = getattr(g, '_current_company', None)
+    if cached is not None and str(cached.id) == str(company_id):
+        return cached
+    company = Company.query.get(company_id)
+    g._current_company = company
+    return company
+
+
 def get_current_store_id() -> str | None:
     """Return the current user's store UUID string, or None for company admins."""
     return session.get('store_id')
