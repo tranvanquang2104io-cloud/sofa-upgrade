@@ -1426,6 +1426,236 @@ class NormalizationSuggestion(db.Model):
         return f'<NormalizationSuggestion {self.entity_type}.{self.field_name}>'
 
 
+class MasterAgreement(db.Model):
+    """HỢP ĐỒNG NGUYÊN TẮC — a framework agreement with a customer.
+
+    Vietnamese law does not name this as a distinct contract type; it is a
+    framework built on ordinary freedom of contract (BLDS 2015 Đ.385, 398,
+    401-403). It binds the *principles of cooperation* — scope, price list,
+    payment/quality/delivery terms, penalties, dispute resolution — and
+    deliberately omits what identifies a single transaction: quantity,
+    specification, delivery date and final price.
+
+    Because of that omission a HĐNT alone CANNOT substantiate a hóa đơn GTGT:
+    NĐ 123/2020 Đ.9 ties invoice timing to a specific delivery and requires an
+    invoice per delivery for repeated shipments. Each order therefore still
+    needs its own document — an ``OrderConfirmation`` (ĐƠN ĐẶT HÀNG), which
+    under BLDS 2015 Đ.386+393 is itself a complete contract for that
+    transaction once accepted.
+
+    Most Vietnamese SME framework agreements commit to no volume at all, so
+    ``commitment_type`` defaults to NONE and the agreement is simply a terms +
+    pricing container.
+    """
+
+    __tablename__ = 'master_agreements'
+
+    STATUS_DRAFT = 'draft'
+    STATUS_ACTIVE = 'active'
+    STATUS_SUSPENDED = 'suspended'
+    STATUS_EXPIRED = 'expired'
+    STATUS_TERMINATED = 'terminated'
+
+    COMMITMENT_NONE = 'none'
+    COMMITMENT_VALUE = 'value'
+    COMMITMENT_QUANTITY = 'quantity'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    customer_id = db.Column(GUID(), db.ForeignKey('customers.id'),
+                            nullable=False, index=True)
+
+    agreement_number = db.Column(db.String(50), nullable=False)
+    signed_date = db.Column(db.Date)
+    effective_from = db.Column(db.Date, nullable=False)
+    # NULL = vô thời hạn (open-ended until terminated) — common in practice.
+    effective_to = db.Column(db.Date)
+
+    auto_renew = db.Column(db.Boolean, default=False)
+    renewal_notice_days = db.Column(db.Integer, default=30)
+
+    status = db.Column(db.String(16), nullable=False, default=STATUS_DRAFT,
+                       index=True)
+
+    commitment_type = db.Column(db.String(16), default=COMMITMENT_NONE)
+    target_value = db.Column(db.Numeric(15, 2))
+    target_quantity = db.Column(db.Numeric(15, 2))
+
+    scope_description = db.Column(db.Text)        # phạm vi hợp tác
+    payment_terms = db.Column(db.Text)            # điều khoản thanh toán
+    quality_terms = db.Column(db.Text)            # chất lượng
+    delivery_terms = db.Column(db.Text)           # giao nhận
+
+    # Phạt vi phạm. LTM 2005 Đ.301 caps the penalty at 8% OF THE VALUE OF THE
+    # BREACHED PORTION of the obligation — not 8% of the whole contract value.
+    penalty_pct = db.Column(db.Numeric(5, 2), default=8.00)
+    penalty_basis_note = db.Column(
+        db.String(255),
+        default='Tính trên giá trị phần nghĩa vụ hợp đồng bị vi phạm')
+
+    dispute_resolution = db.Column(db.Text)       # giải quyết tranh chấp
+    seller_representative = db.Column(db.String(255))
+    seller_representative_title = db.Column(db.String(100))
+    buyer_representative = db.Column(db.String(255))
+    buyer_representative_title = db.Column(db.String(100))
+
+    notes = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    price_lines = db.relationship('MasterAgreementPriceLine',
+                                  backref='agreement', lazy=True,
+                                  cascade='all, delete-orphan')
+    confirmations = db.relationship('OrderConfirmation', backref='agreement',
+                                    lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'agreement_number',
+                            name='uq_company_agreement_number'),
+        db.Index('ix_master_agreements_customer_status',
+                 'customer_id', 'status'),
+    )
+
+    def is_effective_on(self, on_date):
+        """Is the agreement usable for a NEW release order on ``on_date``?
+
+        An already-issued confirmation is never invalidated by the agreement
+        later expiring — it was a completed offer+acceptance in its own right.
+        Only the creation of new ones is gated.
+        """
+        if self.status != self.STATUS_ACTIVE:
+            return False
+        if self.effective_from and on_date < self.effective_from:
+            return False
+        if self.effective_to and on_date > self.effective_to:
+            return False
+        return True
+
+    def can_edit(self):
+        return self.status in (self.STATUS_DRAFT, self.STATUS_ACTIVE)
+
+    def __repr__(self):
+        return f'<MasterAgreement {self.agreement_number}>'
+
+
+class MasterAgreementPriceLine(db.Model):
+    """An agreed price (or discount) for one product under a HĐNT.
+
+    Line-level validity rather than whole-document versioning: revising a
+    price closes the old line's ``effective_to`` and inserts a new one, so a
+    past ĐƠN ĐẶT HÀNG can still be explained by the price that applied on its
+    date. This matches Vietnamese practice, where a price revision is done by
+    phụ lục rather than by reissuing the agreement under a new number.
+
+    ``product_key`` is a normalized product name, consistent with
+    ``MaterialNorm`` — this app has no product-master entity yet (see F11).
+    """
+
+    __tablename__ = 'master_agreement_price_lines'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    agreement_id = db.Column(GUID(), db.ForeignKey('master_agreements.id'),
+                             nullable=False, index=True)
+
+    product_key = db.Column(db.String(255), nullable=False)
+    product_name = db.Column(db.String(255))
+    unit = db.Column(db.String(50))
+
+    agreed_unit_price = db.Column(db.Numeric(15, 2))
+    discount_pct = db.Column(db.Numeric(5, 2))
+
+    effective_from = db.Column(db.Date)
+    effective_to = db.Column(db.Date)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<MasterAgreementPriceLine {self.product_key}>'
+
+
+class OrderConfirmation(DocExtensionMixin, db.Model):
+    """ĐƠN ĐẶT HÀNG — the per-order document issued under a HĐNT.
+
+    Occupies the same slot in the lifecycle that ``Contract`` does: both
+    evidence offer + acceptance for one transaction, and either satisfies the
+    precondition for a handover record. Which one an order gets is decided by
+    the workflow configuration, not hardcoded.
+
+    The agreement number/date are SNAPSHOTTED here rather than only joined, so
+    the printed document keeps citing what it cited at the time even if the
+    agreement is later amended.
+    """
+
+    __tablename__ = 'order_confirmations'
+
+    STATUS_DRAFT = 'draft'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_CANCELED = 'canceled'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'),
+                         nullable=False, index=True)
+    master_agreement_id = db.Column(GUID(),
+                                    db.ForeignKey('master_agreements.id'),
+                                    nullable=False, index=True)
+    quotation_id = db.Column(GUID(), db.ForeignKey('quotations.id'))
+
+    confirmation_number = db.Column(db.String(50), nullable=False)
+    confirmation_date = db.Column(db.Date, nullable=False)
+
+    # Snapshot of the cited agreement ("căn cứ HĐNT số ... ngày ...").
+    cited_agreement_number = db.Column(db.String(50))
+    cited_agreement_date = db.Column(db.Date)
+
+    items = db.Column(db.JSON, default=list)
+    subtotal = db.Column(db.Numeric(15, 2), default=0)
+    vat_rate = db.Column(db.Numeric(5, 2), default=8.00)
+    vat_amount = db.Column(db.Numeric(15, 2), default=0)
+    shipping_fee = db.Column(db.Numeric(15, 2), default=0)
+    another_fee = db.Column(db.Numeric(15, 2), default=0)
+    total_amount = db.Column(db.Numeric(15, 2), default=0)
+    amount_in_words = db.Column(db.String(500))
+
+    delivery_date = db.Column(db.Date)
+    delivery_address = db.Column(db.Text)
+    payment_terms = db.Column(db.Text)
+    notes = db.Column(db.Text)
+
+    status = db.Column(db.String(16), nullable=False, default=STATUS_DRAFT)
+    is_active = db.Column(db.Boolean, default=True)
+    is_canceled = db.Column(db.Boolean, default=False)
+    canceled_at = db.Column(db.DateTime)
+    canceled_reason = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'confirmation_number',
+                            name='uq_company_confirmation_number'),
+    )
+
+    @property
+    def is_confirmed(self):
+        return self.status == self.STATUS_CONFIRMED
+
+    def can_edit(self):
+        return self.status == self.STATUS_DRAFT and not self.is_canceled
+
+    def can_confirm(self):
+        return self.status == self.STATUS_DRAFT and not self.is_canceled
+
+    def can_cancel(self):
+        return not self.is_canceled
+
+    def __repr__(self):
+        return f'<OrderConfirmation {self.confirmation_number}>'
+
+
 def _populate_doc_company_id(mapper, connection, target):
     """before_insert: set a document's company_id from its order (NR3/D8).
 
@@ -1440,5 +1670,6 @@ def _populate_doc_company_id(mapper, connection, target):
             target.company_id = row[0]
 
 
-for _doc_model in (Quotation, Contract, HandoverRecord, PaymentReport, ProductionPlan):
+for _doc_model in (Quotation, Contract, HandoverRecord, PaymentReport, ProductionPlan,
+                   OrderConfirmation):
     event.listen(_doc_model, 'before_insert', _populate_doc_company_id)
