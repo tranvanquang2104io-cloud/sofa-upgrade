@@ -55,3 +55,7 @@ backups/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Local scratch dev database (SQLite)
+devdata.sqlite3
+*.sqlite3
