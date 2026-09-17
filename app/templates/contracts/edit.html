@@ -259,15 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateRowNumbers();
 });
 
-function fmtNum(n) {
-    return new Intl.NumberFormat('vi-VN').format(Math.round(n));
-}
-
-function parseRawFee(id) {
-    const el = document.getElementById(id);
-    return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;
-}
-
 function numberToVietnamese(num) {
     num = Math.round(num);
     if (!num || num === 0) return '';

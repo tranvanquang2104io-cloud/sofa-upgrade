@@ -16,6 +16,14 @@
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
+    {# Shared document-form helpers (fmtNum / parseRawFee / numberToWordsVi).
+       Loaded in <head>, NOT at the end of <body>: every document template puts
+       its inline <script> inside the content block, which the parser reaches
+       before the bottom script tags. Today those inline scripts only call the
+       helpers from inside DOMContentLoaded, so bottom-loading would also work,
+       but a single future top-level call would break it silently. Loading here
+       removes the ordering hazard entirely. #}
+    <script src="{{ url_for('static', filename='js/sofa-doc-utils.js') }}"></script>
 </head>
 <body>
     {% if current_user %}

@@ -247,10 +247,6 @@ document.addEventListener('DOMContentLoaded', function() {
     recalcAll();
 });
 
-function fmtNum(n) {
-    return new Intl.NumberFormat('vi-VN').format(Math.round(n));
-}
-
 function getStaticFee(id) {
     const el = document.getElementById(id);
     return parseInt((el ? el.value : '0').replace(/\D/g, '')) || 0;

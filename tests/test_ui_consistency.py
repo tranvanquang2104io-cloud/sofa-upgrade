@@ -68,3 +68,68 @@ def test_core_list_pages_still_render(client, login, url):
     login("admin")
     resp = client.get(url)
     assert resp.status_code in (200, 302, 308), f"{url} returned {resp.status_code}"
+
+
+# --- shared document-form helpers ----------------------------------------
+
+SHARED_JS_FUNCS = ('fmtNum', 'parseRawFee', 'numberToWordsVi')
+
+
+def test_shared_doc_utils_is_loaded_globally():
+    base = io.open(TEMPLATES / 'base.html', encoding='utf-8').read()
+    assert 'sofa-doc-utils.js' in base, (
+        "the shared helpers must be loaded from base.html, before any inline "
+        "page script that calls them"
+    )
+
+
+def test_shared_helpers_are_defined_exactly_once_in_the_codebase():
+    """They used to be copy-pasted: fmtNum x7, numberToWordsVi x4.
+
+    A fix to the Vietnamese number-to-words rules must land in one place.
+    """
+    static_js = (TEMPLATES.parent / 'static' / 'js' / 'sofa-doc-utils.js')
+    shared = io.open(static_js, encoding='utf-8').read()
+
+    for func in SHARED_JS_FUNCS:
+        assert f'function {func}' in shared, f"{func} missing from the shared module"
+
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        for func in SHARED_JS_FUNCS:
+            if f'function {func}' in text:
+                offenders.append(f"{path.relative_to(TEMPLATES)}:{func}")
+
+    assert offenders == [], (
+        "these templates redefine a helper that now lives in "
+        f"static/js/sofa-doc-utils.js: {offenders}"
+    )
+
+
+@pytest.mark.parametrize("template", [
+    'quotations/create.html', 'quotations/edit.html',
+    'contracts/create.html', 'contracts/edit.html',
+    'handover/create.html', 'handover/edit.html',
+    'payment/create.html', 'payments/edit.html',
+])
+def test_document_templates_still_parse(app, template):
+    """Removing inline JS must not have broken the Jinja syntax."""
+    with app.app_context():
+        app.jinja_env.get_template(template)
+
+
+def test_shared_helpers_load_before_the_content_block():
+    """Ordering hazard guard.
+
+    Every document template puts its inline <script> inside {% block content %},
+    so a helper loaded at the end of <body> would be parsed AFTER it. That works
+    only while no template calls a helper at top level. Keeping the script above
+    the content block removes the hazard.
+    """
+    base = io.open(TEMPLATES / 'base.html', encoding='utf-8').read()
+    content_block = '{%' + ' block content ' + '%}'
+    assert base.index('sofa-doc-utils.js') < base.index(content_block), (
+        "sofa-doc-utils.js must be loaded before {% block content %}, since "
+        "templates put their inline scripts inside that block"
+    )
