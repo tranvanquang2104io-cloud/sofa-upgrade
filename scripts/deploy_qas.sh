@@ -51,7 +51,8 @@ sleep 10
 sh "docker exec -e PYTHONIOENCODING=utf-8 sofa-flow-qas-app-1 sh -c 'PYTHONPATH=/app python /app/scripts/create_qas_test_accounts.py' >/dev/null && echo '   tai khoan test: OK'"
 
 echo "== [7/7] Verify + don dep"
-sh "docker image prune -f >/dev/null; docker builder prune -f --filter until=72h >/dev/null; df -h / | tail -1"
+# giu lai image QAS hien tai + 1 ban truoc, xoa cac ban cu hon
+sh "docker images --format '{{.Repository}}:{{.Tag}}' sofa-flow-qas | grep -v ':$VER\$' | tail -n +2 | xargs -r docker rmi -f >/dev/null 2>&1; docker image prune -f >/dev/null; docker builder prune -f --filter until=24h >/dev/null; df -h / | tail -1"
 CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 https://qas-sofaflow.quangtv.com/auth/login || true)
 echo "   https://qas-sofaflow.quangtv.com/auth/login -> $CODE"
 [ "$CODE" = "200" ] || { echo "   LOI: app khong phan hoi 200"; sh "docker logs --tail 40 sofa-flow-qas-app-1"; exit 1; }
