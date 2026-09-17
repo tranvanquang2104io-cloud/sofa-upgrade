@@ -3696,6 +3696,135 @@ def pay_supplier_invoice(invoice_id):
     return redirect(url_for('dashboard.view_supplier_invoice', invoice_id=invoice_id))
 
 
+@dashboard_bp.route('/orders/<order_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_order(order_id):
+    """Correct an order's descriptive fields.
+
+    There was previously NO way to edit an order at all, so a typo in the
+    title was permanent — it then printed on every document generated from
+    that order.
+
+    Deliberately narrow: only title, description and notes. The money is
+    derived from the order's documents, and the customer/store determine which
+    documents and permissions apply, so neither is editable here — changing
+    them after documents exist would silently invalidate those documents.
+    """
+    company_id = get_current_company_id()
+    order_service = OrderService()
+    order = order_service.get_order(order_id, company_id)
+
+    if not order:
+        flash(t('Order not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+
+    if order.is_canceled:
+        flash(t('A canceled order cannot be edited'), 'error')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
+
+    if request.method == 'POST':
+        try:
+            title = (request.form.get('title') or '').strip()
+            if not title:
+                raise ValueError(t('Title is required'))
+
+            order.title = title
+            order.description = (request.form.get('description') or '').strip() or None
+            order.notes = (request.form.get('notes') or '').strip() or None
+            order.updated_at = datetime.utcnow()
+            db.session.commit()
+
+            flash(t('Order updated'), 'success')
+            return redirect(url_for('dashboard.view_order', order_id=order_id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error("Error updating order: %s", e)
+            db.session.rollback()
+            flash(t('Error updating order'), 'error')
+
+    return render_template('orders/edit.html', order=order)
+
+
+@dashboard_bp.route('/agreements/<agreement_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_agreement(agreement_id):
+    """Correct a framework agreement.
+
+    Allowed while the agreement is a DRAFT or ACTIVE (``can_edit``); an
+    expired or terminated agreement is history and must not be rewritten,
+    because orders were issued citing its terms.
+    """
+    from app.models.models import Customer, MasterAgreement
+
+    company_id = get_current_company_id()
+    agreement = _owned_agreement(agreement_id, company_id)
+    if not agreement:
+        flash(t('Framework agreement not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_agreements'))
+
+    if not agreement.can_edit():
+        flash(t('This agreement can no longer be edited'), 'error')
+        return redirect(url_for('dashboard.view_agreement',
+                                agreement_id=agreement_id))
+
+    customers = Customer.query.filter_by(company_id=company_id,
+                                         is_active=True).order_by(Customer.name).all()
+
+    if request.method == 'POST':
+        try:
+            number = (request.form.get('agreement_number') or '').strip()
+            if not number:
+                raise ValueError(t('Agreement number is required'))
+            clash = MasterAgreement.query.filter(
+                MasterAgreement.company_id == company_id,
+                MasterAgreement.agreement_number == number,
+                MasterAgreement.id != agreement.id).first()
+            if clash:
+                raise ValueError(t('Agreement number already exists'))
+
+            penalty = float(request.form.get('penalty_pct') or 8)
+            if penalty > 8:
+                raise ValueError(
+                    t('Penalty cannot exceed 8% (Điều 301 Luật Thương mại 2005)'))
+
+            effective_from = _parse_date(request.form.get('effective_from'))
+            if not effective_from:
+                raise ValueError(t('Effective from date is required'))
+
+            agreement.agreement_number = number
+            agreement.customer_id = request.form.get('customer_id') or agreement.customer_id
+            agreement.signed_date = _parse_date(request.form.get('signed_date'))
+            agreement.effective_from = effective_from
+            agreement.effective_to = _parse_date(request.form.get('effective_to'))
+            agreement.auto_renew = request.form.get('auto_renew') == 'on'
+            agreement.renewal_notice_days = int(
+                request.form.get('renewal_notice_days') or 30)
+            agreement.scope_description = request.form.get('scope_description') or None
+            agreement.payment_terms = request.form.get('payment_terms') or None
+            agreement.quality_terms = request.form.get('quality_terms') or None
+            agreement.delivery_terms = request.form.get('delivery_terms') or None
+            agreement.penalty_pct = penalty
+            agreement.dispute_resolution = request.form.get('dispute_resolution') or None
+            agreement.seller_representative = request.form.get('seller_representative') or None
+            agreement.buyer_representative = request.form.get('buyer_representative') or None
+            agreement.notes = request.form.get('notes') or None
+            db.session.commit()
+
+            flash(t('Framework agreement updated'), 'success')
+            return redirect(url_for('dashboard.view_agreement',
+                                    agreement_id=agreement_id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error("Error updating agreement: %s", e)
+            db.session.rollback()
+            flash(t('Error updating framework agreement'), 'error')
+
+    return render_template('agreements/edit.html', agreement=agreement,
+                           customers=customers)
+
+
 # ===== PRODUCTION PLANNING (Feature 2) =====
 
 def _owned_plan(plan_id, company_id):

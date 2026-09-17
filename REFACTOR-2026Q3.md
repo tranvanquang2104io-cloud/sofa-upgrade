@@ -64,7 +64,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F20 | S4 | `payment/` and `payments/` template directories both existed for the same concept | dirs | ✅ **FIXED** (T14) — merged onto plural + guard test |
 | F23 | S4 | `skip_advance_payment` sets `lifecycle.advance_paid = True` when no money was received. **Scope corrected 2026-09-18:** money reports sum confirmed `PaymentReport` rows, NOT this flag, so financial figures were never wrong. The real defect is **display only** — the order timeline shows a green "advance paid ✓" for a skipped advance | `report_service.py:133-145` (correct), `orders/view.html:315`, `orders/list.html:46` | Open — T16 |
 | F24 | S2 | **Unreachable status badges.** `orders/list.html` tested `advance_paid` before `handover_confirmed`; every delivered order also has `advance_paid`, so the "Delivered" and "Contract Signed" branches were dead code — an order showed "Advance Paid" from delivery until fully paid | `orders/list.html:44-53` | ✅ **FIXED** (T17) |
-| F21 | S4 | Missing screens: Orders has no edit; quotations/contracts/handover/payments have no list; GR has no create/edit form; stores/users have no view | inventory | Open — T15 (triage, not blanket CRUD) |
+| F21 | S4 | Missing screens. **Triaged, not filled in:** Orders had **no edit route at all** (a title typo was permanent and printed on every document) and the HĐNT I shipped had no edit (a draft that could not be corrected). Both built. `stores`/`users` need no separate view — edit already shows everything; per-document-type lists deferred with a reason | inventory | ✅ **TRIAGED** (T15) |
 
 ---
 
@@ -86,6 +86,18 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 ---
 
 ## 4. Task ledger
+
+**Screens deliberately NOT added (T15 triage).** The brief asked not to add
+CRUD everywhere, so each absence was judged on the entity's lifecycle:
+`stores` and `users` need no separate *view* — their edit form already shows
+every field, and a read-only twin would be two screens to keep in sync for no
+gain. Per-document-type **lists** (quotations, contracts, handover, payments)
+are a real gap but a larger one: the useful version is a single cross-document
+search, not four near-identical lists, and that is worth designing rather than
+generating. `GoodsReceipt` has no create form on purpose — a receipt only
+exists as the result of receiving against a purchase order, and a free-standing
+one would bypass the 3-way match.
+
 
 **T13-remainder (open):** three classes of Vietnamese string are still not
 translated, and each needs a judgement rather than a mechanical wrap:
@@ -116,7 +128,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T12 | Responsive wrapper on the 11 tables actually missing it + lint test so no new screen can opt out (F18) | 11 templates | `test_ui_consistency.py` (7) | ✅ Done |
 | T13 | i18n pass on procurement/production (F19): **53 keys added, 99 strings wrapped**; one sentence split across `<strong>`/`<em>` rewritten as a single key. Guard test scans every template for bare Vietnamese labels | 10 templates + `i18n.py` | `test_ui_consistency.py` (22) | ✅ Labels done |
 | T14 | Merge `payment/` into `payments/` via `git mv` (history preserved); guard test fails if any singular/plural directory pair reappears (F20) | templates + routes | `test_ui_consistency.py` (26) | ✅ Done |
-| T15 | Triage missing screens (F21) — add only what the entity's lifecycle justifies | various | per screen | |
+| T15 | Triage missing screens (F21): built **order edit** (descriptive fields only — money is derived from documents, customer/store would invalidate them) and **agreement edit** (draft/active only — terminated is history that orders cite). Everything else deliberately NOT added | routes + 2 templates | `test_edit_screens.py` (11) | ✅ Done |
 | D1 | Refresh `CLAUDE.md` — CSRF/Alembic corrected, plus the new house rules (money module, status tokens, workflow engine, normalization chokepoint), real test commands, current data model and branch | `CLAUDE.md` | — | ✅ Done |
 
 ### Phase 2 — Product enhancements

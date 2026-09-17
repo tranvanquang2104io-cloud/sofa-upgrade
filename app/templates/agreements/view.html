@@ -10,6 +10,10 @@
 
 <div class="d-flex align-items-center gap-2 mb-3">
   {{ status_badge(agreement.status, 'document') }}
+  {% if agreement.can_edit() %}
+  <a href="{{ url_for('dashboard.edit_agreement', agreement_id=agreement.id) }}"
+     class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> {{ t('Edit') }}</a>
+  {% endif %}
   {% if agreement.status == 'suspended' %}
     <span class="text-muted small">{{ t('No new orders may cite this agreement while it is suspended.') }}</span>
   {% endif %}
