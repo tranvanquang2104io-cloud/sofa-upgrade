@@ -57,12 +57,13 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F13 | S2 | `PurchaseOrder.supplier_id` and `GoodsReceipt.po_id` are nullable → a PO with no supplier, a GR attached to nothing (bypasses the audit trail) | `models.py:1120`, `:1210` | Open — T7 |
 | F14 | S3 | `BaseRepository.get_by_id` is unscoped `query.get(id)`; a scoped variant exists for `Customer` only. Tenant safety depends entirely on every caller remembering | `repository.py:31-33` vs `:159` | Open — T8 |
 | F15 | S4 | `recalcAll()` copy-pasted across 7 templates; image-preview logic across 6; 3 separate line-editor implementations. `static/js/main.js` is 25 lines and effectively unused | templates | Open — T9 |
-| F16 | S4 | Status badges rendered two different ways: inline `if/elif` chains (sales screens) vs a `colors.get()` dict from the view (procurement) | both | Open — T10 |
+| F16 | S4 | Status badges rendered two different ways: inline `if/elif` chains (sales screens) vs a `colors.get()` dict from the view (procurement) | both | ✅ **FIXED** (T17) — one token map + macros |
 | F17 | S4 | No pagination on materials, PO, PR, GR, documents, stores lists; no search on orders, procurement, stores | templates | Open — T11 |
 | F18 | S4 | No `table-responsive` on materials, PO, PR, GR, production lists → horizontal overflow on mobile with no scroll affordance | templates | Open — T12 |
 | F19 | S4 | 264 template lines carry un-`t()`-wrapped Vietnamese; whole procurement/production modules bypass i18n | templates | Open — T13 |
 | F20 | S4 | `payment/` (singular) and `payments/` (plural) template directories both exist for the same concept | dirs | Open — T14 |
 | F23 | S4 | `skip_advance_payment` sets `lifecycle.advance_paid = True` when no money was received. **Scope corrected 2026-09-18:** money reports sum confirmed `PaymentReport` rows, NOT this flag, so financial figures were never wrong. The real defect is **display only** — the order timeline shows a green "advance paid ✓" for a skipped advance | `report_service.py:133-145` (correct), `orders/view.html:315`, `orders/list.html:46` | Open — T16 |
+| F24 | S2 | **Unreachable status badges.** `orders/list.html` tested `advance_paid` before `handover_confirmed`; every delivered order also has `advance_paid`, so the "Delivered" and "Contract Signed" branches were dead code — an order showed "Advance Paid" from delivery until fully paid | `orders/list.html:44-53` | ✅ **FIXED** (T17) |
 | F21 | S4 | Missing screens: Orders has no edit; quotations/contracts/handover/payments have no list; GR has no create/edit form; stores/users have no view | inventory | Open — T15 (triage, not blanket CRUD) |
 
 ---
@@ -101,7 +102,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T7 | Tighten nullable FKs: PO→supplier, GR→PO (F13) | model + migration | new | |
 | T8 | Make tenant-scoped lookup the default in `BaseRepository` (F14) | `repository.py` | extend isolation tests | |
 | T9 | Extract shared `static/js/sofa-lineitems.js` (recalc + line rows + image preview); delete 7 copies (F15) | templates + js | render tests | |
-| T10 | One `_status_badge.html` macro + one status→colour map (F16) | templates | render tests | |
+| T17 | Shared status vocabulary + UI macro library; orders list converted (F16, F24, F23-display) | `status_tokens.py`, `macros/ui.html`, `style.css` | `test_status_tokens.py` (29) | ✅ Done |
 | T11 | Pagination + search on the 6 lists that lack them (F17) | templates + routes | list tests | |
 | T12 | `table-responsive` on the 5 overflowing tables (F18) | templates | — | |
 | T13 | i18n pass on procurement/production (F19) | templates + `i18n.py` | — | |
@@ -114,7 +115,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T | Task | Depends on |
 |---|---|---|
 | **2A** | **Workflow engine** (DA) — ✅ **engine + rules + waivers + migration + 11 tests DONE**; service guards migrated; `skip_advance_payment` now records an audited waiver. ⬜ Remaining: admin config screen, order-view surfacing of warnings | T8 |
-| **2B** | **Data standardization** (4.1): `standardization_rules` per company/entity/field (UPPERCASE, Title Case, sentence case, trim, collapse spaces, phone/tax format); applied at the service boundary so every write path is covered; auto-apply vs confirm-on-apply flag | T3 |
+| **2B** | **Data standardization** (4.1) — ✅ **DONE**: Vietnamese-aware primitives (`text_normalize.py`), per-company rules + suggestions (migration `d8e9f0a1b2c3`), applied at the **ORM boundary** so routes/services/scripts are all covered, auto vs confirm modes, identifier fields hard-protected. ⬜ Remaining: admin config screen + suggestion inbox | T3 |
 | **2C** | **HĐNT + Đơn đặt hàng** (DB): `master_agreements` table (validity, price list, payment terms, penalty cap ≤8% per LTM 2005 Đ.301, dispute clause, renewal), order→agreement reference, covered orders emit an Đơn đặt hàng citing the HĐNT instead of a full contract, DOCX template | 2A |
 | **2D** | **P2P close-the-loop** (DC): `supplier_invoices` + `supplier_payments`, 3-way match PO/GR/invoice, PO payment status, plus the F11/F13 integrity fixes | T6, T7 |
 | **2E** | **SME gap analysis** (4.5): evidence-based proposal, no speculative features |

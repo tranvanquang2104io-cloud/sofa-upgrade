@@ -1335,6 +1335,97 @@ class WorkflowWaiver(db.Model):
         return f'<WorkflowWaiver {self.action}/{self.prerequisite} order={self.order_id}>'
 
 
+class NormalizationRule(db.Model):
+    """Per-company input-standardisation rule for ONE field.
+
+    The business problem: data is typed by people who are not strict about
+    capitalisation, spacing or punctuation, so generated documents look
+    inconsistent and the stored data is hard to match on.
+
+    One row = one field of one entity, plus the ORDERED list of primitives to
+    run over it (see ``app/utils/text_normalize.py``). Keeping the transform
+    list as data means a company can change its house style without a deploy,
+    and means we do not grow a hardcoded rule per field.
+
+    ``mode``:
+      * ``auto``    — applied silently on save.
+      * ``confirm`` — not applied; the suggestion is surfaced so a human can
+                      accept it. Used for identity-sensitive values where a
+                      wrong guess would misrepresent someone on a document.
+
+    Fields matching ``PROTECTED_FIELD_HINTS`` (tax codes, bank accounts,
+    document numbers...) are refused at the service layer whatever is
+    configured here — normalising a legal identifier corrupts it.
+    """
+
+    __tablename__ = 'normalization_rules'
+
+    MODE_AUTO = 'auto'
+    MODE_CONFIRM = 'confirm'
+    MODES = (MODE_AUTO, MODE_CONFIRM)
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+
+    # 'customer', 'supplier', 'material', 'order', 'quotation', ...
+    entity_type = db.Column(db.String(64), nullable=False)
+    field_name = db.Column(db.String(64), nullable=False)
+
+    # Ordered list of primitive names, e.g. ["nfc","trim","company_name_case"]
+    primitives = db.Column(db.JSON, nullable=False, default=list)
+
+    mode = db.Column(db.String(16), nullable=False, default=MODE_AUTO)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'entity_type', 'field_name',
+                            name='uq_normalization_rule'),
+        db.Index('ix_normalization_rules_company_entity',
+                 'company_id', 'entity_type'),
+    )
+
+    def __repr__(self):
+        return f'<NormalizationRule {self.entity_type}.{self.field_name}>'
+
+
+class NormalizationSuggestion(db.Model):
+    """A pending ``confirm``-mode change awaiting a human decision.
+
+    Keeps the original alongside the proposal so nothing is lost and the
+    change can be reviewed rather than silently applied.
+    """
+
+    __tablename__ = 'normalization_suggestions'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+
+    entity_type = db.Column(db.String(64), nullable=False)
+    entity_id = db.Column(GUID(), nullable=False)
+    field_name = db.Column(db.String(64), nullable=False)
+
+    original_value = db.Column(db.Text)
+    suggested_value = db.Column(db.Text)
+
+    status = db.Column(db.String(16), default='pending', nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime)
+
+    __table_args__ = (
+        db.Index('ix_norm_suggestions_entity', 'entity_type', 'entity_id'),
+    )
+
+    def __repr__(self):
+        return f'<NormalizationSuggestion {self.entity_type}.{self.field_name}>'
+
+
 def _populate_doc_company_id(mapper, connection, target):
     """before_insert: set a document's company_id from its order (NR3/D8).
 

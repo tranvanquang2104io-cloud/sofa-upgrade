@@ -132,6 +132,11 @@ def create_app(config_name=None):
                     .order_by(MaterialUnit.name).all())
         return dict(material_units=material_units)
 
+    # Data-standardization listeners live at the ORM boundary so every write
+    # path (routes, services, import scripts) is covered by one registration.
+    from app.services.normalization_service import register_normalization_listeners
+    register_normalization_listeners()
+
     @app.context_processor
     def inject_status_tokens():
         """Expose the shared status vocabulary so no template decides colour

@@ -57,6 +57,14 @@ class CompanyService:
             logger.warning("Could not seed workflow rules for %s: %s",
                            company_code, exc)
 
+        # Same for the Vietnamese data-standardization defaults.
+        try:
+            from app.services.normalization_service import NormalizationService
+            NormalizationService.seed_defaults(company.id)
+        except Exception as exc:
+            logger.warning("Could not seed normalization rules for %s: %s",
+                           company_code, exc)
+
         # Auto-create company template subfolder
         try:
             templates_base = current_app.config.get('TEMPLATES_FOLDER')
