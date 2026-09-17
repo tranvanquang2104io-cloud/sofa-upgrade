@@ -52,7 +52,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F8 | S1 | **No workflow engine.** Sequencing split 3 ways: `LifecycleStatus` booleans, per-document `can_*` guards that can't see other documents, and hardcoded `if/raise` inside individual services | `models.py:264`, `services.py:745`, `:875-880` | Open — **Phase 2A** |
 | F9 | S1 | `skip_advance_payment` is a **second, parallel** lifecycle-mutation path that bypasses `PaymentReportService` entirely | `dashboard_routes.py:1765-1799` | Open — Phase 2A |
 | F10 | S2 | **P2P dead-ends at goods receipt.** No supplier invoice, no AP, no payment-to-supplier entity | no such model | ✅ **FIXED** (2D) |
-| F11 | S2 | `MaterialNorm.product_key` matches products by **lowercased name string**, not FK — no product master exists. Rename a product → norms silently stop matching | `models.py:1009` | Open — Phase 2C |
+| F11 | S2 | No product master; `MaterialNorm.product_key` matches a **lowercased name string**, so renaming a product silently breaks its norms | `models.py:1009` | 🟡 **Phase 1 DONE** — `products` table + reconciliation report (migration `b2c3d4e5f6a7`). Phase 2 (pointing documents/norms at `product_id`) awaits your review of the report |
 | F12 | S2 | ~~No unique constraint on MaterialStock~~ — **misdiagnosed.** The constraint EXISTS. The real gap: `store_id` is NULLable and SQL treats NULLs as DISTINCT, so it never covered **company-level** rows. Proven empirically: 2 duplicate main-warehouse rows accepted. `receive()` uses `.first()` → stock silently disagrees with itself | `models.py:832`, probe | ✅ **FIXED** (T6) — partial unique index + duplicate-merging migration |
 | F13 | S2 | `PurchaseOrder.supplier_id` nullable → a PO could be SENT with no supplier (and could never be invoiced) | `models.py:1120` | ✅ **FIXED** (T7) — guarded at the `submit` transition rather than made NOT NULL, so drafting before choosing a supplier still works |
 | F14 | S3 | `BaseRepository.get_by_id` is unscoped. **Measured, not assumed:** a sweep of all 14 detail routes with a foreign id found **ZERO leaks** — every current route does check ownership. So this is a *latent* hazard (the next forgetful route leaks), not an active defect | `repository.py:31`, `test_tenant_isolation_sweep.py` | ✅ **ADDRESSED** (T8) — scoped `get_for_company` on every repository + a permanent 28-probe sweep |
@@ -177,3 +177,33 @@ advance, driven by `advance_skipped` and the new waiver record — so the
 timeline tells the truth and the waiver's reason is visible on hover. The
 lifecycle flag keeps its gating role untouched.
 
+
+
+---
+
+## 7. F11 — how the product master is being introduced
+
+Adding master data on top of years of free text is where this kind of
+migration usually goes wrong: a bulk auto-merge quietly combines two real
+products, and un-merging afterwards means editing historical documents. So the
+order is deliberate.
+
+**Phase 1 — shipped, changes nothing.** The `products` table exists and
+`product_service.reconcile(company_id)` reports what is actually in the data:
+every distinct product name across quotations, contracts, handover records and
+order confirmations, plus every `MaterialNorm.product_key`, grouped by a fuzzy
+key that ignores diacritics, punctuation and spacing. Each group shows its
+spelling variants, how often each is used, which document types use it, the
+units seen and the **price spread**. Nothing is created; no document is
+touched.
+
+**Phase 2 — needs your review first.** Two questions only a person can answer:
+
+* Are the flagged groups really one product? The fuzzy key deliberately does
+  NOT merge "Sofa 3 chỗ" with "Sofa 3 chỗ da bò" — those may be two products
+  or one product typed carelessly, and guessing wrong is expensive.
+* Where a group shows a price spread, is that a price change over time, a
+  customer-specific price, or a typo?
+
+Once the list is agreed, phase 2 points line items and material norms at
+`product_id`, keeping the free-text name on each line for one-off custom work.

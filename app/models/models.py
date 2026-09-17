@@ -1887,6 +1887,63 @@ class SupplierPaymentAllocation(db.Model):
         return f'<SupplierPaymentAllocation {self.allocated_amount}>'
 
 
+class Product(db.Model):
+    """The thing the business sells or makes.
+
+    F11: until now no such entity existed. Quotation/contract/handover line
+    items are free text, and ``MaterialNorm.product_key`` matches a LOWERCASED
+    PRODUCT NAME — so renaming "Sofa 3 chỗ" to "Sofa 3 chỗ da bò" silently
+    stops the material norms matching, the production plan generates no
+    requirement, and the shortfall is discovered on the workshop floor.
+
+    It also makes ordinary questions unanswerable — "what do we sell most of",
+    "what does this model cost us" — because there is no thing to group by.
+
+    PHASE 1 (this change) introduces the table and a reconciliation report
+    only. Nothing writes through it yet: existing documents keep their
+    free-text names, so this is purely additive and reversible. Phase 2 points
+    line items and norms at ``product_id`` once the owner has reviewed what
+    the reconciliation found.
+
+    ``match_key`` is the normalized name, kept so phase 2 can link existing
+    free-text rows without a second normalisation rule.
+    """
+
+    __tablename__ = 'products'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+
+    product_code = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    match_key = db.Column(db.String(255), nullable=False, index=True)
+
+    unit = db.Column(db.String(50))
+    category = db.Column(db.String(100))
+    default_price = db.Column(db.Numeric(15, 2))
+    description = db.Column(db.Text)
+
+    # How this row came to exist: 'manual' or 'reconciled' (created from the
+    # free-text names already present in documents).
+    source = db.Column(db.String(20), default='manual')
+
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'product_code',
+                            name='uq_company_product_code'),
+        db.UniqueConstraint('company_id', 'match_key',
+                            name='uq_company_product_match_key'),
+    )
+
+    def __repr__(self):
+        return f'<Product {self.product_code} {self.name}>'
+
+
 def _populate_doc_company_id(mapper, connection, target):
     """before_insert: set a document's company_id from its order (NR3/D8).
 
