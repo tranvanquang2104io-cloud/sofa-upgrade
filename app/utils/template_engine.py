@@ -785,3 +785,127 @@ class DocumentVariableCollector:
         })
         return ctx
 
+
+    @staticmethod
+    def collect_master_agreement_variables(agreement, customer, company=None):
+        """Context for a HỢP ĐỒNG NGUYÊN TẮC document.
+
+        The agreement deliberately carries no quantity, price or delivery date
+        for any single transaction — those belong on the ĐƠN ĐẶT HÀNG issued
+        under it. What it does carry is the framework: validity, the agreed
+        price list, and the commercial/legal terms.
+        """
+        ctx = DocumentVariableCollector._company_ctx(company)
+
+        price_lines = []
+        for line in sorted(getattr(agreement, 'price_lines', []) or [],
+                           key=lambda l: (l.product_name or '')):
+            # Only the currently-open lines belong on the printed agreement;
+            # superseded ones are history, not terms.
+            if line.effective_to is not None:
+                continue
+            price_lines.append({
+                'product_name': line.product_name or '',
+                'unit': line.unit or '',
+                'agreed_unit_price': _fmt(line.agreed_unit_price)
+                                     if line.agreed_unit_price is not None else '',
+                'discount_pct': _fmt(line.discount_pct, decimals=1)
+                                if line.discount_pct is not None else '',
+            })
+
+        ctx.update({
+            'agreement_number': agreement.agreement_number,
+            'agreement_date': _fmt_date(agreement.signed_date
+                                        or agreement.effective_from),
+            'agreement_day': _date_parts(agreement.signed_date
+                                         or agreement.effective_from)[0],
+            'agreement_month': _date_parts(agreement.signed_date
+                                           or agreement.effective_from)[1],
+            'agreement_year': _date_parts(agreement.signed_date
+                                          or agreement.effective_from)[2],
+            'effective_from': _fmt_date(agreement.effective_from),
+            # An open-ended agreement is normal Vietnamese practice; say so in
+            # words rather than printing an empty cell.
+            'effective_to': (_fmt_date(agreement.effective_to)
+                             if agreement.effective_to else 'Vô thời hạn'),
+            'auto_renew_text': ('Hợp đồng tự động gia hạn nếu không bên nào có '
+                                'văn bản chấm dứt trước %s ngày.'
+                                % (agreement.renewal_notice_days or 30))
+                               if agreement.auto_renew else '',
+            'scope_description': agreement.scope_description or '',
+            'payment_terms': agreement.payment_terms or '',
+            'quality_terms': agreement.quality_terms or '',
+            'delivery_terms': agreement.delivery_terms or '',
+            'penalty_pct': _fmt(agreement.penalty_pct, decimals=1),
+            'penalty_basis_note': agreement.penalty_basis_note or '',
+            'dispute_resolution': agreement.dispute_resolution or '',
+            'seller_representative': agreement.seller_representative or '',
+            'seller_representative_title': agreement.seller_representative_title or '',
+            'buyer_representative': agreement.buyer_representative or '',
+            'buyer_representative_title': agreement.buyer_representative_title or '',
+            'price_lines': price_lines,
+            'has_price_list': bool(price_lines),
+            # Customer (party B)
+            'customer_name': customer.name if customer else '',
+            'customer_address': (customer.address or '') if customer else '',
+            'customer_phone': (customer.phone or '') if customer else '',
+            'customer_tax_code': (getattr(customer, 'tax_code', '') or '') if customer else '',
+            'customer_representative': (getattr(customer, 'representative_name', '') or '') if customer else '',
+            'customer_representative_title': (getattr(customer, 'representative_title', '') or '') if customer else '',
+            'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
+        })
+        return ctx
+
+    @staticmethod
+    def collect_order_confirmation_variables(confirmation, customer, order,
+                                             company=None):
+        """Context for an ĐƠN ĐẶT HÀNG issued under a framework agreement.
+
+        The citation fields come from the SNAPSHOT stored on the confirmation,
+        not from a live join, so a reprint years later still shows what the
+        document actually cited when it was issued.
+        """
+        ctx = DocumentVariableCollector._company_ctx(company)
+        ctx.update(DocumentVariableCollector._extend_ctx(confirmation))
+
+        ctx.update({
+            'confirmation_number': confirmation.confirmation_number,
+            'confirmation_date': _fmt_date(confirmation.confirmation_date),
+            'confirmation_day': _date_parts(confirmation.confirmation_date)[0],
+            'confirmation_month': _date_parts(confirmation.confirmation_date)[1],
+            'confirmation_year': _date_parts(confirmation.confirmation_date)[2],
+            # "Căn cứ Hợp đồng nguyên tắc số ... ngày ..."
+            'cited_agreement_number': confirmation.cited_agreement_number or '',
+            'cited_agreement_date': _fmt_date(confirmation.cited_agreement_date),
+            'agreement_reference_text': (
+                'Căn cứ Hợp đồng nguyên tắc số %s ngày %s'
+                % (confirmation.cited_agreement_number or '',
+                   _fmt_date(confirmation.cited_agreement_date))
+            ) if confirmation.cited_agreement_number else '',
+            # Money
+            'items': DocumentVariableCollector._build_items(
+                getattr(confirmation, 'items', None) or []),
+            'subtotal': _fmt(confirmation.subtotal),
+            'vat_rate': _fmt(confirmation.vat_rate, decimals=1),
+            'vat_amount': _fmt(confirmation.vat_amount),
+            'shipping_fee': _fmt(confirmation.shipping_fee),
+            'another_fee': _fmt(confirmation.another_fee),
+            'total_amount': _fmt(confirmation.total_amount),
+            'amount_in_words': getattr(confirmation, 'amount_in_words', '') or '',
+            # Delivery
+            'delivery_date': _fmt_date(confirmation.delivery_date),
+            'delivery_address': confirmation.delivery_address or '',
+            'payment_terms': confirmation.payment_terms or '',
+            'notes': confirmation.notes or '',
+            'city': _order_city(order, ''),
+            # Customer / order
+            'customer_name': customer.name if customer else '',
+            'customer_address': (customer.address or '') if customer else '',
+            'customer_phone': (customer.phone or '') if customer else '',
+            'customer_tax_code': (getattr(customer, 'tax_code', '') or '') if customer else '',
+            'customer_representative': (getattr(customer, 'representative_name', '') or '') if customer else '',
+            'order_code': order.order_code if order else '',
+            'order_title': (order.title or '') if order else '',
+            'generated_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
+        })
+        return ctx
