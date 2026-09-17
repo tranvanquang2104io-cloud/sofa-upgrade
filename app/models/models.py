@@ -830,7 +830,19 @@ class MaterialStock(db.Model):
     last_updated     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at       = db.Column(db.DateTime, default=datetime.utcnow)
 
-    __table_args__ = (db.UniqueConstraint('material_id', 'store_id', name='uq_material_store_stock'),)
+    __table_args__ = (
+        db.UniqueConstraint('material_id', 'store_id', name='uq_material_store_stock'),
+        # The constraint above does NOT cover company-level rows: store_id is
+        # NULLable and SQL treats two NULLs as distinct, so a material could
+        # hold several "main warehouse" rows. ProcurementService.receive()
+        # finds the row with .first(), so duplicates make a goods receipt
+        # increment one row while a reader sees another. A partial unique
+        # index closes the NULL case (supported by PostgreSQL and SQLite).
+        db.Index('uq_material_stock_company_level', 'material_id',
+                 unique=True,
+                 postgresql_where=db.text('store_id IS NULL'),
+                 sqlite_where=db.text('store_id IS NULL')),
+    )
 
     def __repr__(self):
         return f'<MaterialStock material={self.material_id} store={self.store_id}>'

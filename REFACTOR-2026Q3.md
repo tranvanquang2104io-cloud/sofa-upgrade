@@ -53,8 +53,8 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F9 | S1 | `skip_advance_payment` is a **second, parallel** lifecycle-mutation path that bypasses `PaymentReportService` entirely | `dashboard_routes.py:1765-1799` | Open — Phase 2A |
 | F10 | S2 | **P2P dead-ends at goods receipt.** No supplier invoice, no AP, no payment-to-supplier entity | no such model | ✅ **FIXED** (2D) |
 | F11 | S2 | `MaterialNorm.product_key` matches products by **lowercased name string**, not FK — no product master exists. Rename a product → norms silently stop matching | `models.py:1009` | Open — Phase 2C |
-| F12 | S2 | `MaterialStock` has **no unique constraint** on `(material_id, store_id)`; code relies on `.first()` → duplicate rows would silently corrupt stock | `models.py:815-831` | Open — T6 |
-| F13 | S2 | `PurchaseOrder.supplier_id` and `GoodsReceipt.po_id` are nullable → a PO with no supplier, a GR attached to nothing (bypasses the audit trail) | `models.py:1120`, `:1210` | Open — T7 |
+| F12 | S2 | ~~No unique constraint on MaterialStock~~ — **misdiagnosed.** The constraint EXISTS. The real gap: `store_id` is NULLable and SQL treats NULLs as DISTINCT, so it never covered **company-level** rows. Proven empirically: 2 duplicate main-warehouse rows accepted. `receive()` uses `.first()` → stock silently disagrees with itself | `models.py:832`, probe | ✅ **FIXED** (T6) — partial unique index + duplicate-merging migration |
+| F13 | S2 | `PurchaseOrder.supplier_id` nullable → a PO could be SENT with no supplier (and could never be invoiced) | `models.py:1120` | ✅ **FIXED** (T7) — guarded at the `submit` transition rather than made NOT NULL, so drafting before choosing a supplier still works |
 | F14 | S3 | `BaseRepository.get_by_id` is unscoped `query.get(id)`; a scoped variant exists for `Customer` only. Tenant safety depends entirely on every caller remembering | `repository.py:31-33` vs `:159` | Open — T8 |
 | F15 | S4 | `recalcAll()` copy-pasted across 7 templates; image-preview logic across 6; 3 separate line-editor implementations. `static/js/main.js` is 25 lines and effectively unused | templates | Open — T9 |
 | F16 | S4 | Status badges rendered two different ways: inline `if/elif` chains (sales screens) vs a `colors.get()` dict from the view (procurement) | both | ✅ **FIXED** (T17) — one token map + macros |
@@ -98,8 +98,8 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T3 | Extract `services/money.py`; wire all 7 call sites; honour `Company.vat_rate` | `money.py`, `dashboard_routes.py`, `auth_utils.py` | `test_money.py` (12) | ✅ Done |
 | T4 | Re-derive totals from copied items + restore single-active-contract invariant (F6, F22) | `dashboard_routes.py` | `test_contract_integrity.py` (2) | ✅ Done |
 | T5 | ~~Handover accepted-qty total~~ — withdrawn, verified already correct | — | — | ❌ N/A |
-| T6 | Unique constraint on `MaterialStock(material_id, store_id)` + migration (F12) | model + migration | new | |
-| T7 | Tighten nullable FKs: PO→supplier, GR→PO (F13) | model + migration | new | |
+| T6 | Partial unique index for company-level stock + duplicate-merging migration `a1b2c3d4e5f6` (F12) | model + migration | `test_stock_uniqueness.py` (3) | ✅ Done |
+| T7 | PO cannot be submitted without a supplier (F13) | `procurement_service.py` | same file (2) | ✅ Done |
 | T8 | Make tenant-scoped lookup the default in `BaseRepository` (F14) | `repository.py` | extend isolation tests | |
 | T9 | Extract shared `static/js/sofa-lineitems.js` (recalc + line rows + image preview); delete 7 copies (F15) | templates + js | render tests | |
 | T17 | Shared status vocabulary + UI macro library; orders list converted (F16, F24, F23-display) | `status_tokens.py`, `macros/ui.html`, `style.css` | `test_status_tokens.py` (29) | ✅ Done |

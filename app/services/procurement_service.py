@@ -118,6 +118,14 @@ class ProcurementService:
         tr = po.TRANSITIONS.get(action)
         if not tr or po.status not in tr[0]:
             raise ValueError(f'Không thể "{action}" khi đơn mua ở trạng thái "{po.status}"')
+
+        # supplier_id is nullable so a PO can be drafted before the supplier is
+        # chosen, but an order cannot be SENT to nobody — and without a
+        # supplier there is nobody to invoice it later either. Enforced at the
+        # transition rather than as a NOT NULL column, so drafting still works.
+        if action == 'submit' and not po.supplier_id:
+            raise ValueError('Chưa chọn nhà cung cấp — không thể gửi đơn mua hàng.')
+
         po.status = tr[1]
         db.session.commit()
         return po
