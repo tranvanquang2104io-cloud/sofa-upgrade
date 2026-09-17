@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, status_badge, search_bar, empty_state, table_open, table_close with context %}
+{% block title %}{{ t('Supplier Invoices') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Supplier Invoices'), icon='bi-receipt',
+               count=(pagination.total if pagination else 0),
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Supplier Invoices'), None)]) }}
+
+{{ search_bar(url_for('dashboard.list_supplier_invoices'), search_value=search,
+              placeholder='Search by invoice number',
+              reset_url=url_for('dashboard.list_supplier_invoices')) }}
+
+{% if invoices %}
+{{ table_open() }}
+  <thead class="table-light">
+    <tr>
+      <th>{{ t('Invoice') }}</th>
+      <th>{{ t('Supplier') }}</th>
+      <th>{{ t('Date') }}</th>
+      <th>{{ t('Purchase Order') }}</th>
+      <th class="text-end">{{ t('Total') }}</th>
+      <th class="text-end">{{ t('Outstanding') }}</th>
+      <th>{{ t('Match') }}</th>
+      <th>{{ t('Status') }}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for inv in invoices %}
+    <tr>
+      <td>
+        <a href="{{ url_for('dashboard.view_supplier_invoice', invoice_id=inv.id) }}">
+          <strong>{% if inv.invoice_series %}{{ inv.invoice_series }}/{% endif %}{{ inv.invoice_number }}</strong>
+        </a>
+      </td>
+      <td>{{ inv.supplier.name if inv.supplier else '' }}</td>
+      <td>{{ inv.invoice_date.strftime('%d/%m/%Y') if inv.invoice_date else '' }}</td>
+      <td>{{ inv.po.po_number if inv.po else '' }}</td>
+      <td class="text-end">{{ "{:,.0f}".format(inv.total_amount|float) }} đ</td>
+      <td class="text-end">
+        {% if inv.is_paid %}
+          <span class="text-success">{{ t('Paid') }}</span>
+        {% else %}
+          {{ "{:,.0f}".format(inv.amount_outstanding|float) }} đ
+        {% endif %}
+      </td>
+      <td>
+        {% if inv.match_status == 'ok' %}
+          <span class="badge bg-success">{{ t('OK') }}</span>
+        {% else %}
+          <span class="badge bg-warning text-dark" title="{{ inv.match_notes or '' }}">
+            {{ t(inv.match_status) }}
+          </span>
+        {% endif %}
+      </td>
+      <td>{{ status_badge(inv.status, 'document') }}</td>
+      <td class="text-end">
+        <a href="{{ url_for('dashboard.view_supplier_invoice', invoice_id=inv.id) }}"
+           class="btn btn-outline-secondary btn-sm">{{ t('View') }}</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+{{ table_close() }}
+{% include '_pagination.html' %}
+{% else %}
+{{ empty_state('No supplier invoices yet. Record one from a purchase order.',
+               icon='bi-receipt',
+               action_url=url_for('dashboard.list_purchase_orders'),
+               action_label='Go to purchase orders') }}
+{% endif %}
+{% endblock %}

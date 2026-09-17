@@ -108,7 +108,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | T13 | i18n pass on procurement/production (F19) — status labels now route through `t()` via `status_badge`; remaining headings/buttons still hardcoded | templates + `i18n.py` | — | 🟡 Partial |
 | T14 | Merge `payment/` into `payments/` (F20) | templates | render tests | |
 | T15 | Triage missing screens (F21) — add only what the entity's lifecycle justifies | various | per screen | |
-| D1 | Refresh `CLAUDE.md` (Alembic + CSRF now exist) | `CLAUDE.md` | — | |
+| D1 | Refresh `CLAUDE.md` — CSRF/Alembic corrected, plus the new house rules (money module, status tokens, workflow engine, normalization chokepoint), real test commands, current data model and branch | `CLAUDE.md` | — | ✅ Done |
 
 ### Phase 2 — Product enhancements
 
@@ -117,7 +117,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | **2A** | **Workflow engine** (DA) — ✅ **engine + rules + waivers + migration + 11 tests DONE**; service guards migrated; `skip_advance_payment` now records an audited waiver. ✅ **admin screen DONE** (`/settings/workflow` — relax/waive/disable per rule). ⬜ Remaining: order-view surfacing of warnings | T8 |
 | **2B** | **Data standardization** (4.1) — ✅ **DONE**: Vietnamese-aware primitives (`text_normalize.py`), per-company rules + suggestions (migration `d8e9f0a1b2c3`), applied at the **ORM boundary** so routes/services/scripts are all covered, auto vs confirm modes, identifier fields hard-protected. ✅ **admin screen DONE** (`/settings/standardization`, with live preview of what a rule does to a sample). ⬜ Remaining: suggestion inbox for confirm-mode | T3 |
 | **2C** | **HĐNT + Đơn đặt hàng** (DB) — ✅ **model + service + migration `e9f0a1b2c3d4` + 18 tests DONE**: `master_agreements` (validity, open-ended support, suspend/terminate, penalty ≤8% per LTM 2005 Đ.301 noted as *breached portion*, not total), `master_agreement_price_lines` (line-level validity so a revision never rewrites a past order), `order_confirmations` (ĐĐH, occupies the Contract slot, snapshots the cited agreement + prices). Routing: no agreement ⇒ ordinary Contract, so **zero migration for historical orders**. ✅ **UI screens DONE** (`/agreements` list · create · view with price-list management and activate/suspend/terminate). ✅ **order-side action DONE** — an order covered by an active HĐNT now offers *Issue Order Confirmation* instead of *Create Contract*, and names the covering agreement. ⬜ Remaining: DOCX templates for HĐNT and ĐĐH | 2A |
-| **2D** | **P2P close-the-loop** (DC) — ✅ **DONE**: `supplier_invoices` (+lines), `supplier_payments`, `supplier_payment_allocations`, `purchase_order_lines.quantity_invoiced`; line-level 3-way match (ordered/received/invoiced + price variance) that **warns, never blocks**; PO invoice/payment status; migration `f0a1b2c3d4e5`; 23 tests. ⬜ Remaining: UI screens; F11/F13 integrity fixes still open | T6, T7 |
+| **2D** | **P2P close-the-loop** (DC) — ✅ **DONE**: `supplier_invoices` (+lines), `supplier_payments`, `supplier_payment_allocations`, `purchase_order_lines.quantity_invoiced`; line-level 3-way match (ordered/received/invoiced + price variance) that **warns, never blocks**; PO invoice/payment status; migration `f0a1b2c3d4e5`; 23 tests. ✅ **UI screens DONE** (`/supplier-invoices` list · record-from-PO · view with match verdict, confirm and pay). ⬜ Remaining: F11 (product master) still open | T6, T7 |
 | **2E** | **SME gap analysis** (4.5): evidence-based proposal, no speculative features |
 
 ---

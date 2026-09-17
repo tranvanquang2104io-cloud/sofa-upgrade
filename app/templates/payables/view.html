@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, status_badge, table_open, table_close with context %}
+{% block title %}{{ invoice.invoice_number }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Supplier Invoice') ~ ' ' ~ invoice.invoice_number, icon='bi-receipt',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Supplier Invoices'), url_for('dashboard.list_supplier_invoices')),
+                       (invoice.invoice_number, None)]) }}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  {{ status_badge(invoice.status, 'document') }}
+  {% if invoice.match_status != 'ok' %}
+  <span class="badge bg-warning text-dark">{{ t('3-way match') }}: {{ t(invoice.match_status) }}</span>
+  {% else %}
+  <span class="badge bg-success">{{ t('3-way match') }}: {{ t('OK') }}</span>
+  {% endif %}
+  {% if invoice.is_paid %}<span class="badge bg-success">{{ t('Paid') }}</span>{% endif %}
+</div>
+
+{% if invoice.match_notes %}
+<div class="alert alert-warning">
+  <strong><i class="bi bi-exclamation-triangle"></i> {{ t('Matching discrepancy') }}:</strong>
+  {{ invoice.match_notes }}
+  <div class="small mt-1">
+    {{ t('This is a warning, not a block — review it before paying.') }}
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">{{ t('Invoice') }}</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">{{ t('Series') }} / {{ t('Number') }}</dt>
+          <dd class="col-sm-7">{{ invoice.invoice_series or '—' }} / {{ invoice.invoice_number }}</dd>
+          <dt class="col-sm-5">{{ t('Invoice Date') }}</dt>
+          <dd class="col-sm-7">{{ invoice.invoice_date.strftime('%d/%m/%Y') if invoice.invoice_date else '' }}</dd>
+          <dt class="col-sm-5">{{ t('Supplier') }}</dt>
+          <dd class="col-sm-7">{{ invoice.supplier.name if invoice.supplier else '' }}</dd>
+          <dt class="col-sm-5">{{ t('Seller Tax Code') }}</dt>
+          <dd class="col-sm-7">{{ invoice.seller_tax_code or '—' }}</dd>
+          <dt class="col-sm-5">{{ t('Purchase Order') }}</dt>
+          <dd class="col-sm-7">
+            {% if invoice.po %}
+            <a href="{{ url_for('dashboard.view_purchase_order', po_id=invoice.po.id) }}">{{ invoice.po.po_number }}</a>
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">{{ t('Amounts') }}</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-6">{{ t('Subtotal') }} (tiền hàng)</dt>
+          <dd class="col-sm-6 text-end">{{ "{:,.0f}".format(invoice.subtotal|float) }} đ</dd>
+          <dt class="col-sm-6">{{ t('VAT') }} ({{ invoice.vat_rate }}%)</dt>
+          <dd class="col-sm-6 text-end">{{ "{:,.0f}".format(invoice.vat_amount|float) }} đ</dd>
+          <dt class="col-sm-6"><strong>{{ t('Total') }}</strong></dt>
+          <dd class="col-sm-6 text-end"><strong>{{ "{:,.0f}".format(invoice.total_amount|float) }} đ</strong></dd>
+          <dt class="col-sm-6">{{ t('Paid') }}</dt>
+          <dd class="col-sm-6 text-end">{{ "{:,.0f}".format(invoice.amount_paid|float) }} đ</dd>
+          <dt class="col-sm-6">{{ t('Outstanding') }}</dt>
+          <dd class="col-sm-6 text-end">{{ "{:,.0f}".format(invoice.amount_outstanding|float) }} đ</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">{{ t('Lines') }}</div>
+  <div class="card-body">
+    {{ table_open('table table-sm align-middle mb-0') }}
+      <thead class="table-light">
+        <tr>
+          <th>{{ t('Material') }}</th>
+          <th class="text-end">{{ t('Quantity') }}</th>
+          <th class="text-end">{{ t('Unit price') }}</th>
+          <th class="text-end">{{ t('Line total') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in invoice.lines %}
+        <tr>
+          <td>{{ line.material.name if line.material else '' }}</td>
+          <td class="text-end">{{ "{:,.2f}".format(line.quantity|float) }} {{ line.unit or '' }}</td>
+          <td class="text-end">{{ "{:,.0f}".format(line.unit_price|float) }} đ</td>
+          <td class="text-end">{{ "{:,.0f}".format(line.line_total|float) }} đ</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    {{ table_close() }}
+  </div>
+</div>
+
+{% if invoice.allocations %}
+<div class="card mb-3">
+  <div class="card-header">{{ t('Payments') }}</div>
+  <div class="card-body">
+    {{ table_open('table table-sm align-middle mb-0') }}
+      <thead class="table-light">
+        <tr>
+          <th>{{ t('Payment') }}</th>
+          <th>{{ t('Date') }}</th>
+          <th>{{ t('Method') }}</th>
+          <th class="text-end">{{ t('Amount') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alloc in invoice.allocations %}
+        <tr>
+          <td>{{ alloc.payment.payment_number if alloc.payment else '' }}</td>
+          <td>{{ alloc.payment.payment_date.strftime('%d/%m/%Y') if alloc.payment and alloc.payment.payment_date else '' }}</td>
+          <td>
+            {% if alloc.payment and alloc.payment.is_cash %}
+              <span class="badge bg-warning text-dark" title="{{ t('Cash payment — check input-VAT deductibility') }}">
+                {{ t('Cash') }}
+              </span>
+            {% else %}
+              {{ t('Bank transfer') }}
+            {% endif %}
+          </td>
+          <td class="text-end">{{ "{:,.0f}".format(alloc.allocated_amount|float) }} đ</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    {{ table_close() }}
+  </div>
+</div>
+{% endif %}
+
+<div class="d-flex flex-wrap gap-3">
+  {% if invoice.status == 'draft' %}
+  <form method="POST" action="{{ url_for('dashboard.confirm_supplier_invoice', invoice_id=invoice.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-check-lg"></i> {{ t('Confirm Invoice') }}
+    </button>
+  </form>
+  {% endif %}
+
+  {% if invoice.status == 'confirmed' and not invoice.is_paid %}
+  <form method="POST" action="{{ url_for('dashboard.pay_supplier_invoice', invoice_id=invoice.id) }}"
+        class="row g-2 align-items-end flex-grow-1">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-auto">
+      <label class="form-label small">{{ t('Payment No.') }}</label>
+      <input type="text" name="payment_number" class="form-control form-control-sm" required>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small">{{ t('Date') }}</label>
+      <input type="date" name="payment_date" class="form-control form-control-sm" required>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small">{{ t('Amount') }}</label>
+      <input type="number" name="amount" class="form-control form-control-sm" min="1" step="1"
+             value="{{ invoice.amount_outstanding|float|round(0)|int }}" required>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small">{{ t('Method') }}</label>
+      <select name="method" class="form-select form-select-sm">
+        <option value="bank_transfer">{{ t('Bank transfer') }}</option>
+        <option value="cash">{{ t('Cash') }}</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small">{{ t('Reference') }}</label>
+      <input type="text" name="reference_number" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-cash-coin"></i> {{ t('Record Payment') }}
+      </button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

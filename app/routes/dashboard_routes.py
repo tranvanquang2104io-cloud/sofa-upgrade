@@ -3528,6 +3528,174 @@ def add_agreement_price(agreement_id):
     return redirect(url_for('dashboard.view_agreement', agreement_id=agreement_id))
 
 
+# ===== SUPPLIER INVOICES & PAYMENTS (closing the P2P loop) =====
+
+def _owned_supplier_invoice(invoice_id, company_id):
+    from app.models.models import SupplierInvoice
+    inv = SupplierInvoice.query.get(invoice_id)
+    if not inv or str(inv.company_id) != str(company_id):
+        return None
+    return inv
+
+
+@dashboard_bp.route('/supplier-invoices', methods=['GET'])
+@login_required
+def list_supplier_invoices():
+    from app.models.models import SupplierInvoice
+
+    company_id = get_current_company_id()
+    status = request.args.get('status') or None
+    search = (request.args.get('search') or '').strip() or None
+    page = request.args.get('page', 1, type=int)
+
+    q = SupplierInvoice.query.filter_by(company_id=company_id)
+    if status:
+        q = q.filter_by(status=status)
+    if search:
+        q = q.filter(SupplierInvoice.invoice_number.ilike(f'%{search}%'))
+    pagination = q.order_by(SupplierInvoice.invoice_date.desc()).paginate(
+        page=page, per_page=20, error_out=False)
+
+    return render_template('payables/list.html',
+                           invoices=pagination.items, pagination=pagination,
+                           status=status or '', search=search or '')
+
+
+@dashboard_bp.route('/purchase-orders/<po_id>/invoice', methods=['GET', 'POST'])
+@login_required
+def create_supplier_invoice(po_id):
+    """Record the supplier's hóa đơn GTGT against a purchase order."""
+    from app.services.payables_service import PayablesService
+    from app.services.procurement_service import ProcurementService
+
+    company_id = get_current_company_id()
+    po = ProcurementService().get_po(company_id, po_id)
+    if not po:
+        flash(t('Purchase order not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_purchase_orders'))
+
+    if request.method == 'POST':
+        try:
+            lines = []
+            for line in po.lines:
+                qty = request.form.get(f'qty_{line.id}')
+                if not qty:
+                    continue
+                qty = float(qty)
+                if qty <= 0:
+                    continue
+                lines.append({
+                    'po_line_id': str(line.id),
+                    'quantity': qty,
+                    'unit_price': request.form.get(f'price_{line.id}')
+                                  or line.unit_price,
+                })
+
+            invoice = PayablesService.create_invoice(
+                po=po,
+                invoice_number=(request.form.get('invoice_number') or '').strip(),
+                invoice_series=(request.form.get('invoice_series') or '').strip() or None,
+                invoice_date=_parse_date(request.form.get('invoice_date')),
+                lines=lines,
+                vat_rate=request.form.get('vat_rate'),
+                seller_tax_code=(request.form.get('seller_tax_code') or '').strip() or None,
+                notes=request.form.get('notes') or None,
+            )
+            if invoice.match_status != 'ok':
+                flash(t('Invoice recorded with a matching discrepancy: ')
+                      + (invoice.match_notes or ''), 'warning')
+            else:
+                flash(t('Supplier invoice recorded'), 'success')
+            return redirect(url_for('dashboard.view_supplier_invoice',
+                                    invoice_id=invoice.id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error("Error recording supplier invoice: %s", e)
+            db.session.rollback()
+            flash(t('Error recording supplier invoice'), 'error')
+
+    return render_template('payables/create.html', po=po)
+
+
+@dashboard_bp.route('/supplier-invoices/<invoice_id>', methods=['GET'])
+@login_required
+def view_supplier_invoice(invoice_id):
+    from app.services.payables_service import PayablesService
+
+    company_id = get_current_company_id()
+    invoice = _owned_supplier_invoice(invoice_id, company_id)
+    if not invoice:
+        flash(t('Supplier invoice not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_supplier_invoices'))
+
+    return render_template('payables/view.html', invoice=invoice,
+                           payment_status=PayablesService.payment_status(invoice.po))
+
+
+@dashboard_bp.route('/supplier-invoices/<invoice_id>/confirm', methods=['POST'])
+@login_required
+def confirm_supplier_invoice(invoice_id):
+    from app.services.payables_service import PayablesService
+
+    company_id = get_current_company_id()
+    invoice = _owned_supplier_invoice(invoice_id, company_id)
+    if not invoice:
+        flash(t('Supplier invoice not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_supplier_invoices'))
+    try:
+        PayablesService.confirm_invoice(invoice)
+        flash(t('Supplier invoice confirmed'), 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    return redirect(url_for('dashboard.view_supplier_invoice', invoice_id=invoice_id))
+
+
+@dashboard_bp.route('/supplier-invoices/<invoice_id>/pay', methods=['POST'])
+@login_required
+def pay_supplier_invoice(invoice_id):
+    """Record a payment and allocate it to this invoice."""
+    from app.models.models import SupplierPayment
+    from app.services.payables_service import PayablesService
+
+    company_id = get_current_company_id()
+    invoice = _owned_supplier_invoice(invoice_id, company_id)
+    if not invoice:
+        flash(t('Supplier invoice not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_supplier_invoices'))
+
+    try:
+        method = request.form.get('method') or SupplierPayment.METHOD_TRANSFER
+        payment = PayablesService.create_payment(
+            company_id=company_id,
+            supplier_id=invoice.supplier_id,
+            payment_number=(request.form.get('payment_number') or '').strip(),
+            payment_date=_parse_date(request.form.get('payment_date')),
+            amount=request.form.get('amount') or 0,
+            method=method,
+            reference_number=(request.form.get('reference_number') or '').strip() or None,
+        )
+        PayablesService.allocate(payment, invoice, payment.amount)
+        PayablesService.confirm_payment(payment)
+
+        if method == SupplierPayment.METHOD_CASH:
+            # Input-VAT deduction depends on non-cash payment evidence; the
+            # rule has changed recently, so surface the fact rather than
+            # enforce a threshold that may move again.
+            flash(t('Payment recorded in CASH — check input-VAT deductibility with your accountant'),
+                  'warning')
+        else:
+            flash(t('Payment recorded'), 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error("Error recording supplier payment: %s", e)
+        db.session.rollback()
+        flash(t('Error recording payment'), 'error')
+
+    return redirect(url_for('dashboard.view_supplier_invoice', invoice_id=invoice_id))
+
+
 # ===== PRODUCTION PLANNING (Feature 2) =====
 
 def _owned_plan(plan_id, company_id):
