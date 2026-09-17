@@ -1777,7 +1777,7 @@ def create_payment(order_id):
                 flash(t(f'Payment report number "{report_number}" is already taken. Please use a different number.'), 'error')
                 from app.models.models import PaymentReport as _PR
                 _adv = db.session.query(_PR).filter(_PR.order_id==order_id, _PR.payment_type=='advance', _PR.is_confirmed==True, _PR.is_canceled==False).all()
-                return render_template('payment/create.html', order=order, default_type=default_type,
+                return render_template('payments/create.html', order=order, default_type=default_type,
                                        active_contract=active_contract, company=company,
                                        confirmed_advance_payments=_adv,
                                        confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv)),
@@ -1791,7 +1791,7 @@ def create_payment(order_id):
                 flash(t('Advance payment can only be recorded after contract is signed'), 'error')
                 from app.models.models import PaymentReport as _PR2
                 _adv2 = db.session.query(_PR2).filter(_PR2.order_id==order_id, _PR2.payment_type=='advance', _PR2.is_confirmed==True, _PR2.is_canceled==False).all()
-                return render_template('payment/create.html', order=order, default_type=default_type,
+                return render_template('payments/create.html', order=order, default_type=default_type,
                                        active_contract=active_contract, company=company,
                                        confirmed_advance_payments=_adv2,
                                        confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv2)),
@@ -1801,7 +1801,7 @@ def create_payment(order_id):
                 flash(t('Final payment can only be recorded after handover is confirmed'), 'error')
                 from app.models.models import PaymentReport as _PR3
                 _adv3 = db.session.query(_PR3).filter(_PR3.order_id==order_id, _PR3.payment_type=='advance', _PR3.is_confirmed==True, _PR3.is_canceled==False).all()
-                return render_template('payment/create.html', order=order, default_type=default_type,
+                return render_template('payments/create.html', order=order, default_type=default_type,
                                        active_contract=active_contract, company=company,
                                        confirmed_advance_payments=_adv3,
                                        confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv3)),
@@ -1892,7 +1892,7 @@ def create_payment(order_id):
     confirmed_advance_total = float(sum(p.advance_amount or 0 for p in confirmed_advance_payments))
     advance_skipped = bool(order.lifecycle and order.lifecycle.advance_skipped)
 
-    return render_template('payment/create.html', order=order, default_type=default_type,
+    return render_template('payments/create.html', order=order, default_type=default_type,
                            active_contract=active_contract, company=company,
                            confirmed_advance_payments=confirmed_advance_payments,
                            confirmed_advance_total=confirmed_advance_total,

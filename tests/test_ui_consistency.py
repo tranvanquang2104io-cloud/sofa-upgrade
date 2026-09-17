@@ -111,7 +111,7 @@ def test_shared_helpers_are_defined_exactly_once_in_the_codebase():
     'quotations/create.html', 'quotations/edit.html',
     'contracts/create.html', 'contracts/edit.html',
     'handover/create.html', 'handover/edit.html',
-    'payment/create.html', 'payments/edit.html',
+    'payments/create.html', 'payments/edit.html',
 ])
 def test_document_templates_still_parse(app, template):
     """Removing inline JS must not have broken the Jinja syntax."""
@@ -240,3 +240,29 @@ def test_every_translation_key_used_in_procurement_templates_exists():
     assert missing == [], (
         f"these t() keys have no Vietnamese translation registered: {missing}"
     )
+
+
+# --- template directory naming -------------------------------------------
+
+def test_no_singular_plural_duplicate_template_directories():
+    """`payment/` and `payments/` both existed for the same concept.
+
+    Two directories for one thing means a developer has to guess which holds
+    the screen they want, and screens for the same entity drift apart.
+    Everything else here is plural (orders, quotations, contracts, customers),
+    so plural is the convention.
+    """
+    dirs = {p.name for p in TEMPLATES.iterdir() if p.is_dir()}
+    offenders = sorted(d for d in dirs if d + 's' in dirs)
+    assert offenders == [], (
+        "these template directories exist in both singular and plural form: "
+        f"{offenders}"
+    )
+
+
+@pytest.mark.parametrize("template", [
+    'payments/create.html', 'payments/edit.html', 'payments/view.html',
+])
+def test_payment_templates_live_together_and_parse(app, template):
+    with app.app_context():
+        app.jinja_env.get_template(template)
