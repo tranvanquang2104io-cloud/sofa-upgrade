@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, status_badge, search_bar, empty_state, table_open, table_close with context %}
+{% block title %}{{ t('Framework Agreements') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Framework Agreements') ~ ' (HĐNT)', icon='bi-file-earmark-text',
+               count=(pagination.total if pagination else 0),
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Framework Agreements'), None)],
+               action_url=url_for('dashboard.create_agreement'),
+               action_label=t('New Agreement')) }}
+
+<div class="mb-3">
+  <a href="{{ url_for('dashboard.list_agreements') }}"
+     class="btn btn-sm {{ 'btn-primary' if not status else 'btn-outline-secondary' }}">{{ t('All') }}</a>
+  {% for s in statuses %}
+  <a href="{{ url_for('dashboard.list_agreements', status=s) }}"
+     class="btn btn-sm {{ 'btn-primary' if status == s else 'btn-outline-secondary' }}">{{ t(s|capitalize) }}</a>
+  {% endfor %}
+</div>
+
+{{ search_bar(url_for('dashboard.list_agreements'), search_value=search,
+              placeholder='Search by agreement number',
+              reset_url=url_for('dashboard.list_agreements')) }}
+
+{% if agreements %}
+{{ table_open() }}
+  <thead class="table-light">
+    <tr>
+      <th>{{ t('Number') }}</th>
+      <th>{{ t('Customer') }}</th>
+      <th>{{ t('Effective From') }}</th>
+      <th>{{ t('Effective To') }}</th>
+      <th>{{ t('Status') }}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in agreements %}
+    <tr>
+      <td><a href="{{ url_for('dashboard.view_agreement', agreement_id=a.id) }}"><strong>{{ a.agreement_number }}</strong></a></td>
+      <td>{{ a.customer.name if a.customer else '' }}</td>
+      <td>{{ a.effective_from.strftime('%d/%m/%Y') if a.effective_from else '' }}</td>
+      <td>
+        {% if a.effective_to %}{{ a.effective_to.strftime('%d/%m/%Y') }}
+        {% else %}<span class="text-muted">{{ t('Open-ended') }}</span>{% endif %}
+      </td>
+      <td>{{ status_badge(a.status, 'document') }}</td>
+      <td class="text-end">
+        <a href="{{ url_for('dashboard.view_agreement', agreement_id=a.id) }}"
+           class="btn btn-outline-secondary btn-sm">{{ t('View') }}</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+{{ table_close() }}
+{% include '_pagination.html' %}
+{% else %}
+{{ empty_state('No framework agreements yet.', icon='bi-file-earmark-text',
+               action_url=url_for('dashboard.create_agreement'),
+               action_label='New Agreement') }}
+{% endif %}
+{% endblock %}

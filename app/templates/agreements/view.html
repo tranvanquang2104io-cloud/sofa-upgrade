@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, status_badge, table_open, table_close with context %}
+{% block title %}{{ agreement.agreement_number }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(agreement.agreement_number, icon='bi-file-earmark-text',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Framework Agreements'), url_for('dashboard.list_agreements')),
+                       (agreement.agreement_number, None)]) }}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  {{ status_badge(agreement.status, 'document') }}
+  {% if agreement.status == 'suspended' %}
+    <span class="text-muted small">{{ t('No new orders may cite this agreement while it is suspended.') }}</span>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">{{ t('Parties and validity') }}</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">{{ t('Customer') }}</dt>
+          <dd class="col-sm-7">{{ agreement.customer.name if agreement.customer else '' }}</dd>
+          <dt class="col-sm-5">{{ t('Signed Date') }}</dt>
+          <dd class="col-sm-7">{{ agreement.signed_date.strftime('%d/%m/%Y') if agreement.signed_date else '—' }}</dd>
+          <dt class="col-sm-5">{{ t('Effective From') }}</dt>
+          <dd class="col-sm-7">{{ agreement.effective_from.strftime('%d/%m/%Y') if agreement.effective_from else '' }}</dd>
+          <dt class="col-sm-5">{{ t('Effective To') }}</dt>
+          <dd class="col-sm-7">
+            {% if agreement.effective_to %}{{ agreement.effective_to.strftime('%d/%m/%Y') }}
+            {% else %}<span class="text-muted">{{ t('Open-ended') }}</span>{% endif %}
+          </dd>
+          <dt class="col-sm-5">{{ t('Auto-renew') }}</dt>
+          <dd class="col-sm-7">{{ t('Yes') if agreement.auto_renew else t('No') }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">{{ t('Commercial terms') }}</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">{{ t('Payment Terms') }}</dt>
+          <dd class="col-sm-7">{{ agreement.payment_terms or '—' }}</dd>
+          <dt class="col-sm-5">{{ t('Delivery Terms') }}</dt>
+          <dd class="col-sm-7">{{ agreement.delivery_terms or '—' }}</dd>
+          <dt class="col-sm-5">{{ t('Penalty %') }}</dt>
+          <dd class="col-sm-7">
+            {{ agreement.penalty_pct }}%
+            <div class="text-muted small">{{ agreement.penalty_basis_note or '' }}</div>
+          </dd>
+          <dt class="col-sm-5">{{ t('Dispute Resolution') }}</dt>
+          <dd class="col-sm-7">{{ agreement.dispute_resolution or '—' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# --- agreed price list --- #}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>{{ t('Agreed Price List') }}</span>
+    <span class="text-muted small">
+      {{ t('A revision closes the previous line instead of overwriting it, so past orders keep their price.') }}
+    </span>
+  </div>
+  <div class="card-body">
+    {% if agreement.price_lines %}
+    {{ table_open('table table-sm align-middle mb-3') }}
+      <thead class="table-light">
+        <tr>
+          <th>{{ t('Product') }}</th>
+          <th>{{ t('Unit') }}</th>
+          <th class="text-end">{{ t('Agreed Price') }}</th>
+          <th class="text-end">{{ t('Discount %') }}</th>
+          <th>{{ t('From') }}</th>
+          <th>{{ t('To') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in agreement.price_lines %}
+        <tr class="{% if line.effective_to %}text-muted{% endif %}">
+          <td>{{ line.product_name }}</td>
+          <td>{{ line.unit or '' }}</td>
+          <td class="text-end">
+            {% if line.agreed_unit_price %}{{ "{:,.0f}".format(line.agreed_unit_price|float) }} đ{% else %}—{% endif %}
+          </td>
+          <td class="text-end">{% if line.discount_pct %}{{ line.discount_pct }}%{% else %}—{% endif %}</td>
+          <td>{{ line.effective_from.strftime('%d/%m/%Y') if line.effective_from else '—' }}</td>
+          <td>
+            {% if line.effective_to %}{{ line.effective_to.strftime('%d/%m/%Y') }}
+            {% else %}<span class="badge bg-success">{{ t('Current') }}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    {{ table_close() }}
+    {% else %}
+    <p class="text-muted">{{ t('No agreed prices yet. Orders will use their quoted prices.') }}</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('dashboard.add_agreement_price', agreement_id=agreement.id) }}"
+          class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-3">
+        <label class="form-label small">{{ t('Product') }}</label>
+        <input type="text" name="product_name" class="form-control form-control-sm" required>
+      </div>
+      <div class="col-md-1">
+        <label class="form-label small">{{ t('Unit') }}</label>
+        <input type="text" name="unit" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">{{ t('Agreed Price') }}</label>
+        <input type="number" name="agreed_unit_price" class="form-control form-control-sm" min="0" step="1">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">{{ t('or Discount %') }}</label>
+        <input type="number" name="discount_pct" class="form-control form-control-sm" min="0" max="100" step="0.1">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">{{ t('Effective From') }}</label>
+        <input type="date" name="effective_from" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+          <i class="bi bi-plus-lg"></i> {{ t('Add price') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# --- orders issued under this agreement --- #}
+<div class="card mb-3">
+  <div class="card-header">{{ t('Orders under this agreement') }} ({{ agreement.confirmations|length }})</div>
+  <div class="card-body">
+    {% if agreement.confirmations %}
+    {{ table_open('table table-sm align-middle mb-0') }}
+      <thead class="table-light">
+        <tr>
+          <th>{{ t('Number') }}</th>
+          <th>{{ t('Date') }}</th>
+          <th class="text-end">{{ t('Value') }}</th>
+          <th>{{ t('Status') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in agreement.confirmations %}
+        <tr>
+          <td>{{ c.confirmation_number }}</td>
+          <td>{{ c.confirmation_date.strftime('%d/%m/%Y') if c.confirmation_date else '' }}</td>
+          <td class="text-end">{{ "{:,.0f}".format(c.total_amount|float) }} đ</td>
+          <td>{{ status_badge(c.status, 'document') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    {{ table_close() }}
+    {% else %}
+    <p class="text-muted mb-0">{{ t('No orders have been issued under this agreement yet.') }}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if can_feature('settings') or current_user.role == 'company_admin' %}
+<div class="card">
+  <div class="card-header">{{ t('Status') }}</div>
+  <div class="card-body d-flex flex-wrap gap-2">
+    <form method="POST" action="{{ url_for('dashboard.change_agreement_status', agreement_id=agreement.id) }}" class="d-flex gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="text" name="reason" class="form-control form-control-sm"
+             placeholder="{{ t('Reason (for suspend / terminate)') }}" style="min-width:16rem">
+      {% if agreement.status in ('draft', 'suspended') %}
+      <button type="submit" name="action" value="activate" class="btn btn-sm btn-success">
+        <i class="bi bi-play-circle"></i> {{ t('Activate') }}
+      </button>
+      {% endif %}
+      {% if agreement.status == 'active' %}
+      <button type="submit" name="action" value="suspend" class="btn btn-sm btn-warning">
+        <i class="bi bi-pause-circle"></i> {{ t('Suspend') }}
+      </button>
+      {% endif %}
+      {% if agreement.status != 'terminated' %}
+      <button type="submit" name="action" value="terminate" class="btn btn-sm btn-outline-danger"
+              onclick="return confirm('{{ t('Terminate this agreement? Orders already issued keep their validity.') }}');">
+        <i class="bi bi-x-circle"></i> {{ t('Terminate') }}
+      </button>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

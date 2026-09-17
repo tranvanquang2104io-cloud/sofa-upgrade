@@ -3252,6 +3252,206 @@ def standardization_settings():
                            protected=is_protected_field)
 
 
+# ===== HỢP ĐỒNG NGUYÊN TẮC (framework agreements) =====
+
+def _owned_agreement(agreement_id, company_id):
+    from app.models.models import MasterAgreement
+    ma = MasterAgreement.query.get(agreement_id)
+    if not ma or str(ma.company_id) != str(company_id):
+        return None
+    return ma
+
+
+@dashboard_bp.route('/agreements', methods=['GET'])
+@login_required
+def list_agreements():
+    """Framework agreements for the company."""
+    from app.models.models import MasterAgreement
+
+    company_id = get_current_company_id()
+    status = request.args.get('status') or None
+    search = (request.args.get('search') or '').strip() or None
+    page = request.args.get('page', 1, type=int)
+
+    q = MasterAgreement.query.filter_by(company_id=company_id)
+    if status:
+        q = q.filter_by(status=status)
+    if search:
+        q = q.filter(MasterAgreement.agreement_number.ilike(f'%{search}%'))
+    pagination = q.order_by(MasterAgreement.effective_from.desc()).paginate(
+        page=page, per_page=20, error_out=False)
+
+    return render_template('agreements/list.html',
+                           agreements=pagination.items, pagination=pagination,
+                           status=status or '', search=search or '',
+                           statuses=(MasterAgreement.STATUS_DRAFT,
+                                     MasterAgreement.STATUS_ACTIVE,
+                                     MasterAgreement.STATUS_SUSPENDED,
+                                     MasterAgreement.STATUS_EXPIRED,
+                                     MasterAgreement.STATUS_TERMINATED))
+
+
+@dashboard_bp.route('/agreements/create', methods=['GET', 'POST'])
+@login_required
+def create_agreement():
+    from app.models.models import Customer, MasterAgreement
+
+    company_id = get_current_company_id()
+    customers = Customer.query.filter_by(company_id=company_id,
+                                         is_active=True).order_by(Customer.name).all()
+
+    if request.method == 'POST':
+        try:
+            number = (request.form.get('agreement_number') or '').strip()
+            if not number:
+                raise ValueError(t('Agreement number is required'))
+            if MasterAgreement.query.filter_by(company_id=company_id,
+                                               agreement_number=number).first():
+                raise ValueError(t('Agreement number already exists'))
+
+            effective_from = _parse_date(request.form.get('effective_from'))
+            if not effective_from:
+                raise ValueError(t('Effective from date is required'))
+
+            # LTM 2005 Đ.301 caps a contractual penalty at 8% of the value of
+            # the breached portion; refuse to record more than the law allows.
+            penalty = float(request.form.get('penalty_pct') or 8)
+            if penalty > 8:
+                raise ValueError(
+                    t('Penalty cannot exceed 8% (Điều 301 Luật Thương mại 2005)'))
+
+            agreement = MasterAgreement(
+                company_id=company_id,
+                customer_id=request.form.get('customer_id'),
+                agreement_number=number,
+                signed_date=_parse_date(request.form.get('signed_date')),
+                effective_from=effective_from,
+                effective_to=_parse_date(request.form.get('effective_to')),
+                auto_renew=request.form.get('auto_renew') == 'on',
+                renewal_notice_days=int(request.form.get('renewal_notice_days') or 30),
+                scope_description=request.form.get('scope_description') or None,
+                payment_terms=request.form.get('payment_terms') or None,
+                quality_terms=request.form.get('quality_terms') or None,
+                delivery_terms=request.form.get('delivery_terms') or None,
+                penalty_pct=penalty,
+                dispute_resolution=request.form.get('dispute_resolution') or None,
+                seller_representative=request.form.get('seller_representative') or None,
+                buyer_representative=request.form.get('buyer_representative') or None,
+                notes=request.form.get('notes') or None,
+                status=MasterAgreement.STATUS_DRAFT,
+            )
+            db.session.add(agreement)
+            db.session.commit()
+            flash(t('Framework agreement created'), 'success')
+            return redirect(url_for('dashboard.view_agreement',
+                                    agreement_id=agreement.id))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error("Error creating agreement: %s", e)
+            db.session.rollback()
+            flash(t('Error creating framework agreement'), 'error')
+
+    return render_template('agreements/create.html', customers=customers)
+
+
+@dashboard_bp.route('/agreements/<agreement_id>', methods=['GET'])
+@login_required
+def view_agreement(agreement_id):
+    company_id = get_current_company_id()
+    agreement = _owned_agreement(agreement_id, company_id)
+    if not agreement:
+        flash(t('Framework agreement not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_agreements'))
+    return render_template('agreements/view.html', agreement=agreement)
+
+
+@dashboard_bp.route('/agreements/<agreement_id>/status', methods=['POST'])
+@company_admin_required
+def change_agreement_status(agreement_id):
+    """Activate / suspend / terminate a framework agreement."""
+    from app.services.agreement_service import AgreementService
+
+    company_id = get_current_company_id()
+    agreement = _owned_agreement(agreement_id, company_id)
+    if not agreement:
+        flash(t('Framework agreement not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_agreements'))
+
+    action = request.form.get('action')
+    reason = (request.form.get('reason') or '').strip() or None
+    try:
+        if action == 'activate':
+            AgreementService.activate(agreement)
+            flash(t('Framework agreement activated'), 'success')
+        elif action == 'suspend':
+            AgreementService.suspend(agreement, reason)
+            flash(t('Framework agreement suspended — no new orders can cite it'),
+                  'warning')
+        elif action == 'terminate':
+            AgreementService.terminate(agreement, reason)
+            flash(t('Framework agreement terminated'), 'warning')
+        else:
+            flash(t('Unknown action'), 'error')
+    except ValueError as e:
+        flash(str(e), 'error')
+
+    return redirect(url_for('dashboard.view_agreement', agreement_id=agreement_id))
+
+
+@dashboard_bp.route('/agreements/<agreement_id>/prices', methods=['POST'])
+@login_required
+def add_agreement_price(agreement_id):
+    """Add an agreed price line.
+
+    A revision closes the previous line rather than overwriting it, so a past
+    order can still be explained by the price that applied on its date.
+    """
+    from app.models.models import MasterAgreementPriceLine
+    from app.services.agreement_service import product_key
+
+    company_id = get_current_company_id()
+    agreement = _owned_agreement(agreement_id, company_id)
+    if not agreement:
+        flash(t('Framework agreement not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_agreements'))
+
+    try:
+        name = (request.form.get('product_name') or '').strip()
+        if not name:
+            raise ValueError(t('Product name is required'))
+
+        price = request.form.get('agreed_unit_price') or None
+        discount = request.form.get('discount_pct') or None
+        if not price and not discount:
+            raise ValueError(t('Enter either an agreed price or a discount'))
+
+        effective_from = _parse_date(request.form.get('effective_from'))
+        key = product_key(name)
+
+        # Close any currently-open line for the same product.
+        for line in agreement.price_lines:
+            if line.product_key == key and line.effective_to is None:
+                line.effective_to = effective_from
+
+        db.session.add(MasterAgreementPriceLine(
+            agreement_id=agreement.id, product_key=key, product_name=name,
+            unit=request.form.get('unit') or None,
+            agreed_unit_price=price or None,
+            discount_pct=discount or None,
+            effective_from=effective_from))
+        db.session.commit()
+        flash(t('Price line added'), 'success')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error("Error adding price line: %s", e)
+        db.session.rollback()
+        flash(t('Error adding price line'), 'error')
+
+    return redirect(url_for('dashboard.view_agreement', agreement_id=agreement_id))
+
+
 # ===== PRODUCTION PLANNING (Feature 2) =====
 
 def _owned_plan(plan_id, company_id):

@@ -57,6 +57,14 @@
                             </a>
                         </li>
                         {% endif %}
+                        {# ── Hợp đồng nguyên tắc ── #}
+                        {% if can_feature('orders') %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'agreement' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_agreements') }}">
+                                <i class="bi bi-file-earmark-text"></i> {{ t('Agreements') }}
+                            </a>
+                        </li>
+                        {% endif %}
                         {# ── Kho & Vật tư ── #}
                         {% if can_feature('inventory') %}
                         <li class="nav-item dropdown">
