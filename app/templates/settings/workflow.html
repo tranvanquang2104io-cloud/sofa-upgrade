@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header with context %}
+{% block title %}{{ t('Order Workflow') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Order Workflow'), icon='bi-diagram-3',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Settings'), None),
+                       (t('Order Workflow'), None)]) }}
+
+<div class="alert alert-light border">
+  <p class="mb-2">
+    {{ t('Each row is one prerequisite of one step. Change how strictly it is enforced:') }}
+  </p>
+  <ul class="mb-0 small">
+    <li><span class="badge bg-danger">{{ t('required') }}</span>
+        {{ t('the step is blocked until the prerequisite is met') }}</li>
+    <li><span class="badge bg-warning text-dark">{{ t('waivable') }}</span>
+        {{ t('can be skipped, but only with a reason that is recorded') }}</li>
+    <li><span class="badge bg-secondary">{{ t('optional') }}</span>
+        {{ t('shown as a warning only, never blocks') }}</li>
+  </ul>
+</div>
+
+<form method="POST" action="{{ url_for('dashboard.workflow_settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width:6%">{{ t('On') }}</th>
+          <th style="width:22%">{{ t('Step') }}</th>
+          <th style="width:22%">{{ t('Requires') }}</th>
+          <th style="width:16%">{{ t('Enforcement') }}</th>
+          <th>{{ t('Message shown when blocked') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rule in rules %}
+        <tr>
+          <td>
+            <input type="checkbox" class="form-check-input"
+                   name="active_{{ rule.id }}" {% if rule.is_active %}checked{% endif %}>
+          </td>
+          <td><code>{{ rule.action }}</code></td>
+          <td>{{ t(prerequisite_labels.get(rule.prerequisite, rule.prerequisite)) }}</td>
+          <td>
+            <select name="mode_{{ rule.id }}" class="form-select form-select-sm">
+              {% for m in modes %}
+              <option value="{{ m }}" {% if rule.mode == m %}selected{% endif %}>{{ t(m) }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm"
+                   name="message_{{ rule.id }}" value="{{ rule.message or '' }}"
+                   placeholder="{{ t('Leave empty for the default message') }}">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="d-flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-save"></i> {{ t('Save') }}
+    </button>
+    <button type="submit" name="action" value="reset" class="btn btn-outline-secondary"
+            onclick="return confirm('{{ t('Reset all workflow rules to the standard process?') }}');">
+      <i class="bi bi-arrow-counterclockwise"></i> {{ t('Reset to standard process') }}
+    </button>
+  </div>
+</form>
+
+<p class="text-muted small mt-3">
+  {{ t('Changing these rules affects new actions only. Documents already created keep their history.') }}
+</p>
+{% endblock %}

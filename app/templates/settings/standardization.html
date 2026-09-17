@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header with context %}
+{% block title %}{{ t('Data Standardization') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Data Standardization'), icon='bi-magic',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Settings'), None),
+                       (t('Data Standardization'), None)]) }}
+
+<div class="alert alert-light border">
+  <p class="mb-2">
+    {{ t('Tidies what users type so documents come out consistent. Each row is one field; the transforms run in the order listed.') }}
+  </p>
+  <ul class="mb-0 small">
+    <li><span class="badge bg-success">{{ t('auto') }}</span>
+        {{ t('applied silently when the record is saved') }}</li>
+    <li><span class="badge bg-warning text-dark">{{ t('confirm') }}</span>
+        {{ t('suggested only — the value is never rewritten without a person agreeing') }}</li>
+  </ul>
+  <hr class="my-2">
+  <p class="mb-0 small text-muted">
+    <i class="bi bi-shield-check"></i>
+    {{ t('Identifiers (tax codes, bank accounts, document numbers, emails, phone numbers) are never standardized, whatever is configured here — changing them would corrupt a legal value or hide a typing error that should be corrected instead.') }}
+  </p>
+</div>
+
+{# Preview: an automatic rule rewrites what users typed, so let the admin see
+   the effect on a sample before committing to it. #}
+<form method="GET" class="row g-2 align-items-end mb-3">
+  <div class="col-12 col-md-6">
+    <label class="form-label small text-muted mb-1">{{ t('Preview sample text') }}</label>
+    <input type="text" name="sample" value="{{ sample }}" class="form-control">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-secondary">
+      <i class="bi bi-eye"></i> {{ t('Preview') }}
+    </button>
+  </div>
+</form>
+
+<form method="POST" action="{{ url_for('dashboard.standardization_settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width:6%">{{ t('On') }}</th>
+          <th style="width:14%">{{ t('Record') }}</th>
+          <th style="width:14%">{{ t('Field') }}</th>
+          <th>{{ t('Transforms') }}</th>
+          <th style="width:12%">{{ t('Mode') }}</th>
+          <th style="width:20%">{{ t('Preview') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rule in rules %}
+        <tr>
+          <td>
+            <input type="checkbox" class="form-check-input"
+                   name="active_{{ rule.id }}" {% if rule.is_active %}checked{% endif %}>
+          </td>
+          <td>{{ t(rule.entity_type|capitalize) }}</td>
+          <td>
+            <code>{{ rule.field_name }}</code>
+            {% if protected(rule.field_name) %}
+              <span class="badge bg-secondary" title="{{ t('Protected identifier — never standardized') }}">
+                <i class="bi bi-lock"></i>
+              </span>
+            {% endif %}
+          </td>
+          <td>
+            <select name="primitives_{{ rule.id }}" class="form-select form-select-sm"
+                    multiple size="4">
+              {% for key, meta in primitives.items() %}
+              <option value="{{ key }}" {% if key in (rule.primitives or []) %}selected{% endif %}>
+                {{ t(meta[2]) }}{% if not meta[1] %} *{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <select name="mode_{{ rule.id }}" class="form-select form-select-sm">
+              <option value="auto" {% if rule.mode == 'auto' %}selected{% endif %}>{{ t('auto') }}</option>
+              <option value="confirm" {% if rule.mode == 'confirm' %}selected{% endif %}>{{ t('confirm') }}</option>
+            </select>
+          </td>
+          <td class="small text-muted">{{ previews.get(rule.id|string, '') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-muted small">
+    * {{ t('Transforms marked with an asterisk change meaning, not just formatting — review the preview before enabling them automatically.') }}
+  </p>
+
+  <div class="d-flex gap-2 mt-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-save"></i> {{ t('Save') }}
+    </button>
+    <button type="submit" name="action" value="reset" class="btn btn-outline-secondary"
+            onclick="return confirm('{{ t('Reset all standardization rules to the defaults?') }}');">
+      <i class="bi bi-arrow-counterclockwise"></i> {{ t('Reset to defaults') }}
+    </button>
+  </div>
+</form>
+{% endblock %}

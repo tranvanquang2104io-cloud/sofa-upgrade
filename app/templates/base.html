@@ -105,6 +105,8 @@
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_templates') }}"><i class="bi bi-file-earmark-text"></i> {{ t('Document Templates') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.company_settings') }}"><i class="bi bi-gear"></i> {{ t('Company Settings') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.extension_fields_settings') }}"><i class="bi bi-input-cursor-text"></i> {{ t('Extension Fields') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.workflow_settings') }}"><i class="bi bi-diagram-3"></i> {{ t('Order Workflow') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.standardization_settings') }}"><i class="bi bi-magic"></i> {{ t('Data Standardization') }}</a></li>
                                 {% endif %}
                             </ul>
                         </li>

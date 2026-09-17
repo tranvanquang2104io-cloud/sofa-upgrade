@@ -3142,6 +3142,116 @@ def extension_fields_settings():
                            data_types=ExtensionFieldConfig.DATA_TYPES)
 
 
+# ===== WORKFLOW RULES (configurable order process) =====
+
+@dashboard_bp.route('/settings/workflow', methods=['GET', 'POST'])
+@company_admin_required
+def workflow_settings():
+    """Company-admin page for the order workflow.
+
+    This is the screen that makes the workflow engine usable: the rules
+    already exist per company, but until now only a developer could change
+    them. An operator can now relax a step to `optional`, mark it `waivable`
+    (skippable with a recorded reason), or turn it off entirely — the exact
+    scenarios the business raised, such as taking a deposit before the
+    contract is formally signed.
+    """
+    from app.models.models import WorkflowRule
+    from app.services.workflow_service import (
+        ALL_ACTIONS, PREREQUISITE_LABELS, WorkflowService,
+    )
+
+    company_id = get_current_company_id()
+
+    if request.method == 'POST':
+        if request.form.get('action') == 'reset':
+            WorkflowService.seed_defaults(company_id, overwrite=True)
+            flash(t('Workflow rules reset to the standard process'), 'success')
+            return redirect(url_for('dashboard.workflow_settings'))
+
+        rules = WorkflowRule.query.filter_by(company_id=company_id).all()
+        for rule in rules:
+            mode = request.form.get(f'mode_{rule.id}')
+            if mode in WorkflowRule.MODES:
+                rule.mode = mode
+            rule.is_active = request.form.get(f'active_{rule.id}') == 'on'
+            message = (request.form.get(f'message_{rule.id}') or '').strip()
+            rule.message = message or None
+        db.session.commit()
+        flash(t('Workflow rules saved'), 'success')
+        return redirect(url_for('dashboard.workflow_settings'))
+
+    rules = WorkflowRule.query.filter_by(company_id=company_id).order_by(
+        WorkflowRule.action, WorkflowRule.sort_order).all()
+    if not rules:
+        # First visit: install the standard process so the page is never empty.
+        WorkflowService.seed_defaults(company_id)
+        rules = WorkflowRule.query.filter_by(company_id=company_id).order_by(
+            WorkflowRule.action, WorkflowRule.sort_order).all()
+
+    return render_template('settings/workflow.html',
+                           rules=rules,
+                           actions=ALL_ACTIONS,
+                           prerequisite_labels=PREREQUISITE_LABELS,
+                           modes=WorkflowRule.MODES)
+
+
+# ===== DATA STANDARDIZATION RULES =====
+
+@dashboard_bp.route('/settings/standardization', methods=['GET', 'POST'])
+@company_admin_required
+def standardization_settings():
+    """Company-admin page for input standardisation.
+
+    Lets an administrator decide the house style per field — and, importantly,
+    preview what a rule would do to a sample value before enabling it, since
+    an automatic rule rewrites what users typed.
+    """
+    from app.models.models import NormalizationRule
+    from app.services.normalization_service import NormalizationService
+    from app.utils.text_normalize import PRIMITIVES, is_protected_field
+
+    company_id = get_current_company_id()
+
+    if request.method == 'POST':
+        if request.form.get('action') == 'reset':
+            NormalizationService.seed_defaults(company_id, overwrite=True)
+            flash(t('Standardization rules reset to the defaults'), 'success')
+            return redirect(url_for('dashboard.standardization_settings'))
+
+        rules = NormalizationRule.query.filter_by(company_id=company_id).all()
+        for rule in rules:
+            mode = request.form.get(f'mode_{rule.id}')
+            if mode in NormalizationRule.MODES:
+                rule.mode = mode
+            rule.is_active = request.form.get(f'active_{rule.id}') == 'on'
+            chosen = request.form.getlist(f'primitives_{rule.id}')
+            rule.primitives = [p for p in chosen if p in PRIMITIVES]
+        db.session.commit()
+        flash(t('Standardization rules saved'), 'success')
+        return redirect(url_for('dashboard.standardization_settings'))
+
+    rules = NormalizationRule.query.filter_by(company_id=company_id).order_by(
+        NormalizationRule.entity_type, NormalizationRule.sort_order).all()
+    if not rules:
+        NormalizationService.seed_defaults(company_id)
+        rules = NormalizationRule.query.filter_by(company_id=company_id).order_by(
+            NormalizationRule.entity_type, NormalizationRule.sort_order).all()
+
+    sample = request.args.get('sample') or 'cty tnhh  nội thất an phát'
+    previews = {
+        str(rule.id): NormalizationService.preview(sample, rule.primitives or [])
+        for rule in rules
+    }
+
+    return render_template('settings/standardization.html',
+                           rules=rules,
+                           primitives=PRIMITIVES,
+                           sample=sample,
+                           previews=previews,
+                           protected=is_protected_field)
+
+
 # ===== PRODUCTION PLANNING (Feature 2) =====
 
 def _owned_plan(plan_id, company_id):
