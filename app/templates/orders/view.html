@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import process_stepper, order_badge with context %}
 
 {% block title %}Order - SofaFlow{% endblock %}
 
@@ -88,6 +89,18 @@
         <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> {{ t('Back') }}
         </a>
+    </div>
+</div>
+
+{# One glance: which step is this order on. The detailed timeline below still
+   carries the documents and actions; this answers the question first. #}
+<div class="card mb-4">
+    <div class="card-body pb-2">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">{{ t('Order progress') }}</span>
+            {{ order_badge(order) }}
+        </div>
+        {{ process_stepper(order) }}
     </div>
 </div>
 

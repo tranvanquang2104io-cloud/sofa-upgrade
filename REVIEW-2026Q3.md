@@ -133,11 +133,13 @@ services. Worth doing *before* either feature, not during.
 |---|---|
 | `page_header()` | 12 of 77 templates |
 | `status_badge()` | 10 templates, while ~30 still hand-build badges |
-| `process_stepper()` | **0 — built and never used** |
+| `process_stepper()` | ✅ now on the order page (was built and never used) |
 
-The stepper is the clearest single win available: it shows a non-technical
-user exactly where their order is, in one glance, and the component already
-exists.
+The stepper now sits directly under the order title, so "which step is my
+order on" is answered before any reading. The detailed timeline below still
+carries the documents and the actions; the stepper just answers the question
+first. A waived advance is drawn distinctly there too, consistent with the
+timeline fix.
 
 Long forms needing sectioning and a sticky save button: `contracts/create.html`
 (446 lines) and `handover/create.html` (406) — on a laptop the save button is

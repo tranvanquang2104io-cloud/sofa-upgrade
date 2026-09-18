@@ -323,3 +323,54 @@ def test_order_confirmation_is_tenant_scoped(app, client, login, seed,
 
     with app.app_context():
         assert OrderConfirmation.query.get(theirs).is_canceled is False
+
+
+# --- "where is my order" at a glance -------------------------------------
+
+def _order_with(app, seed, code, **flags):
+    from app.config import db
+    from app.models import Order
+    from app.models.models import LifecycleStatus
+
+    with app.app_context():
+        o = Order(company_id=seed["company_id"], store_id=seed["store_id"],
+                  customer_id=seed["customer_id"], order_code=code, title=code)
+        db.session.add(o)
+        db.session.flush()
+        db.session.add(LifecycleStatus(order_id=o.id, **flags))
+        db.session.commit()
+        return str(o.id)
+
+
+def test_order_page_shows_the_progress_stepper(app, client, login, seed):
+    """The stepper was built and never used; it answers the first question a
+    non-technical user asks — which step is my order on."""
+    order_id = _order_with(app, seed, 'ORD-STEP',
+                           quotation_created=True, quotation_approved=True,
+                           contract_created=True, contract_signed=True)
+    login("admin")
+    body = client.get(f'/orders/{order_id}').get_data(as_text=True)
+
+    assert 'sf-stepper' in body, "the progress stepper should be on the page"
+    assert 'sf-step--done' in body, "completed steps should be marked done"
+    assert 'sf-step--current' in body, "the current step should be marked"
+
+
+def test_stepper_marks_a_waived_advance_distinctly(app, client, login, seed):
+    """Consistent with the timeline fix: waived is not done."""
+    order_id = _order_with(app, seed, 'ORD-STEP-WAIVE',
+                           quotation_created=True, quotation_approved=True,
+                           contract_created=True, contract_signed=True,
+                           advance_paid=True, advance_skipped=True)
+    login("admin")
+    body = client.get(f'/orders/{order_id}').get_data(as_text=True)
+    assert 'sf-step--skipped' in body
+
+
+def test_stepper_on_a_brand_new_order_points_at_the_first_step(app, client,
+                                                               login, seed):
+    order_id = _order_with(app, seed, 'ORD-STEP-NEW')
+    login("admin")
+    body = client.get(f'/orders/{order_id}').get_data(as_text=True)
+    assert 'sf-stepper' in body
+    assert 'sf-step--current' in body
