@@ -827,6 +827,20 @@ TRANSLATIONS = {
             'Không có khách hàng nào còn dư nợ.',
         'Largest debt first. Only confirmed payments count as received — money promised but not yet confirmed still shows as owed.':
             'Nợ lớn nhất xếp trước. Chỉ khoản thanh toán đã xác nhận mới tính là đã thu — tiền mới hứa nhưng chưa xác nhận vẫn hiện là còn nợ.',
+
+        # -- Job costing --
+        'Job cost so far':
+            'Chi phí đơn hàng đến hiện tại',
+        'Materials issued':
+            'Vật tư đã cấp phát',
+        'Difference':
+            'Chênh lệch',
+        'Incomplete':
+            'Chưa đủ dữ liệu',
+        '%(n)s material(s) issued to this job have no cost recorded yet, so the figure above is lower than the real cost. A cost is set the first time that material is received with a price on the purchase order.':
+            'Có %(n)s vật tư đã cấp phát cho đơn này chưa có giá vốn, nên con số trên đang thấp hơn chi phí thật. Giá vốn được ghi nhận lần đầu khi vật tư đó được nhập kho kèm đơn giá trên đơn mua.',
+        'Materials only — labour is not recorded in the system, so this is not the final profit.':
+            'Mới tính vật tư — hệ thống chưa ghi nhận công thợ, nên đây chưa phải lợi nhuận cuối cùng.',
     }
 }
 

@@ -269,3 +269,66 @@ def test_a_plan_with_nothing_issued_costs_nothing(app, plan_with_issued_material
         assert cost['complete'] is True, (
             "nothing issued is not the same as something unpriced"
         )
+
+
+# --- on screen ------------------------------------------------------------
+
+def test_the_plan_page_shows_what_the_job_has_cost(app, client, login,
+                                                   plan_with_issued_material):
+    login("admin")
+    with app.app_context():
+        order_id = str(_plan(plan_with_issued_material).order_id)
+
+    body = client.get(f'/orders/{order_id}/production-plan').get_data(as_text=True)
+    assert '3,000,000' in body, "the agreed value should be shown"
+    assert '400,000' in body, "the material cost should be shown"
+    assert '2,600,000' in body, "the difference should be shown"
+
+
+def test_the_page_says_the_figure_excludes_labour(app, client, login,
+                                                  plan_with_issued_material):
+    """Otherwise a user reads the difference as profit."""
+    login("admin")
+    with app.app_context():
+        order_id = str(_plan(plan_with_issued_material).order_id)
+
+    body = client.get(f'/orders/{order_id}/production-plan').get_data(as_text=True)
+    assert ('labour' in body.lower() or 'công thợ' in body.lower()), (
+        "the page must say labour is not included"
+    )
+
+
+def test_the_page_warns_when_a_material_has_no_cost(app, client, login,
+                                                    plan_with_issued_material):
+    """A total that omits a line must say so on screen, not just in the data."""
+    from app.config import db
+    from app.models.models import Material
+
+    with app.app_context():
+        plan = _plan(plan_with_issued_material)
+        Material.query.get(plan.material_lines[0].material_id).avg_cost = 0
+        order_id = str(plan.order_id)
+        db.session.commit()
+
+    login("admin")
+    body = client.get(f'/orders/{order_id}/production-plan').get_data(as_text=True)
+    assert ('no cost recorded' in body or 'chưa có giá vốn' in body), (
+        "an unpriced material must be flagged where the user sees the total"
+    )
+
+
+def test_a_loss_making_job_shows_the_difference_in_red(app, client, login,
+                                                       plan_with_issued_material):
+    from app.config import db
+    from app.models.models import Contract
+
+    with app.app_context():
+        plan = _plan(plan_with_issued_material)
+        order_id = str(plan.order_id)
+        contract = Contract.query.filter_by(order_id=plan.order_id).first()
+        contract.contract_value = 100_000        # less than the 400,000 issued
+        db.session.commit()
+
+    login("admin")
+    body = client.get(f'/orders/{order_id}/production-plan').get_data(as_text=True)
+    assert 'text-danger' in body, "a negative difference should be visually obvious"

@@ -3927,8 +3927,14 @@ def view_production_plan(order_id):
     plan = ProductionPlanService().get_plan_for_order(order_id)
     materials = Material.query.filter_by(company_id=company_id, is_active=True).order_by(Material.name).all()
     units = MaterialUnit.query.filter_by(company_id=company_id, is_active=True).order_by(MaterialUnit.name).all()
+    # What this job has consumed so far, and how that compares with what it
+    # sold for. Only meaningful once a plan exists.
+    margin = ProductionPlanService().order_margin(plan) if plan else None
+    cost = ProductionPlanService().material_cost(plan) if plan else None
+
     return render_template('production/plan.html', order=order, plan=plan,
-                           materials=materials, units=units)
+                           materials=materials, units=units,
+                           margin=margin, cost=cost)
 
 
 @dashboard_bp.route('/production-plan/<plan_id>/status/<action>', methods=['POST'])

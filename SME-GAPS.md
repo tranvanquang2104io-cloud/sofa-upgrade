@@ -61,7 +61,7 @@ rather than serve it.
 
 ---
 
-## G3 — Nothing knows what anything costs · ✅ **SERVICE DONE**
+## G3 — Nothing knows what anything costs · ✅ **DONE**
 
 **Evidence:** no cost field exists on `Material` — no `avg_cost`,
 `cost_price`, `unit_cost` or `standard_cost` anywhere in the schema. Goods
@@ -91,8 +91,13 @@ Three deliberate refusals, each pinned by a test:
 The margin is explicitly labelled as excluding labour. Presenting a
 material-only figure as profit would flatter every job.
 
-⬜ Remaining: put it on screen (the plan page is the natural home), and
-labour — see G6, which is the other half.
+**On screen** at the top of the production plan: agreed value, materials
+issued, and the difference — with the difference in red when the job is
+underwater. When a material has no cost yet the page says how many lines are
+affected and that the figure is therefore *lower* than the real cost, rather
+than showing a confident number that is quietly wrong.
+
+⬜ Remaining: labour — see G6, which is the other half of a job's cost.
 
 ---
 
@@ -233,7 +238,7 @@ mixed-rate range.
 
 | # | Gap | Class | Why this position |
 |---|---|---|---|
-| ~~1~~ | ~~**G3** Material costing~~ | ✅ SERVICE DONE | Screen still to come |
+| ~~1~~ | ~~**G3** Material costing~~ | ✅ DONE | Service + screen |
 | ~~2~~ | ~~**G4** Customer debt~~ | ✅ DONE | Shipped, plus the DDH revenue regression it uncovered |
 | 3 | **G6** Labour on production | USEFUL | Completes job costing with G3, and answers the daily workshop question |
 | 4 | **G7** Expenses | USEFUL | Turns gross margin into something the owner can trust |
