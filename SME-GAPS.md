@@ -61,7 +61,7 @@ rather than serve it.
 
 ---
 
-## G3 — Nothing knows what anything costs · **REQUIRED** *(now the top item)*
+## G3 — Nothing knows what anything costs · ✅ **SERVICE DONE**
 
 **Evidence:** no cost field exists on `Material` — no `avg_cost`,
 `cost_price`, `unit_cost` or `standard_cost` anywhere in the schema. Goods
@@ -75,12 +75,24 @@ per plan — and then cannot value it, because materials have no cost.
 
 Every piece of this is already in place except the cost number.
 
-**Minimum:** moving-average cost on `Material`, updated on each goods receipt
-(`new_avg = (old_qty × old_cost + received_qty × po_price) / new_qty`). Then
-material cost per production plan, and therefore per order, becomes a simple
-sum. Deliberately not FIFO, not standard costing, not a valuation layer.
+**Done:** `Material.avg_cost` is blended on every goods receipt, and
+`ProductionPlanService.material_cost(plan)` / `.order_margin(plan)` value what
+was **issued** to a job and compare it with what the job sold for — following
+whichever document the order was agreed on, contract or ĐĐH.
 
-Labour is the other half of a bespoke job's cost — see G6.
+Three deliberate refusals, each pinned by a test:
+* a receipt with **no price** is skipped, never averaged in as zero, which
+  would quietly understate every cost afterwards;
+* cost follows what was **issued**, not what was required — the business has
+  only spent the issued part;
+* an **unpriced** material is counted and reported, not treated as free. A
+  total that silently omits a line is worse than one that admits it.
+
+The margin is explicitly labelled as excluding labour. Presenting a
+material-only figure as profit would flatter every job.
+
+⬜ Remaining: put it on screen (the plan page is the natural home), and
+labour — see G6, which is the other half.
 
 ---
 
@@ -221,7 +233,7 @@ mixed-rate range.
 
 | # | Gap | Class | Why this position |
 |---|---|---|---|
-| 1 | **G3** Material costing | REQUIRED | The one number missing from an otherwise complete chain; without it no bespoke job can be shown to have made money |
+| ~~1~~ | ~~**G3** Material costing~~ | ✅ SERVICE DONE | Screen still to come |
 | ~~2~~ | ~~**G4** Customer debt~~ | ✅ DONE | Shipped, plus the DDH revenue regression it uncovered |
 | 3 | **G6** Labour on production | USEFUL | Completes job costing with G3, and answers the daily workshop question |
 | 4 | **G7** Expenses | USEFUL | Turns gross margin into something the owner can trust |

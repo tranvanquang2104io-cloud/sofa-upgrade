@@ -167,6 +167,7 @@ class ProcurementService:
                 db.session.add(st)
             st.current_quantity = Decimal(str(st.current_quantity or 0)) + qty
             line.quantity_received = Decimal(str(line.quantity_received or 0)) + qty
+            self._update_average_cost(line.material, qty, line.unit_price)
             any_received = True
 
         if not any_received:
@@ -176,6 +177,44 @@ class ProcurementService:
         po.sync_receipt_status()
         db.session.commit()
         return gr, warnings
+
+    @staticmethod
+    def _update_average_cost(material, received_qty, unit_price):
+        """Blend the newly received stock into the material's average cost.
+
+            new_avg = (qty_before * old_avg + received * price) / qty_after
+
+        Uses the quantity held BEFORE this receipt across every location, so
+        the average reflects what the business actually paid for what it
+        holds, not just the latest purchase.
+
+        A receipt with no price (price not yet filled on the PO line) is
+        skipped rather than treated as free — averaging in a zero would
+        silently understate the cost of everything afterwards.
+        """
+        from app.models.models import MaterialStock
+
+        if material is None:
+            return
+        price = Decimal(str(unit_price or 0))
+        received = Decimal(str(received_qty or 0))
+        if price <= 0 or received <= 0:
+            return
+
+        rows = MaterialStock.query.filter_by(material_id=material.id).all()
+        qty_after = sum((Decimal(str(r.current_quantity or 0)) for r in rows),
+                        Decimal('0'))
+        qty_before = qty_after - received
+        if qty_before < 0:
+            qty_before = Decimal('0')
+
+        old_avg = Decimal(str(material.avg_cost or 0))
+        total_value = (qty_before * old_avg) + (received * price)
+        qty_total = qty_before + received
+        if qty_total <= 0:
+            return
+
+        material.avg_cost = (total_value / qty_total).quantize(Decimal('0.01'))
 
     # ---- document-style create/update (single-form save) ------------------
     def create_po(self, company_id, header, lines, pr_id=None):

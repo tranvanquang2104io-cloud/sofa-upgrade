@@ -1798,6 +1798,85 @@ class ProductionPlanService:
         db.session.commit()
         return []
 
+    def material_cost(self, plan):
+        """What the materials ISSUED to this plan cost.
+
+        Issued, not required: a plan can require more than has been handed to
+        the workshop, and the business has only actually spent the issued
+        part. Valued at each material's moving-average cost.
+
+        Returns a dict with the total and the per-line detail, plus a count of
+        lines whose material has no cost recorded yet — an honest total is
+        worth less than an honest total that says what it could not price.
+        """
+        from decimal import Decimal
+
+        lines = []
+        total = Decimal('0')
+        unpriced = 0
+
+        for line in plan.material_lines:
+            issued = Decimal(str(line.quantity_issued or 0))
+            material = line.material
+            unit_cost = Decimal(str(getattr(material, 'avg_cost', 0) or 0))
+
+            if issued > 0 and unit_cost <= 0:
+                unpriced += 1
+
+            line_cost = issued * unit_cost
+            total += line_cost
+            lines.append({
+                'material_name': material.name if material else '',
+                'issued': float(issued),
+                'unit': line.unit or '',
+                'unit_cost': float(unit_cost),
+                'line_cost': float(line_cost),
+                'priced': unit_cost > 0 or issued == 0,
+            })
+
+        return {
+            'total': float(total),
+            'lines': lines,
+            'unpriced_lines': unpriced,
+            'complete': unpriced == 0,
+        }
+
+    def order_margin(self, plan):
+        """Revenue minus material cost for the order behind this plan.
+
+        Labour is NOT included — the system does not record it yet (see
+        SME-GAPS G6). The result says so rather than presenting a material-only
+        figure as if it were profit, which would flatter every job.
+        """
+        from decimal import Decimal
+        from app.models.models import Contract, OrderConfirmation
+
+        order = plan.order
+        cost = self.material_cost(plan)
+
+        revenue = Decimal('0')
+        contract = Contract.query.filter_by(
+            order_id=order.id, is_signed=True, is_canceled=False).first()
+        if contract:
+            revenue = Decimal(str(contract.contract_value or 0))
+        else:
+            confirmation = OrderConfirmation.query.filter_by(
+                order_id=order.id,
+                status=OrderConfirmation.STATUS_CONFIRMED,
+                is_canceled=False).first()
+            if confirmation:
+                revenue = Decimal(str(confirmation.total_amount or 0))
+
+        material_total = Decimal(str(cost['total']))
+        return {
+            'revenue': float(revenue),
+            'material_cost': cost['total'],
+            'gross_margin': float(revenue - material_total),
+            'material_cost_complete': cost['complete'],
+            'unpriced_lines': cost['unpriced_lines'],
+            'excludes_labour': True,
+        }
+
     def save_as_norm(self, plan_item):
         """Lưu định mức từ các material line của 1 item để tái sử dụng (upsert)."""
         from decimal import Decimal

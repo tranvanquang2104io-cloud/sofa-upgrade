@@ -818,6 +818,18 @@ class Material(ExtendFieldsMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Moving-average cost, updated on every goods receipt.
+    #
+    # Without it the system could see what a bespoke job SOLD for but not what
+    # it COST: material issues are already tracked per production plan
+    # (ProductionMaterialLine.quantity_issued), they just had no price. In a
+    # bespoke business there is no catalogue price to compare against, so this
+    # is the only way to tell whether a job made money.
+    #
+    # Deliberately moving-average rather than FIFO or standard cost: this is a
+    # workshop, not a valuation system.
+    avg_cost = db.Column(db.Numeric(15, 2), default=0)
+
     __table_args__ = (db.UniqueConstraint('company_id', 'material_code', name='uq_company_material_code'),)
 
     # Relationships
