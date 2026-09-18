@@ -84,7 +84,7 @@ Labour is the other half of a bespoke job's cost — see G6.
 
 ---
 
-## G4 — Customer debt is a single company-wide number · **REQUIRED**
+## G4 — Customer debt is a single company-wide number · ✅ **SERVICE DONE**
 
 **Evidence:** `report_service.py:155` computes `receivable` as
 `booked_value − collected` across the whole company. There is no per-customer
@@ -98,8 +98,17 @@ This is now asymmetric: after this refactor the **supplier** side answers
 "what do we owe this supplier" (`outstanding_for_supplier`), while the
 **customer** side cannot answer the mirror question.
 
-**Minimum:** receivable per customer = confirmed contract/ĐĐH value minus
-confirmed payments, with an age bucket and a list sorted by oldest.
+**Done:** `ReportService.customer_receivables()` returns booked, collected
+and outstanding per customer, largest debt first — a work queue rather than a
+number. ⬜ Remaining: a screen for it, and age buckets.
+
+**A regression was found while building this.** When the HĐNT path was added,
+`sales()`, `top_customers` and `accounting()` each carried their OWN copy of
+"booked revenue = signed contracts". None was updated, so every order agreed
+via an **ĐƠN ĐẶT HÀNG counted as zero** — the business under-reported what it
+was owed by the full value of all framework-agreement orders. The definition
+now lives in one place (`_booked_rows`), which is the actual fix: three copies
+of a rule is why adding a fourth document type broke it silently.
 
 ---
 

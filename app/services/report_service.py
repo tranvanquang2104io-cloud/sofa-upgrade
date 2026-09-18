@@ -26,6 +26,106 @@ def _f(x):
 class ReportService:
     """Aggregate KPIs for the reports dashboard."""
 
+    def _booked_rows(self, company_id):
+        """Every agreement that counts as booked revenue, per customer.
+
+        THIS IS THE ONE DEFINITION. It used to be written out separately in
+        sales(), in top_customers and in accounting() — three copies of the
+        same rule — so when the HĐNT path was added and orders started being
+        agreed via an ĐƠN ĐẶT HÀNG instead of a Contract, all three kept
+        counting only contracts and silently under-reported what customers
+        owed by the full value of every framework-agreement order.
+
+        Returns [(customer_id, customer_name, value)].
+        """
+        from app.models.models import OrderConfirmation
+
+        rows = []
+
+        contracts = db.session.query(
+            Customer.id, Customer.name,
+            func.coalesce(func.sum(Contract.contract_value), 0)
+        ).join(Order, Order.customer_id == Customer.id
+        ).join(Contract, Contract.order_id == Order.id
+        ).filter(
+            Order.company_id == company_id,
+            Order.is_canceled == False,
+            Contract.is_signed == True,
+            Contract.is_canceled == False,
+        ).group_by(Customer.id, Customer.name).all()
+        rows.extend(contracts)
+
+        confirmations = db.session.query(
+            Customer.id, Customer.name,
+            func.coalesce(func.sum(OrderConfirmation.total_amount), 0)
+        ).join(Order, Order.customer_id == Customer.id
+        ).join(OrderConfirmation, OrderConfirmation.order_id == Order.id
+        ).filter(
+            Order.company_id == company_id,
+            Order.is_canceled == False,
+            OrderConfirmation.status == OrderConfirmation.STATUS_CONFIRMED,
+            OrderConfirmation.is_canceled == False,
+        ).group_by(Customer.id, Customer.name).all()
+        rows.extend(confirmations)
+
+        merged = {}
+        for cid, name, value in rows:
+            key = str(cid)
+            if key not in merged:
+                merged[key] = [cid, name, Decimal('0')]
+            merged[key][2] += Decimal(str(value or 0))
+        return [(c, n, v) for c, n, v in merged.values()]
+
+    def _booked_total(self, company_id):
+        return float(sum((v for _c, _n, v in self._booked_rows(company_id)),
+                         Decimal('0')))
+
+    def _collected_by_customer(self, company_id):
+        """Cash received per customer, using the same rule as _cash_collected."""
+        pays = db.session.query(PaymentReport, Order.customer_id).join(
+            Order, PaymentReport.order_id == Order.id).filter(
+            PaymentReport.company_id == company_id,
+            PaymentReport.is_confirmed == True,
+            PaymentReport.is_canceled == False).all()
+
+        totals = {}
+        for payment, customer_id in pays:
+            if payment.payment_type == 'advance':
+                amount = payment.advance_amount or payment.amount or 0
+            else:
+                amount = payment.remaining_amount or payment.amount or 0
+            key = str(customer_id)
+            totals[key] = totals.get(key, Decimal('0')) + Decimal(str(amount))
+        return totals
+
+    def customer_receivables(self, company_id):
+        """Who owes us money, and how much.
+
+        The company-wide `receivable` figure said only THAT money was owed,
+        never BY WHOM — so chasing debt, a weekly job, could not be done from
+        the system. The supplier side already answered the mirror question
+        (`outstanding_for_supplier`), which made the gap lopsided.
+        """
+        collected = self._collected_by_customer(company_id)
+
+        result = []
+        for customer_id, name, booked in self._booked_rows(company_id):
+            paid = collected.get(str(customer_id), Decimal('0'))
+            outstanding = booked - paid
+            if outstanding <= 0 and booked <= 0:
+                continue
+            result.append({
+                'customer_id': str(customer_id),
+                'customer_name': name,
+                'booked': float(booked),
+                'collected': float(paid),
+                'outstanding': float(max(outstanding, Decimal('0'))),
+                'settled': outstanding <= 0,
+            })
+
+        result.sort(key=lambda r: -r['outstanding'])
+        return result
+
     def sales(self, company_id):
         # Orders (exclude canceled)
         orders_total = db.session.query(func.count(Order.id)).filter(
@@ -38,29 +138,21 @@ class ReportService:
             LifecycleStatus.completed == True).scalar() or 0
         in_progress = max(orders_total - completed, 0)
 
-        # Booked sales = signed, non-canceled contracts
-        booked = db.session.query(func.coalesce(func.sum(Contract.contract_value), 0)).join(
-            Order, Contract.order_id == Order.id).filter(
-            Order.company_id == company_id, Contract.is_signed == True,
-            Contract.is_canceled == False).scalar()
+        # Booked sales — signed contracts AND confirmed order confirmations.
+        booked = self._booked_total(company_id)
 
         collected = self._cash_collected(company_id)
 
-        # Top customers by booked contract value
-        rows = db.session.query(
-            Customer.name, func.coalesce(func.sum(Contract.contract_value), 0).label('v')).join(
-            Order, Order.customer_id == Customer.id).join(
-            Contract, Contract.order_id == Order.id).filter(
-            Order.company_id == company_id, Contract.is_signed == True,
-            Contract.is_canceled == False).group_by(Customer.name).order_by(
-            func.sum(Contract.contract_value).desc()).limit(5).all()
-        top_customers = [{'name': n, 'value': _f(v)} for n, v in rows]
+        # Top customers — same definition, so a framework-agreement customer
+        # is not invisible here while appearing in the totals.
+        ranked = sorted(self._booked_rows(company_id), key=lambda r: -r[2])[:5]
+        top_customers = [{'name': n, 'value': float(v)} for _c, n, v in ranked]
 
         return {
             'orders_total': orders_total,
             'completed': completed,
             'in_progress': in_progress,
-            'booked_value': _f(booked),
+            'booked_value': booked,
             'collected': collected,
             'top_customers': top_customers,
         }
@@ -125,10 +217,7 @@ class ReportService:
 
     def accounting(self, company_id):
         collected = self._cash_collected(company_id)
-        booked = db.session.query(func.coalesce(func.sum(Contract.contract_value), 0)).join(
-            Order, Contract.order_id == Order.id).filter(
-            Order.company_id == company_id, Contract.is_signed == True,
-            Contract.is_canceled == False).scalar()
+        booked = self._booked_total(company_id)
 
         advance = db.session.query(
             func.coalesce(func.sum(PaymentReport.advance_amount), 0)).filter(
@@ -151,8 +240,8 @@ class ReportService:
 
         return {
             'cash_in': collected,
-            'booked_value': _f(booked),
-            'receivable': max(_f(booked) - collected, 0.0),
+            'booked_value': booked,
+            'receivable': max(booked - collected, 0.0),
             'advance_collected': _f(advance),
             'final_collected': _f(final),
             'pending_count': pending[0] or 0,
