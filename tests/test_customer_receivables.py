@@ -210,3 +210,71 @@ def test_receivables_are_tenant_scoped(app, two_customers, seed):
         db.session.add(other)
         db.session.commit()
         assert ReportService().customer_receivables(other.id) == []
+
+
+# --- the screen -----------------------------------------------------------
+
+def test_receivables_page_lists_both_customers(client, login, two_customers):
+    login("admin")
+    body = client.get('/reports/receivables').get_data(as_text=True)
+    assert 'Khach Hop Dong' in body
+    assert 'Khach HDNT' in body
+
+
+def test_receivables_page_shows_the_total_owed(client, login, two_customers):
+    login("admin")
+    body = client.get('/reports/receivables').get_data(as_text=True)
+    assert '30,000,000' in body, "the headline should be the total still owed"
+
+
+def test_receivables_page_can_filter_to_customers_still_owing(
+        app, client, login, two_customers):
+    from app.config import db
+    from app.models.models import PaymentReport
+
+    with app.app_context():
+        db.session.add(PaymentReport(
+            company_id=two_customers["company_id"],
+            order_id=two_customers["order_a"], report_number="PM-SETTLE",
+            report_date=dt.date(2026, 2, 1), payment_date=dt.date(2026, 2, 1),
+            payment_type='advance', amount=10_000_000,
+            advance_amount=10_000_000, is_confirmed=True))
+        db.session.commit()
+
+    login("admin")
+    body = client.get('/reports/receivables?only=owing').get_data(as_text=True)
+    assert 'Khach HDNT' in body
+    assert 'Khach Hop Dong' not in body, "a settled customer should drop out"
+
+
+def test_receivables_page_does_not_show_another_tenant(app, client, login,
+                                                       seed, two_customers):
+    from app.config import db
+    from app.models import Company, Customer, Order, Store
+    from app.models.models import Contract
+
+    with app.app_context():
+        c = Company(company_code="RCP", name="Rival", email="r@rcp.test")
+        db.session.add(c)
+        db.session.flush()
+        st = Store(company_id=c.id, store_code="RCS", name="S")
+        db.session.add(st)
+        db.session.flush()
+        cu = Customer(company_id=c.id, store_id=st.id, customer_code="RCC",
+                      name="ZZRIVALDEBTOR")
+        db.session.add(cu)
+        db.session.flush()
+        o = Order(company_id=c.id, store_id=st.id, customer_id=cu.id,
+                  order_code="RCORD", title="T")
+        db.session.add(o)
+        db.session.flush()
+        db.session.add(Contract(company_id=c.id, order_id=o.id,
+                                contract_number="RCCT",
+                                contract_date=dt.date(2026, 1, 1),
+                                contract_value=99_000_000, is_signed=True))
+        db.session.commit()
+
+    login("admin")
+    body = client.get('/reports/receivables').get_data(as_text=True)
+    assert 'ZZRIVALDEBTOR' not in body
+    assert '99,000,000' not in body

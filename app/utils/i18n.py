@@ -807,6 +807,26 @@ TRANSLATIONS = {
         # -- Document lifecycle --
         'Current version':          'Bản hiện hành',
         'Replaced':                 'Đã thay thế',
+
+        # -- Customer debt report --
+        'Customer Debt':
+            'Công nợ khách hàng',
+        'Total still owed to us':
+            'Tổng còn phải thu',
+        'Customers with an unpaid balance':
+            'Khách còn dư nợ',
+        'Still owing':
+            'Còn nợ',
+        'Agreed value':
+            'Giá trị đã chốt',
+        'Still owed':
+            'Còn phải thu',
+        'Paid in full':
+            'Đã thanh toán đủ',
+        'No customer has an outstanding balance.':
+            'Không có khách hàng nào còn dư nợ.',
+        'Largest debt first. Only confirmed payments count as received — money promised but not yet confirmed still shows as owed.':
+            'Nợ lớn nhất xếp trước. Chỉ khoản thanh toán đã xác nhận mới tính là đã thu — tiền mới hứa nhưng chưa xác nhận vẫn hiện là còn nợ.',
     }
 }
 

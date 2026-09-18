@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, empty_state, table_open, table_close with context %}
+{% block title %}{{ t('Customer Debt') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Customer Debt'), icon='bi-cash-stack',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Reports'), url_for('dashboard.reports')),
+                       (t('Customer Debt'), None)]) }}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <div class="card text-center h-100 border-warning"><div class="card-body py-3">
+      <div class="fs-3 fw-bold text-warning">{{ "{:,.0f}".format(total_outstanding) }} đ</div>
+      <div class="small text-muted">{{ t('Total still owed to us') }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card text-center h-100"><div class="card-body py-3">
+      <div class="fs-3 fw-bold">{{ owing_count }}</div>
+      <div class="small text-muted">{{ t('Customers with an unpaid balance') }}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="mb-3">
+  <a href="{{ url_for('dashboard.customer_receivables') }}"
+     class="btn btn-sm {{ 'btn-primary' if not only else 'btn-outline-secondary' }}">{{ t('All') }}</a>
+  <a href="{{ url_for('dashboard.customer_receivables', only='owing') }}"
+     class="btn btn-sm {{ 'btn-primary' if only == 'owing' else 'btn-outline-secondary' }}">
+    {{ t('Still owing') }}
+  </a>
+</div>
+
+{% if rows %}
+{{ table_open() }}
+  <thead class="table-light">
+    <tr>
+      <th>{{ t('Customer') }}</th>
+      <th class="text-end">{{ t('Agreed value') }}</th>
+      <th class="text-end">{{ t('Received') }}</th>
+      <th class="text-end">{{ t('Still owed') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr class="{% if r.settled %}text-muted{% endif %}">
+      <td>
+        <strong>{{ r.customer_name }}</strong>
+        {% if r.settled %}
+        <span class="badge bg-success ms-1">{{ t('Paid in full') }}</span>
+        {% endif %}
+      </td>
+      <td class="text-end">{{ "{:,.0f}".format(r.booked) }} đ</td>
+      <td class="text-end">{{ "{:,.0f}".format(r.collected) }} đ</td>
+      <td class="text-end">
+        {% if r.outstanding > 0 %}
+          <strong class="text-warning-emphasis">{{ "{:,.0f}".format(r.outstanding) }} đ</strong>
+        {% else %}
+          &mdash;
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+{{ table_close() }}
+<p class="text-muted small mt-2">
+  {{ t('Largest debt first. Only confirmed payments count as received — money promised but not yet confirmed still shows as owed.') }}
+</p>
+{% else %}
+{{ empty_state('No customer has an outstanding balance.', icon='bi-cash-stack') }}
+{% endif %}
+{% endblock %}

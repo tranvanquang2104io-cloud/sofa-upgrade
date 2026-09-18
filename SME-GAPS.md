@@ -84,7 +84,7 @@ Labour is the other half of a bespoke job's cost — see G6.
 
 ---
 
-## G4 — Customer debt is a single company-wide number · ✅ **SERVICE DONE**
+## G4 — Customer debt is a single company-wide number · ✅ **DONE**
 
 **Evidence:** `report_service.py:155` computes `receivable` as
 `booked_value − collected` across the whole company. There is no per-customer
@@ -100,7 +100,9 @@ This is now asymmetric: after this refactor the **supplier** side answers
 
 **Done:** `ReportService.customer_receivables()` returns booked, collected
 and outstanding per customer, largest debt first — a work queue rather than a
-number. ⬜ Remaining: a screen for it, and age buckets.
+number, on screen at **`/reports/receivables`** with a "still owing" filter
+and the total owed as the headline. ⬜ Remaining: age buckets (how overdue),
+which need an agreed due-date rule first.
 
 **A regression was found while building this.** When the HĐNT path was added,
 `sales()`, `top_customers` and `accounting()` each carried their OWN copy of
@@ -220,7 +222,7 @@ mixed-rate range.
 | # | Gap | Class | Why this position |
 |---|---|---|---|
 | 1 | **G3** Material costing | REQUIRED | The one number missing from an otherwise complete chain; without it no bespoke job can be shown to have made money |
-| 2 | **G4** Customer debt | REQUIRED | Weekly operational need, small build, and the supplier side already does it |
+| ~~2~~ | ~~**G4** Customer debt~~ | ✅ DONE | Shipped, plus the DDH revenue regression it uncovered |
 | 3 | **G6** Labour on production | USEFUL | Completes job costing with G3, and answers the daily workshop question |
 | 4 | **G7** Expenses | USEFUL | Turns gross margin into something the owner can trust |
 | 5 | **G5** Warranty tracking | USEFUL | Cheap; stops the office guessing |

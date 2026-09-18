@@ -116,6 +116,8 @@
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.extension_fields_settings') }}"><i class="bi bi-input-cursor-text"></i> {{ t('Extension Fields') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.workflow_settings') }}"><i class="bi bi-diagram-3"></i> {{ t('Order Workflow') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.standardization_settings') }}"><i class="bi bi-magic"></i> {{ t('Data Standardization') }}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.customer_receivables') }}"><i class="bi bi-cash-stack"></i> {{ t('Customer Debt') }}</a></li>
                                 {% endif %}
                             </ul>
                         </li>

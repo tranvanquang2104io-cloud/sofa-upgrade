@@ -2193,6 +2193,31 @@ def download_document(document_id):
         return redirect(request.referrer)
 
 
+@dashboard_bp.route('/reports/receivables')
+@login_required
+def customer_receivables():
+    """Who owes us money — a work queue, not a number.
+
+    The dashboard already showed a single company-wide "receivable" figure,
+    which tells you that money is owed but not by whom, so it could not be
+    acted on. Chasing debt is a weekly job.
+    """
+    from app.services.report_service import ReportService
+
+    company_id = get_current_company_id()
+    rows = ReportService().customer_receivables(company_id)
+
+    if request.args.get('only') == 'owing':
+        rows = [r for r in rows if not r['settled']]
+
+    return render_template(
+        'reports/receivables.html',
+        rows=rows,
+        only=request.args.get('only') or '',
+        total_outstanding=sum(r['outstanding'] for r in rows),
+        owing_count=sum(1 for r in rows if not r['settled']))
+
+
 @dashboard_bp.route('/reports')
 @login_required
 def reports():
