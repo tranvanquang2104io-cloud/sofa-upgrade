@@ -3,100 +3,84 @@
 > Requirement 4.5. Written for the business owner and the tech lead deciding
 > what to build next — not a feature wish-list, and not a generic ERP checklist.
 >
-> Every gap below is stated with the evidence that it is actually missing, and
-> each is classified as **REQUIRED** (the business cannot run correctly without
-> it), **USEFUL** (real value, can wait), or **LATER** (only when the business
-> grows into it). Where I am inferring rather than observing, I say so.
+> **Revised 2026-09-18 after the owner corrected a wrong premise.** See
+> §0 first: the largest item in the original version has been withdrawn, and
+> three others were overstated. Everything below has been re-verified against
+> the code.
+
+---
+
+## 0. Correction: how this business actually works
+
+My first version treated the free-text line items on quotations and contracts
+as a data-quality problem and proposed a product master to fix it. **That was
+wrong, and it inverted the design.**
+
+The real flow, confirmed in the code:
+
+1. A quotation or contract line is a **detailed, negotiated description** —
+   "Đóng mới ghế sofa đơn chất liệu da bò thật". Every order is bespoke. The
+   free text is the agreement with that customer, not sloppy data entry.
+2. When the contract is signed, `ProductionPlanService.create_from_contract`
+   copies each line verbatim into `ProductionPlanItem.source_name`.
+3. **Kế hoạch sản xuất is where the decomposition happens**: the user adds
+   `ProductionMaterialLine` rows — this is the "phân rã đơn hàng thành các
+   cấu phần" step.
+4. Approving and issuing the plan checks stock and deducts it
+   (`issue_materials`), refusing and reporting a shortage rather than
+   deducting when stock is short.
+
+`MaterialNorm` is an **optional accelerator**, not load-bearing. If a past
+plan for a similarly-named item was saved as a norm, the material lines are
+pre-filled. If nothing matches, the material list is simply **empty on the
+screen** and the user fills it in — which is the normal path for bespoke work
+anyway.
+
+So my claim that "renaming a product silently breaks its norms, the plan
+generates no requirement and the shortfall appears on the workshop floor" was
+wrong in its consequence. Nothing is silent: the empty material list is
+visible, and issuing is guarded by a stock check.
+
+**Withdrawn as a result:** the product master (was G2, and was ranked the #1
+REQUIRED item). The code written for it has been reverted. Forcing bespoke
+descriptions into a fixed product catalogue would fight the business model
+rather than serve it.
 
 ---
 
 ## The business, as the system currently models it
 
-Three revenue activities were described: **selling sofas**, **manufacturing
-them**, and **repairing/servicing them**.
-
-The system covers the common lifecycle well:
-
 | Process | Covered by | State |
 |---|---|---|
 | Quote → agree → deliver → collect | Order · Quotation · Contract/ĐĐH · HandoverRecord · PaymentReport | Solid |
-| Framework relationships | MasterAgreement + OrderConfirmation | New, complete |
-| Buy materials → receive → pay | PurchaseRequisition · PurchaseOrder · GoodsReceipt · SupplierInvoice · SupplierPayment | Complete as of this refactor |
-| Plan production, issue materials | ProductionPlan · ProductionMaterialLine · MaterialNorm | Works, but see G1/G2 |
+| Framework relationships | MasterAgreement + OrderConfirmation | Complete |
+| Buy materials → receive → pay | PurchaseRequisition · PurchaseOrder · GoodsReceipt · SupplierInvoice · SupplierPayment | Complete |
+| **Decompose an order into materials, issue, deduct stock** | ProductionPlan · ProductionPlanItem · ProductionMaterialLine · MaterialNorm | **Works, and is the heart of the product** |
 | Stock on hand | MaterialStock, low-stock, purchase suggestions | Works |
 | Who may do what | RBAC per feature, multi-store | Works |
 
 ---
 
-## G1 — Repair jobs are not modelled at all · **REQUIRED**
-
-**Evidence:** `Order` has no type field. Its columns are `order_code`,
-`title`, `description`, `total_amount`, `advance_amount`, `final_amount`,
-`notes` and the lifecycle flags — nothing distinguishes a new sofa sale from a
-manufacturing job from a repair. A repair is an `Order` whose `title` happens
-to say so.
-
-**Why this matters more than it looks.** A repair is not a small sale; it has
-different facts:
-
-* it concerns an **existing item**, often one this company originally sold;
-* it has a **fault description** and a **diagnosis**, which the quote depends on;
-* it may be **under warranty**, in which case the customer pays nothing — but
-  the job still consumes materials and labour that the business pays for;
-* it usually skips the deposit step entirely.
-
-Today none of that can be recorded, reported or searched. "How many repairs
-did we do last month, and how many were warranty jobs we absorbed?" is
-currently unanswerable — and for a business with a repair line, that is one of
-the two or three numbers that decide whether the line is profitable.
-
-**Minimum:** `Order.order_type` (`sale` / `production` / `repair`), plus a
-small repair block (item description, reported fault, under-warranty flag,
-link to the originating order when known). The workflow engine built in this
-refactor can already give repairs a different step sequence without code
-changes — that part is free.
-
----
-
-## G2 — No product master; material norms match on a name string · **REQUIRED**
-
-**Evidence:** `MaterialNorm.product_key` is a lowercased product **name**
-(`models.py`). There is no product/item entity anywhere in the schema.
-Quotation, contract and handover line items are free-text JSON.
-
-**The failure is silent.** Rename "Sofa 3 chỗ" to "Sofa 3 chỗ da bò" on a new
-quotation and its material norms stop matching. Nothing errors. The production
-plan simply generates no material requirement, and the shortfall is discovered
-on the workshop floor.
-
-It also makes ordinary questions impossible: "what do we sell most of", "what
-does this model cost us", "which customers bought this model" — none can be
-answered, because there is no thing called a product to group by.
-
-**Minimum:** a `Product` master (code, name, unit, category, default price),
-with line items referencing it while keeping the free-text name for one-off
-custom work. Norms then key on the product id. This is the single highest-value
-structural fix remaining, and it unblocks G3 and G5.
-
----
-
-## G3 — Nothing knows what anything costs · **REQUIRED**
+## G3 — Nothing knows what anything costs · **REQUIRED** *(now the top item)*
 
 **Evidence:** no cost field exists on `Material` — no `avg_cost`,
 `cost_price`, `unit_cost` or `standard_cost` anywhere in the schema. Goods
 receipts increase quantity only.
 
-So the business can see revenue, and can see what it paid suppliers in total,
-but cannot answer **"did we make money on this order?"** A sofa's cost is the
-materials issued to it plus labour, and neither is valued.
+**Why this is now the most valuable gap.** In a bespoke business there is no
+catalogue price to compare against, so the *only* way to know whether a job
+made money is: what it sold for, minus the materials actually issued to it.
+The system already tracks exactly that — `ProductionMaterialLine.quantity_issued`
+per plan — and then cannot value it, because materials have no cost.
+
+Every piece of this is already in place except the cost number.
 
 **Minimum:** moving-average cost on `Material`, updated on each goods receipt
-(`new_avg = (old_qty × old_cost + received_qty × po_price) / new_qty`). That
-alone makes material cost per production plan computable. It is a small
-addition — deliberately not a full valuation layer, and explicitly not FIFO or
-standard costing, which this business does not need.
+(`new_avg = (old_qty × old_cost + received_qty × po_price) / new_qty`). Then
+material cost per production plan, and therefore per order, becomes a simple
+sum. Deliberately not FIFO, not standard costing, not a valuation layer.
 
-Labour cost is a bigger question and belongs in G6.
+Labour is the other half of a bespoke job's cost — see G6.
 
 ---
 
@@ -106,32 +90,16 @@ Labour cost is a bigger question and belongs in G6.
 `booked_value − collected` across the whole company. There is no per-customer
 receivable anywhere.
 
-The business can therefore see that it is owed money, but not **by whom**,
-**how long overdue**, or **who to chase this week**. For an SME selling on
-terms, chasing debt is a weekly operational task, not a reporting nicety.
+The business can see that it is owed money, but not **by whom**, **how long
+overdue**, or **who to chase this week**. For an SME selling on terms that is
+a weekly operational task.
 
-Note this is now asymmetric: after this refactor the **supplier** side can
-answer "what do we owe this supplier" (`outstanding_for_supplier`), while the
+This is now asymmetric: after this refactor the **supplier** side answers
+"what do we owe this supplier" (`outstanding_for_supplier`), while the
 **customer** side cannot answer the mirror question.
 
 **Minimum:** receivable per customer = confirmed contract/ĐĐH value minus
-confirmed payments, with an age bucket and a list view sorted by oldest.
-
----
-
-## G5 — Warranty is recorded but never tracked · **USEFUL**
-
-**Evidence:** `Contract.warranty_months` exists (`models.py:447`). Nothing
-reads it. There is no warranty expiry, no claim record, and no link from a
-repair back to the order that is under warranty.
-
-So when a customer calls, the office cannot tell from the system whether the
-sofa is still covered. In practice this gets resolved by looking through paper
-or by guessing — and guessing generously is a direct cost.
-
-**Minimum (after G1):** derive expiry from handover date + warranty months,
-show "under warranty until …" on the order, and let a repair cite the original
-order. Cheap once G1 exists, which is why it is USEFUL rather than REQUIRED.
+confirmed payments, with an age bucket and a list sorted by oldest.
 
 ---
 
@@ -139,63 +107,102 @@ order. Cheap once G1 exists, which is why it is USEFUL rather than REQUIRED.
 
 **Evidence:** `ProductionPlan` has a status machine and
 `ProductionMaterialLine`, but no worker assignment, no time recorded and no
-per-stage progress.
+per-stage progress (verified: no `worker`, `assigned_to`, `hours` or
+equivalent field exists).
 
-For a workshop, "which jobs are late and who is on them" is a daily question.
-The status field answers it coarsely (`processing`) but not usefully.
+Two consequences. Operationally, "which jobs are late and who is on them" is a
+daily workshop question the status field answers only coarsely. Financially,
+labour is the missing half of G3 — material cost alone understates what a
+bespoke sofa cost to make.
 
-Deliberately **not** proposing a full MES or work-order routing here — that
-would be over-engineering for this size of business. A worker assignment and a
-promised-date-vs-actual comparison would cover most of the real need.
+Deliberately **not** proposing a full MES or work-order routing. A worker
+assignment plus promised-date-vs-actual would cover the real need.
+
+---
+
+## G1 — Repair jobs are not distinguishable from new orders · **USEFUL**
+*(downgraded from REQUIRED — see the reasoning)*
+
+**Evidence:** `Order` has no type or category field. A repair is an `Order`
+whose line description happens to describe a repair.
+
+**Why this is not REQUIRED.** Under the bespoke model a repair *works* fine:
+it is described in the line, decomposed in the production plan, and consumes
+materials like any other job. Nothing is broken.
+
+**Why it is still worth doing.** The gap is in **reporting**, not operation.
+"How many repairs did we do last month, and how many were warranty jobs we
+absorbed?" cannot be answered, because nothing separates a repair from a new
+build. For a business with a repair line that is a number worth having — but
+whether it matters enough to build is a judgement about how the owner runs the
+business, and I am inferring the need rather than observing it.
+
+**Minimum if wanted:** `Order.order_type` (`sale` / `production` / `repair`)
+plus an under-warranty flag. The workflow engine can already give repairs a
+different step sequence with no code change.
+
+---
+
+## G5 — Warranty is printed but never tracked · **USEFUL**
+
+**Evidence:** `Contract.warranty_months` exists and **is** read — it is
+rendered onto the contract document (`template_engine.py:597`).
+*(My first version said nothing reads it. That was wrong.)*
+
+What does not exist is any **tracking**: no expiry date derived from it, no
+claim record, and no link from a later repair back to the order under
+warranty. So when a customer calls, the office cannot tell from the system
+whether the sofa is still covered; in practice that gets resolved from paper
+or by guessing, and guessing generously is a direct cost.
+
+**Minimum:** derive expiry from handover date + warranty months and show
+"under warranty until …" on the order. Cheap. More useful once G1 exists.
 
 ---
 
 ## G7 — No record of money that is not an order or a purchase · **USEFUL**
 
 **Evidence:** the only money flows modelled are customer payments against
-orders and supplier payments against purchase orders.
+orders and supplier payments against purchase orders (verified: no expense or
+cash-book entity exists).
 
-Rent, electricity, wages, transport, tools — the ordinary running costs — are
-invisible. That means the profit figure the system can produce is a **gross**
-margin, and the owner still needs a separate book to know whether the month was
-actually profitable.
+Rent, electricity, wages, transport, tools are invisible, so the best figure
+the system can produce is a **gross** margin and the owner still needs a
+separate book to know whether the month was profitable.
 
 **Minimum:** a simple expense record (date, category, amount, payment method,
-note, optional supplier). Not a general ledger, not double-entry — a cash-out
-book with categories.
+note, optional supplier). Not a general ledger, not double-entry.
 
 ---
 
-## G8 — No document numbering configuration · **USEFUL**
+## G8 — Document numbering is not configurable · **USEFUL**
+*(scope corrected)*
 
-**Evidence:** prefixes are hardcoded in two different places and in two
-different styles (`QT-`/`CT-`/`PR-`/`HR-` in the route layer,
-`BaoGia`/`HopDong`/`BanGiao` in the service layer), and the padding is fixed at
-three digits.
+**Evidence:** the prefixes `QT-`, `CT-`, `PR-`, `HR-`, `CUST-`, `ORD-` are
+hardcoded in the route layer and the padding is fixed at three digits.
 
-Vietnamese businesses commonly want year or month in the number
-(`BG-2026/001`). Today that needs a code change. Given this refactor has
-already made VAT rate, workflow and data-standardization configurable, document
+**Correction to my first version.** I also claimed a second, competing
+numbering scheme existed in the service layer (`BaoGia_`, `HopDong_`,
+`BanGiao_`). That was wrong: `_build_doc_basename` builds the **download file
+name**, and embeds the document number inside it. It is a deliberate file
+naming convention, not a rival numbering scheme.
+
+So the real gap is narrower: Vietnamese businesses commonly want the year or
+month inside the number (`BG-2026/001`), and today that needs a code change.
+Given VAT rate, workflow and data standardization are all now configurable,
 numbering is the conspicuous remaining hardcoded convention.
 
 ---
 
 ## G9 — Nothing to hand to the accountant · **LATER**
 
-The system holds everything an accountant needs but exposes no export. A
-period-based export of sales documents, supplier invoices and payments (CSV or
-XLSX) would remove a recurring manual copy-out.
-
-Marked LATER because the shape depends entirely on what the accountant's own
-software accepts — worth asking them before building anything.
-
----
+The system holds what an accountant needs but exposes no period export. Worth
+asking them what their software accepts before building anything.
 
 ## G10 — Single-currency, single-tax-rate assumptions · **LATER**
 
-Amounts carry no currency and VAT is one rate per document. Correct for a
-domestic sofa business today. Only worth revisiting on export sales or a
-mixed-rate product range.
+Correct for a domestic sofa business today. Revisit only on export sales or a
+mixed-rate range.
 
 ---
 
@@ -203,29 +210,27 @@ mixed-rate product range.
 
 | # | Gap | Class | Why this position |
 |---|---|---|---|
-| 1 | **G2** Product master | REQUIRED | Unblocks G3 and G5; every day without it adds more free-text data to migrate later |
-| 2 | **G1** Repair jobs | REQUIRED | A whole revenue line is currently invisible |
-| 3 | **G4** Customer debt | REQUIRED | Weekly operational need; small build |
-| 4 | **G3** Material costing | REQUIRED | Needs G2 to be meaningful per product |
-| 5 | **G5** Warranty tracking | USEFUL | Cheap once G1 lands |
-| 6 | **G7** Expenses | USEFUL | Turns gross margin into something the owner can trust |
-| 7 | **G6** Production labour | USEFUL | Daily workshop visibility |
-| 8 | **G8** Numbering config | USEFUL | Small, visible, frequently requested |
-| 9 | G9, G10 | LATER | Depend on facts we do not have yet |
+| 1 | **G3** Material costing | REQUIRED | The one number missing from an otherwise complete chain; without it no bespoke job can be shown to have made money |
+| 2 | **G4** Customer debt | REQUIRED | Weekly operational need, small build, and the supplier side already does it |
+| 3 | **G6** Labour on production | USEFUL | Completes job costing with G3, and answers the daily workshop question |
+| 4 | **G7** Expenses | USEFUL | Turns gross margin into something the owner can trust |
+| 5 | **G5** Warranty tracking | USEFUL | Cheap; stops the office guessing |
+| 6 | **G1** Repair job type | USEFUL | Reporting only — build it if that report is actually wanted |
+| 7 | **G8** Numbering config | USEFUL | Small, visible, frequently requested |
+| 8 | G9, G10 | LATER | Depend on facts not yet known |
 
-**G2 first** is the one recommendation I would argue for hardest: it is the
-only item on this list that gets *more expensive every week it is deferred*,
-because the volume of free-text product names that must eventually be
-reconciled keeps growing.
+**G3 first.** Unlike the item it replaces at the top of this list, it does not
+propose a new way of working — it puts a price on data the system already
+collects.
 
 ---
 
 ## What I deliberately did NOT propose
 
-CRM pipelines and lead management · marketing automation · e-commerce or a
-customer portal · barcode/RFID warehousing · full double-entry accounting ·
-HR/payroll · multi-warehouse transfers · demand forecasting · a mobile app.
+A product master or catalogue (**withdrawn — see §0**) · CRM pipelines and
+lead management · marketing automation · e-commerce or a customer portal ·
+barcode/RFID warehousing · full double-entry accounting · HR/payroll ·
+multi-warehouse transfers · demand forecasting · a mobile app.
 
-Each is a standard ERP module and none of them addresses an observed gap in
-how this business actually operates. Adding them would make the product larger
-without making it more complete.
+Each is a standard ERP module and none addresses an observed gap in how this
+business operates.

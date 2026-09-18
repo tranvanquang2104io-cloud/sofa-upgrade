@@ -1,6 +1,6 @@
 # SofaFlow — Refactor & Product Enhancement (2026 Q3)
 
-## STATUS: Phase 1 and Phase 2 complete, except F11 phase 2 (awaiting your review)
+## STATUS: Phase 1 and Phase 2 complete. F11 WITHDRAWN — the premise was wrong (see §7).
 
 | | |
 |---|---|
@@ -100,7 +100,7 @@ Severity: **S1** = correctness/security, **S2** = data integrity, **S3** = maint
 | F8 | S1 | **No workflow engine.** Sequencing split 3 ways: `LifecycleStatus` booleans, per-document `can_*` guards that can't see other documents, and hardcoded `if/raise` inside individual services | `models.py:264`, `services.py:745`, `:875-880` | Open — **Phase 2A** |
 | F9 | S1 | `skip_advance_payment` is a **second, parallel** lifecycle-mutation path that bypasses `PaymentReportService` entirely | `dashboard_routes.py:1765-1799` | Open — Phase 2A |
 | F10 | S2 | **P2P dead-ends at goods receipt.** No supplier invoice, no AP, no payment-to-supplier entity | no such model | ✅ **FIXED** (2D) |
-| F11 | S2 | No product master; `MaterialNorm.product_key` matches a **lowercased name string**, so renaming a product silently breaks its norms | `models.py:1009` | 🟡 **Phase 1 DONE** — `products` table + reconciliation report (migration `b2c3d4e5f6a7`). Phase 2 (pointing documents/norms at `product_id`) awaits your review of the report |
+| F11 | — | ~~No product master; norms match on a name string~~ — **WITHDRAWN 2026-09-18.** Premise wrong: line items are bespoke descriptions BY DESIGN and `MaterialNorm` is an optional pre-fill, not load-bearing. A non-matching norm leaves the plan's material list visibly empty and the user enters lines manually, as they would anyway. Code reverted | owner correction + `services.py:1685-1718` | ❌ Withdrawn |
 | F12 | S2 | ~~No unique constraint on MaterialStock~~ — **misdiagnosed.** The constraint EXISTS. The real gap: `store_id` is NULLable and SQL treats NULLs as DISTINCT, so it never covered **company-level** rows. Proven empirically: 2 duplicate main-warehouse rows accepted. `receive()` uses `.first()` → stock silently disagrees with itself | `models.py:832`, probe | ✅ **FIXED** (T6) — partial unique index + duplicate-merging migration |
 | F13 | S2 | `PurchaseOrder.supplier_id` nullable → a PO could be SENT with no supplier (and could never be invoiced) | `models.py:1120` | ✅ **FIXED** (T7) — guarded at the `submit` transition rather than made NOT NULL, so drafting before choosing a supplier still works |
 | F14 | S3 | `BaseRepository.get_by_id` is unscoped. **Measured, not assumed:** a sweep of all 14 detail routes with a foreign id found **ZERO leaks** — every current route does check ownership. So this is a *latent* hazard (the next forgetful route leaks), not an active defect | `repository.py:31`, `test_tenant_isolation_sweep.py` | ✅ **ADDRESSED** (T8) — scoped `get_for_company` on every repository + a permanent 28-probe sweep |
@@ -189,7 +189,7 @@ One task = one coherent unit, each ending green. **Phase 1 first — no Phase 2 
 | **2A** | **Workflow engine** (DA) — ✅ **engine + rules + waivers + migration + 11 tests DONE**; service guards migrated; `skip_advance_payment` now records an audited waiver. ✅ **admin screen DONE** (`/settings/workflow` — relax/waive/disable per rule). ⬜ Remaining: order-view surfacing of warnings | T8 |
 | **2B** | **Data standardization** (4.1) — ✅ **DONE**: Vietnamese-aware primitives (`text_normalize.py`), per-company rules + suggestions (migration `d8e9f0a1b2c3`), applied at the **ORM boundary** so routes/services/scripts are all covered, auto vs confirm modes, identifier fields hard-protected. ✅ **admin screen DONE** (`/settings/standardization`, with live preview of what a rule does to a sample). ⬜ Remaining: suggestion inbox for confirm-mode | T3 |
 | **2C** | **HĐNT + Đơn đặt hàng** (DB) — ✅ **model + service + migration `e9f0a1b2c3d4` + 18 tests DONE**: `master_agreements` (validity, open-ended support, suspend/terminate, penalty ≤8% per LTM 2005 Đ.301 noted as *breached portion*, not total), `master_agreement_price_lines` (line-level validity so a revision never rewrites a past order), `order_confirmations` (ĐĐH, occupies the Contract slot, snapshots the cited agreement + prices). Routing: no agreement ⇒ ordinary Contract, so **zero migration for historical orders**. ✅ **UI screens DONE** (`/agreements` list · create · view with price-list management and activate/suspend/terminate). ✅ **order-side action DONE** — an order covered by an active HĐNT now offers *Issue Order Confirmation* instead of *Create Contract*, and names the covering agreement. ✅ **document variable collectors DONE** (`collect_master_agreement_variables`, `collect_order_confirmation_variables`) — citation fields read the stored snapshot, so a reprint shows what was cited at issue. ⬜ Remaining: the .docx template FILES themselves (need the customer's letterhead/wording) | 2A |
-| **2D** | **P2P close-the-loop** (DC) — ✅ **DONE**: `supplier_invoices` (+lines), `supplier_payments`, `supplier_payment_allocations`, `purchase_order_lines.quantity_invoiced`; line-level 3-way match (ordered/received/invoiced + price variance) that **warns, never blocks**; PO invoice/payment status; migration `f0a1b2c3d4e5`; 23 tests. ✅ **UI screens DONE** (`/supplier-invoices` list · record-from-PO · view with match verdict, confirm and pay). ⬜ Remaining: F11 (product master) still open | T6, T7 |
+| **2D** | **P2P close-the-loop** (DC) — ✅ **DONE**: `supplier_invoices` (+lines), `supplier_payments`, `supplier_payment_allocations`, `purchase_order_lines.quantity_invoiced`; line-level 3-way match (ordered/received/invoiced + price variance) that **warns, never blocks**; PO invoice/payment status; migration `f0a1b2c3d4e5`; 23 tests. ✅ **UI screens DONE** (`/supplier-invoices` list · record-from-PO · view with match verdict, confirm and pay). F11 withdrawn (see §7) | T6, T7 |
 | **2E** | **SME gap analysis** (4.5) — ✅ **DONE**, written up in [`SME-GAPS.md`](SME-GAPS.md): 10 gaps, each with the evidence it is missing, classified REQUIRED/USEFUL/LATER, plus an explicit list of standard ERP modules deliberately NOT proposed. Headline: **G2 product master** (norms match on a name string), **G1 repair jobs not modelled** despite being a revenue line, **G3 no costing**, **G4 customer debt is one company-wide number** |
 
 ---
@@ -225,42 +225,3 @@ advance, driven by `advance_skipped` and the new waiver record — so the
 timeline tells the truth and the waiver's reason is visible on hover. The
 lifecycle flag keeps its gating role untouched.
 
-
-
----
-
-## 7. F11 — how the product master is being introduced
-
-Adding master data on top of years of free text is where this kind of
-migration usually goes wrong: a bulk auto-merge quietly combines two real
-products, and un-merging afterwards means editing historical documents. So the
-order is deliberate.
-
-**Phase 1 — shipped, changes nothing.** The `products` table exists, the
-report is visible at **`/products/reconcile`** (company-admin only, since it
-exposes every product name and price the company has quoted), and
-`product_service.reconcile(company_id)` reports what is actually in the data:
-every distinct product name across quotations, contracts, handover records and
-order confirmations, plus every `MaterialNorm.product_key`, grouped by a fuzzy
-key that ignores diacritics, punctuation and spacing. Each group shows its
-spelling variants, how often each is used, which document types use it, the
-units seen and the **price spread**. Nothing is created; no document is
-touched.
-
-**Phase 2 — needs your review first.** Two questions only a person can answer:
-
-* Are the flagged groups really one product? The fuzzy key deliberately does
-  NOT merge "Sofa 3 chỗ" with "Sofa 3 chỗ da bò" — those may be two products
-  or one product typed carelessly, and guessing wrong is expensive.
-* Where a group shows a price spread, is that a price change over time, a
-  customer-specific price, or a typo?
-
-The screen answers both visually: spelling variants are listed with their
-counts, a price range shows in amber when one product has been sold at more
-than one price, and a "needs review" filter narrows to just the ambiguous
-groups. Creating a product is one row at a time, and the suggested name is
-editable before it becomes master data — the most common spelling is a good
-guess, not necessarily the right one.
-
-Once the list is agreed, phase 2 points line items and material norms at
-`product_id`, keeping the free-text name on each line for one-off custom work.

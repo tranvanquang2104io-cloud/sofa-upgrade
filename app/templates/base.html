@@ -57,13 +57,6 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if can_feature('orders') %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if 'product' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_products') }}">
-                                <i class="bi bi-box"></i> {{ t('Products') }}
-                            </a>
-                        </li>
-                        {% endif %}
                         {# ── Hợp đồng nguyên tắc ── #}
                         {% if can_feature('orders') %}
                         <li class="nav-item">
