@@ -485,12 +485,22 @@ class DocumentTemplateRepository(BaseRepository):
         return query.all()
     
     def get_default_for_type(self, company_id, document_type):
-        """Get default template for document type"""
+        """The template a document of this type is printed from.
+
+        Activation is exclusive per type, so normally only one row matches.
+        Rows created before that rule can still be doubly active, and `.first()`
+        with no ORDER BY left the choice to whatever order the database
+        returned — so a user could upload a corrected template, activate it,
+        and go on printing the old one with nothing on screen to say so.
+
+        The most recently created active template is the one the user chose
+        last, so it wins.
+        """
         return self.model.query.filter_by(
             company_id=company_id,
             document_type=document_type,
             is_active=True
-        ).first()
+        ).order_by(self.model.created_at.desc()).first()
 
 
 class LifecycleStatusRepository(BaseRepository):

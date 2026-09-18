@@ -60,6 +60,9 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Use this template for all documents of this type from now on? The template currently in use will be replaced.':
+            'Dùng mẫu này cho mọi chứng từ cùng loại từ nay? Mẫu đang dùng sẽ bị thay thế.',
+        'Mark this plan as behind schedule?': 'Đánh dấu kế hoạch này là trễ tiến độ?',
         # process_list() / handover line acceptance
         'Done':                   'Xong',
         'Skipped':                'Đã Bỏ Qua',

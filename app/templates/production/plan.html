@@ -48,7 +48,10 @@
           <button class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up"></i> {{ t('Issue materials (deduct stock)') }}</button>
         </form>
         {% endif %}
-        <form method="POST" action="{{ url_for('dashboard.production_plan_delay', plan_id=plan.id) }}" class="d-inline">
+        <form method="POST" action="{{ url_for('dashboard.production_plan_delay', plan_id=plan.id) }}" class="d-inline"
+              {# Setting the flag puts a visible mark on the job, so it asks first.
+                 Clearing it is the undo and needs no ceremony. #}
+              {% if not plan.is_delayed %}onsubmit="return confirm('{{ t('Mark this plan as behind schedule?') }}');"{% endif %}>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="delayed" value="{{ '0' if plan.is_delayed else '1' }}">
           <button class="btn btn-sm btn-outline-warning">{{ t('Clear late flag') if plan.is_delayed else t('Mark as behind schedule') }}</button>

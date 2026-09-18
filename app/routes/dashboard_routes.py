@@ -448,9 +448,27 @@ def activate_template(template_id):
     if not tpl or str(tpl.company_id) != str(company_id):
         flash(t('Không tìm thấy mẫu.'), 'error')
     else:
+        # Exclusive per document type: the screen shows one "Active" badge per
+        # row and the generator asks for THE template of a type, so letting two
+        # be active at once made the printed result depend on row order.
+        replaced = _DT.query.filter(
+            _DT.company_id == tpl.company_id,
+            _DT.document_type == tpl.document_type,
+            _DT.is_active.is_(True),
+            _DT.id != tpl.id,
+        ).all()
+        for other in replaced:
+            other.is_active = False
         tpl.is_active = True
         db.session.commit()
-        flash(t(f'Mẫu "{tpl.name}" đã được kích hoạt.'), 'success')
+        if replaced:
+            # Say what was retired, or the user cannot tell an exclusive
+            # switch from an additive one.
+            names = ', '.join(o.name for o in replaced)
+            flash(t(f'Mẫu "{tpl.name}" đã được kích hoạt, thay cho: {names}.'),
+                  'success')
+        else:
+            flash(t(f'Mẫu "{tpl.name}" đã được kích hoạt.'), 'success')
     return redirect(url_for('dashboard.list_templates'))
 
 

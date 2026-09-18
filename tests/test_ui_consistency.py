@@ -408,3 +408,55 @@ def test_the_sticky_action_style_exists():
 def test_forms_with_a_pinned_save_bar_still_parse(app, template):
     with app.app_context():
         app.jinja_env.get_template(template)
+
+
+# Actions a non-technical user cannot undo by pressing the same button again.
+# Deliberately NOT every POST: create/edit forms are the user's own deliberate
+# submission, and confirming those would be the clutter the product is trying
+# to avoid.
+IRREVERSIBLE_ACTIONS = (
+    'sign_contract', 'cancel_contract', 'cancel_handover', 'cancel_payment',
+    'cancel_order', 'cancel_quotation', 'confirm_handover', 'confirm_payment',
+    'approve_quotation', 'skip_advance_payment', 'activate_template',
+    'deactivate_template', 'issue_plan_materials',
+)
+
+
+def _form_around(text, pos):
+    start = text.rfind('<form', 0, pos)
+    end = text.find('</form>', pos)
+    return (text[start:end], text[:start]) if start >= 0 and end >= 0 else (None, None)
+
+
+def test_every_irreversible_action_asks_first():
+    """The product's own rule: a change the user cannot take back must confirm.
+
+    Two ways count, and both are used in the app already — an onsubmit
+    confirm(), or a form that lives inside a Bootstrap modal (the modal IS the
+    confirmation, and is the better one because it can show what is about to
+    change and collect a reason).
+
+    This caught `activate_template`, whose twin `deactivate_template` asked but
+    which did not — and activating silently decides which .docx every future
+    document is printed from.
+    """
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        for action in IRREVERSIBLE_ACTIONS:
+            for match in re.finditer(r"url_for\('[a-z_]+\.%s'" % action, text):
+                form, before = _form_around(text, match.start())
+                if form is None:
+                    continue
+                asks = ('confirm(' in form
+                        or 'data-bs-dismiss="modal"' in form
+                        or 'data-bs-toggle="modal"' in form
+                        or 'modal' in before[-1200:])
+                if not asks:
+                    offenders.append(f"{path.relative_to(TEMPLATES)}: {action}")
+                break
+
+    assert offenders == [], (
+        "these actions change something the user cannot undo without asking "
+        f"first: {offenders}"
+    )
