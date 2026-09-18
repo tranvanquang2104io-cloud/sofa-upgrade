@@ -179,7 +179,8 @@
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if quotation.can_approve() %}
-                                            <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;">
+                                            <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;"
+                                                  onsubmit="return confirm('{{ t('Approve this quotation? After approval it can no longer be edited.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" onclick="return confirm('{{ t("Approve this quotation?") }}')">
                                                     <i class="bi bi-check2"></i>
@@ -264,7 +265,8 @@
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if contract.can_sign() %}
-                                            <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;">
+                                            <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;"
+                                                  onsubmit="return confirm('{{ t('Mark this contract as signed? A signed contract can no longer be edited or cancelled.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" onclick="return confirm('{{ t("Sign this contract?") }}')">
                                                     <i class="bi bi-check2"></i>
@@ -319,11 +321,20 @@
 
                     <!-- Advance Payment -->
                     <div class="timeline-item">
-                        <div class="timeline-marker {% if lifecycle.advance_paid %}completed{% elif lifecycle.contract_signed %}in-progress{% else %}pending{% endif %}">
-                            {% if lifecycle.advance_paid %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
+                        {# A WAIVED advance is not a PAID advance. The same green
+                           tick for both made the timeline claim money had arrived. #}
+                        {% set advance_waived = lifecycle.advance_skipped %}
+                        <div class="timeline-marker {% if advance_waived %}pending{% elif lifecycle.advance_paid %}completed{% elif lifecycle.contract_signed %}in-progress{% else %}pending{% endif %}">
+                            {% if advance_waived %}<i class="bi bi-slash-circle"></i>
+                            {% elif lifecycle.advance_paid %}<i class="bi bi-check-lg"></i>
+                            {% else %}<i class="bi bi-circle"></i>{% endif %}
                         </div>
                         <div class="timeline-content">
                             {{ t('Advance Payment') }}
+                            {% if advance_waived %}
+                              <span class="badge bg-warning text-dark ms-1">{{ t('Advance Skipped') }}</span>
+                              <div class="small text-muted">{{ t('No advance was received - this step was waived.') }}</div>
+                            {% endif %}
                             {% set advance_payments = payment_reports|selectattr('payment_type', 'equalto', 'advance')|list %}
                             {% if advance_payments %}
                                 {% for payment in advance_payments %}
@@ -460,7 +471,8 @@
                                             <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;">
+                                            <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;"
+                                                  onsubmit="return confirm('{{ t('Confirm this handover? It records that the customer accepted the goods and cannot be undone.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this handover?") }}')">
                                                     <i class="bi bi-check2"></i>
@@ -654,7 +666,11 @@
                         <a href="{{ url_for('dashboard.view_agreement', agreement_id=master_agreement.id) }}">
                           {{ master_agreement.agreement_number }}</a>
                       </div>
-                      <form method="POST" action="{{ url_for('dashboard.issue_order_confirmation', order_id=order.id) }}" class="d-grid">
+                      {# Issuing is a commitment: it snapshots agreed prices onto a
+                         document and marks the order contracted AND signed. It must
+                         not happen on a stray click. #}
+                      <form method="POST" action="{{ url_for('dashboard.issue_order_confirmation', order_id=order.id) }}" class="d-grid"
+                            onsubmit="return confirm('{{ t('Issue the order confirmation now? It records the agreed prices and counts as the signed agreement for this order.') }}');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-primary">
                           <i class="bi bi-plus"></i> {{ t('Issue Order Confirmation') }}
@@ -672,6 +688,18 @@
                       <i class="bi bi-check-circle"></i>
                       {{ t('Order Confirmation') }} <strong>{{ order_confirmation.confirmation_number }}</strong>
                       &mdash; {{ order_confirmation.cited_agreement_number }}
+                      {% if not order_confirmation.is_canceled %}
+                      <form method="POST" class="mt-2"
+                            action="{{ url_for('dashboard.cancel_order_confirmation', confirmation_id=order_confirmation.id) }}"
+                            onsubmit="return confirm('{{ t('Cancel this order confirmation?') }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="input-group input-group-sm">
+                          <input type="text" name="reason" class="form-control"
+                                 placeholder="{{ t('Reason for cancelling') }}" required>
+                          <button type="submit" class="btn btn-outline-danger">{{ t('Cancel') }}</button>
+                        </div>
+                      </form>
+                      {% endif %}
                     </div>
                     {% endif %}
                     

@@ -3825,6 +3825,59 @@ def edit_agreement(agreement_id):
                            customers=customers)
 
 
+@dashboard_bp.route('/order-confirmations/<confirmation_id>/cancel', methods=['POST'])
+@login_required
+def cancel_order_confirmation(confirmation_id):
+    """Void an issued ĐƠN ĐẶT HÀNG.
+
+    Every other document in the system (quotation, contract, handover,
+    payment, purchase order) can be cancelled with a reason. This one could
+    not, which meant a mis-issued order confirmation was permanent — the worst
+    combination for a non-technical user, since issuing it is a single click.
+
+    Cancelling also rolls back the lifecycle flags it set, but only if no
+    later step has happened: once a handover is confirmed the order has moved
+    on, and silently un-signing it would misrepresent history.
+    """
+    from app.models.models import OrderConfirmation
+    from app.services.agreement_service import AgreementService
+
+    company_id = get_current_company_id()
+    confirmation = OrderConfirmation.query.get(confirmation_id)
+    if not confirmation or str(confirmation.company_id) != str(company_id):
+        flash(t('Order confirmation not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_orders'))
+
+    order_id = confirmation.order_id
+    reason = (request.form.get('reason') or '').strip()
+    if not reason:
+        flash(t('Please give a reason for cancelling'), 'error')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
+
+    try:
+        AgreementService.cancel(confirmation, reason)
+
+        lifecycle = LifecycleStatusRepository().get_for_order(order_id)
+        if lifecycle and not lifecycle.handover_confirmed and not lifecycle.advance_paid:
+            lifecycle.contract_signed = False
+            lifecycle.contract_created = False
+            db.session.add(lifecycle)
+            db.session.commit()
+            flash(t('Order confirmation cancelled. The order is back to the agreement step.'),
+                  'success')
+        else:
+            flash(t('Order confirmation cancelled. Later steps already happened, so the order status was left as it is.'),
+                  'warning')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error("Error cancelling order confirmation: %s", e)
+        db.session.rollback()
+        flash(t('Error cancelling order confirmation'), 'error')
+
+    return redirect(url_for('dashboard.view_order', order_id=order_id))
+
+
 # ===== PRODUCTION PLANNING (Feature 2) =====
 
 def _owned_plan(plan_id, company_id):
@@ -3903,8 +3956,10 @@ def add_plan_material(plan_id):
     try:
         material_id = request.form.get('material_id')
         qty = float(request.form.get('quantity_required') or 0)
-        if not material_id or qty < 0:
-            raise ValueError(t('Vui lòng chọn vật tư và số lượng hợp lệ (>= 0)'))
+        # A zero-quantity line looks like a plan but issues nothing, which
+        # misleads staff into thinking the material was accounted for.
+        if not material_id or qty <= 0:
+            raise ValueError(t('Vui lòng chọn vật tư và nhập số lượng lớn hơn 0'))
         db.session.add(ProductionMaterialLine(
             plan_id=plan.id, plan_item_id=request.form.get('plan_item_id') or None,
             material_id=material_id, quantity_required=qty,

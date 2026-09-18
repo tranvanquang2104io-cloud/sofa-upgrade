@@ -20,7 +20,9 @@
   {% endif %}
   {% for a in po.allowed_actions() %}
   <form method="POST" action="{{ url_for('dashboard.purchase_order_status', po_id=po.id, action=a) }}"
-        {% if a == 'cancel' %}onsubmit="return confirm('{{ t('Cancel this purchase order?') }}');"{% endif %}>
+        {% if a == 'cancel' %}onsubmit="return confirm('{{ t('Cancel this purchase order?') }}');"
+        {% elif a == 'submit' %}onsubmit="return confirm('{{ t('Send this purchase order to the supplier? Treat it as a real commitment to buy.') }}');"
+        {% elif a == 'reopen' %}onsubmit="return confirm('{{ t('Withdraw this purchase order back to draft?') }}');"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-sm btn-{{ act_colors.get(a,'secondary') }}">{{ act_labels.get(a, a) }}</button>
   </form>

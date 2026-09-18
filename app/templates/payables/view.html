@@ -138,7 +138,8 @@
 
 <div class="d-flex flex-wrap gap-3">
   {% if invoice.status == 'draft' %}
-  <form method="POST" action="{{ url_for('dashboard.confirm_supplier_invoice', invoice_id=invoice.id) }}">
+  <form method="POST" action="{{ url_for('dashboard.confirm_supplier_invoice', invoice_id=invoice.id) }}"
+        onsubmit="return confirm('{{ t('Confirm this supplier invoice? After this it can no longer be edited or cancelled.') }}');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-success">
       <i class="bi bi-check-lg"></i> {{ t('Confirm Invoice') }}
@@ -148,7 +149,8 @@
 
   {% if invoice.status == 'confirmed' and not invoice.is_paid %}
   <form method="POST" action="{{ url_for('dashboard.pay_supplier_invoice', invoice_id=invoice.id) }}"
-        class="row g-2 align-items-end flex-grow-1">
+        class="row g-2 align-items-end flex-grow-1"
+        onsubmit="return confirm('{{ t('Record this payment to the supplier? This cannot be undone.') }}');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="col-auto">
       <label class="form-label small">{{ t('Payment No.') }}</label>
