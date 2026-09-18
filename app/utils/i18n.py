@@ -60,6 +60,12 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        # process_list() / handover line acceptance
+        'Done':                   'Xong',
+        'Skipped':                'Đã Bỏ Qua',
+        'Not Started':            'Chưa Bắt Đầu',
+        'Unconfirmed':            'Chưa Xác Nhận',
+        'Partially Accepted':     'Nghiệm Thu Một Phần',
         'Fully Paid':             'Đã Thanh Toán',
 
         # ── Table headers ────────────────────────────────────────────────

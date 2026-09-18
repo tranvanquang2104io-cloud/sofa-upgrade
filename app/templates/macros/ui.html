@@ -91,6 +91,18 @@
 {% endmacro %}
 
 
+{% macro file_badge(doc) %}
+  {#
+    Which PRINTED file is the one in force. Two screens had their own copy of
+    this three-way chain with the colours written in by hand.
+  #}
+  {% set meta = status_meta(doc.status, 'document_file') %}
+  <span class="badge {{ token_class(meta[0]) }} ms-1">
+    {%- if doc.is_signed %}<i class="bi bi-patch-check"></i> {% endif -%}
+    {{ t(meta[1]) }}
+  </span>
+{% endmacro %}
+
 {# ---------------------------------------------------------------- stepper #}
 {% macro process_stepper(order) %}
   {#
@@ -114,6 +126,31 @@
   </ol>
 {% endmacro %}
 
+
+{% macro process_list(order) %}
+  {#
+    The sidebar variant of process_stepper: same order_process_steps() source,
+    stacked instead of inline. It exists because orders/view had a SECOND,
+    hand-written copy of the stages whose colours had already drifted and which
+    had no notion of a skipped advance.
+  #}
+  {% for step in order_process_steps(order) %}
+    <div class="mb-2">
+      <small class="text-muted">{{ t(step.label) }}</small>
+      <div>
+        {% if step.state == 'done' %}
+          <span class="badge bg-success"><i class="bi bi-check"></i> {{ t('Done') }}</span>
+        {% elif step.state == 'skipped' %}
+          <span class="badge bg-warning text-dark">{{ t('Skipped') }}</span>
+        {% elif step.state == 'current' %}
+          <span class="badge bg-primary">{{ t('In Progress') }}</span>
+        {% else %}
+          <span class="badge bg-secondary">{{ t('Not Started') }}</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% endmacro %}
 
 {# ------------------------------------------------------------- search bar #}
 {% macro search_bar(action_url, search_value='', placeholder='Search',

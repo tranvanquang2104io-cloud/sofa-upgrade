@@ -15,7 +15,7 @@
   {% else %}
   <span class="badge bg-success">{{ t('3-way match') }}: {{ t('OK') }}</span>
   {% endif %}
-  {% if invoice.is_paid %}<span class="badge bg-success">{{ t('Paid') }}</span>{% endif %}
+  {% if invoice.is_paid %}{{ status_badge('paid') }}{% endif %}
 </div>
 
 {% if invoice.match_notes %}

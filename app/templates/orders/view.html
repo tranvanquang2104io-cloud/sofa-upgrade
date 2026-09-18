@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import process_stepper, order_badge with context %}
+{% from "macros/ui.html" import process_stepper, process_list, order_badge, doc_badge with context %}
 
 {% block title %}Order - SofaFlow{% endblock %}
 
@@ -177,11 +177,7 @@
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <strong>{{ quotation.quotation_number }}</strong> - {{ "{:,.0f}".format(quotation.total_amount|float) }} đ ({{ quotation.items|length }} {{ t('items') }})
-                                            {% if quotation.is_approved %}
-                                            <span class="badge bg-success ms-2">{{ t('Approved') }}</span>
-                                            {% else %}
-                                            <span class="badge bg-warning ms-2">{{ t('Pending') }}</span>
-                                            {% endif %}
+                                            {{ doc_badge(quotation) }}
                                         </div>
                                         <div class="d-flex gap-1">
                                             <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
@@ -263,11 +259,7 @@
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <strong>{{ contract.contract_number }}</strong> - {{ "{:,.0f}".format(contract.contract_value|float) }} đ
-                                            {% if contract.is_signed %}
-                                            <span class="badge bg-success ms-2">{{ t('Signed') }}</span>
-                                            {% else %}
-                                            <span class="badge bg-warning ms-2">{{ t('Unsigned') }}</span>
-                                            {% endif %}
+                                            {{ doc_badge(contract) }}
                                         </div>
                                         <div class="d-flex gap-1">
                                             <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
@@ -355,13 +347,7 @@
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
                                                 <strong class="{% if payment.is_canceled %}text-decoration-line-through text-muted{% endif %}">{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
-                                                {% if payment.is_canceled %}
-                                                    <span class="badge bg-danger ms-2">Đã Hủy</span>
-                                                {% elif payment.is_confirmed %}
-                                                    <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
-                                                {% endif %}
+                                                {{ doc_badge(payment) }}
                                             </div>
                                             <div class="d-flex gap-1">
                                                 <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
@@ -470,11 +456,7 @@
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <strong>{{ handover.report_number }}</strong> - {{ handover.handover_date.strftime('%Y-%m-%d') }}
-                                            {% if handover.is_confirmed %}
-                                                <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
-                                            {% else %}
-                                                <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
-                                            {% endif %}
+                                            {{ doc_badge(handover) }}
                                         </div>
                                         <div class="d-flex gap-1">
                                             <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
@@ -555,13 +537,7 @@
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
                                                 <strong class="{% if payment.is_canceled %}text-decoration-line-through text-muted{% endif %}">{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
-                                                {% if payment.is_canceled %}
-                                                    <span class="badge bg-danger ms-2">Đã Hủy</span>
-                                                {% elif payment.is_confirmed %}
-                                                    <span class="badge bg-success ms-2">{{ t('Confirmed') }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-warning ms-2">{{ t('Pending Confirmation') }}</span>
-                                                {% endif %}
+                                                {{ doc_badge(payment) }}
                                             </div>
                                             <div class="d-flex gap-1">
                                                 <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
@@ -774,55 +750,7 @@
                     {% endif %}
                 </div>
                 {% endif %}
-                <div class="mb-2">
-                    <small class="text-muted">{{ t('Quotation') }}</small>
-                    <div>
-                        {% if lifecycle.quotation_created %}
-                        <span class="badge bg-success">{{ t('✓ Created') }}</span>
-                        {% else %}
-                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <small class="text-muted">{{ t('Contract') }}</small>
-                    <div>
-                        {% if lifecycle.contract_created %}
-                        {% set active_contract = order.contracts|selectattr('is_active')|list|first %}
-                        {% if active_contract and active_contract.is_signed %}
-                        <span class="badge bg-success">{{ t('✓ Signed') }}</span>
-                        {% elif active_contract %}
-                        <span class="badge bg-info">{{ t('✓ Created') }}</span>
-                        {% else %}
-                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
-                        {% endif %}
-                        {% else %}
-                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <small class="text-muted">{{ t('Handover') }}</small>
-                    <div>
-                        {% if lifecycle.handover_confirmed %}
-                        <span class="badge bg-success">{{ t('✓ Confirmed') }}</span>
-                        {% else %}
-                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <small class="text-muted">{{ t('Payment') }}</small>
-                    <div>
-                        {% if lifecycle.fully_paid %}
-                        <span class="badge bg-success">{{ t('✓ Completed') }}</span>
-                        {% elif lifecycle.advance_paid %}
-                        <span class="badge bg-warning">{{ t('Advance Paid') }}</span>
-                        {% else %}
-                        <span class="badge bg-secondary">{{ t('Pending') }}</span>
-                        {% endif %}
-                    </div>
-                </div>
+                {{ process_list(order) }}
             </div>
         </div>
     </div>

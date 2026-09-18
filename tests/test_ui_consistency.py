@@ -6,6 +6,7 @@ a new screen from quietly opting out.
 """
 import io
 import pathlib
+import re
 
 import pytest
 
@@ -53,6 +54,54 @@ def test_no_template_reintroduces_a_local_status_colour_map():
     assert offenders == [], (
         "these templates define their own status->colour map instead of using "
         f"status_badge()/status_meta(): {offenders}"
+    )
+
+
+STATUS_WORDS = {
+    'draft', 'pending', 'sent', 'approved', 'signed', 'unsigned', 'confirmed',
+    'unconfirmed', 'paid', 'partial', 'rejected', 'cancelled', 'canceled',
+    'expired', 'new', 'completed', 'delivered', 'fully paid',
+    'contract signed', 'quotation approved', 'advance paid', 'submitted',
+    'ordered', 'received', 'converted', 'pending approval',
+}
+
+# `<span class="badge bg-success">{{ t('Signed') }}</span>` and friends.
+_INLINE_BADGE = re.compile(
+    r"""<span[^>]*class="[^"]*badge[^"]*bg-[a-z]+[^"]*"[^>]*>\s*"""
+    # an icon may sit between the tag and the label — `<i class="bi bi-x"></i>`
+    r"""(?:<i[^>]*></i>\s*)?"""
+    r"""\{\{\s*t\(\s*['"]([^'"]+)['"]""",
+    re.IGNORECASE,
+)
+
+
+def test_no_template_paints_a_status_badge_by_hand():
+    """The colour map catches `{% set colors %}`; this catches the other shape.
+
+    Every offender found so far was an inline ``{% if %}/{% else %}`` chain
+    with the colour written straight into the class, which is exactly why
+    `payments/view` showed "Draft" amber while the token map calls draft
+    neutral, and why `dashboard/index` had no "Advance Paid" branch at all —
+    the chain was maintained by hand and fell behind the real lifecycle.
+
+    A status word inside a hardcoded `badge bg-*` is therefore a lint failure:
+    use `doc_badge()` / `order_badge()` / `status_badge()`.
+
+    Labels that are not a document status ("3-way match: OK", "Paid in full")
+    are deliberately not listed in STATUS_WORDS — they are prose, not state.
+    """
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        if 'macros' in path.parts:
+            continue                      # the macros ARE the one place
+        text = io.open(path, encoding='utf-8').read()
+        for label in _INLINE_BADGE.findall(text):
+            if label.strip().lower() in STATUS_WORDS:
+                offenders.append(f"{path.relative_to(TEMPLATES)}: {label}")
+
+    assert offenders == [], (
+        "these templates hardcode a status badge colour instead of going "
+        f"through the shared token map: {offenders}"
     )
 
 

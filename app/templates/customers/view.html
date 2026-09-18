@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import order_badge with context %}
 
 {% block title %}{{ customer.name }} - SofaFlow{% endblock %}
 
@@ -122,13 +123,7 @@
                                     {{ "{:,.0f}".format(order.total_amount|default(0)|float) }} ₫
                                 </td>
                                 <td class="text-center">
-                                    {% if order.lifecycle and order.lifecycle.completed %}
-                                        <span class="badge bg-success">{{ t('Completed') }}</span>
-                                    {% elif order.lifecycle and order.lifecycle.fully_paid %}
-                                        <span class="badge bg-info text-dark">{{ t('Fully Paid') }}</span>
-                                    {% else %}
-                                        <span class="badge bg-warning text-dark">{{ t('In Progress') }}</span>
-                                    {% endif %}
+                                    {{ order_badge(order) }}
                                 </td>
                                 <td class="text-center">
                                     <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}"

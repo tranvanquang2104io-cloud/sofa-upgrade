@@ -1,3 +1,4 @@
+{% from "macros/ui.html" import file_badge with context %}
 {# ---------------------------------------------------------------------------
    Khối "Tài liệu đã tạo" dùng chung cho màn hình xem Báo giá / Hợp đồng /
    Bàn giao / Thanh toán.
@@ -27,15 +28,7 @@
                         <div class="min-w-0">
                             <h6 class="mb-1 text-break">
                                 {{ doc.document_name }}
-                                {% if doc.is_signed %}
-                                <span class="badge bg-success ms-1">
-                                  <i class="bi bi-patch-check"></i> {{ t('Signed') }}
-                                </span>
-                                {% elif doc.is_current %}
-                                <span class="badge bg-primary ms-1">{{ t('Current version') }}</span>
-                                {% else %}
-                                <span class="badge bg-secondary ms-1">{{ t('Replaced') }}</span>
-                                {% endif %}
+                                {{ file_badge(doc) }}
                             </h6>
                             <small class="text-muted">
                                 <span class="badge bg-light text-dark border">{{ doc.document_format.upper() }}</span>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import doc_badge with context %}
 
 {% block title %}Payment Report - SofaFlow{% endblock %}
 
@@ -8,13 +9,7 @@
         <h1>
             <i class="bi bi-credit-card"></i> 
             Payment Report #{{ payment.report_number }}
-            {% if payment.is_confirmed %}
-                <span class="badge bg-success">{{ t('CONFIRMED') }}</span>
-            {% elif payment.is_canceled %}
-                <span class="badge bg-danger">{{ t('CANCELLED') }}</span>
-            {% else %}
-                <span class="badge bg-warning">{{ t('DRAFT') }}</span>
-            {% endif %}
+            {{ doc_badge(payment) }}
         </h1>
     </div>
     <div class="col-md-4 text-end">
@@ -45,7 +40,7 @@
                     </div>
                     <div class="col-md-4">
                         <small class="text-muted d-block">{{ t('Contract Status') }}</small>
-                        {% if active_contract.is_signed %}<span class="badge bg-success">{{ t('Signed') }}</span>{% else %}<span class="badge bg-warning">{{ t('Draft') }}</span>{% endif %}
+                        {{ doc_badge(active_contract) }}
                     </div>
                 </div>
                 <hr class="my-2">

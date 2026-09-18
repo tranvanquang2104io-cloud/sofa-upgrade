@@ -84,6 +84,24 @@ PROCUREMENT_STATUS = {
     'finished': ('success', 'Finished'),
 }
 
+# Per-line acceptance on a handover record. Kept separate from
+# DOCUMENT_STATUS because 'partial' means "partially ACCEPTED" here, not
+# "partially paid" — the same word, a different sentence.
+HANDOVER_ITEM_STATUS = {
+    'accepted': ('success', 'Accepted'),
+    'partial': ('attention', 'Partially Accepted'),
+    'rejected': ('critical', 'Rejected'),
+}
+
+# The lifecycle of a generated FILE, which is not the lifecycle of the
+# document it prints. A quotation can be 'approved' while the PDF someone
+# printed of it is 'superseded' by a later reprint.
+DOCUMENT_FILE_STATUS = {
+    'signed': ('success', 'Signed'),
+    'current': ('progress', 'Current version'),
+    'superseded': ('neutral', 'Replaced'),
+}
+
 ENTITY_MAPS = {
     'document': DOCUMENT_STATUS,
     'quotation': DOCUMENT_STATUS,
@@ -95,6 +113,8 @@ ENTITY_MAPS = {
     'purchase_requisition': PROCUREMENT_STATUS,
     'goods_receipt': PROCUREMENT_STATUS,
     'production': PROCUREMENT_STATUS,
+    'handover_item': HANDOVER_ITEM_STATUS,
+    'document_file': DOCUMENT_FILE_STATUS,
 }
 
 

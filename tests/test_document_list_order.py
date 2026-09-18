@@ -13,7 +13,8 @@ import pytest
 from app.routes.dashboard_routes import _is_safe_redirect_url
 
 
-def _mk_doc(db, seed, order_id, quotation_id, name, when, fmt="pdf"):
+def _mk_doc(db, seed, order_id, quotation_id, name, when, fmt="pdf",
+            status="current"):
     from app.models import Document
 
     doc = Document(
@@ -25,6 +26,7 @@ def _mk_doc(db, seed, order_id, quotation_id, name, when, fmt="pdf"):
         document_format=fmt,
         file_path=f"/tmp/{name}",
         generated_at=when,
+        status=status,
     )
     db.session.add(doc)
     return doc
@@ -50,11 +52,12 @@ def quotation_with_docs(app, seeded_order):
         db.session.flush()
 
         _mk_doc(db, seeded_order, seeded_order["order_id"], quotation.id,
-                "BaoGia_giua", base + timedelta(hours=1))
+                "BaoGia_giua", base + timedelta(hours=1),
+                status="superseded")
         _mk_doc(db, seeded_order, seeded_order["order_id"], quotation.id,
                 "BaoGia_moi_nhat", base + timedelta(hours=2), fmt="docx")
         _mk_doc(db, seeded_order, seeded_order["order_id"], quotation.id,
-                "BaoGia_cu_nhat", base)
+                "BaoGia_cu_nhat", base, status="superseded")
         db.session.commit()
         return {**seeded_order, "quotation_id": str(quotation.id)}
 
@@ -119,8 +122,14 @@ def test_man_hinh_xem_bao_gia_hien_nhan_moi_nhat_va_nut_xoa(client, login, quota
     # Thứ tự xuất hiện trong HTML phản ánh thứ tự hiển thị cho người dùng.
     assert html.index("BaoGia_moi_nhat") < html.index("BaoGia_giua") < html.index("BaoGia_cu_nhat")
 
-    # Nhãn đánh dấu bản mới nhất, và chỉ một nhãn duy nhất.
-    assert html.count("Mới nhất") == 1
+    # Nhãn đánh dấu bản đang dùng, và chỉ một bản duy nhất.
+    #
+    # Trước đây nhãn là "Mới nhất" gắn theo `loop.first`. Nhãn đó SAI khi danh
+    # sách trộn nhiều LOẠI tài liệu: bản hợp đồng đang hiệu lực có thể nằm dưới
+    # một tệp thanh toán mới in hơn và bị bỏ trống nhãn. Nay trạng thái do
+    # `Document.status` quyết định — bản cũ bị đánh dấu thay thế khi in lại.
+    assert html.count("Bản hiện hành") == 1
+    assert html.count("Đã thay thế") == 2
 
     # Ba nút xoá cho ba tài liệu.
     assert html.count('data-bs-target="#docDeleteModal"') == 3

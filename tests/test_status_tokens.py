@@ -248,3 +248,34 @@ def test_the_same_state_gets_the_same_colour_on_every_screen():
         status_meta('signed')[0]
     assert document_meta(_Doc('quotation', is_approved=True))[0] == \
         status_meta('approved')[0]
+
+
+# --- a printed file is not the document it prints -------------------------
+
+def test_a_printed_file_has_its_own_vocabulary():
+    """A quotation can be approved while the PDF of it has been superseded.
+
+    The two were being coloured by two hand-written copies of the same
+    three-way chain, one per screen."""
+    from app.utils.status_tokens import status_meta
+
+    assert status_meta('superseded', 'document_file') == ('neutral', 'Replaced')
+    assert status_meta('current', 'document_file') == ('progress', 'Current version')
+    assert status_meta('signed', 'document_file') == ('success', 'Signed')
+
+
+def test_superseded_is_not_read_as_a_document_status():
+    """Under the document map the word is unknown and would fall back to grey
+    with the raw string as its label — which is why it needed its own map.
+    """
+    from app.utils.status_tokens import status_meta
+
+    assert status_meta('superseded')[1] == 'superseded'
+    assert status_meta('superseded', 'document_file')[1] == 'Replaced'
+
+
+def test_handover_partial_means_partially_accepted_not_partially_paid():
+    from app.utils.status_tokens import status_meta
+
+    assert status_meta('partial', 'handover_item')[1] == 'Partially Accepted'
+    assert status_meta('partial')[1] == 'Partially Paid'
