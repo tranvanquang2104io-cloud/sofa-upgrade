@@ -138,6 +138,34 @@ services. Worth doing *before* either feature, not during.
 
 ---
 
+## 5b. Confirmation — measured, and one defect behind it
+
+The product rule is that a change must always confirm. Measured: **18** actions
+a user cannot undo by pressing the same button again; **16** already asked.
+
+A first pass reported 69 of 95 POST forms unconfirmed. That number was wrong —
+it looked only inside the `<form>` tag and missed that most of these forms sit
+*inside a modal*, which IS the confirmation (and the better one: it can show
+what is about to change and collect a reason). Recorded because the wrong
+number would have led to 60-odd pointless dialogs.
+
+The two genuine gaps:
+
+* `activate_template` — its twin `deactivate_template` asked, it did not.
+  Pulling that thread found a real defect: activation was not exclusive, so
+  several templates of one type could be Active, and `get_default_for_type()`
+  resolved that with `.first()` and no `ORDER BY`. A user could upload a
+  corrected contract template, activate it, and keep printing the old one.
+  Fixed: exclusive activation + deterministic lookup + the flash says what was
+  retired.
+* the behind-schedule toggle — now asks only when SETTING the flag. Clearing
+  it is the undo; confirming both directions is clutter.
+
+Held by `test_every_irreversible_action_asks_first`, over 13 named actions —
+deliberately not every POST, since a create form is the user's own deliberate
+submission.
+
+
 ## 6. UI consistency — measured, not guessed
 
 | Pattern | Adoption |
