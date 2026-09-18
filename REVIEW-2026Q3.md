@@ -146,6 +146,29 @@ services. Worth doing *before* either feature, not during.
 | `status_badge()` / `doc_badge()` | document screens converted; the boolean→status derivation now lives in one place |
 | `process_stepper()` | ✅ now on the order page (was built and never used) |
 
+**Status colour is now enforced, not agreed.** A lint test fails the build if a
+status word appears inside a hardcoded `badge bg-*` outside `macros/ui.html`.
+It found 19 remaining offenders, two of them real defects: the dashboard's
+order chain had no `advance_paid` branch (a deposited order still read
+"Contract Signed"), and `orders/view` kept a second hand-written copy of the
+process stages in its sidebar whose colours had already drifted from the
+stepper at the top of the same page. That sidebar is now `process_list()`,
+reading the same `order_process_steps()`.
+
+Two vocabularies were deliberately kept OUT of `DOCUMENT_STATUS`, because the
+same word means something else:
+
+* `document_file` — the lifecycle of a printed file is not the lifecycle of the
+  document it prints. A quotation can be approved while a PDF of it is
+  superseded by a reprint.
+* `handover_item` — `partial` on an acceptance line is *partially accepted*.
+  Under the document map it would have read "Partially Paid".
+
+Caveat on the lint itself: its first version contained a stray character that
+made it match nothing, and it passed while catching nothing. Any lint added
+here must be proved against a known-bad string before it is trusted.
+
+
 The stepper now sits directly under the order title, so "which step is my
 order on" is answered before any reading. The detailed timeline below still
 carries the documents and the actions; the stepper just answers the question
