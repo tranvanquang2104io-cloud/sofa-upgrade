@@ -138,6 +138,36 @@ def create_app(config_name=None):
     register_normalization_listeners()
 
     @app.context_processor
+    def inject_submitted_form():
+        """Expose what the user just typed, so a failed save can give it back.
+
+        When a create/edit handler hits a validation error it re-renders the
+        same template. Until now it re-rendered EMPTY, so a long bespoke order
+        typed by hand was lost — the most punishing thing the product did to a
+        user who is not confident with computers.
+
+        Flask already puts `request` in the template context, so no route
+        needs changing: the base layout serialises this on any POST and a
+        small script puts the values back.
+
+        File inputs are deliberately excluded — a browser will not let a page
+        re-attach a chosen file, so the user is told to pick images again
+        rather than being left to wonder.
+        """
+        from flask import request as _request
+
+        def submitted_form():
+            if _request.method != 'POST':
+                return None
+            return {
+                key: _request.form.getlist(key)
+                for key in _request.form.keys()
+                if key != 'csrf_token'
+            }
+
+        return dict(submitted_form=submitted_form)
+
+    @app.context_processor
     def inject_status_tokens():
         """Expose the shared status vocabulary so no template decides colour
         for itself (see app/utils/status_tokens.py)."""

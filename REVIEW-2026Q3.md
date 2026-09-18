@@ -86,16 +86,26 @@ blocking a second contract outright.
 
 ---
 
-## 4. Biggest remaining usability problem
+## 4. Biggest usability problem — FIXED
 
-**A validation error throws away everything the user typed.** On a failed
-save, the create screens re-render empty — the line items, the descriptions,
-all gone. For a bespoke order with many hand-typed lines, hitting this after
-ten minutes of work is the single most punishing thing the product does to a
-non-technical user, and it is systemic across the create/edit handlers rather
-than one bad screen.
+**A validation error used to throw away everything the user typed.** On a
+failed save the create screens re-rendered empty: line items, descriptions,
+amounts, all gone. For a bespoke order with many hand-typed lines, hitting
+that after ten minutes of work was the single most punishing thing the product
+did to a non-technical user — and it made people distrust the whole system,
+not just that screen.
 
-This is the next thing I would fix, and it is worth more than any new feature.
+Fixed in **one place, with no route changes**. Flask already exposes the
+submitted form to the template, so the base layout hands it back on any POST
+that re-renders, and a small script restores every field — including the
+dynamically-added line-item rows, which it rebuilds before filling.
+
+The one thing it cannot restore is **file inputs**: a browser will not let a
+page re-select a file the user chose. Rather than dropping them silently, the
+page now says so ("Your text was restored. Please choose any images again.").
+
+Because it lives in the layout it covers every form in the app at once,
+including the most common real failure — a document number already in use.
 
 ---
 

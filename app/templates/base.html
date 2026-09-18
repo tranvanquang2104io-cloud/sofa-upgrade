@@ -208,5 +208,15 @@
     </script>
 
     {% block extra_js %}{% endblock %}
+    {# If a save just failed, hand the user back everything they typed.
+       The handler re-renders this same page; without this the form comes
+       back empty and a long bespoke order is lost. See
+       static/js/sofa-restore-form.js. #}
+    {% set _submitted = submitted_form() %}
+    {% if _submitted %}
+    <script id="submitted-form-data" type="application/json"
+            data-file-notice="{{ t('Your text was restored. Please choose any images again.') }}">{{ _submitted|tojson }}</script>
+    <script src="{{ url_for('static', filename='js/sofa-restore-form.js') }}"></script>
+    {% endif %}
 </body>
 </html>
