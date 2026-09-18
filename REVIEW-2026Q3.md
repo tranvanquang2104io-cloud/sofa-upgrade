@@ -111,10 +111,21 @@ including the most common real failure — a document number already in use.
 
 ## 5. Readiness for what you want to add later
 
-**Chữ ký số (digital signature).** There is no document-lifecycle service to
-hook into: generation logic is split between `template_engine.py` and the
-route file, with no `draft → generated → signed` state on a document. A
-signing step would have to be threaded through route handlers.
+**Chữ ký số (digital signature) — the seam now exists.**
+*Correction to the first review: a `DocumentService` DOES exist (in
+`services.py`, not its own file) and already funnels every generated document
+through one `_save_document`. What was missing was a lifecycle state.*
+
+`Document.status` is now explicit: `current` / `superseded` / `signed`. A
+signing step has somewhere to live, and the rule that matters is already
+enforced — **a signed document is never superseded by a regeneration**,
+because it is evidence, not a draft.
+
+That change earned its place on its own: regenerating writes a NEW file each
+time (the name carries a timestamp), so one contract could own three files
+with nothing saying which to send the customer. The screen marked only the
+single newest row as "Latest", but that list mixes document *types*, so the
+current contract could sit unmarked next to a newer payment file.
 
 **Chatbot AI.** It needs stable functions to ask ("trạng thái đơn này", "còn
 nợ bao nhiêu"). Today `dashboard_routes.py` is ~4,400 lines and holds more

@@ -1196,6 +1196,16 @@ class DocumentService:
                 return v
             return ''   # InlineImage and any other non-serializable object
 
+        # Regenerating supersedes the previous file for the SAME source
+        # document, so the list stops showing three contract files with no
+        # indication which one to send. A SIGNED document is never touched:
+        # it is evidence, and a new draft must not quietly replace it.
+        self._supersede_previous(
+            order_id=order_id, document_type=document_type,
+            quotation_id=quotation_id, contract_id=contract_id,
+            handover_record_id=handover_record_id,
+            payment_report_id=payment_report_id)
+
         document = self.repo.create(
             company_id          = company_id,
             order_id            = order_id,
@@ -1213,6 +1223,43 @@ class DocumentService:
         )
         logger.info(f"Document generated: {os.path.basename(file_path)}")
         return document
+
+    def _supersede_previous(self, *, order_id, document_type,
+                            quotation_id=None, contract_id=None,
+                            handover_record_id=None, payment_report_id=None):
+        """Mark earlier files for the same source document as superseded.
+
+        Scoped to the specific source (this contract, this quotation) rather
+        than to the order, so regenerating a contract never touches the
+        order's handover or payment documents.
+        """
+        from app.models.models import Document
+
+        query = Document.query.filter(
+            Document.order_id == order_id,
+            Document.document_type == document_type,
+            Document.status == Document.STATUS_CURRENT,
+        )
+        # Narrow to the same source row when we know it.
+        for column, value in (
+            (Document.quotation_id, quotation_id),
+            (Document.contract_id, contract_id),
+            (Document.handover_record_id, handover_record_id),
+            (Document.payment_report_id, payment_report_id),
+        ):
+            if value is not None:
+                query = query.filter(column == value)
+
+        superseded = 0
+        for previous in query.all():
+            previous.status = Document.STATUS_SUPERSEDED
+            previous.superseded_at = datetime.utcnow()
+            superseded += 1
+        if superseded:
+            db.session.flush()
+            logger.info("Superseded %s earlier %s document(s)",
+                        superseded, document_type)
+        return superseded
 
     # ------------------------------------------------------------------
     # Public generators

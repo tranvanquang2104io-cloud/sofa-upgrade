@@ -662,12 +662,39 @@ class Document(db.Model):
     file_size = db.Column(db.Integer)
     
     variables_used = db.Column(db.JSON, default=dict)  # {"var_name": value}
+
+    # Document lifecycle.
+    #
+    # Every regeneration writes a NEW file (the name carries a timestamp), so
+    # one contract can own several files. Without a marker the user has to
+    # read timestamps to work out which one to send the customer — a real
+    # question for staff who are not confident with computers.
+    #
+    # This is also the seam a signing step will hook into later: `signed`
+    # belongs on this same axis, and a signed document must never be silently
+    # superseded by a regeneration.
+    STATUS_CURRENT = 'current'
+    STATUS_SUPERSEDED = 'superseded'
+    STATUS_SIGNED = 'signed'
+
+    status = db.Column(db.String(16), default=STATUS_CURRENT, nullable=False,
+                       index=True)
+    superseded_at = db.Column(db.DateTime)
+
     generated_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    @property
+    def is_current(self):
+        return self.status in (self.STATUS_CURRENT, self.STATUS_SIGNED)
+
+    @property
+    def is_signed(self):
+        return self.status == self.STATUS_SIGNED
+
     def __repr__(self):
-        return f'<Document {self.document_name}>'
+        return f'<Document {self.document_name} ({self.status})>'
 
 
 class MaterialUnit(db.Model):

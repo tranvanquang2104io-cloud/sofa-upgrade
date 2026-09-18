@@ -803,6 +803,10 @@ TRANSLATIONS = {
             'Nội dung bạn nhập đã được khôi phục. Vui lòng chọn lại ảnh (nếu có).',
         'Vui lòng chọn vật tư và nhập số lượng lớn hơn 0':
             'Vui lòng chọn vật tư và nhập số lượng lớn hơn 0',
+
+        # -- Document lifecycle --
+        'Current version':          'Bản hiện hành',
+        'Replaced':                 'Đã thay thế',
     }
 }
 

@@ -31,10 +31,21 @@
                 <tbody>
                     {% for document in documents %}
                     <tr>
-                        <td><strong>{{ document.document_name }}</strong></td>
+                        <td>
+                            <strong>{{ document.document_name }}</strong>
+                            {% if document.is_signed %}
+                            <span class="badge bg-success ms-1"><i class="bi bi-patch-check"></i> {{ t('Signed') }}</span>
+                            {% elif document.is_current %}
+                            <span class="badge bg-primary ms-1">{{ t('Current version') }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary ms-1">{{ t('Replaced') }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ document.document_type.title() }}</td>
                         <td>{{ document.document_format.upper() }}</td>
-                        <td>{{ (document.file_size / 1024)|round(2) }} KB</td>
+                        {# A row with no recorded size must not take the page
+                           down; show a dash instead of dividing None. #}
+                        <td>{% if document.file_size %}{{ (document.file_size / 1024)|round(2) }} KB{% else %}&mdash;{% endif %}</td>
                         <td>{{ document.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td class="d-flex gap-2">
                             <a href="{{ url_for('dashboard.download_document', document_id=document.id) }}" class="btn btn-sm btn-primary">
