@@ -246,7 +246,7 @@
 
     {% set entity_type = 'material' %}{% include '_extension_fields_form.html' %}
 
-    <div class="d-flex gap-2 mb-5">
+    <div class="d-flex gap-2 mb-5 sofa-form-actions">
         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ t('Save') }}</button>
         <a href="{{ url_for('dashboard.list_materials') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
     </div>

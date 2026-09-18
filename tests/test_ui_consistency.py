@@ -309,3 +309,53 @@ def test_no_template_builds_its_own_status_label_dict():
         "these templates define their own status->label map instead of using "
         f"status_meta(): {offenders}"
     )
+
+
+# --- long forms must keep Save reachable ---------------------------------
+
+LONG_FORM_MIN_LINES = 250
+
+
+def test_long_forms_pin_their_save_button():
+    """On a 400-line form the Save button ends up below the fold.
+
+    A user who is not confident with computers scrolls, loses the button, and
+    cannot tell whether the form was saved. `.sofa-form-actions` pins the
+    action row to the bottom of the viewport while there is still form below.
+    """
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        # Only data-entry screens. A view page's buttons sit next to the thing
+        # they act on; pinning those would be wrong, not helpful.
+        if path.name not in ('create.html', 'edit.html', 'company.html'):
+            continue
+        text = io.open(path, encoding='utf-8').read()
+        if 'type="submit"' not in text:
+            continue
+        if len(text.splitlines()) < LONG_FORM_MIN_LINES:
+            continue
+        if 'sofa-form-actions' not in text:
+            offenders.append(
+                f'{path.relative_to(TEMPLATES)} ({len(text.splitlines())} lines)')
+
+    assert offenders == [], (
+        "these forms are long enough to push Save below the fold but do not "
+        f"pin it: {offenders}"
+    )
+
+
+def test_the_sticky_action_style_exists():
+    css = io.open(TEMPLATES.parent / 'static' / 'css' / 'style.css',
+                  encoding='utf-8').read()
+    assert '.sofa-form-actions' in css
+    assert 'position: sticky' in css
+
+
+@pytest.mark.parametrize("template", [
+    'contracts/create.html', 'handover/create.html',
+    'quotations/create.html', 'payments/create.html',
+    'agreements/create.html', 'settings/company.html',
+])
+def test_forms_with_a_pinned_save_bar_still_parse(app, template):
+    with app.app_context():
+        app.jinja_env.get_template(template)

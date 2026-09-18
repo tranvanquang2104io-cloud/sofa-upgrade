@@ -141,6 +141,16 @@ carries the documents and the actions; the stepper just answers the question
 first. A waived advance is drawn distinctly there too, consistent with the
 timeline fix.
 
-Long forms needing sectioning and a sticky save button: `contracts/create.html`
-(446 lines) and `handover/create.html` (406) — on a laptop the save button is
-below the fold after a long scroll.
+**Long forms — save button fixed.** 14 data-entry screens are long enough to
+push Save below the fold (`payments/create.html` 592 lines, `contracts/create`
+446, `handover/create` 406, down to `materials/create` 269). Their action row
+is now pinned to the bottom of the viewport while there is still form below,
+so Save is always reachable — a user who scrolls and loses the button cannot
+tell whether their work was saved at all.
+
+A lint test keeps this true: any create/edit template over 250 lines must pin
+its actions. The test deliberately ignores *view* pages — their buttons sit
+next to the thing they act on, and pinning those would be wrong.
+
+Still open on these screens: grouping the fields into labelled sections. The
+save button was the part that actually blocked people; sectioning is polish.

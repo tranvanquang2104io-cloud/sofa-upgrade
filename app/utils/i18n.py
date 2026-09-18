@@ -761,6 +761,48 @@ TRANSLATIONS = {
         'Submit for acceptance':                  'Gửi nghiệm thu',
         'Submit for approval':                    'Gửi duyệt',
         'Withdraw to draft':                      'Thu hồi về nháp',
+
+        # -- Confirmation dialogs & safety messages (2026-09) --
+        'Send this purchase order to the supplier? Treat it as a real commitment to buy.':
+            'Gửi đơn mua này cho nhà cung cấp? Hãy coi đây là cam kết mua thật sự.',
+        'Withdraw this purchase order back to draft?':
+            'Thu hồi đơn mua này về trạng thái nháp?',
+        'Issue the order confirmation now? It records the agreed prices and counts as the signed agreement for this order.':
+            'Phát hành đơn đặt hàng ngay? Chứng từ này ghi nhận giá đã thỏa thuận và có giá trị như thỏa thuận đã ký của đơn này.',
+        'Approve this quotation? After approval it can no longer be edited.':
+            'Duyệt báo giá này? Sau khi duyệt sẽ không sửa được nữa.',
+        'Mark this contract as signed? A signed contract can no longer be edited or cancelled.':
+            'Đánh dấu hợp đồng này đã ký? Hợp đồng đã ký sẽ không sửa hay hủy được nữa.',
+        'Confirm this handover? It records that the customer accepted the goods and cannot be undone.':
+            'Xác nhận bàn giao? Thao tác này ghi nhận khách đã nhận hàng và không thể hoàn tác.',
+        'Confirm this supplier invoice? After this it can no longer be edited or cancelled.':
+            'Xác nhận hóa đơn nhà cung cấp này? Sau đó sẽ không sửa hay hủy được nữa.',
+        'Record this payment to the supplier? This cannot be undone.':
+            'Ghi nhận khoản thanh toán cho nhà cung cấp? Thao tác này không thể hoàn tác.',
+        'Change the status of this framework agreement? It affects whether new orders can be placed under it.':
+            'Đổi trạng thái hợp đồng nguyên tắc này? Việc này ảnh hưởng tới việc có đặt đơn mới theo nó được hay không.',
+        'Cancel this order confirmation?':
+            'Hủy đơn đặt hàng này?',
+        'Reason for cancelling':
+            'Lý do hủy',
+        'Order confirmation not found or access denied':
+            'Không tìm thấy đơn đặt hàng hoặc không có quyền',
+        'Please give a reason for cancelling':
+            'Vui lòng nhập lý do hủy',
+        'Order confirmation cancelled. The order is back to the agreement step.':
+            'Đã hủy đơn đặt hàng. Đơn quay lại bước thỏa thuận.',
+        'Order confirmation cancelled. Later steps already happened, so the order status was left as it is.':
+            'Đã hủy đơn đặt hàng. Các bước sau đã diễn ra nên trạng thái đơn được giữ nguyên.',
+        'Error cancelling order confirmation':
+            'Lỗi khi hủy đơn đặt hàng',
+        'No advance was received - this step was waived.':
+            'Không nhận tạm ứng — bước này đã được bỏ qua.',
+        'Order progress':
+            'Tiến độ đơn hàng',
+        'Your text was restored. Please choose any images again.':
+            'Nội dung bạn nhập đã được khôi phục. Vui lòng chọn lại ảnh (nếu có).',
+        'Vui lòng chọn vật tư và nhập số lượng lớn hơn 0':
+            'Vui lòng chọn vật tư và nhập số lượng lớn hơn 0',
     }
 }
 
