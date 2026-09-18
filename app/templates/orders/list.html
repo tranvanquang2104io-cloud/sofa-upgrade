@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import page_header, order_badge, empty_state, table_open, table_close with context %}
+{% from "macros/ui.html" import page_header, order_badge, empty_state, search_bar, table_open, table_close with context %}
 
 {% block title %}Orders - SofaFlow{% endblock %}
 
@@ -7,6 +7,10 @@
 {{ page_header(t('Orders'), icon='bi-boxes', count=(orders|length if orders else 0),
                crumbs=[(t('Dashboard'), url_for('dashboard.index')), (t('Orders'), None)],
                action_url=url_for('dashboard.create_order'), action_label=t('Create Order')) }}
+
+{{ search_bar(url_for('dashboard.list_orders'), search_value=search,
+              placeholder='Search by order code, job or customer...',
+              reset_url=url_for('dashboard.list_orders') if search else None) }}
 
 <div class="card">
     <div class="card-body">
@@ -48,7 +52,16 @@
                     {% endfor %}
                 </tbody>
             {{ table_close() }}
+            {% with extra_query = ({'search': search} if search else {}) %}
             {% include '_pagination.html' %}
+            {% endwith %}
+        {% elif search %}
+            {# "No orders yet" would be a lie here, and would send the user off
+               to create a duplicate of the order they were looking for. #}
+            {{ empty_state('Không tìm thấy đơn hàng nào khớp với từ khóa.',
+                           icon='bi-search',
+                           action_url=url_for('dashboard.list_orders'),
+                           action_label='Xem tất cả đơn hàng') }}
         {% else %}
             {{ empty_state('No orders yet.', icon='bi-boxes',
                            action_url=url_for('dashboard.create_order'),

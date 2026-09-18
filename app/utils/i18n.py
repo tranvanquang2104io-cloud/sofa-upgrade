@@ -60,6 +60,10 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Search by order code, job or customer...':
+            'Tìm theo mã đơn, tên công việc hoặc khách hàng...',
+        'Search by receipt number or supplier...':
+            'Tìm theo số phiếu nhập hoặc nhà cung cấp...',
         'Use this template for all documents of this type from now on? The template currently in use will be replaced.':
             'Dùng mẫu này cho mọi chứng từ cùng loại từ nay? Mẫu đang dùng sẽ bị thay thế.',
         'Mark this plan as behind schedule?': 'Đánh dấu kế hoạch này là trễ tiến độ?',

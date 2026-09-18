@@ -687,13 +687,30 @@ def list_orders():
     """List orders — scoped to accessible stores"""
     company_id = get_current_company_id()
     page = request.args.get('page', 1, type=int)
+    search = (request.args.get('search') or '').strip()
     per_page = current_app.config.get('ITEMS_PER_PAGE', 20)
 
+    from app.models.models import Customer as _Customer
     from app.models.models import Order as _Order
     query = _Order.query.filter(_Order.company_id == company_id, _Order.is_active == True)
     if not is_company_admin():
         accessible_ids = get_accessible_store_ids(company_id)
         query = query.filter(_Order.store_id.in_(accessible_ids))
+
+    if search:
+        # The three things a user has in hand when they go looking: the code on
+        # the paperwork, what the job was called, and whose it was. The customer
+        # name needs the join, which is why this is an outerjoin - an order with
+        # no customer must not vanish from an unrelated search.
+        like = f'%{search}%'
+        query = query.outerjoin(_Customer, _Order.customer_id == _Customer.id).filter(
+            db.or_(
+                _Order.order_code.ilike(like),
+                _Order.title.ilike(like),
+                _Customer.name.ilike(like),
+            )
+        )
+
     query = query.options(
         joinedload(_Order.customer),
         joinedload(_Order.lifecycle),
@@ -702,7 +719,7 @@ def list_orders():
     # error_out=False → an out-of-range page renders empty instead of 404.
     pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
     return render_template('orders/list.html', orders=pagination.items,
-                           pagination=pagination, page=page)
+                           pagination=pagination, page=page, search=search)
 
 
 @dashboard_bp.route('/orders/create', methods=['GET', 'POST'])
@@ -4437,7 +4454,11 @@ def list_goods_receipts():
     page = request.args.get('page', 1, type=int)
     gr_pagination = ProcurementService().list_grs(company_id, page=page)
     grs = gr_pagination.items
-    return render_template('procurement/gr_list.html', grs=grs)
+    # The template includes _pagination.html, which renders nothing unless
+    # `pagination` is in the context — so without this the nav silently never
+    # appeared and receipt 21 onwards could not be reached from the screen.
+    return render_template('procurement/gr_list.html', grs=grs,
+                           pagination=gr_pagination, page=page)
 
 
 @dashboard_bp.route('/goods-receipts/<gr_id>', methods=['GET'])
