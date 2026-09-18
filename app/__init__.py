@@ -174,6 +174,7 @@ def create_app(config_name=None):
         from app.utils import status_tokens
         return dict(
             status_meta=status_tokens.status_meta,
+            document_meta=status_tokens.document_meta,
             order_status_meta=status_tokens.order_status_meta,
             order_process_steps=status_tokens.order_process_steps,
             token_class=status_tokens.token_class,

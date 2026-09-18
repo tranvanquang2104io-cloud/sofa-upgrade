@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import doc_badge with context %}
 
 {% block title %}View Contract - SofaFlow{% endblock %}
 
@@ -66,13 +67,7 @@
                     
                     <dt class="col-sm-4">{{ t('Status:') }}</dt>
                     <dd class="col-sm-8">
-                        {% if contract.is_canceled %}
-                            <span class="badge bg-danger">{{ t('Canceled') }}</span>
-                        {% elif contract.is_signed %}
-                            <span class="badge bg-success">{{ t('Signed') }}</span>
-                        {% else %}
-                            <span class="badge bg-warning">{{ t('Unsigned') }}</span>
-                        {% endif %}
+                        {{ doc_badge(contract) }}
                     </dd>
                     
                     {% if contract.is_signed %}

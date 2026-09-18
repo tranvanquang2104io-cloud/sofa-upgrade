@@ -75,6 +75,15 @@
 {% endmacro %}
 
 
+{% macro doc_badge(doc) %}
+  {# Any document — quotation, contract, handover, payment. The status is
+     derived in one place from the document's own flags, so "Draft" cannot be
+     amber on one screen and grey on another. #}
+  {% set meta = document_meta(doc) %}
+  <span class="badge {{ token_class(meta[0]) }}">{{ t(meta[1]) }}</span>
+{% endmacro %}
+
+
 {% macro order_badge(order) %}
   {# Overall order stage, derived from the lifecycle in one shared place. #}
   {% set meta = order_status_meta(order) %}

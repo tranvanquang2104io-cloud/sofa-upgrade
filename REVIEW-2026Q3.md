@@ -143,7 +143,7 @@ services. Worth doing *before* either feature, not during.
 | Pattern | Adoption |
 |---|---|
 | `page_header()` | 12 of 77 templates |
-| `status_badge()` | 10 templates, while ~30 still hand-build badges |
+| `status_badge()` / `doc_badge()` | document screens converted; the boolean→status derivation now lives in one place |
 | `process_stepper()` | ✅ now on the order page (was built and never used) |
 
 The stepper now sits directly under the order title, so "which step is my

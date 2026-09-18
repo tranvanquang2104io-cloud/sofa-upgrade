@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import doc_badge with context %}
 
 {% block title %}View Quotation - SofaFlow{% endblock %}
 
@@ -40,13 +41,7 @@
                     
                     <dt class="col-sm-4">{{ t('Status:') }}</dt>
                     <dd class="col-sm-8">
-                        {% if quotation.is_canceled %}
-                            <span class="badge bg-danger">{{ t('Canceled') }}</span>
-                        {% elif quotation.is_approved %}
-                            <span class="badge bg-success">{{ t('Approved') }}</span>
-                        {% else %}
-                            <span class="badge bg-warning">{{ t('Pending Approval') }}</span>
-                        {% endif %}
+                        {{ doc_badge(quotation) }}
                     </dd>
                     
                     {% if quotation.notes %}

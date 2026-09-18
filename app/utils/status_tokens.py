@@ -54,6 +54,12 @@ DOCUMENT_STATUS = {
     'confirmed': ('success', 'Confirmed'),
     'paid': ('success', 'Paid'),
     'partial': ('attention', 'Partially Paid'),
+    # A document WAITING for someone is not the same as one not started.
+    # Flattening both to "Draft" would lose the call to action, which is the
+    # more useful half of the message for the person looking at the screen.
+    'pending_approval': ('attention', 'Pending Approval'),
+    'unsigned': ('attention', 'Unsigned'),
+    'unconfirmed': ('attention', 'Unconfirmed'),
     'rejected': ('critical', 'Rejected'),
     'canceled': ('critical', 'Cancelled'),
     'cancelled': ('critical', 'Cancelled'),
@@ -90,6 +96,48 @@ ENTITY_MAPS = {
     'goods_receipt': PROCUREMENT_STATUS,
     'production': PROCUREMENT_STATUS,
 }
+
+
+def document_state(doc):
+    """Derive a document's status from its boolean flags.
+
+    Quotations carry `is_approved`, contracts `is_signed`, handovers and
+    payments `is_confirmed` — and every view template used to turn those into
+    a badge with its own hardcoded colour. That drifted: `payments/view`
+    painted "Draft" amber while the token map calls draft neutral, so the same
+    word appeared in two colours depending on which screen you were on.
+
+    One derivation, one colour.
+    """
+    if getattr(doc, 'is_canceled', False):
+        return 'canceled'
+    if getattr(doc, 'is_approved', False):
+        return 'approved'
+    if getattr(doc, 'is_signed', False):
+        return 'signed'
+    if getattr(doc, 'is_confirmed', False):
+        return 'confirmed'
+
+    # Some documents carry an explicit status string instead of flags.
+    explicit = getattr(doc, 'status', None)
+    if isinstance(explicit, str) and explicit:
+        return explicit
+
+    # Not done yet — but WHY not depends on the document, and "waiting for a
+    # signature" is a more useful thing to show than "draft". Which flag the
+    # object owns tells us which kind of document it is.
+    if hasattr(doc, 'is_approved'):
+        return 'pending_approval'
+    if hasattr(doc, 'is_signed'):
+        return 'unsigned'
+    if hasattr(doc, 'is_confirmed'):
+        return 'unconfirmed'
+    return 'draft'
+
+
+def document_meta(doc):
+    """(token, label) for any document, from its flags."""
+    return status_meta(document_state(doc))
 
 
 def status_meta(status, entity='document'):

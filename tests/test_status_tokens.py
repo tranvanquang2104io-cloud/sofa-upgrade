@@ -190,3 +190,61 @@ def test_orders_list_shows_delivered_for_a_delivered_order(app, client, login, s
     assert 'Delivered' in body or 'Đã giao' in body, (
         "a delivered order must show the Delivered stage, not the earlier one"
     )
+
+
+# --- one derivation for every document -----------------------------------
+
+class _Doc:
+    """A document carrying only the flags its real model carries."""
+
+    def __init__(self, kind, **flags):
+        self.is_canceled = flags.get('is_canceled', False)
+        if kind == 'quotation':
+            self.is_approved = flags.get('is_approved', False)
+        elif kind == 'contract':
+            self.is_signed = flags.get('is_signed', False)
+        elif kind == 'handover':
+            self.is_confirmed = flags.get('is_confirmed', False)
+
+
+def test_an_unfinished_document_keeps_its_call_to_action():
+    """"Draft" would lose the useful half: WHO needs to do WHAT next."""
+    from app.utils.status_tokens import document_meta
+
+    assert document_meta(_Doc('quotation'))[1] == 'Pending Approval'
+    assert document_meta(_Doc('contract'))[1] == 'Unsigned'
+    assert document_meta(_Doc('handover'))[1] == 'Unconfirmed'
+
+
+def test_a_waiting_document_is_attention_not_neutral():
+    """It needs a human; grey would say "nothing to do here"."""
+    from app.utils.status_tokens import document_meta
+
+    for kind in ('quotation', 'contract', 'handover'):
+        assert document_meta(_Doc(kind))[0] == 'attention', kind
+
+
+def test_finished_documents_map_to_success():
+    from app.utils.status_tokens import document_meta
+
+    assert document_meta(_Doc('quotation', is_approved=True)) == ('success', 'Approved')
+    assert document_meta(_Doc('contract', is_signed=True)) == ('success', 'Signed')
+    assert document_meta(_Doc('handover', is_confirmed=True)) == ('success', 'Confirmed')
+
+
+def test_cancellation_beats_every_other_flag():
+    from app.utils.status_tokens import document_meta
+
+    doc = _Doc('contract', is_signed=True, is_canceled=True)
+    assert document_meta(doc) == ('critical', 'Cancelled')
+
+
+def test_the_same_state_gets_the_same_colour_on_every_screen():
+    """The drift this replaced: payments/view painted Draft amber while the
+    token map called it neutral, so one word had two colours."""
+    from app.utils.status_tokens import document_meta, status_meta
+
+    assert document_meta(_Doc('contract', is_signed=True))[0] == \
+        status_meta('signed')[0]
+    assert document_meta(_Doc('quotation', is_approved=True))[0] == \
+        status_meta('approved')[0]
