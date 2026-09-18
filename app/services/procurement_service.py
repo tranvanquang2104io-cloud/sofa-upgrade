@@ -300,8 +300,11 @@ class ProcurementService:
     def list_grs(self, company_id, page=None, per_page=20):
         """Goods receipts for a company; Pagination when ``page`` is given."""
         from app.models.models import GoodsReceipt
+        # created_at alone is not a stable sort: receipts entered in the same
+        # second tie, and a tie makes LIMIT/OFFSET paging repeat or drop rows.
         q = (GoodsReceipt.query.filter_by(company_id=company_id)
-             .order_by(GoodsReceipt.created_at.desc()))
+             .order_by(GoodsReceipt.created_at.desc(),
+                       GoodsReceipt.gr_number.desc()))
         if page:
             return q.paginate(page=page, per_page=per_page, error_out=False)
         return q.all()
