@@ -474,6 +474,26 @@ def activate_template(template_id):
 
 # ===== CUSTOMERS =====
 
+def _apply_customer_search(query, search):
+    """Narrow a customer query by name, code or phone.
+
+    Search used to be a different code path from browsing: it called
+    search_customers(), whose signature carries limit=20, and then set
+    pagination to None. A shop with 25 customers named Nguyen saw twenty of
+    them with no next-page link and nothing to say the list had been cut.
+
+    Filtering the SAME query the browse path paginates removes the special case
+    instead of adding a second one to keep in step.
+    """
+    if not search:
+        return query
+    from app.models.models import Customer as _C
+    like = f'%{search}%'
+    return query.filter(db.or_(_C.name.ilike(like),
+                               _C.customer_code.ilike(like),
+                               _C.phone.ilike(like)))
+
+
 @dashboard_bp.route('/customers', methods=['GET'])
 @login_required
 def list_customers():
@@ -514,26 +534,20 @@ def list_customers():
             flash(t('Cửa hàng không tìm thấy'), 'error')
             return redirect(url_for('dashboard.index'))
 
-        if search:
-            customers = customer_service.search_customers(store_id, search)
-            total     = len(customers)
-        else:
-            q = _Customer.query.filter_by(store_id=store_id, is_active=True).order_by(_Customer.customer_code)
-            pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
-            customers, total = pagination.items, pagination.total
+        q = _Customer.query.filter_by(store_id=store_id, is_active=True)
+        q = _apply_customer_search(q, search)
+        q = q.order_by(_Customer.customer_code)
+        pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
+        customers, total = pagination.items, pagination.total
     else:
         # "All Stores" — company admin sees every accessible store's customers
-        from app.repositories.repository import CustomerRepository as _CustRepo
-        _repo = _CustRepo()
-        if search:
-            customers = _repo.search_customers_for_stores(accessible_ids, search)
-            total     = len(customers)
-        else:
-            q = _Customer.query.filter(
-                _Customer.store_id.in_(accessible_ids), _Customer.is_active == True
-            ).order_by(_Customer.customer_code)
-            pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
-            customers, total = pagination.items, pagination.total
+        q = _Customer.query.filter(
+            _Customer.store_id.in_(accessible_ids), _Customer.is_active == True
+        )
+        q = _apply_customer_search(q, search)
+        q = q.order_by(_Customer.customer_code)
+        pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
+        customers, total = pagination.items, pagination.total
 
     # Preserve store/search filters across pagination links.
     extra_query = {k: v for k, v in (('store_id', store_id), ('search', search)) if v}

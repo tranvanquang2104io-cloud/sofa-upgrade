@@ -297,10 +297,7 @@ class CustomerService:
         offset = (page - 1) * per_page
         return self.repo.get_customers_for_store(store_id, limit=per_page, offset=offset)
     
-    def search_customers(self, store_id, search_term):
-        """Search customers"""
-        return self.repo.search_customers(store_id, search_term)
-    
+
     def count_customers_for_store(self, store_id):
         """Count customers in store"""
         return self.repo.count_for_store(store_id)

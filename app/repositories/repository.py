@@ -217,17 +217,6 @@ class CustomerRepository(BaseRepository):
             query = query.limit(limit)
         return query.all()
 
-    def search_customers_for_stores(self, store_ids, search_term, limit=20):
-        """Search customers across multiple stores"""
-        return self.model.query.filter(
-            self.model.store_id.in_(store_ids), self.model.is_active == True
-        ).filter(
-            db.or_(
-                self.model.name.ilike(f'%{search_term}%'),
-                self.model.customer_code.ilike(f'%{search_term}%'),
-                self.model.phone.ilike(f'%{search_term}%')
-            )
-        ).order_by(self.model.customer_code).limit(limit).all()
 
     def count_for_stores(self, store_ids):
         """Count customers across multiple stores"""
@@ -235,16 +224,7 @@ class CustomerRepository(BaseRepository):
             self.model.store_id.in_(store_ids), self.model.is_active == True
         ).count()
 
-    def search_customers(self, store_id, search_term, limit=20):
-        """Search customers by name or code"""
-        return self.model.query.filter_by(store_id=store_id, is_active=True).filter(
-            db.or_(
-                self.model.name.ilike(f'%{search_term}%'),
-                self.model.customer_code.ilike(f'%{search_term}%'),
-                self.model.phone.ilike(f'%{search_term}%')
-            )
-        ).limit(limit).all()
-    
+
     def count_for_store(self, store_id):
         """Count customers in store"""
         return self.model.query.filter_by(store_id=store_id, is_active=True).count()
