@@ -20,6 +20,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from app.services.workflow_service import (  # noqa: E402  (after logger by convention)
+    ACTION_CONTRACT_CREATE,
+    ACTION_CONTRACT_SIGN,
     ACTION_HANDOVER_CREATE,
     ACTION_PAYMENT_ADVANCE,
     ACTION_PAYMENT_FINAL,
@@ -603,6 +605,14 @@ class ContractService:
                        contract_value, terms_and_conditions=None):
         """Create contract"""
         _order = OrderRepository().get_by_id(order_id)
+
+        # Same reason as contract.sign: the action is configurable on the
+        # workflow settings screen but nothing consulted the rule. The shipped
+        # default is OPTIONAL, i.e. advisory, so a default install is
+        # unaffected - only an admin who deliberately makes it required sees a
+        # change, which is what they asked for by making it required.
+        WorkflowService.require(_order, ACTION_CONTRACT_CREATE)
+
         existing = self.repo.get_by_company_and_number(
             _order.company_id if _order else None, contract_number)
         if existing:
@@ -661,6 +671,13 @@ class ContractService:
             contract = self.repo.get_by_id(contract_id)
             if not contract:
                 raise ValueError(f"Contract {contract_id} not found")
+
+            # contract.sign is in ALL_ACTIONS and in DEFAULT_RULES, and the
+            # workflow settings screen lets an admin change it - but nothing
+            # ever consulted it, so the setting was decoration. Consulting it
+            # here changes nothing on a default install: the shipped rule is
+            # `contract_created`, which is satisfied by the contract existing.
+            WorkflowService.require(contract.order, ACTION_CONTRACT_SIGN)
             
             if contract.is_signed:
                 logger.warning(f"Contract {contract_id} already signed at {contract.signed_date}")

@@ -1234,6 +1234,12 @@ def create_contract(order_id):
             flash(t('Contract created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
+        except ValueError as e:
+            # A business rule refusing the action carries the sentence that explains it
+            # (WorkflowBlocked subclasses ValueError). Flattening that to "Error"
+            # left the user with a red bar and nothing to act on.
+            logger.info(f"Refused - creating contract: {str(e)}")
+            flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error creating contract: {str(e)}")
             flash(t('Error creating contract'), 'error')
@@ -1341,6 +1347,12 @@ def edit_contract(contract_id):
             flash(t('Contract updated successfully'), 'success')
             return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
             
+        except ValueError as e:
+            # A business rule refusing the action carries the sentence that explains it
+            # (WorkflowBlocked subclasses ValueError). Flattening that to "Error"
+            # left the user with a red bar and nothing to act on.
+            logger.info(f"Refused - updating contract: {str(e)}")
+            flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error updating contract: {str(e)}")
             flash(t('Error updating contract'), 'error')
@@ -1368,6 +1380,12 @@ def sign_contract(contract_id):
         contract_service = ContractService()
         contract_service.mark_signed(contract_id, contract.order_id)
         flash(t('Contract marked as signed'), 'success')
+    except ValueError as e:
+        # A business rule refusing the action carries the sentence that explains it
+        # (WorkflowBlocked subclasses ValueError). Flattening that to "Error"
+        # left the user with a red bar and nothing to act on.
+        logger.info(f"Refused - signing contract: {str(e)}")
+        flash(str(e), 'error')
     except Exception as e:
         logger.error(f"Error signing contract: {str(e)}")
         flash(t('Error signing contract'), 'error')
@@ -1608,6 +1626,12 @@ def create_handover(order_id):
             flash(t('Handover record created successfully'), 'success')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
+        except ValueError as e:
+            # A business rule refusing the action carries the sentence that explains it
+            # (WorkflowBlocked subclasses ValueError). Flattening that to "Error"
+            # left the user with a red bar and nothing to act on.
+            logger.info(f"Refused - creating handover record: {str(e)}")
+            flash(str(e), 'error')
         except Exception as e:
             logger.error(f"Error creating handover record: {str(e)}")
             flash(t('Error creating handover record'), 'error')
@@ -1644,6 +1668,12 @@ def confirm_handover(handover_id):
         handover_service = HandoverRecordService()
         handover_service.confirm_handover(handover_id, handover.order_id)
         flash(t('Handover record confirmed'), 'success')
+    except ValueError as e:
+        # A business rule refusing the action carries the sentence that explains it
+        # (WorkflowBlocked subclasses ValueError). Flattening that to "Error"
+        # left the user with a red bar and nothing to act on.
+        logger.info(f"Refused - confirming handover: {str(e)}")
+        flash(str(e), 'error')
     except Exception as e:
         logger.error(f"Error confirming handover: {str(e)}")
         flash(t('Error confirming handover'), 'error')
@@ -2031,6 +2061,12 @@ def confirm_payment(payment_id):
             db.session.add(payment)
             db.session.commit()
         flash(t('Payment marked as confirmed'), 'success')
+    except ValueError as e:
+        # A business rule refusing the action carries the sentence that explains it
+        # (WorkflowBlocked subclasses ValueError). Flattening that to "Error"
+        # left the user with a red bar and nothing to act on.
+        logger.info(f"Refused - confirming payment: {str(e)}")
+        flash(str(e), 'error')
     except Exception as e:
         logger.error(f"Error confirming payment: {str(e)}")
         flash(t('Error confirming payment'), 'error')
@@ -3308,7 +3344,7 @@ def workflow_settings():
     """
     from app.models.models import WorkflowRule
     from app.services.workflow_service import (
-        ALL_ACTIONS, PREREQUISITE_LABELS, WorkflowService,
+        PREREQUISITE_LABELS, WorkflowService,
     )
 
     company_id = get_current_company_id()
@@ -3341,7 +3377,6 @@ def workflow_settings():
 
     return render_template('settings/workflow.html',
                            rules=rules,
-                           actions=ALL_ACTIONS,
                            prerequisite_labels=PREREQUISITE_LABELS,
                            modes=WorkflowRule.MODES)
 

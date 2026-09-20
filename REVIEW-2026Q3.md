@@ -138,6 +138,38 @@ services. Worth doing *before* either feature, not during.
 
 ---
 
+## 5a. Configuration that could not do anything
+
+`contract.sign` and `contract.create` are seeded into every company and listed
+on the workflow settings screen, where a company admin can change their mode.
+**Nothing ever called `WorkflowService.require()` for either.** Only handover
+creation and the two payment actions were gated. An admin could set "signing
+requires an approved quotation", save it, see it on the screen, and have it do
+nothing at all.
+
+Both are now enforced. Default behaviour is unchanged by construction: the
+shipped rule for `contract.sign` is `contract_created`, satisfied by the
+contract existing, and `contract.create` ships as OPTIONAL, i.e. advisory.
+
+**And when a rule did refuse, the reason was discarded.** `WorkflowBlocked`
+carries the sentence that explains the refusal, but six POST handlers caught
+broad `Exception` and flashed "Error signing contract". The user pressed Sign,
+got a red bar saying "Error", and had no way to learn that the quotation needed
+approving. Those six now catch `ValueError` first and show its message, keeping
+the generic handler underneath for genuinely unexpected failures.
+
+Held by `test_every_seeded_rule_is_enforced_somewhere`. Scoped to
+`DEFAULT_RULES`, not `ALL_ACTIONS`: `quotation.approve` and `handover.confirm`
+are declared constants with no seeded rule, and the settings screen renders
+only rules that exist, so they are not reachable by an admin today. My first
+version of that lint flagged them and would have had me build enforcement for
+a setting nobody can set.
+
+Also removed `actions=ALL_ACTIONS` from the settings context — passed to the
+template, never used by it. It is what makes the screen look as if new rules
+can be added.
+
+
 ## 5b. Confirmation — measured, and one defect behind it
 
 The product rule is that a change must always confirm. Measured: **18** actions
