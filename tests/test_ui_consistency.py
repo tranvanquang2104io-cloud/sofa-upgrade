@@ -460,3 +460,46 @@ def test_every_irreversible_action_asks_first():
         "these actions change something the user cannot undo without asking "
         f"first: {offenders}"
     )
+
+
+WORD = '(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])'
+
+
+def test_no_route_passes_a_context_variable_the_template_ignores():
+    """A value computed for a screen that the screen never shows.
+
+    This is how `payables/view` came to compute the order-wide payment state
+    and drop it on the floor: someone wrote the service call, the template
+    never referenced it, and nothing said so. The failure is silent in both
+    directions — the work is done and the user still cannot see the answer.
+
+    Only dashboard_routes is scanned, and only literal render_template calls
+    with keyword arguments; the point is to catch the drift, not to be a
+    complete static analysis.
+    """
+    import re
+
+    routes_py = TEMPLATES.parent / 'routes' / 'dashboard_routes.py'
+    routes = io.open(routes_py, encoding='utf-8').read()
+
+    offenders = []
+    for match in re.finditer(r"render_template\(\s*'([^']+)'\s*,([^)]*)\)",
+                             routes, re.S):
+        template_name, args = match.group(1), match.group(2)
+        path = TEMPLATES / template_name
+        if not path.exists():
+            continue
+        text = io.open(path, encoding='utf-8').read()
+        for included in re.findall(r"\{%\s*include\s*'([^']+)'", text):
+            partial = TEMPLATES / included
+            if partial.exists():
+                text += io.open(partial, encoding='utf-8').read()
+
+        for keyword in re.findall(r"(\w+)\s*=", args):
+            if not re.search(WORD % re.escape(keyword), text):
+                offenders.append(f"{template_name}: {keyword}")
+
+    assert sorted(set(offenders)) == [], (
+        "these values are computed and passed to a template that never uses "
+        f"them: {sorted(set(offenders))}"
+    )

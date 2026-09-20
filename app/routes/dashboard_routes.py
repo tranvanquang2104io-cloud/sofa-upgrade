@@ -2742,7 +2742,9 @@ def list_users():
         stores = [own_store] if own_store else []
 
     store_map = {str(s.id): s.name for s in stores}
-    return render_template('users/list.html', users=users, stores=stores, store_map=store_map)
+    # `stores` itself is not rendered; the template resolves names through
+    # store_map. Passing both invites the next edit to use the wrong one.
+    return render_template('users/list.html', users=users, store_map=store_map)
 
 
 @dashboard_bp.route('/users/create', methods=['GET', 'POST'])

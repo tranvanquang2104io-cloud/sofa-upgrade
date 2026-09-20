@@ -60,6 +60,9 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Whole order':            'Cả đơn hàng',
+        'Not Invoiced':           'Chưa Có Hóa Đơn',
+        'Not Paid':               'Chưa Thanh Toán',
         'Search by order code, job or customer...':
             'Tìm theo mã đơn, tên công việc hoặc khách hàng...',
         'Search by receipt number or supplier...':

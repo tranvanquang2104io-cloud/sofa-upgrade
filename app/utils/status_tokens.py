@@ -102,6 +102,16 @@ DOCUMENT_FILE_STATUS = {
     'superseded': ('neutral', 'Replaced'),
 }
 
+# How a purchase ORDER stands across all of its supplier invoices. Distinct
+# from a single invoice's own status: an invoice can be paid while the order
+# it belongs to still owes money on another one.
+PO_PAYMENT_STATUS = {
+    'not_invoiced': ('neutral', 'Not Invoiced'),
+    'not_paid': ('attention', 'Not Paid'),
+    'partially_paid': ('attention', 'Partially Paid'),
+    'paid': ('success', 'Paid'),
+}
+
 ENTITY_MAPS = {
     'document': DOCUMENT_STATUS,
     'quotation': DOCUMENT_STATUS,
@@ -115,6 +125,7 @@ ENTITY_MAPS = {
     'production': PROCUREMENT_STATUS,
     'handover_item': HANDOVER_ITEM_STATUS,
     'document_file': DOCUMENT_FILE_STATUS,
+    'po_payment': PO_PAYMENT_STATUS,
 }
 
 

@@ -16,6 +16,10 @@
   <span class="badge bg-success">{{ t('3-way match') }}: {{ t('OK') }}</span>
   {% endif %}
   {% if invoice.is_paid %}{{ status_badge('paid') }}{% endif %}
+  {# Whether THIS invoice is paid is half the question; the other half is
+     whether the order still owes money on its other invoices. #}
+  <span class="text-muted small">{{ t('Whole order') }}:</span>
+  {{ status_badge(payment_status, 'po_payment') }}
 </div>
 
 {% if invoice.match_notes %}

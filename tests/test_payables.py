@@ -387,3 +387,27 @@ def test_outstanding_for_supplier_sums_confirmed_invoices(app, po):
         outstanding = PayablesService.outstanding_for_supplier(
             po["company_id"], po["supplier_id"])
         assert outstanding == inv.total_amount
+
+
+def test_the_invoice_page_shows_how_the_whole_order_stands(app, client, login, po):
+    """The route computed the PO-wide payment state and threw it away.
+
+    Whether THIS invoice is paid is only half the question for someone about to
+    pay: the other half is whether the order it belongs to still has money
+    outstanding on other invoices. The value was already computed and passed to
+    the template, which never referenced it.
+    """
+    with app.app_context():
+        inv = _confirmed_invoice(po, number="ST-VIEW")
+        pay = PayablesService.create_payment(
+            po["company_id"], po["supplier_id"], "PAY-VIEW", TODAY, amount=500_000)
+        PayablesService.allocate(pay, inv, 500_000)
+        PayablesService.confirm_payment(pay)
+        invoice_id = str(inv.id)
+
+    login("admin")
+    body = client.get(f'/supplier-invoices/{invoice_id}').get_data(as_text=True)
+    assert ('Partially Paid' in body or 'Trả Một Phần' in body
+            or 'Thanh Toán Một Phần' in body), (
+        "the order's overall payment state must be visible on the invoice page"
+    )
