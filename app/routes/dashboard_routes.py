@@ -39,6 +39,35 @@ logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/')
 
 
+
+def _safe_back_url(default):
+    """Where to send the user back to, when the answer is "where you were".
+
+    `redirect(_safe_back_url(url_for('dashboard.index')))` looks harmless and is not. Two ways it goes
+    wrong, both invisible to whoever wrote it:
+
+      * a user who opened the link directly, used a bookmark, or whose browser
+        strips the header has no referrer, and `redirect(None)` does not fail -
+        it emits `Location: None`, so the browser lands on a 404 page named
+        "None" straight after being told the action failed;
+      * the header is set by whoever sent the user here, so a page on another
+        site can bounce them back out through us.
+
+    `_is_safe_redirect_url` already refuses the second for `next` parameters,
+    but it requires a relative path and a referrer is absolute, so it cannot be
+    reused directly. Same-origin is the test that fits a referrer.
+    """
+    referrer = request.referrer
+    if not referrer:
+        return default
+    parsed = urlparse(referrer)
+    if not parsed.scheme and not parsed.netloc:
+        return referrer if referrer.startswith('/') else default
+    if parsed.netloc == urlparse(request.host_url).netloc:
+        return referrer
+    return default
+
+
 def _is_safe_redirect_url(target):
     """Chỉ cho phép quay lại đường dẫn nội bộ của chính site.
 
@@ -237,7 +266,7 @@ def set_language(lang):
     """Switch the UI language stored in the session."""
     if lang in ('en', 'vi'):
         session['lang'] = lang
-    return redirect(request.referrer or url_for('dashboard.index'))
+    return redirect(_safe_back_url(url_for('dashboard.index')))
 
 
 # ===== DASHBOARD =====
@@ -2191,7 +2220,7 @@ def generate_document(doc_type, ref_id):
             quotation = QuotationRepository().get_by_id(ref_id)
             if not quotation or str(quotation.order.company_id) != str(company_id):
                 flash(t('Quotation not found'), 'error')
-                return redirect(request.referrer)
+                return redirect(_safe_back_url(url_for('dashboard.list_orders')))
             
             document = document_service.generate_quotation_document(ref_id, quotation.order_id, company_id, doc_format)
         
@@ -2199,7 +2228,7 @@ def generate_document(doc_type, ref_id):
             contract = ContractRepository().get_by_id(ref_id)
             if not contract or str(contract.order.company_id) != str(company_id):
                 flash(t('Contract not found'), 'error')
-                return redirect(request.referrer)
+                return redirect(_safe_back_url(url_for('dashboard.list_orders')))
             
             document = document_service.generate_contract_document(
                 ref_id, contract.order_id, company_id, 
@@ -2210,7 +2239,7 @@ def generate_document(doc_type, ref_id):
             handover = HandoverRecordRepository().get_by_id(ref_id)
             if not handover or str(handover.order.company_id) != str(company_id):
                 flash(t('Handover record not found'), 'error')
-                return redirect(request.referrer)
+                return redirect(_safe_back_url(url_for('dashboard.list_orders')))
             
             document = document_service.generate_delivery_document(ref_id, handover.order_id, company_id, doc_format)
         
@@ -2218,7 +2247,7 @@ def generate_document(doc_type, ref_id):
             payment = PaymentReportRepository().get_by_id(ref_id)
             if not payment or str(payment.order.company_id) != str(company_id):
                 flash(t('Payment report not found'), 'error')
-                return redirect(request.referrer)
+                return redirect(_safe_back_url(url_for('dashboard.list_orders')))
             
             document = document_service.generate_payment_document(ref_id, payment.order_id, company_id, doc_format)
             
@@ -2226,13 +2255,13 @@ def generate_document(doc_type, ref_id):
             order = OrderRepository().get_by_id(ref_id)
             if not order or str(order.company_id) != str(company_id):
                 flash(t('Order not found'), 'error')
-                return redirect(request.referrer)
+                return redirect(_safe_back_url(url_for('dashboard.list_orders')))
                 
             document = document_service.generate_payment_request_document(ref_id, company_id, doc_format)
         
         else:
             flash(t('Unknown document type'), 'error')
-            return redirect(request.referrer)
+            return redirect(_safe_back_url(url_for('dashboard.list_orders')))
 
         # Tell the user the real output format. If PDF was requested but the
         # DOCX→PDF conversion was unavailable, the service falls back to DOCX —
@@ -2247,7 +2276,7 @@ def generate_document(doc_type, ref_id):
         logger.error(f"Error generating document: {str(e)}")
         flash(t(f'Error generating document: {str(e)}'), 'error')
     
-    return redirect(request.referrer)
+    return redirect(_safe_back_url(url_for('dashboard.list_orders')))
 
 
 @dashboard_bp.route('/documents/<document_id>/download')
@@ -2260,11 +2289,11 @@ def download_document(document_id):
     document = doc_repo.get_by_id(document_id)
     if not document or str(document.company_id) != str(company_id):
         flash(t('Document not found or access denied'), 'error')
-        return redirect(request.referrer)
+        return redirect(_safe_back_url(url_for('dashboard.list_orders')))
     
     if not os.path.exists(document.file_path):
         flash(t('Document file not found'), 'error')
-        return redirect(request.referrer)
+        return redirect(_safe_back_url(url_for('dashboard.list_orders')))
     
     try:
         return send_file(
@@ -2275,7 +2304,7 @@ def download_document(document_id):
     except Exception as e:
         logger.error(f"Error downloading document: {str(e)}")
         flash(t('Error downloading document'), 'error')
-        return redirect(request.referrer)
+        return redirect(_safe_back_url(url_for('dashboard.list_orders')))
 
 
 @dashboard_bp.route('/reports/receivables')
@@ -2357,7 +2386,7 @@ def delete_document(document_id):
 
     if not document or str(document.company_id) != str(company_id):
         flash(t('Document not found or access denied'), 'error')
-        return redirect(request.referrer or url_for('dashboard.list_orders'))
+        return redirect(_safe_back_url(url_for('dashboard.list_orders')))
 
     order_id = document.order_id
     # Nút xoá giờ có mặt cả trên màn hình xem báo giá / hợp đồng / bàn giao /
