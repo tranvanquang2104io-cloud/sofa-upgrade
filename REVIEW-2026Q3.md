@@ -138,6 +138,51 @@ services. Worth doing *before* either feature, not during.
 
 ---
 
+## 4b. Screens that grow, and screens nobody had opened
+
+**Lists.** Of the 8 screens whose row count grows with business volume, two
+were broken: the orders list — the busiest screen, and the only table that
+grows forever since orders are never archived — had no search at all, and the
+goods-receipt list was stuck on page 1 because the route paginated but never
+passed `pagination` to the template, so the nav rendered as nothing. The
+customer search took a different code path from browsing, capped at 20, with
+no next-page link to suggest there were more.
+
+`materials/list` has search and no paging and is **left that way on purpose**:
+it returns every row, and for a few hundred materials one page with a search
+and a category filter beats paging.
+
+**Coverage.** 6 of 107 dashboard routes had never been opened by any test. The
+two that serve files were checked first and were sound; the document download
+led to `redirect(request.referrer)` in twelve places (see §4c).
+
+**Cross-tenant writes.** The isolation sweep only asked whether another
+company's records could be READ, while 35 POST routes take a record id. Nine
+write probes added; no cross-tenant write is possible. Two corrections were
+needed before that sentence was worth anything: the probes first passed
+because a workflow rule blocked the action before tenancy was consulted, and
+the check that the sweep bites first patched the wrong one of seven identical
+guards. Only after the rival's contract was actually signed, and the sweep
+failed on that probe, was the result a finding.
+
+### Checked and NOT a defect
+
+* `create_handover` computes line totals in `float` while the shared parser
+  uses `Decimal`. On realistic VND values the difference is 1.5e-08 — invisible
+  after formatting, and no line case differed. A consistency wart, not a bug.
+  Recorded so it is not re-litigated.
+* The three material POST routes looked unguarded to a crude scan; all three
+  check ownership via `get_material(id, company_id)`.
+
+## 4c. Redirects
+
+`redirect(request.referrer)` in 12 places. Absent referrer → `Location: None`
+→ a 404 page called "None" right after a failed action. And the header is set
+by whoever sent the user in, so another site could bounce them back out.
+`_is_safe_redirect_url` could not be reused — it requires a relative path and a
+referrer is absolute — so `_safe_back_url()` does a same-origin test instead.
+
+
 ## 5a. Configuration that could not do anything
 
 `contract.sign` and `contract.create` are seeded into every company and listed
