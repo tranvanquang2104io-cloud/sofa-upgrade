@@ -47,7 +47,14 @@ def rival(app):
                       order_code="ZZMARKERORD", title="Rival sweep order")
         db.session.add(order)
         db.session.flush()
-        db.session.add(LifecycleStatus(order_id=order.id))
+        # The write probes below must be refused because of the TENANT, not
+        # because a workflow rule happened to block the action anyway — a
+        # probe that passes for the wrong reason proves nothing. So the
+        # rival's order is put in a state where each action would succeed.
+        db.session.add(LifecycleStatus(
+            order_id=order.id, quotation_created=True, quotation_approved=True,
+            contract_created=True, contract_signed=True, advance_paid=True,
+            handover_confirmed=True))
 
         q = Quotation(company_id=c.id, order_id=order.id,
                       quotation_number="ZZMARKERQT",
@@ -189,3 +196,51 @@ def test_scoped_lookup_refuses_a_model_without_company_id(app):
     with app.app_context():
         with _pytest.raises(AttributeError, match='company_id'):
             LifecycleStatusRepository().get_for_company('x', 'y')
+
+
+# --- writes -------------------------------------------------------------
+#
+# The probes above ask whether another tenant's record can be READ. Reading is
+# the lesser half: these ask whether it can be CHANGED. Nothing covered that
+# before, while 35 POST routes take a record id.
+#
+# Each entry: (url template, fixture key, model, id key, attribute that must
+# not change, its expected value).
+WRITE_PROBES = [
+    ('/contracts/{contract}/sign', 'contract', 'Contract', 'is_signed', False),
+    ('/contracts/{contract}/cancel', 'contract', 'Contract', 'is_canceled', False),
+    ('/quotations/{quotation}/approve', 'quotation', 'Quotation', 'is_approved', False),
+    ('/quotations/{quotation}/cancel', 'quotation', 'Quotation', 'is_canceled', False),
+    ('/handover/{handover}/confirm', 'handover', 'HandoverRecord', 'is_confirmed', False),
+    ('/payment/{payment}/confirm', 'payment', 'PaymentReport', 'is_confirmed', False),
+    ('/orders/{order}/cancel', 'order', 'Order', 'is_canceled', False),
+    ('/materials/{material}/deactivate', 'material', 'Material', 'is_active', True),
+    ('/supplier-invoices/{invoice}/confirm', 'invoice', 'SupplierInvoice',
+     'status', 'draft'),
+]
+
+
+@pytest.mark.parametrize("url_tpl,key,model_name,attr,expected",
+                         WRITE_PROBES, ids=[p[0] for p in WRITE_PROBES])
+def test_post_route_cannot_change_another_tenant(app, client, login, rival,
+                                                 url_tpl, key, model_name,
+                                                 attr, expected):
+    """Logged in as ACME, POST at RIVAL's id. Their record must be untouched.
+
+    A refusal can be a 403, a 404, or a redirect with a flash — the test does
+    not care which, only that the data did not move. Checking the response
+    would let a route that says "not found" and mutates anyway slip through.
+    """
+    from app.models import models as m
+
+    login("admin")
+    client.post(url_tpl.format(**rival), follow_redirects=True)
+
+    with app.app_context():
+        model = getattr(m, model_name)
+        record = model.query.get(rival[key])
+        assert record is not None, "the rival's record was deleted outright"
+        assert getattr(record, attr) == expected, (
+            f"TENANT WRITE: {url_tpl} changed another company's "
+            f"{model_name}.{attr}"
+        )
