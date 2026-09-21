@@ -356,12 +356,22 @@ def company_settings():
             company.vat_rate = float(vat_str) if vat_str else company.vat_rate
             # Bank accounts from JSON textarea
             bank_json = request.form.get('bank_accounts', '').strip()
+            bank_error = False
             try:
                 company.bank_accounts = _json.loads(bank_json) if bank_json else []
             except Exception:
-                pass
+                # The rows are serialised by JavaScript, so this is rare - but
+                # swallowing it meant the bank details were quietly left as they
+                # were while the screen reported success. They are printed on
+                # payment documents; the user has to know they did not change.
+                bank_error = True
             db.session.commit()
-            flash(t('Company settings updated successfully'), 'success')
+            if bank_error:
+                flash(t('Đã lưu cài đặt, nhưng KHÔNG đọc được danh sách tài '
+                        'khoản ngân hàng nên phần này giữ nguyên như cũ.'),
+                      'warning')
+            else:
+                flash(t('Company settings updated successfully'), 'success')
         except Exception as e:
             logger.error(f"Error updating company settings: {str(e)}")
             db.session.rollback()
