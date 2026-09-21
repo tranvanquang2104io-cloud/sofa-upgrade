@@ -11,19 +11,47 @@ from app.config.database import db
 from app.services.services import ProductionPlanService
 
 
+
+def _next_document_number(model, number_column, company_id, prefix):
+    """Next number in the ``PREFIX-yymm-nnnn`` series for one company.
+
+    Built from the HIGHEST number already issued in this month's series, not
+    from a row count. A count is not a sequence: delete any row and the next
+    number repeats one already used, which the unique constraint on
+    (company, number) then rejects - an unexplained crash on an action that
+    worked a minute earlier, and retrying cannot help because the count does
+    not change.
+
+    A gap where a document was deleted is normal and auditable. Reissuing a
+    number is neither.
+    """
+    series = f"{prefix}-{datetime.now():%y%m}-"
+    highest = 0
+    rows = (model.query
+            .filter(model.company_id == company_id,
+                    number_column.like(f"{series}%"))
+            .with_entities(number_column)
+            .all())
+    for (value,) in rows:
+        tail = (value or '').rsplit('-', 1)[-1]
+        if tail.isdigit():
+            highest = max(highest, int(tail))
+    return f"{series}{highest + 1:04d}"
+
+
 class ProcurementService:
     """Đơn mua hàng (PurchaseOrder) và Nhập kho (GoodsReceipt)."""
 
     # ---- number generators ------------------------------------------------
     def _gen_po_number(self, company_id):
         from app.models.models import PurchaseOrder
-        n = PurchaseOrder.query.filter_by(company_id=company_id).count() + 1
-        return f"PO-{datetime.now():%y%m}-{n:04d}"
+        return _next_document_number(PurchaseOrder, PurchaseOrder.po_number,
+                                     company_id, 'PO')
 
     def _gen_gr_number(self, company_id):
         from app.models.models import GoodsReceipt
-        n = GoodsReceipt.query.filter_by(company_id=company_id).count() + 1
-        return f"GR-{datetime.now():%y%m}-{n:04d}"
+        return _next_document_number(GoodsReceipt, GoodsReceipt.gr_number,
+                                     company_id, 'GR')
 
     # ---- PR → PO ----------------------------------------------------------
     def create_pos_from_suggestions(self, company_id, store_id=None):

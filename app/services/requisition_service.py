@@ -16,8 +16,10 @@ from app.services.procurement_service import ProcurementService
 class RequisitionService:
     def _gen_pr_number(self, company_id):
         from app.models.models import PurchaseRequisition
-        n = PurchaseRequisition.query.filter_by(company_id=company_id).count() + 1
-        return f"PR-{datetime.now():%y%m}-{n:04d}"
+        from app.services.procurement_service import _next_document_number
+        return _next_document_number(PurchaseRequisition,
+                                     PurchaseRequisition.pr_number,
+                                     company_id, 'PR')
 
     def suggest_lines(self, company_id):
         """Gợi ý dòng vật tư (điền sẵn PR) từ đề xuất tự động (nhu cầu − tồn + min)."""
