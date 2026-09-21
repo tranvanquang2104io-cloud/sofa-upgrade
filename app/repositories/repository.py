@@ -639,6 +639,12 @@ class SupplierRepository(BaseRepository):
         ).first()
 
     def get_next_code(self, company_id):
-        """Auto-generate next supplier code: NCC-001, NCC-002 ..."""
-        count = self.model.query.filter_by(company_id=company_id).count()
-        return f'NCC-{count + 1:03d}'
+        """Auto-generate next supplier code: NCC-001, NCC-002 ...
+
+        From the highest code already issued, not from a row count: counting
+        reissues a code as soon as a supplier is deleted, and
+        (company_id, supplier_code) is unique.
+        """
+        from app.services.procurement_service import _next_document_number
+        return _next_document_number(self.model, self.model.supplier_code,
+                                     company_id, 'NCC', dated=False, width=3)

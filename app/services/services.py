@@ -1736,8 +1736,9 @@ class ProductionPlanService:
 
     def _gen_plan_number(self, company_id):
         from app.models.models import ProductionPlan
-        n = ProductionPlan.query.filter_by(company_id=company_id).count() + 1
-        return f"KHSX-{n:05d}"
+        from app.services.procurement_service import _next_document_number
+        return _next_document_number(ProductionPlan, ProductionPlan.plan_number,
+                                     company_id, 'KHSX', dated=False, width=5)
 
     def get_plan_for_order(self, order_id):
         from app.models.models import ProductionPlan

@@ -160,3 +160,63 @@ def test_another_company_has_its_own_sequence(app, supplier):
 
         first_for_rival = service._gen_po_number(other.id)
         assert first_for_rival.endswith('0001')
+
+
+# --- the two that carry no date in the series ----------------------------
+#
+# Supplier codes and production plan numbers run NCC-001 / KHSX-00001 with no
+# month segment, but they are generated the same way and carry the same unique
+# constraint, so they fail the same way.
+
+def test_a_supplier_code_is_not_reused_after_a_deletion(app, seed):
+    from app.config import db
+    from app.models.models import Supplier
+    from app.repositories.repository import SupplierRepository
+
+    with app.app_context():
+        repo = SupplierRepository()
+        issued = []
+        for _ in range(3):
+            code = repo.get_next_code(seed['company_id'])
+            db.session.add(Supplier(company_id=seed['company_id'],
+                                    supplier_code=code, name=f'NCC {code}'))
+            db.session.commit()
+            issued.append(code)
+
+        db.session.delete(
+            Supplier.query.filter_by(supplier_code=issued[1]).first())
+        db.session.commit()
+
+        assert repo.get_next_code(seed['company_id']) not in issued
+
+
+def test_a_plan_number_is_not_reused_after_a_deletion(app, seed):
+    from app.config import db
+    from app.models import Order
+    from app.models.models import ProductionPlan
+    from app.services.services import ProductionPlanService
+
+    with app.app_context():
+        # one plan per order, so each needs its own
+        service = ProductionPlanService()
+        issued = []
+        for index in range(3):
+            order = Order(company_id=seed['company_id'],
+                          store_id=seed['store_id'],
+                          customer_id=seed['customer_id'],
+                          order_code=f'DH-KHSX-{index}', title='Sofa')
+            db.session.add(order)
+            db.session.flush()
+            number = service._gen_plan_number(seed['company_id'])
+            db.session.add(ProductionPlan(company_id=seed['company_id'],
+                                          order_id=order.id,
+                                          plan_number=number))
+            db.session.commit()
+            issued.append(number)
+
+        db.session.delete(
+            ProductionPlan.query.filter_by(plan_number=issued[1]).first())
+        db.session.commit()
+
+        assert service._gen_plan_number(seed['company_id']) not in issued
+

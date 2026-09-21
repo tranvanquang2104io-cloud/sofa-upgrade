@@ -12,7 +12,8 @@ from app.services.services import ProductionPlanService
 
 
 
-def _next_document_number(model, number_column, company_id, prefix):
+def _next_document_number(model, number_column, company_id, prefix,
+                          dated=True, width=4):
     """Next number in the ``PREFIX-yymm-nnnn`` series for one company.
 
     Built from the HIGHEST number already issued in this month's series, not
@@ -25,7 +26,7 @@ def _next_document_number(model, number_column, company_id, prefix):
     A gap where a document was deleted is normal and auditable. Reissuing a
     number is neither.
     """
-    series = f"{prefix}-{datetime.now():%y%m}-"
+    series = f"{prefix}-{datetime.now():%y%m}-" if dated else f"{prefix}-"
     highest = 0
     rows = (model.query
             .filter(model.company_id == company_id,
@@ -36,7 +37,7 @@ def _next_document_number(model, number_column, company_id, prefix):
         tail = (value or '').rsplit('-', 1)[-1]
         if tail.isdigit():
             highest = max(highest, int(tail))
-    return f"{series}{highest + 1:04d}"
+    return f"{series}{highest + 1:0{width}d}"
 
 
 class ProcurementService:
