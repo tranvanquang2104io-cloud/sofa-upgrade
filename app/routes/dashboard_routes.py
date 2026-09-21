@@ -292,7 +292,11 @@ def index():
 
     if is_company_admin():
         all_orders = order_repo.get_orders_for_company(company_id)
-        total_customers = db.session.query(_Customer).filter_by(company_id=company_id).count()
+        # is_active matters: every customer LIST and lookup filters it, so
+        # counting deactivated customers here made the front page disagree with
+        # the page it links to - 4 on the card, 3 in the list.
+        total_customers = db.session.query(_Customer).filter_by(
+            company_id=company_id, is_active=True).count()
     else:
         all_orders = []
         for sid in accessible_store_ids:
@@ -300,7 +304,8 @@ def index():
                 company_id=company_id, store_id=sid, is_active=True
             ).all()
         total_customers = db.session.query(_Customer).filter(
-            _Customer.store_id.in_(accessible_store_ids)
+            _Customer.store_id.in_(accessible_store_ids),
+            _Customer.is_active == True,
         ).count()
 
     total_orders = len(all_orders)
