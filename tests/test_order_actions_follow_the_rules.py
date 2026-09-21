@@ -97,12 +97,20 @@ def test_a_contract_with_an_advance_still_waits_for_it(app, client, login,
 
 def test_the_advance_can_always_be_recorded_when_it_is_optional(app, client,
                                                                  login, seed):
-    """0% means optional, not forbidden — a customer may still pay early."""
+    """0% means optional, not forbidden — a customer may still pay early.
+
+    Checks the labelled button, not just the word `/payment/`: that substring
+    appears in other links on the page and would have proved nothing.
+    """
     order_id = _order_with_contract(app, seed, 0, 'DH-UI-0A')
 
     login("admin")
     body = client.get(f'/orders/{order_id}').get_data(as_text=True)
-    assert '/payment/' in body
+    assert ('Record Advance Payment' in body
+            or 'Ghi Nhận Tạm Ứng' in body
+            or 'Ghi nhận tạm ứng' in body), (
+        "a customer may still choose to pay something up front"
+    )
 
 
 def test_relaxing_the_rule_makes_the_button_appear(app, client, login, seed):

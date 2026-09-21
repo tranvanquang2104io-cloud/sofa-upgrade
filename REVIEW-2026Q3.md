@@ -169,7 +169,7 @@ services. Worth doing *before* either feature, not during.
 
 ## 4a. Every chain validated to the đồng
 
-Four processes walked end to end with **45 figures** asserted against
+Five processes walked end to end with **57 figures** asserted against
 hand-computed values rather than against whatever the code returns. All
 correct today; the point is that any drift now fails loudly.
 
@@ -179,6 +179,7 @@ correct today; the point is that any drift now fails loudly.
 | O2C via HĐNT/ĐĐH | 11 | agreed list 11,000,000 / 3,800,000 → **28,264,000**; a later price revision does not move an issued order |
 | P2P | 15 | 100m @ 250,000; receive 60 then 40 @ 300,000 → average **270,000**; invoice 16,200,000; pay 10,000,000 → owe 6,200,000 |
 | Production | 9 | issue 40m + 15m = **12,250,000** cost; margin 20,094,000, labour excluded |
+| P2P front end | 12 | suggest = need − on hand + minimum: 40 − 15 + 5 = **30**; three lines across two suppliers → **two** orders |
 
 Three checks exist to catch a plausible mistake rather than to record a total:
 
