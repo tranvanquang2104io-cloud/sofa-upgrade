@@ -37,6 +37,28 @@ def order(app, seed):
         return str(o.id)
 
 
+def _give_contract(app, order_id, company_id, advance_percentage=30):
+    """Attach a signed contract so the contract-driven advance rule applies.
+
+    handover.create ships as MODE_CONTRACT: the advance is required only when
+    the contract names a percentage. An order with no contract has no such
+    term, so these tests have to state which kind of order they mean.
+    """
+    import datetime as _dt
+
+    from app.config import db
+    from app.models.models import Contract
+
+    with app.app_context():
+        db.session.add(Contract(
+            company_id=company_id, order_id=order_id,
+            contract_number=f'HD-WF-{advance_percentage}',
+            contract_date=_dt.date(2026, 1, 1), contract_value=10_000_000,
+            advance_percentage=advance_percentage, is_signed=True))
+        db.session.commit()
+
+
+
 def _get(order_id):
     from app.models import Order
     return Order.query.get(order_id)
@@ -72,11 +94,25 @@ def test_defaults_reproduce_the_previously_hardcoded_rules(app, order):
         assert WorkflowService.can(_get(order), ACTION_PAYMENT_FINAL)
 
 
-def test_handover_requires_advance_paid_by_default(app, order):
-    """services.py:745-747 — handover blocked until the advance is paid."""
+def test_handover_requires_the_advance_when_the_contract_asks_for_one(
+        app, seed, order):
+    """Was: blocked regardless. Now: blocked when the contract names a %.
+
+    See tests/test_advance_follows_the_contract.py — a contract agreed at 0%
+    never asked for an advance, so holding the handover until that advance is
+    "skipped with a reason" made the user excuse something the paperwork never
+    required.
+    """
+    _give_contract(app, order, seed["company_id"], advance_percentage=30)
     with app.app_context():
         assert not WorkflowService.can(_get(order), ACTION_HANDOVER_CREATE)
         _set_lifecycle(order, advance_paid=True)
+        assert WorkflowService.can(_get(order), ACTION_HANDOVER_CREATE)
+
+
+def test_handover_is_not_held_up_by_a_zero_percent_contract(app, seed, order):
+    _give_contract(app, order, seed["company_id"], advance_percentage=0)
+    with app.app_context():
         assert WorkflowService.can(_get(order), ACTION_HANDOVER_CREATE)
 
 
@@ -158,6 +194,7 @@ def test_rules_are_per_company(app, seed, order):
 
 def test_waivable_step_blocks_until_waived_then_allows(app, seed, order):
     """Generalises the old untracked `advance_skipped` flag."""
+    _give_contract(app, order, seed["company_id"], advance_percentage=30)
     with app.app_context():
         WorkflowService.seed_defaults(seed["company_id"])
         o = _get(order)

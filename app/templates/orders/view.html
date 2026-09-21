@@ -510,7 +510,7 @@
                                 {% endfor %}
                             {% else %}
                                 <p class="text-muted">{{ t('Pending') }}</p>
-                                {% if lifecycle.advance_paid %}
+                                {% if can_create_handover %}
                                 <a href="{{ url_for('dashboard.create_handover', order_id=order.id) }}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-plus"></i> Create Handover Record
                                 </a>
@@ -692,7 +692,7 @@
                     </div>
                     {% endif %}
                     
-                    {% if lifecycle.contract_signed and not lifecycle.advance_paid %}
+                    {% if can_record_advance and not lifecycle.advance_paid %}
                     <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-primary">
                         <i class="bi bi-plus"></i> {{ t('Record Advance Payment') }}
                     </a>
@@ -701,13 +701,13 @@
                     </button>
                     {% endif %}
                     
-                    {% if lifecycle.advance_paid and not lifecycle.handover_confirmed and not handover_records %}
+                    {% if can_create_handover and not lifecycle.handover_confirmed and not handover_records %}
                     <a href="{{ url_for('dashboard.create_handover', order_id=order.id) }}" class="btn btn-primary">
                         <i class="bi bi-plus"></i> {{ t('Create Handover Record') }}
                     </a>
                     {% endif %}
                     
-                    {% if lifecycle.advance_paid and not lifecycle.fully_paid %}
+                    {% if can_record_final and not lifecycle.fully_paid %}
                     <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}?type=final" class="btn btn-primary">
                         <i class="bi bi-plus"></i> {{ t('Record Final Payment') }}
                     </a>

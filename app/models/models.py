@@ -1326,7 +1326,12 @@ class WorkflowRule(db.Model):
     MODE_REQUIRED = 'required'
     MODE_WAIVABLE = 'waivable'
     MODE_OPTIONAL = 'optional'
-    MODES = (MODE_REQUIRED, MODE_WAIVABLE, MODE_OPTIONAL)
+    # Applies only when the order's contract calls for it. Added for the
+    # advance: a contract agreed at 0% never asked for one, so blocking the
+    # handover until it is "skipped with a reason" makes the user excuse
+    # something the paperwork never required.
+    MODE_CONTRACT = 'contract'
+    MODES = (MODE_REQUIRED, MODE_WAIVABLE, MODE_OPTIONAL, MODE_CONTRACT)
 
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_id = db.Column(GUID(), db.ForeignKey('companies.id'),

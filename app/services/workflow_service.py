@@ -98,7 +98,10 @@ PREREQUISITE_LABELS_VI = {
 DEFAULT_RULES = (
     (ACTION_CONTRACT_CREATE, 'quotation_approved', WorkflowRule.MODE_OPTIONAL),
     (ACTION_CONTRACT_SIGN, 'contract_created', WorkflowRule.MODE_REQUIRED),
-    (ACTION_HANDOVER_CREATE, 'advance_paid', WorkflowRule.MODE_WAIVABLE),
+    # Contract-driven: a contract agreed at 0% advance never asked for one,
+    # so the handover is not held up waiting to 'skip' it. When the contract
+    # does name a percentage, this behaves exactly as WAIVABLE did.
+    (ACTION_HANDOVER_CREATE, 'advance_paid', WorkflowRule.MODE_CONTRACT),
     (ACTION_PAYMENT_ADVANCE, 'contract_signed', WorkflowRule.MODE_REQUIRED),
     (ACTION_PAYMENT_FINAL, 'handover_confirmed', WorkflowRule.MODE_REQUIRED),
 )
@@ -214,6 +217,15 @@ class WorkflowService:
 
             if rule.mode == WorkflowRule.MODE_OPTIONAL:
                 warnings.append((rule, cls._message_for(rule)))
+            elif rule.mode == WorkflowRule.MODE_CONTRACT:
+                # Applies only when the paperwork asked for it. A contract
+                # agreed at 0% advance never did, so there is nothing to meet
+                # and nothing to warn about - not an unmet prerequisite, an
+                # inapplicable one.
+                if not cls._contract_requires(order, rule.prerequisite):
+                    continue
+                if not cls.has_waiver(order.id, action, rule.prerequisite):
+                    blocked.append((rule, cls._message_for(rule)))
             elif rule.mode == WorkflowRule.MODE_WAIVABLE:
                 if not cls.has_waiver(order.id, action, rule.prerequisite):
                     blocked.append((rule, cls._message_for(rule)))
@@ -245,6 +257,28 @@ class WorkflowService:
             for _rule, message in warnings:
                 advisories.append({'action': action, 'message': message})
         return advisories
+
+    @staticmethod
+    def _contract_requires(order, prerequisite):
+        """Does this order's contract actually call for ``prerequisite``?
+
+        Only the advance is contract-driven today: the contract carries an
+        `advance_percentage`, and 0 means the customer agreed to pay nothing up
+        front. Any other prerequisite has no contract term behind it, so the
+        rule applies as written.
+        """
+        if prerequisite != 'advance_paid':
+            return True
+
+        contract = next(
+            (c for c in (getattr(order, 'contracts', None) or [])
+             if getattr(c, 'is_active', False) and not getattr(c, 'is_canceled', False)),
+            None)
+        if contract is None:
+            # Agreed through a framework agreement, or not yet contracted:
+            # there is no term demanding an advance.
+            return False
+        return float(contract.advance_percentage or 0) > 0
 
     @classmethod
     def can(cls, order, action):
@@ -288,7 +322,12 @@ class WorkflowService:
         )
         if rule is None:
             raise ValueError(f'No workflow rule {action}/{prerequisite} to waive')
-        if rule.mode != WorkflowRule.MODE_WAIVABLE:
+        # `contract` mode is waivable too: it narrows WHEN the rule applies, it
+        # does not remove the recorded escape hatch for the order that needs
+        # one. `required` still refuses, or the waiver would become a way
+        # around every hard control.
+        if rule.mode not in (WorkflowRule.MODE_WAIVABLE,
+                             WorkflowRule.MODE_CONTRACT):
             raise ValueError(
                 f'Step {prerequisite} of {action} is {rule.mode} and cannot be waived'
             )

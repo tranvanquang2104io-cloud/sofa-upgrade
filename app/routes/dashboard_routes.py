@@ -869,8 +869,22 @@ def view_order(order_id):
 
     # Optional workflow rules are advice, not gates: show them where the user
     # decides, never as a dialog. An empty list renders nothing at all.
-    from app.services.workflow_service import WorkflowService as _WF
+    from app.services.workflow_service import (
+        ACTION_HANDOVER_CREATE as _A_HANDOVER,
+        ACTION_PAYMENT_ADVANCE as _A_ADVANCE,
+        ACTION_PAYMENT_FINAL as _A_FINAL,
+        WorkflowService as _WF,
+    )
     order_details['workflow_advisories'] = _WF.advisories(_order)
+
+    # What the page OFFERS must be the same question the service ANSWERS when
+    # the form arrives. The screen used to read lifecycle.advance_paid itself,
+    # so a contract agreed at 0% never showed the handover or final payment
+    # button at all, and a rule relaxed on the settings screen changed nothing
+    # here.
+    order_details['can_create_handover'] = _WF.can(_order, _A_HANDOVER)
+    order_details['can_record_advance'] = _WF.can(_order, _A_ADVANCE)
+    order_details['can_record_final'] = _WF.can(_order, _A_FINAL)
 
     return render_template('orders/view.html', **order_details)
 

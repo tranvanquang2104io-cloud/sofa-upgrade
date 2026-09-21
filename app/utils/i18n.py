@@ -60,6 +60,11 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        # workflow rule modes
+        'required':               'Bắt buộc',
+        'waivable':               'Được phép bỏ qua (có lý do)',
+        'optional':               'Khuyến nghị',
+        'contract':               'Theo hợp đồng',
         'Whole order':            'Cả đơn hàng',
         'Not Invoiced':           'Chưa Có Hóa Đơn',
         'Not Paid':               'Chưa Thanh Toán',
