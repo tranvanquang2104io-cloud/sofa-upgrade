@@ -93,6 +93,38 @@ Evidence: `dashboard_routes.py` — decorator census 1 route with none
 `company_admin_required`, 11 `store_admin_required`.
 
 
+**3.2 A payment confirmed by mistake can never be corrected.**
+
+`PaymentReport.can_cancel()` and `can_edit()` both require `not is_confirmed`,
+and there is no unconfirm or reopen route anywhere in the product. Once
+someone presses *Xác nhận*, that record is permanent.
+
+What that costs, concretely: a 9,703,200 advance confirmed against the wrong
+order, or the same receipt entered and confirmed twice, leaves the customer
+showing as having paid, understates the receivable by that amount, and can be
+put right only by editing the database. For the person using this product
+there is no way back at all.
+
+This is more consequential than §3.1 — a contract that cannot be cancelled is
+awkward, money recorded that never arrived is wrong. But **how** an accounting
+mistake gets corrected is a business and audit policy, so the current
+behaviour is pinned in `tests/test_cancellation_arithmetic.py` and left as it
+is until you choose:
+
+1. **Void with a reason** — mark the payment cancelled, restoring the
+   receivable, keeping the row and the reason for the audit trail. Simplest,
+   and matches how cancellation already works everywhere else here.
+2. **Reversing entry** — leave the original untouched and post an opposite
+   record. What an accountant expects, and what survives an inspection best,
+   but it doubles the rows a shop owner reads on the payment list.
+3. **Unconfirm, then edit** — reopen to draft, correct it, confirm again. The
+   gentlest for a non-technical user, and the weakest audit trail of the three.
+
+Recommendation: **(1)**, restricted to the same role that may confirm, with the
+reason mandatory. It restores the correct figure, leaves evidence of what
+happened, and reuses a pattern the product already has.
+
+
 **3.1 A signed contract cannot be cancelled anywhere.**
 `Contract.can_cancel()` requires `not is_signed`. In bespoke furniture a
 customer backing out after signing is a normal event, and today it has no home
