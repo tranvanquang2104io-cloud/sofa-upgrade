@@ -203,6 +203,23 @@ def test_required_mode_ignores_the_contract_percentage(app, seed):
 
 
 def test_the_new_mode_is_offered_on_the_settings_screen(client, login):
+    """As a selectable option, not merely as a word on the page.
+
+    Asserting `'contract' in body` would have passed on the action name
+    `contract.sign` alone and proved nothing.
+    """
     login("admin")
     body = client.get('/settings/workflow').get_data(as_text=True)
-    assert 'contract' in body
+
+    assert 'value="contract"' in body
+    for mode in ('required', 'waivable', 'optional'):
+        assert f'value="{mode}"' in body, (
+            f'the existing {mode} option must survive'
+        )
+
+
+def test_the_mode_names_are_shown_in_vietnamese(client, login):
+    """`contract` on its own tells a shop owner nothing."""
+    login("admin")
+    body = client.get('/settings/workflow').get_data(as_text=True)
+    assert 'Theo hợp đồng' in body

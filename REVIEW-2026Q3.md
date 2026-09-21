@@ -167,6 +167,53 @@ services. Worth doing *before* either feature, not during.
 
 ---
 
+## 4a. Every chain validated to the đồng
+
+Four processes walked end to end with **45 figures** asserted against
+hand-computed values rather than against whatever the code returns. All
+correct today; the point is that any drift now fails loudly.
+
+| Chain | Checks | Headline numbers |
+|---|---|---|
+| O2C via contract | 10 | 29,300,000 + VAT 2,344,000 + fees 700,000 = **32,344,000**; advance 30% = 9,703,200; balance 22,640,800 |
+| O2C via HĐNT/ĐĐH | 11 | agreed list 11,000,000 / 3,800,000 → **28,264,000**; a later price revision does not move an issued order |
+| P2P | 15 | 100m @ 250,000; receive 60 then 40 @ 300,000 → average **270,000**; invoice 16,200,000; pay 10,000,000 → owe 6,200,000 |
+| Production | 9 | issue 40m + 15m = **12,250,000** cost; margin 20,094,000, labour excluded |
+
+Three checks exist to catch a plausible mistake rather than to record a total:
+
+* charging VAT on the shipping and other fees would add exactly **56,000** to
+  the sample order — the fees are added after tax;
+* a **shortage issues nothing at all**, because issuing what happens to be in
+  stock and leaving the rest makes the stock figures lie about a job that was
+  never started;
+* the **second receipt at a different price** is the only place a costing bug
+  hides in plain sight, so the blend is pinned at 270,000.
+
+The 3-way match is checked in both failing directions — invoicing more than
+arrived, and a price 4% over the 2% tolerance — and both **warn while still
+recording the invoice**, which is the deliberate SME choice.
+
+
+## 4a-bis. The advance now follows the contract
+
+The owner's rule: a contract with an advance percentage other than zero must
+have its advance; a contract at 0% does not, and the handover and payment go
+ahead without one.
+
+Built as a **fourth rule mode** (`required` · `waivable` · `optional` ·
+`contract`) rather than a hardcoded branch, so the same engine can carry other
+rules of this shape later. `contract` mode still honours a recorded waiver;
+`required` still refuses to be waived.
+
+The half that mattered most was the screen. `orders/view` read
+`lifecycle.advance_paid` directly, so a 0% contract never showed *Create
+Handover* or *Record Final Payment* at all — the order could not be finished
+from its own page — and it ignored the workflow engine entirely, so relaxing a
+rule in settings changed nothing. The page now asks `WorkflowService.can()`,
+the same question the service answers when the form arrives.
+
+
 ## 4b. Screens that grow, and screens nobody had opened
 
 **Lists.** Of the 8 screens whose row count grows with business volume, two
