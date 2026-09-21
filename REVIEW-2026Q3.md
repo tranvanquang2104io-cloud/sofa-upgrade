@@ -64,6 +64,35 @@ about which reports to trust.
 
 ## 3. Open — needs your decision, not code
 
+**3.0 Who may sign a contract or confirm that money arrived?**
+
+Measured, not assumed: **16** consequential actions are protected by
+`@login_required` alone — approve and cancel a quotation, sign and cancel a
+contract, cancel an order, confirm and cancel a handover, confirm and cancel a
+payment, delete a document, confirm a supplier invoice, receive a purchase
+order, convert a requisition.
+
+That sits oddly against the rest of the same system: adding a material needs
+`store_admin`, deactivating one needs `company_admin`. So a staff account
+cannot add a fabric to the catalogue, but can sign a contract and record that
+a customer paid.
+
+**Deliberately not changed.** Who may do what is a business decision, and
+guessing wrong in the tightening direction is the worse failure: it locks
+people out of their daily work with no warning. Three shapes to choose from:
+
+1. leave it — everyone in a small shop is trusted, and the audit trail already
+   records who did what;
+2. money-and-signature actions require `store_admin` (sign, confirm payment,
+   confirm handover, confirm supplier invoice), the rest stay open;
+3. per-feature permissions per user, which the `feature_labels` plumbing on the
+   user form already hints at.
+
+Evidence: `dashboard_routes.py` — decorator census 1 route with none
+(`set_language`, correct: the login page needs it), 82 `login_required`, 13
+`company_admin_required`, 11 `store_admin_required`.
+
+
 **3.1 A signed contract cannot be cancelled anywhere.**
 `Contract.can_cancel()` requires `not is_signed`. In bespoke furniture a
 customer backing out after signing is a normal event, and today it has no home
