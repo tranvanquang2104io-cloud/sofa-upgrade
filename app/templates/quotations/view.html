@@ -170,6 +170,10 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>{{ t('Are you sure you want to approve this quotation?') }}</p>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        {{ t('Sau khi duyệt, báo giá này không thể huỷ.') }}
+                    </p>
                     <div class="alert alert-info">
                         <strong>{{ t('Quotation Number:') }}</strong> {{ quotation.quotation_number }}<br>
                         <strong>{{ t('Total Amount:') }}</strong> {{ "{:,.0f}".format(quotation.total_amount|default(0)|float) }} đ

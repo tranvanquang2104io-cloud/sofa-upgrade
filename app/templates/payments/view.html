@@ -307,6 +307,14 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>{{ t('Are you sure you want to confirm this payment?') }}</p>
+                    <div class="alert alert-info mb-0">
+                        <strong>{{ t('Amount:') }}</strong>
+                        {{ "{:,.0f}".format(payment.amount|default(0)|float) }} đ
+                    </div>
+                    <p class="text-danger small mt-2 mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        {{ t('Sau khi xác nhận, phiếu này không thể sửa hoặc huỷ.') }}
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>

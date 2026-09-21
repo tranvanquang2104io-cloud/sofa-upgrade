@@ -205,6 +205,10 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>{{ t('Are you sure you want to confirm this handover record?') }}</p>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        {{ t('Sau khi xác nhận, biên bản này không thể huỷ.') }}
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
