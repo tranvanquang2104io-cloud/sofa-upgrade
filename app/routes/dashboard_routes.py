@@ -867,6 +867,11 @@ def view_order(order_id):
     order_details['order_confirmation'] = OrderConfirmation.query.filter_by(
         order_id=_order.id, is_active=True).first()
 
+    # Optional workflow rules are advice, not gates: show them where the user
+    # decides, never as a dialog. An empty list renders nothing at all.
+    from app.services.workflow_service import WorkflowService as _WF
+    order_details['workflow_advisories'] = _WF.advisories(_order)
+
     return render_template('orders/view.html', **order_details)
 
 

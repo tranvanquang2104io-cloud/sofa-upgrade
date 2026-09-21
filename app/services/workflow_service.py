@@ -67,6 +67,20 @@ PREREQUISITE_LABELS = {
     'fully_paid': 'the order has been fully paid',
 }
 
+# These sentences are built by interpolation, so t() cannot translate them as
+# whole keys. The product's users are Vietnamese and the app renders lang="vi"
+# by default, so the message is composed in Vietnamese and the English labels
+# above are kept for the settings screen, which lists rules for an admin.
+PREREQUISITE_LABELS_VI = {
+    'quotation_created': 'đã lập báo giá',
+    'quotation_approved': 'báo giá đã được duyệt',
+    'contract_created': 'đã lập hợp đồng',
+    'contract_signed': 'hợp đồng đã được ký',
+    'handover_confirmed': 'biên bản bàn giao đã được xác nhận',
+    'advance_paid': 'đã nhận tiền tạm ứng',
+    'fully_paid': 'đơn hàng đã thanh toán đủ',
+}
+
 # --- Default rules -------------------------------------------------------
 # (action, prerequisite, mode). These MUST reproduce the behaviour that was
 # previously hardcoded, so that installing the engine is a no-op:
@@ -137,15 +151,25 @@ class WorkflowService:
     def rules_for(company_id, action):
         """Active rules for one action, in display order.
 
-        Falls back to DEFAULT_RULES when a company has no rows yet, so an
-        un-seeded tenant still behaves exactly as before rather than losing
-        all its guards.
+        Falls back to DEFAULT_RULES when a company has no rows AT ALL for this
+        action, so an un-seeded tenant still behaves exactly as before rather
+        than losing all its guards.
+
+        The distinction matters: the fallback used to trigger whenever no
+        ACTIVE row was found, which could not tell "never configured" from
+        "deliberately switched off". Unticking the On box on the settings
+        screen therefore did not turn the step off — it reverted it to the
+        shipped default. The case that bit is the business's own: an admin
+        unticks payment.advance to take a deposit before the contract is
+        signed, and the default REQUIRED rule comes straight back.
+
+        A row that exists and is inactive now means off.
         """
-        rules = WorkflowRule.query.filter_by(
-            company_id=company_id, action=action, is_active=True,
+        existing = WorkflowRule.query.filter_by(
+            company_id=company_id, action=action,
         ).order_by(WorkflowRule.sort_order).all()
-        if rules:
-            return rules
+        if existing:
+            return [rule for rule in existing if rule.is_active]
         return [
             WorkflowRule(company_id=company_id, action=a, prerequisite=p, mode=m)
             for (a, p, m) in DEFAULT_RULES if a == action
@@ -157,8 +181,15 @@ class WorkflowService:
     def _message_for(rule):
         if rule.message:
             return rule.message
-        label = PREREQUISITE_LABELS.get(rule.prerequisite, rule.prerequisite)
-        return f"This step requires that {label}."
+        label = PREREQUISITE_LABELS_VI.get(
+            rule.prerequisite,
+            PREREQUISITE_LABELS.get(rule.prerequisite, rule.prerequisite))
+        if rule.mode == WorkflowRule.MODE_OPTIONAL:
+            # An optional rule does not require anything, so it must not say
+            # "requires". It is the mode for "we usually do it this way", and
+            # the wording is what carries that difference to the reader.
+            return f"Thường thì {label} trước khi làm bước này."
+        return f"Bước này yêu cầu {label}."
 
     @classmethod
     def check(cls, order, action):
@@ -190,6 +221,30 @@ class WorkflowService:
                 blocked.append((rule, cls._message_for(rule)))
 
         return blocked, warnings
+
+    @classmethod
+    def advisories(cls, order):
+        """Advice for this order: optional rules whose prerequisite is unmet.
+
+        `check()` has always returned `(blocked, warnings)` and every caller
+        discarded the second half, so MODE_OPTIONAL neither blocked an action
+        nor said anything — a setting on the workflow screen with no observable
+        effect at all. Optional is the mode for "we usually approve the
+        quotation first, but not always"; dropping the warning turned that
+        advice into silence.
+
+        Returns ``[{'action': ..., 'message': ...}]``. Advice only: nothing here
+        prevents anything, and an empty list means the page shows nothing.
+        """
+        if order is None:
+            return []
+
+        advisories = []
+        for action in ALL_ACTIONS:
+            _blocked, warnings = cls.check(order, action)
+            for _rule, message in warnings:
+                advisories.append({'action': action, 'message': message})
+        return advisories
 
     @classmethod
     def can(cls, order, action):
