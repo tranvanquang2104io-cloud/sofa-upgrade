@@ -1892,12 +1892,18 @@ class ProductionPlanService:
         }
 
     def save_as_norm(self, plan_item):
-        """Lưu định mức từ các material line của 1 item để tái sử dụng (upsert)."""
+        """Lưu định mức từ các material line của 1 item để tái sử dụng (upsert).
+
+        Trả về SỐ định mức đã ghi. Hàm lặp trên material_lines, nên một hạng mục
+        chưa khai vật tư sẽ không ghi gì — người gọi cần biết để không báo
+        "đã lưu" trong khi không có gì được lưu.
+        """
         from decimal import Decimal
         from app.models.models import MaterialNorm
         company_id = plan_item.plan.company_id
         key = _product_key(plan_item.source_name)
         qty = Decimal(str(plan_item.quantity or 0)) or Decimal('1')
+        written = 0
         for line in plan_item.material_lines:
             per_unit = (Decimal(str(line.quantity_required or 0)) / qty) if qty else Decimal('0')
             norm = MaterialNorm.query.filter_by(
@@ -1908,7 +1914,9 @@ class ProductionPlanService:
                 db.session.add(norm)
             norm.quantity_per_unit = per_unit
             norm.unit = line.unit
+            written += 1
         db.session.commit()
+        return written
 
     def low_stock_materials(self, company_id):
         from app.models.models import Material

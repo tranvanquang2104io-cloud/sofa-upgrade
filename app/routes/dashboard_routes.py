@@ -4174,10 +4174,20 @@ def save_plan_norm(plan_id, item_id):
     from app.models.models import ProductionPlanItem
     from app.services.services import ProductionPlanService
     item = ProductionPlanItem.query.get(item_id)
-    if item and str(item.plan_id) == str(plan.id):
+    if not item or str(item.plan_id) != str(plan.id):
+        # Previously this fell through with no message at all: the user pressed
+        # the button and nothing happened, which reads as a broken screen.
+        flash(t('Không tìm thấy hạng mục trong kế hoạch này'), 'error')
+    else:
         try:
-            ProductionPlanService().save_as_norm(item)
-            flash(t('Đã lưu định mức để tái sử dụng'), 'success')
+            written = ProductionPlanService().save_as_norm(item)
+            if written:
+                flash(t('Đã lưu định mức để tái sử dụng'), 'success')
+            else:
+                # Claiming a save that did not happen is worse than saying
+                # there was nothing to save.
+                flash(t('Hạng mục này chưa khai vật tư nên chưa có định mức để lưu'),
+                      'warning')
         except Exception as e:
             logger.error(f'save_plan_norm error: {e}')
             db.session.rollback(); flash(t('Lỗi khi lưu định mức'), 'error')
