@@ -158,11 +158,50 @@ class NormalizationService:
         return pending
 
 
+_SUGGESTIONS_KEY = '_normalization_suggestions'
+
+
+def pending_suggestions():
+    """Suggestions raised by ``confirm`` rules during this request.
+
+    The settings screen tells the admin a confirm rule is "suggested only - the
+    value is never rewritten without a person agreeing". The first half was
+    true and the second never happened: normalize_instance() returns the
+    pending list and the listener dropped it, so choosing confirm looked like
+    choosing caution and was actually choosing nothing.
+
+    Kept on ``g`` rather than in a table. A suggestion is only worth acting on
+    while the record is still in mind; an inbox you have to remember to visit
+    is the wrong shape for this product, and it would need a migration and a
+    screen to say something that fits in one sentence.
+    """
+    from flask import g, has_request_context
+
+    if not has_request_context():
+        return []
+    return list(getattr(g, _SUGGESTIONS_KEY, []))
+
+
+def _record_suggestions(entity_type, pending):
+    from flask import g, has_request_context
+
+    if not has_request_context() or not pending:
+        return
+    collected = getattr(g, _SUGGESTIONS_KEY, None)
+    if collected is None:
+        collected = []
+        setattr(g, _SUGGESTIONS_KEY, collected)
+    for field, original, suggested in pending:
+        collected.append({'entity_type': entity_type, 'field': field,
+                          'original': original, 'suggested': suggested})
+
+
 def _make_listener(entity_type):
     def _listener(mapper, connection, target):
         # Never let a normalisation bug block a business record from saving.
         try:
-            NormalizationService.normalize_instance(target, entity_type)
+            pending = NormalizationService.normalize_instance(target, entity_type)
+            _record_suggestions(entity_type, pending)
         except Exception:
             logger.exception("Normalization failed for %s; saving unchanged",
                              entity_type)

@@ -12,7 +12,7 @@ try:
         __version__ = _f.read().strip()
 except FileNotFoundError:
     __version__ = 'unknown'
-from flask import Flask, render_template, session, g
+from flask import Flask, flash, render_template, session, g
 from flask_wtf import CSRFProtect
 from app.config import init_db, config
 
@@ -91,6 +91,36 @@ def create_app(config_name=None):
         return render_template('errors/500.html'), 500
     
     # Context processors
+    @app.after_request
+    def _flash_normalization_suggestions(response):
+        """Tell the user what a `confirm` standardization rule would change.
+
+        One hook rather than a line in every create/edit route: the rules apply
+        at the ORM boundary, so the suggestions can surface at the same single
+        place. after_request runs before the session is saved, so a flash here
+        rides the POST-redirect-GET and appears on the page the user lands on.
+
+        Nothing is rewritten - that is the whole point of confirm mode. The
+        message says what the rule would make it, and the user decides.
+        """
+        from app.services.normalization_service import pending_suggestions
+        from app.utils.i18n import t
+
+        try:
+            suggestions = pending_suggestions()
+            if not suggestions:
+                return response
+            for item in suggestions:
+                flash(
+                    t('Theo quy tắc chuẩn hóa, "%(original)s" nên viết là '
+                      '"%(suggested)s". Giá trị đã lưu giữ nguyên — bạn có thể '
+                      'sửa lại nếu muốn.') % item,
+                    'info')
+        except Exception:
+            # A suggestion is never worth failing a request over.
+            app.logger.exception("Could not surface normalization suggestions")
+        return response
+
     @app.context_processor
     def inject_user():
         """Inject user, utilities and app version into templates"""
