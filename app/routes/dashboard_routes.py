@@ -4324,6 +4324,7 @@ def edit_purchase_order(po_id):
     company_id = get_current_company_id()
     po = _owned_po(po_id, company_id)
     if not po:
+        flash(t('Không tìm thấy đơn mua hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_purchase_orders'))
     if not po.can_edit():
         flash(t('Đơn mua đã gửi/hủy — không sửa được.'), 'error')
@@ -4351,6 +4352,7 @@ def purchase_order_status(po_id, action):
     company_id = get_current_company_id()
     po = _owned_po(po_id, company_id)
     if not po:
+        flash(t('Không tìm thấy đơn mua hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_purchase_orders'))
     from app.services.procurement_service import ProcurementService
     try:
@@ -4367,6 +4369,7 @@ def receive_purchase_order(po_id):
     company_id = get_current_company_id()
     po = _owned_po(po_id, company_id)
     if not po:
+        flash(t('Không tìm thấy đơn mua hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_purchase_orders'))
     from app.services.procurement_service import ProcurementService
     # quantities: form fields qty_<line_id>
@@ -4468,6 +4471,7 @@ def edit_requisition(pr_id):
     company_id = get_current_company_id()
     pr = _owned_pr(pr_id, company_id)
     if not pr:
+        flash(t('Không tìm thấy đề nghị mua hàng hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_requisitions'))
     if not pr.can_edit():
         flash(t('PR đã gửi/duyệt/hủy — không sửa được.'), 'error')
@@ -4495,6 +4499,7 @@ def view_requisition(pr_id):
     company_id = get_current_company_id()
     pr = _owned_pr(pr_id, company_id)
     if not pr:
+        flash(t('Không tìm thấy đề nghị mua hàng hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_requisitions'))
     return render_template('procurement/pr_view.html', pr=pr)
 
@@ -4505,6 +4510,7 @@ def requisition_status(pr_id, action):
     company_id = get_current_company_id()
     pr = _owned_pr(pr_id, company_id)
     if not pr:
+        flash(t('Không tìm thấy đề nghị mua hàng hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_requisitions'))
     from app.services.requisition_service import RequisitionService
     try:
@@ -4521,6 +4527,7 @@ def convert_requisition(pr_id):
     company_id = get_current_company_id()
     pr = _owned_pr(pr_id, company_id)
     if not pr:
+        flash(t('Không tìm thấy đề nghị mua hàng hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_requisitions'))
     from app.services.requisition_service import RequisitionService
     try:
@@ -4558,6 +4565,7 @@ def view_goods_receipt(gr_id):
     from app.services.procurement_service import ProcurementService
     gr = ProcurementService().get_gr(company_id, gr_id)
     if not gr:
+        flash(t('Không tìm thấy phiếu nhập kho hoặc không có quyền truy cập'), 'error')
         return redirect(url_for('dashboard.list_goods_receipts'))
     return render_template('procurement/gr_view.html', gr=gr)
 
