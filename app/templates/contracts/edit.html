@@ -1,15 +1,13 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 
 {% block title %}Edit Contract - SofaFlow{% endblock %}
 
 {% from '_unit_select.html' import unit_select, unit_template_select with context %}
 {% block content %}
 {{ unit_template_select() }}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h1><i class="bi bi-pencil-square"></i> {{ t('Edit Contract') }} - {{ contract.contract_number }}</h1>
-    </div>
-</div>
+{{ page_header(t('Edit Contract') ~ ' — ' ~ contract.contract_number, icon='bi-pencil-square',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')), (contract.contract_number, url_for('dashboard.view_contract', contract_id=contract.id)), (t('Edit'), None)]) }}
 
 <div class="row">
     <div class="col-md-10">
@@ -208,14 +206,8 @@
                         <textarea class="form-control" id="terms_and_conditions" name="terms_and_conditions" rows="5">{{ contract.terms_and_conditions or '' }}</textarea>
                     </div>
 
-                    <div class="d-grid gap-2 d-md-block sofa-form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle"></i> {{ t('Save Changes') }}
-                        </button>
-                        <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
-                        </a>
-                    </div>
+                    {{ form_actions(t('Save Changes'),
+                                    url_for('dashboard.view_contract', contract_id=contract.id)) }}
                 </form>
             </div>
         </div>

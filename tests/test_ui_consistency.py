@@ -383,7 +383,10 @@ def test_long_forms_pin_their_save_button():
             continue
         if len(text.splitlines()) < LONG_FORM_MIN_LINES:
             continue
-        if 'sofa-form-actions' not in text:
+        # form_actions() emits the class itself (verified by rendering the
+        # macro), so a screen that calls it satisfies this rule without
+        # naming the class.
+        if 'sofa-form-actions' not in text and 'form_actions(' not in text:
             offenders.append(
                 f'{path.relative_to(TEMPLATES)} ({len(text.splitlines())} lines)')
 

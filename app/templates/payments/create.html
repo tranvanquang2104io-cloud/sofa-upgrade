@@ -1,20 +1,13 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 
 {% block title %}Create Payment Record - SofaFlow{% endblock %}
 
 {% from '_unit_select.html' import unit_select, unit_template_select with context %}
 {% block content %}
 {{ unit_template_select() }}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1><i class="bi bi-plus-circle"></i> {{ t('Create Payment Record') }}</h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back to Order') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Create Payment Record'), icon='bi-plus-circle',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')), (t('Orders'), url_for('dashboard.list_orders')), (order.order_code, url_for('dashboard.view_order', order_id=order.id)), (t('Create Payment Record'), None)]) }}
 
 <div class="row">
     <div class="col-md-9">
@@ -330,14 +323,8 @@
                     {% set entity_type = 'payment' %}
                     {% include '_extension_fields_form.html' %}
 
-                    <div class="d-flex gap-2 sofa-form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle"></i> {{ t('Create Record') }}
-                        </button>
-                        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
-                        </a>
-                    </div>
+                    {{ form_actions(t('Create Record'),
+                                    url_for('dashboard.view_order', order_id=order.id)) }}
                 </form>
             </div>
         </div>

@@ -1,20 +1,13 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 
 {% block title %}Edit Handover Record - SofaFlow{% endblock %}
 
 {% from '_unit_select.html' import unit_select, unit_template_select with context %}
 {% block content %}
 {{ unit_template_select() }}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1><i class="bi bi-pencil"></i> {{ t('Edit Handover Record') }}</h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Edit Handover Record') ~ ' — ' ~ handover.report_number, icon='bi-pencil',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')), (handover.report_number, url_for('dashboard.view_handover', handover_id=handover.id)), (t('Edit'), None)]) }}
 
 <div class="row">
     <div class="col-md-10">
@@ -215,14 +208,8 @@
                         <textarea class="form-control" id="notes" name="notes" rows="2">{{ handover.notes or '' }}</textarea>
                     </div>
 
-                    <div class="d-flex gap-2 sofa-form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> {{ t('Save Changes') }}
-                        </button>
-                        <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
-                        </a>
-                    </div>
+                    {{ form_actions(t('Save Changes'),
+                                    url_for('dashboard.view_handover', handover_id=handover.id)) }}
                 </form>
                 {% endif %}
             </div>
