@@ -1,24 +1,19 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import file_badge with context %}
+{% from "macros/ui.html" import page_header, file_badge, empty_state, table_open, table_close with context %}
 
 {% block title %}Documents - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1><i class="bi bi-file-pdf"></i> {{ t('Documents for') }} {{ order.order_code }}</h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Documents'), icon='bi-file-pdf', count=documents|length,
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Orders'), url_for('dashboard.list_orders')),
+                       (order.order_code, url_for('dashboard.view_order', order_id=order.id)),
+                       (t('Documents'), None)]) }}
 
 <div class="card">
     <div class="card-body">
         {% if documents %}
-            <div class="table-responsive"><table class="table table-hover">
+            {{ table_open() }}
                 <thead>
                     <tr>
                         <th>{{ t('Document Name') }}</th>
@@ -57,7 +52,7 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-            </table></div>
+            {{ table_close() }}
         {% else %}
             <p class="text-muted">{{ t('No documents generated yet.') }}</p>
         {% endif %}

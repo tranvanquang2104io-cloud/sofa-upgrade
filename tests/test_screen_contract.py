@@ -55,24 +55,22 @@ def _screens():
 
 
 # Screens that have not been converged yet. Shrinks with every group.
-NOT_YET = {
-    'admin/create_admin.html',
-    'admin/create_company.html',
-    'admin/edit_company.html',
-    'agreements/create.html',
-    'agreements/edit.html',
-    'documents/list.html',
-    'orders/create.html',
-    'orders/edit.html',
-    'orders/view.html',
-    'payables/create.html',
-}
+# Empty: every list/create/edit/view screen now follows the contract.
+# `set()` rather than `{}` — an empty brace literal is a dict, and the
+# difference only shows up when something tries to subtract from it.
+NOT_YET = set()
 
 # Screens that will never meet part of the contract, and why.
 EXEMPT = {
-    # (empty for now: every list/create/edit/view screen can follow the
-    # contract. Login and the dashboard are classified 'other' and are not
-    # checked at all, so they need no entry here.)
+    # The master-admin console is a different product surface: it serves the
+    # platform operator rather than the sofa business, extends its own base
+    # layout, navigates by a sidebar instead of breadcrumbs, and is written in
+    # English only - it does not call t() anywhere. Pushing the shop app's
+    # header and breadcrumb model into it would import a navigation model that
+    # does not belong there.
+    'admin/create_admin.html': 'master-admin console: own layout, sidebar nav, no i18n',
+    'admin/create_company.html': 'master-admin console: own layout, sidebar nav, no i18n',
+    'admin/edit_company.html': 'master-admin console: own layout, sidebar nav, no i18n',
 }
 
 

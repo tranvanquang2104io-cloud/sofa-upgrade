@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import process_stepper, process_list, order_badge, doc_badge with context %}
+{% from "macros/ui.html" import page_header, process_stepper, process_list, order_badge, doc_badge with context %}
 
 {% block title %}Order - SofaFlow{% endblock %}
 
@@ -66,31 +66,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1>
-            <i class="bi bi-box"></i> {{ order.order_code }}
-        </h1>
-        <p class="text-muted">{{ order.title }}
-          {% if not order.is_canceled %}
-          <a href="{{ url_for('dashboard.edit_order', order_id=order.id) }}"
-             class="btn btn-sm btn-outline-secondary ms-2" title="{{ t('Edit Order') }}">
-            <i class="bi bi-pencil"></i>
-          </a>
-          {% endif %}
-        </p>
-    </div>
-    <div class="col-md-4 text-end">
-        {% if order.production_plan %}
-        <a href="{{ url_for('dashboard.view_production_plan', order_id=order.id) }}" class="btn btn-outline-primary">
-            <i class="bi bi-gear-wide-connected"></i> Kế hoạch sản xuất
-        </a>
-        {% endif %}
-        <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
-        </a>
-    </div>
+{{ page_header(order.order_code, icon='bi-box',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Orders'), url_for('dashboard.list_orders')),
+                       (order.order_code, None)],
+               action_url=url_for('dashboard.edit_order', order_id=order.id) if not order.is_canceled else None,
+               action_label=t('Edit'), action_icon='bi-pencil') }}
+
+<p class="text-muted">{{ order.title }}</p>
+
+{% if order.production_plan %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{{ url_for('dashboard.view_production_plan', order_id=order.id) }}"
+       class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-gear-wide-connected"></i> {{ t('Production Plan') }}
+    </a>
 </div>
+{% endif %}
 
 {# One glance: which step is this order on. The detailed timeline below still
    carries the documents and actions; this answers the question first. #}

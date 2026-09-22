@@ -1,13 +1,13 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 
 {% block title %}Create Order - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h1><i class="bi bi-plus-circle"></i> {{ t('Create Order') }}</h1>
-    </div>
-</div>
+{{ page_header(t('Create Order'), icon='bi-plus-circle',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Orders'), url_for('dashboard.list_orders')),
+                       (t('Create Order'), None)]) }}
 
 <div class="row">
     <div class="col-md-8">
@@ -60,14 +60,8 @@
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                     </div>
 
-                    <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> {{ t('Create Order') }}
-                    </button>
-                    <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-secondary">
-                        <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
-                    </a>
-                    </div>
+                    {{ form_actions(t('Create Order'),
+                                    url_for('dashboard.list_orders')) }}
                 </form>
             </div>
         </div>

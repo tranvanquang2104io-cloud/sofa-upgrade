@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import page_header with context %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 {% block title %}{{ t('New Framework Agreement') }} - SofaFlow{% endblock %}
 
 {% block content %}
@@ -112,13 +112,8 @@
     </div>
   </div>
 
-  <div class="d-flex gap-2 sofa-form-actions">
-    <button type="submit" class="btn btn-primary">
-      <i class="bi bi-save"></i> {{ t('Create') }}
-    </button>
-    <a href="{{ url_for('dashboard.list_agreements') }}" class="btn btn-outline-secondary">
-      {{ t('Cancel') }}
-    </a>
-  </div>
+  {{ form_actions(t('Create'),
+                url_for('dashboard.list_agreements'),
+                  submit_icon='bi-save') }}
 </form>
 {% endblock %}
