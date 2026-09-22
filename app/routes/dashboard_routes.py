@@ -753,6 +753,33 @@ def view_customer(customer_id):
     return render_template('customers/view.html', customer=customer, orders=orders)
 
 
+@dashboard_bp.route('/customers/<customer_id>/deactivate', methods=['POST'])
+@store_admin_required
+def deactivate_customer(customer_id):
+    """Retire a customer who has stopped buying.
+
+    Customer.is_active already existed and every customer query honoured it;
+    nothing ever set it, so a closed-down customer or a duplicate made by a
+    typo stayed in the picker for good.
+
+    Deactivate rather than delete for the same reason a template that printed
+    documents cannot be deleted: orders, quotations and contracts point here,
+    and removing the row would lose the name on paperwork already issued.
+    Nothing can be orphaned by deactivating, so nothing blocks it.
+    """
+    company_id = get_current_company_id()
+    customer = CustomerRepository().get_for_company(customer_id, company_id)
+    if not customer:
+        flash(t('Customer not found or access denied'), 'error')
+        return redirect(url_for('dashboard.list_customers'))
+
+    customer.is_active = False
+    db.session.commit()
+    flash(t('Khách hàng "%(name)s" đã ngừng hoạt động. Chứng từ cũ giữ nguyên.')
+          % {'name': customer.name}, 'success')
+    return redirect(url_for('dashboard.list_customers'))
+
+
 @dashboard_bp.route('/customers/<customer_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_customer(customer_id):

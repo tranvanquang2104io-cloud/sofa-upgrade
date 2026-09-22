@@ -60,6 +60,10 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Ngừng hoạt động khách hàng này? Chứng từ cũ vẫn giữ nguyên.':
+            'Ngừng hoạt động khách hàng này? Chứng từ cũ vẫn giữ nguyên.',
+        'Khách hàng "%(name)s" đã ngừng hoạt động. Chứng từ cũ giữ nguyên.':
+            'Khách hàng "%(name)s" đã ngừng hoạt động. Chứng từ cũ giữ nguyên.',
         'Xóa hẳn mẫu này? Tệp mẫu sẽ bị xóa và không khôi phục được.':
             'Xóa hẳn mẫu này? Tệp mẫu sẽ bị xóa và không khôi phục được.',
         'Đã dùng để in chứng từ nên không xóa được':

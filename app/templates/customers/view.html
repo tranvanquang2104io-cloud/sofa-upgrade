@@ -13,6 +13,24 @@
                action_url=url_for('dashboard.edit_customer', customer_id=customer.id),
                action_label=t('Edit'), action_icon='bi-pencil') }}
 
+{# State on the left, the one destructive action pushed right — the same
+   arrangement the material screen uses, so the Deactivate button is never
+   under the thumb that presses Edit. #}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    {% if not customer.is_active %}
+    <span class="badge bg-secondary">{{ t('Inactive') }}</span>
+    {% elif session.role in ('company_admin', 'store_admin') %}
+    <form method="POST" action="{{ url_for('dashboard.deactivate_customer', customer_id=customer.id) }}"
+          onsubmit="return confirm('{{ t('Ngừng hoạt động khách hàng này? Chứng từ cũ vẫn giữ nguyên.') }}');"
+          class="ms-auto">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-x-circle"></i> {{ t('Deactivate') }}
+        </button>
+    </form>
+    {% endif %}
+</div>
+
 <div class="row">
     <div class="col-md-8">
         <!-- Thông tin khách hàng -->
