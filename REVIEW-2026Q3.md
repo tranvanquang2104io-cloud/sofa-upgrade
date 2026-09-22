@@ -223,6 +223,68 @@ screens one at a time. The dashboard gave the mild version, the numbering the
 severe one.
 
 
+## 4e. Front-end convergence and dynamic CRUD
+
+**The screen contract.** Measured first: **12 of 73** screens used
+`page_header()`. The macro library existed and almost nothing called it, which
+is why the product read as several products. The contract is now a test
+(`tests/test_screen_contract.py`) with a NOT_YET list that may only shrink —
+progress was a number, not a feeling, and converged screens could not drift
+back while the rest was in flight. **44/44 now.**
+
+Four ways of going back existed in one product: a top-right *Back*, a *Back to
+Order*, an icon-only arrow left of the title, and the breadcrumb. All four are
+the breadcrumb now. Labelled facts had three renderings (`<dl><dt>`, grid
+columns with `<strong>Label:</strong>`, bare divs); all go through
+`detail_row()`. *Create* was `btn-success` in procurement and `btn-primary`
+everywhere else.
+
+**Reasoned exceptions** (recorded, not skipped): the three master-admin screens
+serve the platform operator, extend their own base, navigate by sidebar and
+call `t()` nowhere.
+
+**One change that went against "keep the look"**: `stores/list` was the only
+list built as a card grid. Consistency was the explicit instruction and store
+data has the same shape as user data, so it is a table. Reversible if cards
+are preferred.
+
+### Dynamic configuration
+
+Two settings screens could edit only what had been seeded, so anything nobody
+anticipated could never be configured. Both are now grids where every possible
+row already exists:
+
+| Screen | Rows | Columns | Cell |
+|---|---|---|---|
+| Standardization | every text field, discovered from the data model | every primitive | tick = apply |
+| Workflow | every action in `ALL_ACTIONS` | every prerequisite | mode, blank = no rule |
+
+Setting a cell creates the rule; clearing it deletes the rule. There is no
+create form and no delete button because the row is already there — which is
+the answer to "how does the system know which field I mean".
+
+The workflow grid also expresses what the old form could not: **one step
+carrying several prerequisites**. And `quotation.approve` and
+`handover.confirm` were declared in `ALL_ACTIONS` but unreachable — seven steps
+reached the screen as five.
+
+### CRUD audit, and the exceptions
+
+Measured from the route table:
+
+| Deliberately absent | Why |
+|---|---|
+| Goods receipt: create / edit | A receipt exists only as the result of receiving against a purchase order. A free-standing one bypasses the 3-way match and corrupts the moving-average cost. |
+| Template delete, when it has printed | `Document.template_id` records what each document came out of. Deactivate instead — the screen shows the count and a padlock. |
+| Customer delete | Orders, quotations and contracts carry the name. Deactivate keeps the history. |
+| Supplier invoice edit / delete | Confirmed invoices are accounting records; see §3.2 on correcting a mistake. |
+
+**Still open, and worth your call:** per-document-type lists (quotations,
+contracts, handover, payments have create/view/edit but no list of their own),
+and read-only *view* screens for stores and users. The second is two screens to
+keep in sync for no new information — the edit form already shows every field.
+
+
 ## 4a. Every chain validated to the đồng
 
 Five processes walked end to end with **57 figures** asserted against
