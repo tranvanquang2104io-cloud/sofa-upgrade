@@ -60,6 +60,9 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Open the purchase order': 'Mở đơn mua hàng',
+        'Open the requisition':    'Mở đề nghị mua hàng',
+        'Main warehouse':         'Kho chính',
         # Finality warnings: these three actions have no undo anywhere in the
         # product, so the dialog has to say so (see REVIEW-2026Q3.md 3.2).
         'Sau khi xác nhận, phiếu này không thể sửa hoặc huỷ.':

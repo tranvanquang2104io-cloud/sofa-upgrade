@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import status_badge with context %}
+{% from "macros/ui.html" import page_header, status_badge with context %}
 {% block title %}{{ pr.pr_number }} - SofaFlow{% endblock %}
 
 
@@ -7,17 +7,15 @@
 {% set act_colors = {'submit':'primary','approve':'success','reject':'outline-warning','cancel':'outline-danger','reopen':'outline-secondary'} %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-2">
-  <h1 class="mb-0"><i class="bi bi-clipboard-check"></i> {{ pr.pr_number }}
-    {{ status_badge(pr.status, 'procurement') }}
-  </h1>
-  <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ t('Back') }}</a>
-</div>
+{{ page_header(pr.pr_number, icon='bi-clipboard-check',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Purchase Requisitions'), url_for('dashboard.list_requisitions')),
+                       (pr.pr_number, None)],
+               action_url=url_for('dashboard.edit_requisition', pr_id=pr.id) if pr.can_edit() else None,
+               action_label=t('Edit'), action_icon='bi-pencil') }}
 
-<div class="d-flex gap-2 flex-wrap mb-3">
-  {% if pr.can_edit() %}
-  <a href="{{ url_for('dashboard.edit_requisition', pr_id=pr.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> {{ t('Edit') }}</a>
-  {% endif %}
+<div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+  {{ status_badge(pr.status, 'procurement') }}
   {% for a in pr.allowed_actions() %}
   <form method="POST" action="{{ url_for('dashboard.requisition_status', pr_id=pr.id, action=a) }}"
         {% if a == 'cancel' %}onsubmit="return confirm('{{ t('Cancel this requisition?') }}');"{% endif %}>

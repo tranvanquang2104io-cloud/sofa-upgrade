@@ -1,20 +1,32 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, detail_open, detail_row, detail_close with context %}
 {% block title %}{{ gr.gr_number }} - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-2">
-  <h1 class="mb-0"><i class="bi bi-box-seam text-success"></i> {{ gr.gr_number }}
-    {% if gr.is_posted %}<span class="badge bg-success ms-2">{{ t('Stock increased') }}</span>{% endif %}</h1>
-  <a href="{{ url_for('dashboard.list_goods_receipts') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ t('Back') }}</a>
-</div>
+{{ page_header(gr.gr_number, icon='bi-box-seam',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Goods Receipts'), url_for('dashboard.list_goods_receipts')),
+                       (gr.gr_number, None)]) }}
 
-<div class="card mb-3"><div class="card-body row">
-  <div class="col-md-3"><strong>{{ t('Received Date') }}:</strong> {{ gr.receipt_date.strftime('%d/%m/%Y') if gr.receipt_date else '—' }}</div>
-  <div class="col-md-3"><strong>{{ t('Receiving Store') }}:</strong> {{ gr.store.name if gr.store else 'Kho chính (công ty)' }}</div>
-  <div class="col-md-3"><strong>{{ t('Purchase Order') }}:</strong>
-    {% if gr.po %}<a href="{{ url_for('dashboard.view_purchase_order', po_id=gr.po.id) }}">{{ gr.po.po_number }}</a>{% else %}—{% endif %}</div>
-  <div class="col-md-3"><strong>NCC:</strong> {{ gr.po.supplier.name if gr.po and gr.po.supplier else '—' }}</div>
-  {% if gr.notes %}<div class="col-12 mt-2"><strong>{{ t('Notes') }}:</strong> {{ gr.notes }}</div>{% endif %}
+{% if gr.is_posted %}
+<div class="mb-3"><span class="badge bg-success">{{ t('Stock increased') }}</span></div>
+{% endif %}
+
+<div class="card mb-3"><div class="card-body">
+  {{ detail_open() }}
+    {{ detail_row(t('Received Date'), gr.receipt_date.strftime('%d/%m/%Y') if gr.receipt_date else '') }}
+    {{ detail_row(t('Receiving Store'), gr.store.name if gr.store else t('Main warehouse')) }}
+    {{ detail_row(t('Purchase Order'), gr.po.po_number if gr.po else '') }}
+    {{ detail_row(t('Supplier'), gr.po.supplier.name if gr.po and gr.po.supplier else '') }}
+    {% if gr.notes %}{{ detail_row(t('Notes'), gr.notes) }}{% endif %}
+  {{ detail_close() }}
+  {% if gr.po %}
+  <div class="small mt-2">
+    <a href="{{ url_for('dashboard.view_purchase_order', po_id=gr.po.id) }}">
+      <i class="bi bi-arrow-up-right-square"></i> {{ t('Open the purchase order') }}
+    </a>
+  </div>
+  {% endif %}
 </div></div>
 
 <h5>{{ t('Materials received') }}</h5>

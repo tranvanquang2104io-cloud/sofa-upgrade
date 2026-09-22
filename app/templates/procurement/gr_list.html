@@ -1,16 +1,23 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, empty_state, table_open, table_close with context %}
 {% block title %}Phiếu nhập kho - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="mb-0"><i class="bi bi-box-seam text-success"></i> {{ t('Goods Receipt (GR)') }}</h1>
-  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bag-check"></i> {{ t('Purchase Orders') }}</a>
+{{ page_header(t('Goods Receipt (GR)'), icon='bi-box-seam',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Goods Receipts'), None)]) }}
+{# The other two stages of the same chain. Navigation, not actions on this
+   list, so they sit below the header rather than beside the primary button. #}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{{ url_for('dashboard.list_purchase_orders') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-bag-check"></i> {{ t('Purchase Orders') }}
+  </a>
 </div>
+
 <p class="text-muted">Phiếu nhập kho được tạo khi <strong>nhận hàng</strong> từ một đơn mua. Mỗi lần nhận (kể cả nhận một phần) là một phiếu.</p>
 
 {% if grs %}
-<div class="table-responsive">
-<table class="table table-bordered table-sm align-middle">
+{{ table_open('table table-bordered table-sm align-middle mb-0') }}
   <thead class="table-light"><tr><th>{{ t('Document No.') }}</th><th>{{ t('Received Date') }}</th><th>{{ t('Purchase Order') }}</th><th>{{ t('Receiving Store') }}</th><th class="text-center">{{ t('Lines') }}</th><th></th></tr></thead>
   <tbody>
   {% for gr in grs %}

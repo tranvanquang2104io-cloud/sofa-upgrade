@@ -1,23 +1,24 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import status_badge, search_bar, empty_state with context %}
+{% from "macros/ui.html" import page_header, status_badge, search_bar, empty_state, table_open, table_close with context %}
 {% block title %}Đơn mua hàng - SofaFlow{% endblock %}
 
 {% set statuses = ['draft','ordered','partial','received','canceled'] %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="mb-0"><i class="bi bi-bag-check text-primary"></i> {{ t('Purchase Orders (PO)') }}</h1>
-  <div class="d-flex gap-2">
-    <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-clipboard-check"></i> {{ t('Requisitions (PR)') }}
-    </a>
-    <a href="{{ url_for('dashboard.list_goods_receipts') }}" class="btn btn-outline-success btn-sm">
-      <i class="bi bi-box-seam"></i> {{ t('Goods Receipts (GR)') }}
-    </a>
-    <a href="{{ url_for('dashboard.create_purchase_order') }}" class="btn btn-success btn-sm">
-      <i class="bi bi-plus-lg"></i> {{ t('Create Purchase Order') }}
-    </a>
-  </div>
+{{ page_header(t('Purchase Orders (PO)'), icon='bi-bag-check',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Purchase Orders'), None)],
+               action_url=url_for('dashboard.create_purchase_order'),
+               action_label=t('Create Purchase Order')) }}
+{# The other two stages of the same chain. Navigation, not actions on this
+   list, so they sit below the header rather than beside the primary button. #}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-clipboard-check"></i> {{ t('Requisitions (PR)') }}
+  </a>
+  <a href="{{ url_for('dashboard.list_goods_receipts') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-box-seam"></i> {{ t('Goods Receipts (GR)') }}
+  </a>
 </div>
 
 <div class="mb-3">
@@ -32,8 +33,7 @@
               reset_url=url_for('dashboard.list_purchase_orders')) }}
 
 {% if pos %}
-<div class="table-responsive">
-<table class="table table-bordered table-sm align-middle">
+{{ table_open('table table-bordered table-sm align-middle mb-0') }}
   <thead class="table-light"><tr>
     <th>{{ t('PO No.') }}</th><th>{{ t('Supplier') }}</th><th>{{ t('Order Date') }}</th><th class="text-end">{{ t('Total Amount') }}</th><th>{{ t('Status') }}</th><th></th>
   </tr></thead>
@@ -49,8 +49,7 @@
     </tr>
   {% endfor %}
   </tbody>
-</table>
-</div>
+{{ table_close() }}
 {% include '_pagination.html' %}
 {% else %}
 <div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đơn mua nào. Tạo từ <strong>{{ t('Purchase suggestions') }}</strong> hoặc bấm <strong>{{ t('Create Purchase Order') }}</strong>.</div>
