@@ -70,12 +70,6 @@ NOT_YET = {
     'payables/create.html',
     'payments/view.html',
     'quotations/view.html',
-    'stores/create.html',
-    'stores/edit.html',
-    'stores/list.html',
-    'users/create.html',
-    'users/edit.html',
-    'users/list.html',
 }
 
 # Screens that will never meet part of the contract, and why.

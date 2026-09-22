@@ -1,15 +1,14 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 {% block title %}Add Store - SofaFlow{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-7">
-        <div class="d-flex align-items-center mb-4 gap-2">
-            <a href="{{ url_for('dashboard.list_stores') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <h2 class="mb-0"><i class="bi bi-shop-window"></i> {{ t('Add New Store') }}</h2>
-        </div>
+{{ page_header(t('Add New Store'), icon='bi-shop-window',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Stores'), url_for('dashboard.list_stores')),
+                       (t('Add New Store'), None)]) }}
 
         <div class="card shadow-sm">
             <div class="card-body p-4">
@@ -50,12 +49,9 @@
                     </div>
 
                     <hr class="my-4">
-                    <div class="d-flex gap-2 justify-content-end">
-                        <a href="{{ url_for('dashboard.list_stores') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-plus-lg"></i> {{ t('Create Store') }}
-                        </button>
-                    </div>
+                    {{ form_actions(t('Create Store'),
+                                    url_for('dashboard.list_stores'),
+                                    submit_icon='bi-plus-lg') }}
                 </form>
             </div>
         </div>

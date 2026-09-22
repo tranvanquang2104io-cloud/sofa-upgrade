@@ -1,15 +1,14 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 {% block title %}Add User - SofaFlow{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-7">
-        <div class="d-flex align-items-center mb-4 gap-2">
-            <a href="{{ url_for('dashboard.list_users') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <h2 class="mb-0"><i class="bi bi-person-plus"></i> {{ t('Add User') }}</h2>
-        </div>
+{{ page_header(t('Add User'), icon='bi-person-plus',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Users'), url_for('dashboard.list_users')),
+                       (t('Add User'), None)]) }}
 
         <div class="card shadow-sm">
             <div class="card-body p-4">
@@ -92,12 +91,9 @@
                     </div>
 
                     <hr class="my-4">
-                    <div class="d-flex gap-2 justify-content-end">
-                        <a href="{{ url_for('dashboard.list_users') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-person-plus"></i> {{ t('Create User') }}
-                        </button>
-                    </div>
+                    {{ form_actions(t('Create User'),
+                                    url_for('dashboard.list_users'),
+                                    submit_icon='bi-person-plus') }}
                 </form>
             </div>
         </div>
