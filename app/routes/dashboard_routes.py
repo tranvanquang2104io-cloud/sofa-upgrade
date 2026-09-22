@@ -3469,6 +3469,58 @@ def standardization_settings():
             flash(t('Standardization rules reset to the defaults'), 'success')
             return redirect(url_for('dashboard.standardization_settings'))
 
+        if request.form.get('action') == 'save_matrix':
+            entity = (request.form.get('entity') or '').strip()
+            fields = NormalizationService.configurable_fields(entity)
+            if not fields:
+                flash(t('Không tìm thấy nhóm dữ liệu này'), 'error')
+                return redirect(url_for('dashboard.standardization_settings'))
+
+            existing = {
+                rule.field_name: rule
+                for rule in NormalizationRule.query.filter_by(
+                    company_id=company_id, entity_type=entity).all()
+            }
+
+            for field in fields:
+                name = field['field_name']
+                rule = existing.get(name)
+
+                # An identifier is never normalized, whatever arrives in the
+                # form. The screen locks these; this refuses a hand-made post.
+                if field['protected']:
+                    if rule is not None:
+                        db.session.delete(rule)
+                    continue
+
+                chosen = [p for p in request.form.getlist(f'primitives_{entity}_{name}')
+                          if p in PRIMITIVES]
+                if not chosen:
+                    # Clearing every cell on a row IS the delete. There is no
+                    # separate delete button because there is nothing else a
+                    # row with no rules could mean.
+                    if rule is not None:
+                        db.session.delete(rule)
+                    continue
+
+                mode = request.form.get(f'mode_{entity}_{name}')
+                if mode not in NormalizationRule.MODES:
+                    mode = NormalizationRule.MODE_AUTO
+
+                if rule is None:
+                    rule = NormalizationRule(company_id=company_id,
+                                             entity_type=entity,
+                                             field_name=name)
+                    db.session.add(rule)
+                rule.primitives = chosen
+                rule.mode = mode
+                rule.is_active = True
+
+            db.session.commit()
+            flash(t('Standardization rules saved'), 'success')
+            return redirect(url_for('dashboard.standardization_settings',
+                                    entity=entity))
+
         rules = NormalizationRule.query.filter_by(company_id=company_id).all()
         for rule in rules:
             mode = request.form.get(f'mode_{rule.id}')
@@ -3494,11 +3546,26 @@ def standardization_settings():
         for rule in rules
     }
 
+    # The matrix: one row per text field of the chosen entity, one column per
+    # primitive. Every field is present whether or not it has a rule, which is
+    # why there is no "create rule" form - the row is already there.
+    from app.services.normalization_service import NORMALIZED_ENTITIES
+    entity = request.args.get('entity') or 'customer'
+    if entity not in NORMALIZED_ENTITIES:
+        entity = 'customer'
+    matrix_fields = NormalizationService.configurable_fields(entity, company_id)
+    for field in matrix_fields:
+        field['preview'] = NormalizationService.preview(sample,
+                                                        field['primitives'])
+
     return render_template('settings/standardization.html',
                            rules=rules,
                            primitives=PRIMITIVES,
                            sample=sample,
                            previews=previews,
+                           entities=NORMALIZED_ENTITIES,
+                           entity=entity,
+                           matrix_fields=matrix_fields,
                            protected=is_protected_field)
 
 

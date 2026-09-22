@@ -120,6 +120,57 @@ class NormalizationService:
         """Apply primitives to a value without touching anything stored."""
         return apply_primitives(value, list(ALWAYS_PRIMITIVES) + list(primitives))
 
+    @staticmethod
+    def configurable_fields(entity_type, company_id=None):
+        """Every text field of ``entity_type``, with whatever rule it has now.
+
+        Discovered from the data model, not from a seed list. The screen used
+        to show only the rules somebody had seeded, so a field nobody thought
+        of in advance could never be configured at all — and the rule's target
+        was a bare string, which is no answer to "how does the system know
+        which field I mean".
+
+        Returns ``[{field_name, type, protected, primitives, mode}]``. A field
+        with no rule comes back with an empty ``primitives`` list, which is what
+        lets the screen be a grid of empty cells rather than a create form.
+
+        Protected identifiers are INCLUDED and flagged rather than filtered
+        out: absent would read as an oversight, locked reads as a decision.
+        """
+        from sqlalchemy import String, Text
+
+        from app.models import models as m
+
+        model = getattr(m, NORMALIZED_ENTITIES.get(entity_type, ''), None)
+        if model is None:
+            return []
+
+        applied = {}
+        if company_id is not None:
+            for rule in NormalizationRule.query.filter_by(
+                    company_id=company_id, entity_type=entity_type).all():
+                applied[rule.field_name] = rule
+
+        rows = []
+        for column in model.__table__.columns:
+            if not isinstance(column.type, (String, Text)):
+                continue
+            # Foreign keys and ids are strings on some backends; they are
+            # plumbing, not text a person typed.
+            if column.foreign_keys or column.primary_key:
+                continue
+            rule = applied.get(column.name)
+            rows.append({
+                'field_name': column.name,
+                'type': 'text' if isinstance(column.type, Text) else 'string',
+                'protected': bool(is_protected_field(column.name)),
+                'primitives': list(rule.primitives or []) if rule else [],
+                'mode': rule.mode if rule else NormalizationRule.MODE_AUTO,
+                'is_active': bool(rule.is_active) if rule else False,
+            })
+        rows.sort(key=lambda row: (row['protected'], row['field_name']))
+        return rows
+
     @classmethod
     def normalize_instance(cls, instance, entity_type, company_id=None):
         """Apply the company's ``auto`` rules to ``instance`` in place.

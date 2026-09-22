@@ -60,6 +60,16 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Field':                  'Trường dữ liệu',
+        'Preview':                'Xem trước',
+        'Customer':               'Khách hàng',
+        'Supplier':               'Nhà cung cấp',
+        'Material':               'Vật tư',
+        'Changes how the value reads - consider confirm mode':
+            'Làm đổi cách đọc giá trị — nên cân nhắc chế độ xác nhận',
+        'Bỏ chọn hết các ô trên một dòng là xóa quy tắc của trường đó.':
+            'Bỏ chọn hết các ô trên một dòng là xóa quy tắc của trường đó.',
+        'Không tìm thấy nhóm dữ liệu này': 'Không tìm thấy nhóm dữ liệu này',
         'Open the purchase order': 'Mở đơn mua hàng',
         'Open the requisition':    'Mở đề nghị mua hàng',
         'Main warehouse':         'Kho chính',
