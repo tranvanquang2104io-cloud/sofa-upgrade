@@ -91,6 +91,27 @@
                                 </button>
                             </form>
                             {% endif %}
+
+                            {# Delete only where it breaks nothing. A template
+                               that has printed documents keeps the link saying
+                               what they came out of, so it is offered
+                               Deactivate instead. #}
+                            {% if not printed.get(tpl.id|string) %}
+                            <form method="POST" action="{{ url_for('dashboard.delete_template', template_id=tpl.id) }}"
+                                  onsubmit="return confirm('{{ t('Xóa hẳn mẫu này? Tệp mẫu sẽ bị xóa và không khôi phục được.') }}');"
+                                  style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        title="{{ t('Delete') }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="small text-muted ms-1"
+                                  title="{{ t('Đã dùng để in chứng từ nên không xóa được') }}">
+                                <i class="bi bi-lock"></i> {{ printed.get(tpl.id|string) }}
+                            </span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

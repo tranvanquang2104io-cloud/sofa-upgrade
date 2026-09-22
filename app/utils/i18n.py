@@ -60,6 +60,10 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Xóa hẳn mẫu này? Tệp mẫu sẽ bị xóa và không khôi phục được.':
+            'Xóa hẳn mẫu này? Tệp mẫu sẽ bị xóa và không khôi phục được.',
+        'Đã dùng để in chứng từ nên không xóa được':
+            'Đã dùng để in chứng từ nên không xóa được',
         'Để trống một ô nghĩa là bước đó không phụ thuộc điều kiện này.':
             'Để trống một ô nghĩa là bước đó không phụ thuộc điều kiện này.',
         'Field':                  'Trường dữ liệu',

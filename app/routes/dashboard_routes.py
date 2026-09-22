@@ -397,7 +397,17 @@ def list_templates():
     # Also include inactive ones
     from app.models.models import DocumentTemplate as _DT
     all_templates = db.session.query(_DT).filter_by(company_id=company_id).order_by(_DT.document_type, _DT.created_at.desc()).all()
-    return render_template('settings/templates.html', templates=all_templates)
+
+    # How many documents each template has printed. A template with any is
+    # offered Deactivate rather than Delete, because deleting it would orphan
+    # the link recording what those documents came out of.
+    from app.models.models import Document as _Doc
+    printed = {}
+    for tpl in all_templates:
+        printed[str(tpl.id)] = _Doc.query.filter_by(template_id=tpl.id).count()
+
+    return render_template('settings/templates.html', templates=all_templates,
+                           printed=printed)
 
 
 @dashboard_bp.route('/settings/templates/upload', methods=['POST'])
@@ -479,6 +489,54 @@ def deactivate_template(template_id):
         tpl.is_active = False
         db.session.commit()
         flash(t(f'Mẫu "{tpl.name}" đã được vô hiệu hóa.'), 'success')
+    return redirect(url_for('dashboard.list_templates'))
+
+
+@dashboard_bp.route('/settings/templates/<template_id>/delete', methods=['POST'])
+@company_admin_required
+def delete_template(template_id):
+    """Remove a template that has never produced a document.
+
+    Uploading to the wrong document type, or trying a draft, used to be
+    permanent: deactivating hides a template from the generator but leaves it
+    on the screen, so the list only ever grew.
+
+    Deletion stops at the one place it would break something. Document.template_id
+    records what each document was printed from, so removing a template that has
+    produced documents would orphan that link and lose the answer to "what did
+    this contract come out of". Those are refused, with the reason and the
+    operation that does fit - deactivate.
+    """
+    company_id = get_current_company_id()
+    from app.models.models import Document as _Doc
+    from app.models.models import DocumentTemplate as _DT
+
+    tpl = db.session.get(_DT, template_id)
+    if not tpl or str(tpl.company_id) != str(company_id):
+        flash(t('Không tìm thấy mẫu.'), 'error')
+        return redirect(url_for('dashboard.list_templates'))
+
+    used = _Doc.query.filter_by(template_id=tpl.id).count()
+    if used:
+        flash(t('Mẫu "%(name)s" đã dùng để in %(count)d chứng từ nên không '
+                'xóa được — hãy vô hiệu hóa mẫu này thay vì xóa.')
+              % {'name': tpl.name, 'count': used}, 'error')
+        return redirect(url_for('dashboard.list_templates'))
+
+    name = tpl.name
+    stored = tpl.template_file
+    db.session.delete(tpl)
+    db.session.commit()
+
+    # The row is what matters; a file that will not unlink is not worth
+    # failing the request over, and the record is already gone.
+    try:
+        if stored and os.path.exists(stored):
+            os.remove(stored)
+    except OSError:
+        logger.warning('Could not remove template file %s', stored)
+
+    flash(t('Mẫu "%(name)s" đã xóa.') % {'name': name}, 'success')
     return redirect(url_for('dashboard.list_templates'))
 
 
