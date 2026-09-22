@@ -1,24 +1,16 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import doc_badge, status_badge with context %}
+{% from "macros/ui.html" import page_header, doc_badge, status_badge, detail_open, detail_row, detail_close with context %}
 
 {% block title %}Handover Record - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1>
-            <i class="bi bi-file-earmark-check"></i> 
-            Handover Record #{{ handover.report_number }}
-            {{ doc_badge(handover) }}
-        </h1>
-        <p class="text-muted">{{ t('Handover Record') }}</p>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_order', order_id=handover.order_id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back to Order') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Handover Record') ~ ' ' ~ handover.report_number, icon='bi-file-earmark-check',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Orders'), url_for('dashboard.list_orders')),
+                       (handover.order.order_code, url_for('dashboard.view_order', order_id=handover.order_id)),
+                       (handover.report_number, None)]) }}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">{{ doc_badge(handover) }}</div>
 
 <div class="row">
     <div class="col-md-8">
@@ -27,22 +19,17 @@
                 <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Handover Details') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">{{ t('Record Number:') }}</dt>
-                    <dd class="col-sm-8">{{ handover.report_number }}</dd>
+                {{ detail_open() }}
+                    {{ detail_row(t('Record Number'), handover.report_number) }}
                     
-                    <dt class="col-sm-4">{{ t('Report Date:') }}</dt>
-                    <dd class="col-sm-8">{{ handover.report_date.strftime('%Y-%m-%d') }}</dd>
+                    {{ detail_row(t('Report Date'), handover.report_date.strftime('%Y-%m-%d')) }}
                     
-                    <dt class="col-sm-4">{{ t('Handover Date:') }}</dt>
-                    <dd class="col-sm-8">{{ handover.handover_date.strftime('%Y-%m-%d') }}</dd>
+                    {{ detail_row(t('Handover Date'), handover.handover_date.strftime('%Y-%m-%d')) }}
                     
-                    <dt class="col-sm-4">{{ t('Company Rep:') }}</dt>
-                    <dd class="col-sm-8">{{ handover.company_representative or 'N/A' }}</dd>
+                    {{ detail_row(t('Company Rep'), handover.company_representative or 'N/A') }}
                     
-                    <dt class="col-sm-4">{{ t('Customer Rep:') }}</dt>
-                    <dd class="col-sm-8">{{ handover.customer_representative or 'N/A' }}</dd>
-                </dl>
+                    {{ detail_row(t('Customer Rep'), handover.customer_representative or 'N/A') }}
+                {{ detail_close() }}
             </div>
         </div>
 
@@ -176,18 +163,17 @@
                 <h5 class="mb-0"><i class="bi bi-graph-up"></i> {{ t('Order Information') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
+                {{ detail_open() }}
                     <dt class="col-sm-6">{{ t('Order:') }}</dt>
                     <dd class="col-sm-6">
                         <a href="{{ url_for('dashboard.view_order', order_id=handover.order_id) }}">
                             {{ handover.order.order_code }}
                         </a>
                     </dd>
-                    <dt class="col-sm-6">{{ t('Customer:') }}</dt>
-                    <dd class="col-sm-6">{{ handover.order.customer.name }}</dd>
+                    {{ detail_row(t('Customer'), handover.order.customer.name) }}
                     <dt class="col-sm-6">{{ t('Total:') }}</dt>
                     <dd class="col-sm-6">{{ "{:,.0f}".format(handover.order.total_amount) }} đ</dd>
-                </dl>
+                {{ detail_close() }}
             </div>
         </div>
     </div>

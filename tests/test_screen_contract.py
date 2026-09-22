@@ -61,15 +61,11 @@ NOT_YET = {
     'admin/edit_company.html',
     'agreements/create.html',
     'agreements/edit.html',
-    'contracts/view.html',
     'documents/list.html',
-    'handover/view.html',
     'orders/create.html',
     'orders/edit.html',
     'orders/view.html',
     'payables/create.html',
-    'payments/view.html',
-    'quotations/view.html',
 }
 
 # Screens that will never meet part of the contract, and why.

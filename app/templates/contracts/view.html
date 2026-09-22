@@ -1,22 +1,16 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import doc_badge with context %}
+{% from "macros/ui.html" import page_header, doc_badge, detail_open, detail_row, detail_close with context %}
 
 {% block title %}View Contract - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1>
-            <i class="bi bi-file-earmark"></i> {{ contract.contract_number }}
-        </h1>
-        <p class="text-muted">{{ t('Order:') }} <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}">{{ order.order_code }}</a></p>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back to Order') }}
-        </a>
-    </div>
-</div>
+{{ page_header(contract.contract_number, icon='bi-file-earmark',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Orders'), url_for('dashboard.list_orders')),
+                       (order.order_code, url_for('dashboard.view_order', order_id=order.id)),
+                       (contract.contract_number, None)]) }}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">{{ doc_badge(contract) }}</div>
 
 <div class="row">
     <div class="col-md-8">
@@ -26,21 +20,17 @@
                 <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Contract Details') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">{{ t('Contract Number:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.contract_number }}</dd>
+                {{ detail_open() }}
+                    {{ detail_row(t('Contract Number'), contract.contract_number) }}
                     
-                    <dt class="col-sm-4">{{ t('Signing Date:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.contract_date.strftime('%d/%m/%Y') }}</dd>
+                    {{ detail_row(t('Signing Date'), contract.contract_date.strftime('%d/%m/%Y')) }}
 
                     {% if contract.contract_start_date %}
-                    <dt class="col-sm-4">{{ t('Start Date:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.contract_start_date.strftime('%d/%m/%Y') }}</dd>
+                    {{ detail_row(t('Start Date'), contract.contract_start_date.strftime('%d/%m/%Y')) }}
                     {% endif %}
 
                     {% if contract.contract_days_complete %}
-                    <dt class="col-sm-4">{{ t('Days to Complete:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.contract_days_complete }} {{ t('days') }}</dd>
+                    {{ detail_row(t('Days to Complete'), contract.contract_days_complete ~ ' ' ~ t('days')) }}
                     {% endif %}
                     
                     <dt class="col-sm-4">{{ t('Contract Value:') }}</dt>
@@ -52,8 +42,7 @@
                     {% endif %}
 
                     {% if contract.num_date_notice_cancel %}
-                    <dt class="col-sm-4">{{ t('Cancellation Notice:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.num_date_notice_cancel }} {{ t('days') }}</dd>
+                    {{ detail_row(t('Cancellation Notice'), contract.num_date_notice_cancel ~ ' ' ~ t('days')) }}
                     {% endif %}
 
                     {% if company and company.bank_accounts %}
@@ -65,24 +54,16 @@
                     {% endif %}
                     {% endif %}
                     
-                    <dt class="col-sm-4">{{ t('Status:') }}</dt>
-                    <dd class="col-sm-8">
-                        {{ doc_badge(contract) }}
-                    </dd>
-                    
-                    {% if contract.is_signed %}
-                    <dt class="col-sm-4">{{ t('Signed Date:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.signed_date.strftime('%Y-%m-%d %H:%M') if contract.signed_date else 'N/A' }}</dd>
+{% if contract.is_signed %}
+                    {{ detail_row(t('Signed Date'), contract.signed_date.strftime('%Y-%m-%d %H:%M') if contract.signed_date else 'N/A') }}
                     {% endif %}
                     
                     {% if contract.is_canceled %}
-                    <dt class="col-sm-4">{{ t('Canceled At:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.canceled_at.strftime('%Y-%m-%d %H:%M') if contract.canceled_at else 'N/A' }}</dd>
+                    {{ detail_row(t('Canceled At'), contract.canceled_at.strftime('%Y-%m-%d %H:%M') if contract.canceled_at else 'N/A') }}
                     
-                    <dt class="col-sm-4">{{ t('Cancellation Reason:') }}</dt>
-                    <dd class="col-sm-8">{{ contract.canceled_reason or 'N/A' }}</dd>
+                    {{ detail_row(t('Cancellation Reason'), contract.canceled_reason or 'N/A') }}
                     {% endif %}
-                </dl>
+                {{ detail_close() }}
                 {% if contract.terms_and_conditions %}
                 <hr>
                 <h6 class="text-muted mb-2">{{ t('Terms & Conditions') }}</h6>

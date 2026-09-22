@@ -1,23 +1,16 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import doc_badge with context %}
+{% from "macros/ui.html" import page_header, doc_badge, detail_open, detail_row, detail_close with context %}
 
 {% block title %}Payment Report - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1>
-            <i class="bi bi-credit-card"></i> 
-            Payment Report #{{ payment.report_number }}
-            {{ doc_badge(payment) }}
-        </h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_order', order_id=payment.order_id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back to Order') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Payment Report') ~ ' ' ~ payment.report_number, icon='bi-credit-card',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Orders'), url_for('dashboard.list_orders')),
+                       (payment.order.order_code, url_for('dashboard.view_order', order_id=payment.order_id)),
+                       (payment.report_number, None)]) }}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">{{ doc_badge(payment) }}</div>
 
 <div class="row">
     <div class="col-md-8">
@@ -72,9 +65,8 @@
                 <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Payment Details') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row">
-                    <dt class="col-sm-4">{{ t('Report Number:') }}</dt>
-                    <dd class="col-sm-8">{{ payment.report_number }}</dd>
+                {{ detail_open() }}
+                    {{ detail_row(t('Report Number'), payment.report_number) }}
 
                     <dt class="col-sm-4">{{ t('Payment Type:') }}</dt>
                     <dd class="col-sm-8">
@@ -85,22 +77,17 @@
                         {% endif %}
                     </dd>
 
-                    <dt class="col-sm-4">{{ t('Report Date:') }}</dt>
-                    <dd class="col-sm-8">{{ payment.report_date.strftime('%d/%m/%Y') }}</dd>
+                    {{ detail_row(t('Report Date'), payment.report_date.strftime('%d/%m/%Y')) }}
 
-                    <dt class="col-sm-4">{{ t('Payment Date:') }}</dt>
-                    <dd class="col-sm-8">{{ payment.payment_date.strftime('%d/%m/%Y') }}</dd>
+                    {{ detail_row(t('Payment Date'), payment.payment_date.strftime('%d/%m/%Y')) }}
 
                     {% if payment.quotation_reference_date %}
-                    <dt class="col-sm-4">{{ t('Quotation Ref. Date:') }}</dt>
-                    <dd class="col-sm-8">{{ payment.quotation_reference_date.strftime('%d/%m/%Y') }}</dd>
+                    {{ detail_row(t('Quotation Ref. Date'), payment.quotation_reference_date.strftime('%d/%m/%Y')) }}
                     {% endif %}
 
-                    <dt class="col-sm-4">{{ t('Payment Method:') }}</dt>
-                    <dd class="col-sm-8">{{ payment.payment_method or 'N/A' }}</dd>
+                    {{ detail_row(t('Payment Method'), payment.payment_method or 'N/A') }}
 
-                    <dt class="col-sm-4">{{ t('Transaction Ref:') }}</dt>
-                    <dd class="col-sm-8">{{ payment.transaction_reference or 'N/A' }}</dd>
+                    {{ detail_row(t('Transaction Ref'), payment.transaction_reference or 'N/A') }}
 
                     <dt class="col-sm-4">{{ t('Status:') }}</dt>
                     <dd class="col-sm-8">
@@ -124,7 +111,7 @@
                         </a>
                     </dd>
                     {% endif %}
-                </dl>
+                {{ detail_close() }}
             </div>
         </div>
 
@@ -278,18 +265,17 @@
                 <h5 class="mb-0"><i class="bi bi-graph-up"></i> {{ t('Order Information') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
+                {{ detail_open() }}
                     <dt class="col-sm-6">{{ t('Order:') }}</dt>
                     <dd class="col-sm-6">
                         <a href="{{ url_for('dashboard.view_order', order_id=payment.order_id) }}">
                             {{ payment.order.order_code }}
                         </a>
                     </dd>
-                    <dt class="col-sm-6">{{ t('Customer:') }}</dt>
-                    <dd class="col-sm-6">{{ payment.order.customer.name }}</dd>
+                    {{ detail_row(t('Customer'), payment.order.customer.name) }}
                     <dt class="col-sm-6">{{ t('Total:') }}</dt>
                     <dd class="col-sm-6">{{ "{:,.0f}".format(payment.order.total_amount) }} đ</dd>
-                </dl>
+                {{ detail_close() }}
             </div>
         </div>
     </div>

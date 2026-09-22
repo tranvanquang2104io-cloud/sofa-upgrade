@@ -1,22 +1,16 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import doc_badge with context %}
+{% from "macros/ui.html" import page_header, doc_badge, detail_open, detail_row, detail_close with context %}
 
 {% block title %}View Quotation - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1>
-            <i class="bi bi-file-earmark"></i> {{ quotation.quotation_number }}
-        </h1>
-        <p class="text-muted">{{ t('Order:') }} <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}">{{ order.order_code }}</a></p>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back to Order') }}
-        </a>
-    </div>
-</div>
+{{ page_header(quotation.quotation_number, icon='bi-file-earmark',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Orders'), url_for('dashboard.list_orders')),
+                       (order.order_code, url_for('dashboard.view_order', order_id=order.id)),
+                       (quotation.quotation_number, None)]) }}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">{{ doc_badge(quotation) }}</div>
 
 <div class="row">
     <div class="col-md-8">
@@ -26,34 +20,24 @@
                 <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Quotation Details') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">{{ t('Quotation Number:') }}</dt>
-                    <dd class="col-sm-8">{{ quotation.quotation_number }}</dd>
+                {{ detail_open() }}
+                    {{ detail_row(t('Quotation Number'), quotation.quotation_number) }}
                     
-                    <dt class="col-sm-4">{{ t('Date:') }}</dt>
-                    <dd class="col-sm-8">{{ quotation.quotation_date.strftime('%Y-%m-%d') }}</dd>
+                    {{ detail_row(t('Date'), quotation.quotation_date.strftime('%Y-%m-%d')) }}
                     
-                    <dt class="col-sm-4">{{ t('Validity Days:') }}</dt>
-                    <dd class="col-sm-8">{{ quotation.validity_days }}</dd>
+                    {{ detail_row(t('Validity Days'), quotation.validity_days) }}
                     
                     <dt class="col-sm-4">{{ t('Total Amount:') }}</dt>
                     <dd class="col-sm-8"><strong>{{ "{:,.0f}".format(quotation.total_amount|default(0)|float) }} đ</strong></dd>
                     
-                    <dt class="col-sm-4">{{ t('Status:') }}</dt>
-                    <dd class="col-sm-8">
-                        {{ doc_badge(quotation) }}
-                    </dd>
-                    
-                    {% if quotation.notes %}
-                    <dt class="col-sm-4">{{ t('Notes:') }}</dt>
-                    <dd class="col-sm-8">{{ quotation.notes }}</dd>
+{% if quotation.notes %}
+                    {{ detail_row(t('Notes'), quotation.notes) }}
                     {% endif %}
                     
                     {% if quotation.is_canceled and quotation.canceled_reason %}
-                    <dt class="col-sm-4">{{ t('Cancellation Reason:') }}</dt>
-                    <dd class="col-sm-8">{{ quotation.canceled_reason }}</dd>
+                    {{ detail_row(t('Cancellation Reason'), quotation.canceled_reason) }}
                     {% endif %}
-                </dl>
+                {{ detail_close() }}
             </div>
         </div>
 
