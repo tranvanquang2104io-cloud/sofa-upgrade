@@ -60,6 +60,8 @@ TRANSLATIONS = {
         'Contract Signed':        'Đã Ký HĐ',
         'Delivered':              'Đã Bàn Giao',
         'Advance Paid':           'Đã Tạm Ứng',
+        'Để trống một ô nghĩa là bước đó không phụ thuộc điều kiện này.':
+            'Để trống một ô nghĩa là bước đó không phụ thuộc điều kiện này.',
         'Field':                  'Trường dữ liệu',
         'Preview':                'Xem trước',
         'Customer':               'Khách hàng',

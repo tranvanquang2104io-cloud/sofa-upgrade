@@ -3409,7 +3409,7 @@ def workflow_settings():
     """
     from app.models.models import WorkflowRule
     from app.services.workflow_service import (
-        PREREQUISITE_LABELS, WorkflowService,
+        ALL_ACTIONS, PREREQUISITE_LABELS, WorkflowService,
     )
 
     company_id = get_current_company_id()
@@ -3418,6 +3418,38 @@ def workflow_settings():
         if request.form.get('action') == 'reset':
             WorkflowService.seed_defaults(company_id, overwrite=True)
             flash(t('Workflow rules reset to the standard process'), 'success')
+            return redirect(url_for('dashboard.workflow_settings'))
+
+        if request.form.get('action') == 'save_matrix':
+            # The grid names a cell for every action/prerequisite pairing the
+            # engine can express, so setting a cell creates the rule and
+            # blanking it deletes the rule. Nothing outside those pairings is
+            # accepted: anything else arriving here was hand-made.
+            existing = {
+                (rule.action, rule.prerequisite): rule
+                for rule in WorkflowRule.query.filter_by(
+                    company_id=company_id).all()
+            }
+            for action in ALL_ACTIONS:
+                for prerequisite in PREREQUISITE_LABELS:
+                    mode = (request.form.get(f'cell_{action}_{prerequisite}')
+                            or '').strip()
+                    rule = existing.get((action, prerequisite))
+
+                    if mode not in WorkflowRule.MODES:
+                        if rule is not None:
+                            db.session.delete(rule)
+                        continue
+
+                    if rule is None:
+                        rule = WorkflowRule(company_id=company_id,
+                                            action=action,
+                                            prerequisite=prerequisite)
+                        db.session.add(rule)
+                    rule.mode = mode
+                    rule.is_active = True
+            db.session.commit()
+            flash(t('Workflow rules saved'), 'success')
             return redirect(url_for('dashboard.workflow_settings'))
 
         rules = WorkflowRule.query.filter_by(company_id=company_id).all()
@@ -3440,9 +3472,17 @@ def workflow_settings():
         rules = WorkflowRule.query.filter_by(company_id=company_id).order_by(
             WorkflowRule.action, WorkflowRule.sort_order).all()
 
+    # The grid: rows are actions, columns are prerequisites, and the cell holds
+    # how strictly that pairing applies. Every pairing has a cell whether or not
+    # a rule exists, which is what removes the need for a create form.
+    grid = {(rule.action, rule.prerequisite): rule.mode
+            for rule in rules if rule.is_active}
+
     return render_template('settings/workflow.html',
                            rules=rules,
+                           actions=ALL_ACTIONS,
                            prerequisite_labels=PREREQUISITE_LABELS,
+                           grid=grid,
                            modes=WorkflowRule.MODES)
 
 

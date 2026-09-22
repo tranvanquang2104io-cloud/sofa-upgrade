@@ -22,6 +22,68 @@
   </ul>
 </div>
 
+
+{# ---- the grid ---------------------------------------------------------- #}
+{# Rows are the steps the engine can gate, columns are the prerequisites it
+   can check, and the cell says how strictly that pairing applies. Every
+   pairing has a cell whether or not a rule exists, so setting a cell creates
+   the rule and blanking it removes the rule. Before this, only rules that had
+   been seeded were on screen - two of the seven steps could never be
+   configured at all. #}
+<form method="POST" action="{{ url_for('dashboard.workflow_settings') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="action" value="save_matrix">
+
+<div class="card mb-3">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width: 12rem">{{ t('Step') }}</th>
+            {% for prerequisite, label in prerequisite_labels.items() %}
+            <th class="small text-center" style="min-width: 9rem">
+              <span title="{{ prerequisite }}">{{ t(label) }}</span>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for action in actions %}
+          <tr>
+            <td><code>{{ action }}</code></td>
+            {% for prerequisite, label in prerequisite_labels.items() %}
+            <td>
+              <select name="cell_{{ action }}_{{ prerequisite }}"
+                      class="form-select form-select-sm">
+                <option value="">—</option>
+                {% for mode in modes %}
+                <option value="{{ mode }}"
+                        {% if grid.get((action, prerequisite)) == mode %}selected{% endif %}>
+                  {{ t(mode) }}
+                </option>
+                {% endfor %}
+              </select>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 sofa-form-actions">
+  <button type="submit" class="btn btn-primary">
+    <i class="bi bi-save"></i> {{ t('Save') }}
+  </button>
+  <span class="align-self-center small text-muted">
+    {{ t('Để trống một ô nghĩa là bước đó không phụ thuộc điều kiện này.') }}
+  </span>
+</div>
+</form>
+
 <form method="POST" action="{{ url_for('dashboard.workflow_settings') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="table-responsive">
