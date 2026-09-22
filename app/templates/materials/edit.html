@@ -1,19 +1,13 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 {% block title %}{{ t('Edit') }} {{ material.name }} - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.list_materials') }}">{{ t('Materials') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.view_material', material_id=material.id) }}">{{ material.material_code }}</a></li>
-                <li class="breadcrumb-item active">{{ t('Edit') }}</li>
-            </ol>
-        </nav>
-        <h2><i class="bi bi-pencil"></i> {{ t('Edit Material') }}: {{ material.name }}</h2>
-    </div>
-</div>
+{{ page_header(t('Edit Material') ~ ': ' ~ material.name, icon='bi-pencil',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Materials'), url_for('dashboard.list_materials')),
+                       (material.material_code, url_for('dashboard.view_material', material_id=material.id)),
+                       (t('Edit'), None)]) }}
 
 <form method="POST" enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -247,10 +241,9 @@
         </div>
     </div>
 
-    <div class="d-flex gap-2 mb-5 sofa-form-actions">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ t('Save Changes') }}</button>
-        <a href="{{ url_for('dashboard.view_material', material_id=material.id) }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
-    </div>
+    {{ form_actions(t('Save Changes'),
+                    url_for('dashboard.view_material', material_id=material.id),
+                    submit_icon='bi-save') }}
 </form>
 {% endblock %}
 

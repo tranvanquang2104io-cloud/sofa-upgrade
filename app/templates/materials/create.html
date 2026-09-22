@@ -1,18 +1,12 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 {% block title %}{{ t('Add Material') }} - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.list_materials') }}">{{ t('Materials') }}</a></li>
-                <li class="breadcrumb-item active">{{ t('Add Material') }}</li>
-            </ol>
-        </nav>
-        <h2><i class="bi bi-plus-circle"></i> {{ t('Add Material') }}</h2>
-    </div>
-</div>
+{{ page_header(t('Add Material'), icon='bi-plus-circle',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Materials'), url_for('dashboard.list_materials')),
+                       (t('Add Material'), None)]) }}
 
 <form method="POST" enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -246,10 +240,8 @@
 
     {% set entity_type = 'material' %}{% include '_extension_fields_form.html' %}
 
-    <div class="d-flex gap-2 mb-5 sofa-form-actions">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ t('Save') }}</button>
-        <a href="{{ url_for('dashboard.list_materials') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
-    </div>
+    {{ form_actions(t('Save'), url_for('dashboard.list_materials'),
+                    submit_icon='bi-save') }}
 </form>
 {% endblock %}
 
