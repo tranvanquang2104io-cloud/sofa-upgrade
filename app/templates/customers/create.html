@@ -1,13 +1,13 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 
 {% block title %}Create Customer - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h1><i class="bi bi-person-plus"></i> {{ t('Create Customer') }}</h1>
-    </div>
-</div>
+{{ page_header(t('Create Customer'), icon='bi-person-plus',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Customers'), url_for('dashboard.list_customers')),
+                       (t('Create Customer'), None)]) }}
 
 {% if not stores or stores|length == 0 %}
 <div class="alert alert-warning">
@@ -121,14 +121,8 @@
 
                     {% set entity_type = 'customer' %}{% include '_extension_fields_form.html' %}
 
-                    <div class="d-flex gap-2 sofa-form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Create Customer
-                    </button>
-                    <a href="{{ url_for('dashboard.list_customers') }}" class="btn btn-secondary">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </a>
-                    </div>
+                    {{ form_actions(t('Create Customer'),
+                                    url_for('dashboard.list_customers')) }}
                 </form>
             </div>
         </div>

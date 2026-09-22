@@ -1,48 +1,33 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, search_bar, empty_state, table_open, table_close with context %}
 
 {% block title %}Customers - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1><i class="bi bi-people"></i> {{ t('Customers') }}</h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.create_customer') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> {{ t('Add Customer') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Customers'), icon='bi-people', count=total,
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Customers'), None)],
+               action_url=url_for('dashboard.create_customer'),
+               action_label=t('Add Customer')) }}
 
-{% if stores %}
-<div class="row mb-3">
-    <div class="col-md-12">
-        <form method="GET" action="{{ url_for('dashboard.list_customers') }}" class="row g-2">
-            <div class="col-md-4">
-                <select class="form-select" name="store_id" onchange="this.form.submit()">
-                    <option value="">{{ t('All Stores') }}</option>
-                    {% for store in stores %}
-                    <option value="{{ store.id }}" {% if selected_store_id == store.id|string %}selected{% endif %}>{{ store.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-5">
-                <input type="text" class="form-control" name="search" placeholder="{{ t('Search by name or code...') }}" value="{{ search }}">
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Search
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endif %}
+{# Jinja has no list comprehension, so the filter options are built by loop. #}
+{% set store_options = [] %}
+{% for store in stores or [] %}
+  {% set _ = store_options.append((store.id|string, store.name)) %}
+{% endfor %}
+{% set store_filter = [{'name': 'store_id', 'label': 'Store',
+                        'options': store_options,
+                        'selected': selected_store_id}] if stores else None %}
+
+{{ search_bar(url_for('dashboard.list_customers'), search_value=search,
+              placeholder='Search by name or code...',
+              filters=store_filter,
+              reset_url=url_for('dashboard.list_customers') if (search or selected_store_id) else None) }}
 
 <div class="card">
     <div class="card-body">
         {% if customers %}
-            <div class="table-responsive"><table class="table table-hover">
+            {{ table_open() }}
                 <thead>
                     <tr>
                         <th>{{ t('Customer Code') }}</th>
@@ -50,7 +35,7 @@
                         <th>{{ t('Phone') }}</th>
                         <th>{{ t('Email') }}</th>
                         <th>{{ t('City') }}</th>
-                        <th>{{ t('Action') }}</th>
+                        <th class="text-end">{{ t('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -58,24 +43,37 @@
                     <tr>
                         <td><strong>{{ customer.customer_code }}</strong></td>
                         <td>{{ customer.name }}</td>
-                        <td>{{ customer.phone or '-' }}</td>
-                        <td>{{ customer.email or '-' }}</td>
-                        <td>{{ customer.city or '-' }}</td>
-                        <td>
-                            <a href="{{ url_for('dashboard.view_customer', customer_id=customer.id) }}" class="btn btn-sm btn-info">
-                                <i class="bi bi-eye"></i> {{ t('View') }}
+                        <td>{{ customer.phone or '—' }}</td>
+                        <td>{{ customer.email or '—' }}</td>
+                        <td>{{ customer.city or '—' }}</td>
+                        <td class="text-end text-nowrap">
+                            <a href="{{ url_for('dashboard.view_customer', customer_id=customer.id) }}"
+                               class="btn btn-sm btn-outline-secondary" title="{{ t('View') }}">
+                                <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}" class="btn btn-sm btn-warning">
-                                <i class="bi bi-pencil"></i> {{ t('Edit') }}
+                            <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="{{ t('Edit') }}">
+                                <i class="bi bi-pencil"></i>
                             </a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
-            </table></div>
+            {{ table_close() }}
+            {% with extra_query = extra_query %}
             {% include '_pagination.html' %}
+            {% endwith %}
+        {% elif search or selected_store_id %}
+            {# "No customers yet" would be untrue here and would send the user
+               off to create a duplicate of the one they were looking for. #}
+            {{ empty_state('Không tìm thấy khách hàng nào khớp với tìm kiếm.',
+                           icon='bi-search',
+                           action_url=url_for('dashboard.list_customers'),
+                           action_label='Xem tất cả khách hàng') }}
         {% else %}
-            <p class="text-muted">{{ t('No customers found.') }} <a href="{{ url_for('dashboard.create_customer') }}">{{ t('Add one') }}</a></p>
+            {{ empty_state('No customers yet.', icon='bi-people',
+                           action_url=url_for('dashboard.create_customer'),
+                           action_label='Add Customer') }}
         {% endif %}
     </div>
 </div>

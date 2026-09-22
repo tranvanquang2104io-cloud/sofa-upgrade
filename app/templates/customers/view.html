@@ -1,23 +1,17 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import order_badge with context %}
+{% from "macros/ui.html" import page_header, order_badge, detail_open, detail_row, detail_close with context %}
 
 {% block title %}{{ customer.name }} - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1><i class="bi bi-person"></i> {{ customer.name }}</h1>
-        <span class="badge bg-secondary fs-6">{{ customer.customer_code }}</span>
-    </div>
-    <div class="col-md-4 text-end d-flex gap-2 justify-content-end align-items-start">
-        <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}" class="btn btn-primary">
-            <i class="bi bi-pencil-fill"></i> {{ t('Edit') }}
-        </a>
-        <a href="{{ url_for('dashboard.list_customers') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
-        </a>
-    </div>
-</div>
+{# Back lives in the breadcrumb on every screen now, so the header carries one
+   primary action instead of a row of competing buttons. #}
+{{ page_header(customer.name, icon='bi-person',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Customers'), url_for('dashboard.list_customers')),
+                       (customer.customer_code, None)],
+               action_url=url_for('dashboard.edit_customer', customer_id=customer.id),
+               action_label=t('Edit'), action_icon='bi-pencil') }}
 
 <div class="row">
     <div class="col-md-8">
@@ -27,22 +21,17 @@
                 <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Customer Information') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">{{ t('Customer Code:') }}</dt>
-                    <dd class="col-sm-8"><strong>{{ customer.customer_code }}</strong></dd>
+                {{ detail_open() }}
+                    {{ detail_row(t('Customer Code'), customer.customer_code) }}
 
-                    <dt class="col-sm-4">{{ t('Customer Name:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.name }}</dd>
+                    {{ detail_row(t('Customer Name'), customer.name) }}
 
-                    <dt class="col-sm-4">{{ t('Phone:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.phone or '-' }}</dd>
+                    {{ detail_row(t('Phone'), customer.phone or '') }}
 
-                    <dt class="col-sm-4">{{ t('Email:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.email or '-' }}</dd>
+                    {{ detail_row(t('Email'), customer.email or '') }}
 
-                    <dt class="col-sm-4">{{ t('Tax Code:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.tax_code or '-' }}</dd>
-                </dl>
+                    {{ detail_row(t('Tax Code'), customer.tax_code or '') }}
+                {{ detail_close() }}
             </div>
         </div>
 
@@ -52,13 +41,11 @@
                 <h5 class="mb-0"><i class="bi bi-person-badge"></i> {{ t('Representative') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">{{ t('Representative Name:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.representative_name or '-' }}</dd>
+                {{ detail_open() }}
+                    {{ detail_row(t('Representative Name'), customer.representative_name or '') }}
 
-                    <dt class="col-sm-4">{{ t('Position:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.representative_title or '-' }}</dd>
-                </dl>
+                    {{ detail_row(t('Position'), customer.representative_title or '') }}
+                {{ detail_close() }}
             </div>
         </div>
 
@@ -68,19 +55,15 @@
                 <h5 class="mb-0"><i class="bi bi-geo-alt-fill"></i> {{ t('Address') }}</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">{{ t('Address:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.address or '-' }}</dd>
+                {{ detail_open() }}
+                    {{ detail_row(t('Address'), customer.address or '') }}
 
-                    <dt class="col-sm-4">{{ t('City / Province:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.city or '-' }}</dd>
+                    {{ detail_row(t('City / Province'), customer.city or '') }}
 
-                    <dt class="col-sm-4">{{ t('Postal Code:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.postal_code or '-' }}</dd>
+                    {{ detail_row(t('Postal Code'), customer.postal_code or '') }}
 
-                    <dt class="col-sm-4">{{ t('Country:') }}</dt>
-                    <dd class="col-sm-8">{{ customer.country or '-' }}</dd>
-                </dl>
+                    {{ detail_row(t('Country'), customer.country or '') }}
+                {{ detail_close() }}
             </div>
         </div>
 

@@ -216,3 +216,102 @@
     </table>
   </div>
 {% endmacro %}
+
+
+{# ------------------------------------------------------------ detail pairs #}
+{% macro detail_row(label, value, wide=False) %}
+  {#
+    One labelled fact on a view screen. The sales screens rendered these as
+    <dl><dt>/<dd>, the procurement screens as bare divs, so the same kind of
+    information - a document's header fields - looked like two different
+    products. One shape now, everywhere.
+
+    `value` may be empty: an em dash is shown rather than a blank, so a missing
+    value reads as "nothing recorded" instead of a rendering fault.
+  #}
+  <div class="row g-0 py-1 border-bottom sofa-detail-row">
+    <div class="col-12 {{ 'col-sm-3' if wide else 'col-sm-5' }} text-muted small">
+      {{ label }}
+    </div>
+    <div class="col-12 {{ 'col-sm-9' if wide else 'col-sm-7' }}">
+      {% if value is none or value == '' %}<span class="text-muted">—</span>
+      {% else %}{{ value }}{% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+
+{% macro detail_open() %}
+  <div class="sofa-detail-list">
+{% endmacro %}
+
+
+{% macro detail_close() %}
+  </div>
+{% endmacro %}
+
+
+{# --------------------------------------------------------------- card shell #}
+{% macro card_open(title=None, icon=None, subtitle=None) %}
+  {# Every panel on every screen gets the same frame and the same heading size. #}
+  <div class="card mb-4">
+    {% if title %}
+    <div class="card-header">
+      <h5 class="mb-0">
+        {% if icon %}<i class="bi {{ icon }}"></i>{% endif %} {{ title }}
+      </h5>
+      {% if subtitle %}<div class="small text-muted mt-1">{{ subtitle }}</div>{% endif %}
+    </div>
+    {% endif %}
+    <div class="card-body">
+{% endmacro %}
+
+
+{% macro card_close() %}
+    </div>
+  </div>
+{% endmacro %}
+
+
+{# ------------------------------------------------------------ form plumbing #}
+{% macro form_section(title, icon=None, hint=None) %}
+  {#
+    A labelled group of fields inside a long form. The data-entry screens run
+    to 600 lines with no visual grouping, which is what makes them feel like a
+    wall rather than a form.
+  #}
+  <div class="sofa-form-section mb-4">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      {% if icon %}<i class="bi {{ icon }} text-primary"></i>{% endif %}
+      <h6 class="mb-0">{{ title }}</h6>
+    </div>
+    {% if hint %}<div class="small text-muted mb-2">{{ hint }}</div>{% endif %}
+{% endmacro %}
+
+
+{% macro form_section_end() %}
+  </div>
+{% endmacro %}
+
+
+{% macro form_actions(submit_label, cancel_url, submit_icon='bi-check-circle',
+                      cancel_label='Cancel', extra=None) %}
+  {#
+    The save bar. Pinned to the bottom of the viewport while there is form
+    below it, so Save never scrolls out of reach - a user who loses the button
+    cannot tell whether their work was saved at all.
+
+    Save is always first and always primary; Cancel is always a plain link to
+    the same place a Back would go. Swapping those around between screens is
+    how people press the wrong one.
+  #}
+  <div class="d-flex flex-wrap gap-2 sofa-form-actions">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi {{ submit_icon }}"></i> {{ submit_label }}
+    </button>
+    {% if cancel_url %}
+      <a href="{{ cancel_url }}" class="btn btn-secondary">{{ t(cancel_label) }}</a>
+    {% endif %}
+    {{ extra if extra }}
+  </div>
+{% endmacro %}

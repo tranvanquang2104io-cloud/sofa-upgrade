@@ -1,19 +1,15 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 
 {% block title %}Edit Customer - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h1><i class="bi bi-person-gear"></i> {{ t('Edit Customer') }}</h1>
-        <p class="text-muted">Customer Code: <strong>{{ customer.customer_code }}</strong></p>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('dashboard.view_customer', customer_id=customer.id) }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> {{ t('Back') }}
-        </a>
-    </div>
-</div>
+{{ page_header(t('Edit Customer') ~ ' — ' ~ customer.customer_code,
+               icon='bi-person-gear',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Customers'), url_for('dashboard.list_customers')),
+                       (customer.name, url_for('dashboard.view_customer', customer_id=customer.id)),
+                       (t('Edit'), None)]) }}
 
 <div class="row">
     <div class="col-md-10 col-lg-8">
@@ -126,14 +122,12 @@
                 </div>
             </div>
 
-            <div class="d-flex gap-2 justify-content-end mb-4">
-                <button type="button" class="btn btn-secondary btn-lg" onclick="history.back()">
-                    <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
-                </button>
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="bi bi-check-circle-fill"></i> {{ t('Save Changes') }}
-                </button>
-            </div>
+            {# Was: Cancel BEFORE Save, right-aligned, with history.back().
+               Three differences from the create screen for the same decision,
+               and history.back() returns to the form after a failed save
+               rather than to somewhere the user can act. #}
+            {{ form_actions(t('Save Changes'),
+                            url_for('dashboard.view_customer', customer_id=customer.id)) }}
         </form>
     </div>
 </div>
