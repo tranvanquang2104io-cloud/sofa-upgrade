@@ -26,6 +26,17 @@
   </form>
   {% endfor %}
   <a href="{{ url_for('dashboard.print_purchase_order', po_id=po.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i> {{ t('Print Purchase Order') }}</a>
+  {# Recording the supplier's hóa đơn had no way in from anywhere: the invoice
+     list said "record one from a purchase order" and this screen offered no
+     such button, so the form was reachable only by typing its URL. An invoice
+     cannot be recorded against a draft or a cancelled order, which is the same
+     rule the service enforces. #}
+  {% if po.status not in ('draft', 'canceled') %}
+  <a href="{{ url_for('dashboard.create_supplier_invoice', po_id=po.id) }}"
+     class="btn btn-sm btn-primary">
+    <i class="bi bi-receipt"></i> {{ t('Record Supplier Invoice') }}
+  </a>
+  {% endif %}
 </div>
 
 {# Was: <strong>Label:</strong> value in grid columns — a third way of

@@ -1381,3 +1381,12 @@ TRANSLATIONS['vi'].update({
     'Order Code': 'Mã đơn hàng',
     'Value': 'Giá trị',
 })
+
+TRANSLATIONS['vi'].update({
+    'Kế hoạch đang chờ nghiệm thu nên danh mục vật tư đã khóa. Dùng “Từ chối (làm lại)” để mở lại cho chỉnh sửa.':
+        'Kế hoạch đang chờ nghiệm thu nên danh mục vật tư đã khóa. Dùng “Từ chối (làm lại)” để mở lại cho chỉnh sửa.',
+    'Kế hoạch đã chốt và đang sản xuất nên danh mục vật tư đã khóa — để số liệu cấp phát và giá vốn khớp với lệnh đã chốt. Từ trạng thái này chỉ có thể “Hoàn thành” hoặc “Hủy”.':
+        'Kế hoạch đã chốt và đang sản xuất nên danh mục vật tư đã khóa — để số liệu cấp phát và giá vốn khớp với lệnh đã chốt. Từ trạng thái này chỉ có thể “Hoàn thành” hoặc “Hủy”.',
+    'Kế hoạch đã qua giai đoạn sản xuất nên danh mục vật tư đã khóa.':
+        'Kế hoạch đã qua giai đoạn sản xuất nên danh mục vật tư đã khóa.',
+})

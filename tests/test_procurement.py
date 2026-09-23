@@ -80,8 +80,14 @@ def test_loop_through_http_routes(app, client, login, seed):
     login(username='admin')
     # PR page renders
     assert client.get('/materials/purchase-suggestions').status_code == 200
-    # PR → PO
-    client.post('/purchase-orders/from-suggestions', follow_redirects=True)
+    # Build the PO through the service. This used to POST to a route that
+    # made purchase orders straight from the suggestion list, with no
+    # requisition and nobody's approval; that route is gone, because the
+    # supported path refuses exactly that. The service call is the same
+    # building block, used here only to set the scene for the HTTP walk below.
+    with app.app_context():
+        from app.services.procurement_service import ProcurementService
+        ProcurementService().create_pos_from_suggestions(seed['company_id'])
     with app.app_context():
         po = PurchaseOrder.query.filter_by(company_id=seed['company_id']).first()
         pid = str(po.id); lid = str(po.lines[0].id)

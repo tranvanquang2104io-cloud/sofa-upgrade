@@ -73,7 +73,10 @@
                action_url=url_for('dashboard.edit_order', order_id=order.id) if not order.is_canceled else None,
                action_label=t('Edit'), action_icon='bi-pencil') }}
 
-<p class="text-muted">{{ order.title }}</p>
+{# The status badge used to live in the duplicate progress card below. That
+   card is gone; the badge belongs on the title line anyway, which is where it
+   sits on every other detail screen. #}
+<p class="text-muted">{{ order.title }} {{ order_badge(order) }}</p>
 
 {% if order.production_plan %}
 <div class="d-flex flex-wrap gap-2 mb-3">
@@ -83,18 +86,6 @@
     </a>
 </div>
 {% endif %}
-
-{# One glance: which step is this order on. The detailed timeline below still
-   carries the documents and actions; this answers the question first. #}
-<div class="card mb-4">
-    <div class="card-body pb-2">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-muted small">{{ t('Order progress') }}</span>
-            {{ order_badge(order) }}
-        </div>
-        {{ process_stepper(order) }}
-    </div>
-</div>
 
 <div class="row">
     <div class="col-md-8">
@@ -153,7 +144,12 @@
                     
                     <!-- Quotation -->
                     <div class="timeline-item">
-                        <div class="timeline-marker {% if lifecycle.quotation_approved %}completed{% elif lifecycle.quotation_created %}in-progress{% else %}pending{% endif %}">
+                        {# A brand-new order has nothing done, and every marker
+                           below reads `pending` — five grey dots and nothing
+                           saying where to start. The removed stepper marked the
+                           first step as current; the timeline has to do the same
+                           or that information is simply gone. #}
+                        <div class="timeline-marker {% if lifecycle.quotation_approved %}completed{% else %}in-progress{% endif %}">
                             {% if lifecycle.quotation_approved %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}
                         </div>
                         <div class="timeline-content">

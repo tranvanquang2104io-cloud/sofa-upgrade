@@ -225,3 +225,90 @@ advance, driven by `advance_skipped` and the new waiver record — so the
 timeline tells the truth and the waiver's reason is visible on hover. The
 lifecycle flag keeps its gating role untouched.
 
+
+
+---
+
+## 8. Owner backlog — raised 2026-09-24
+
+Six items, in the owner's words, with what I understand each to mean and what I
+need to check before touching it. Nothing here is started yet.
+
+### 8.1 Gom mọi báo cáo về một chức năng
+> "Dashboard, Báo cáo, Công nợ khách hàng … bản chất đang là những Báo cáo, vậy
+> nên hãy gom về thành 1 chức năng thôi, sau đó chia thành các đầu mục báo cáo
+> riêng: Công nợ khách hàng, Đơn hàng, Tồn kho … Nói chung là những chức năng
+> hay màn hình có vẻ trùng thì gom lại 1 thôi."
+
+Today: `/` (dashboard KPI cards), `/reports` (BI split by domain) and
+`/reports/receivables` are three separate screens answering the same kind of
+question, reached three different ways. The ask is one **Báo cáo** area with
+named reports underneath it.
+
+Open question I must not answer alone: the dashboard is also the landing page
+after login. Folding it into Reports either leaves the landing page empty or
+makes Reports the landing page. I will propose rather than decide.
+
+Also in scope per "màn hình có vẻ trùng thì gom lại": sweep for other duplicated
+screens before designing, rather than merging only the three named.
+
+### 8.2 Print templates for every document, and a real template screen
+> "tất cả các chức năng mới: Hợp đồng nguyên tắc, PR, PO, GR, Invoice … đều cần
+> form in hết"
+
+Two pieces of work, and the owner named both:
+1. **The templates themselves** — .docx for HĐNT, ĐĐH, PR, PO, GR and supplier
+   invoice, written for the Vietnamese market and for a sofa business. The
+   variable collectors for HĐNT and ĐĐH already exist; the others do not.
+2. **The template configuration screen**, redesigned to do three jobs it does
+   not do now: full CRUD, and **version control** — which version printed which
+   document, and what happens when a template is replaced after it has printed.
+   `Document.template_id` already records what each file came out of, so the
+   history exists; the screen does not expose it.
+
+### 8.3 Two sessions on the workflow screen; standardization has no CRUD
+> "chức năng workflow đang có 2 session màn hình, và tôi chưa hiểu 2 session này
+> đang có chức năng gì, có trùng không? Chuẩn hóa dữ liệu cũng thế luôn, và
+> chuẩn hóa dữ liệu chưa có CRUD, cũng chưa hiểu tại sao."
+
+Both screens carry a **grid** (every step × every prerequisite / every field ×
+every transform) and a **rule list** below it. If a user cannot tell what the
+second one is for, that is my failure to explain, not theirs — and it may
+genuinely be redundant. I must work out whether the list does anything the grid
+cannot before deciding which to keep.
+
+The "no CRUD" remark needs the same honesty: the grid was built so that every
+possible row already exists, which is why there is no create button. Either
+that is right and the screen must SAY so, or it is wrong for fields the model
+does not discover.
+
+### 8.4 Two progress panels on the order screen
+> "Phần Tiến độ đơn hàng và Tiến Trình Đơn Hàng … có vẻ trùng nhau, nên là giữ
+> lại cái Tiến Trình Đơn Hàng là được rồi."
+
+Decided by the owner: keep **Tiến Trình Đơn Hàng**, remove the other. I must
+check what the removed panel showed that the kept one does not, and carry
+anything real across rather than deleting information.
+
+### 8.5 Workflow: flexible to configure, strict to act
+> "config thì phải linh hoạt, nhưng khi hành động thì phải chặt chẽ."
+
+The principle to hold while doing 8.3. Known gap against it already: the payment
+screen re-implements its own sequencing inline instead of asking the workflow
+engine, so turning a rule off at `/settings/workflow` does not change what the
+money screen does. Configuration that the action ignores is worse than no
+configuration.
+
+### 8.6 GR and invoices cannot be created; references look wrong
+> "Phiếu nhập kho (GR), Hóa đơn … thì lại không được tạo, và data bên trong rất
+> nhiều chứng từ chưa thực sự tham chiếu hoặc hiển thị chính xác (hoặc do data
+> seed chưa nhất quán)."
+
+Two claims, both to be reproduced in the browser before any change:
+* **Cannot create a GR or an invoice.** A GR has no create screen ON PURPOSE —
+  it exists only as the result of receiving against a PO — but if "Nhận hàng" on
+  a PO is failing, that reason is void and this is a live defect. Same for
+  recording an invoice against a PO.
+* **Documents referencing or displaying the wrong thing.** Could be the demo
+  seed being inconsistent, or could be real. I will check the seed against the
+  screens and say which, rather than assuming the seed is at fault.

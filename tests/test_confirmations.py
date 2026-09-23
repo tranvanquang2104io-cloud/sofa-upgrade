@@ -342,35 +342,39 @@ def _order_with(app, seed, code, **flags):
         return str(o.id)
 
 
-def test_order_page_shows_the_progress_stepper(app, client, login, seed):
-    """The stepper was built and never used; it answers the first question a
-    non-technical user asks — which step is my order on."""
+# The order screen used to carry TWO progress panels: a compact stepper and the
+# full lifecycle timeline. The owner chose to keep the timeline, so these three
+# tests now ask the timeline for the same three guarantees they always asked
+# for. The panel changed; what a user must be able to see did not.
+
+
+def test_the_order_page_says_which_step_the_order_is_on(app, client, login,
+                                                         seed):
+    """The first question a non-technical user asks."""
     order_id = _order_with(app, seed, 'ORD-STEP',
                            quotation_created=True, quotation_approved=True,
                            contract_created=True, contract_signed=True)
     login("admin")
     body = client.get(f'/orders/{order_id}').get_data(as_text=True)
 
-    assert 'sf-stepper' in body, "the progress stepper should be on the page"
-    assert 'sf-step--done' in body, "completed steps should be marked done"
-    assert 'sf-step--current' in body, "the current step should be marked"
+    assert 'timeline-marker completed' in body, "finished steps must read as finished"
+    assert 'timeline-marker in-progress' in body, "the current step must be marked"
 
 
-def test_stepper_marks_a_waived_advance_distinctly(app, client, login, seed):
-    """Consistent with the timeline fix: waived is not done."""
+def test_a_waived_advance_is_not_shown_as_done(app, client, login, seed):
+    """Waived is not paid, and the screen must not blur the two."""
     order_id = _order_with(app, seed, 'ORD-STEP-WAIVE',
                            quotation_created=True, quotation_approved=True,
                            contract_created=True, contract_signed=True,
                            advance_paid=True, advance_skipped=True)
     login("admin")
     body = client.get(f'/orders/{order_id}').get_data(as_text=True)
-    assert 'sf-step--skipped' in body
+    # Its own icon, and a marker that is not `completed`.
+    assert 'bi-slash-circle' in body, "a waived advance needs its own mark"
 
 
-def test_stepper_on_a_brand_new_order_points_at_the_first_step(app, client,
-                                                               login, seed):
+def test_a_brand_new_order_points_at_its_first_step(app, client, login, seed):
     order_id = _order_with(app, seed, 'ORD-STEP-NEW')
     login("admin")
     body = client.get(f'/orders/{order_id}').get_data(as_text=True)
-    assert 'sf-stepper' in body
-    assert 'sf-step--current' in body
+    assert 'timeline-marker in-progress' in body
