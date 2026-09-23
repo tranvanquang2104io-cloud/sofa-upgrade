@@ -1055,3 +1055,5 @@ TRANSLATIONS['vi'].update({
     'Delete this file': 'Xóa tệp này',
     'Adjust stock': 'Điều chỉnh tồn kho',
 })
+
+TRANSLATIONS['vi'].update({'Áp dụng quy tắc này': 'Áp dụng quy tắc này'})

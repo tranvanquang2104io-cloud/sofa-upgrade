@@ -106,14 +106,14 @@
       </table>
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
-          <label class="form-label">{{ t('Into Store') }}</label>
-          <select class="form-select form-select-sm" name="store_id">
+          <label class="form-label" for="f_store_id">{{ t('Into Store') }}</label>
+          <select class="form-select form-select-sm" name="store_id" id="f_store_id">
             <option value="">Kho chính (công ty){% if not po.store_id %} — mặc định{% endif %}</option>
             {% for s in stores %}<option value="{{ s.id }}" {% if po.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
           </select>
         </div>
-        <div class="col-md-3"><label class="form-label">{{ t('Received Date') }}</label><input type="date" class="form-control form-control-sm" name="receipt_date"></div>
-        <div class="col-md-3"><label class="form-label">{{ t('Notes') }}</label><input type="text" class="form-control form-control-sm" name="notes"></div>
+        <div class="col-md-3"><label class="form-label" for="f_receipt_date">{{ t('Received Date') }}</label><input type="date" class="form-control form-control-sm" name="receipt_date" id="f_receipt_date"></div>
+        <div class="col-md-3"><label class="form-label" for="f_notes">{{ t('Notes') }}</label><input type="text" class="form-control form-control-sm" name="notes" id="f_notes"></div>
         <div class="col-md-2"><button class="btn btn-success w-100"><i class="bi bi-check-lg"></i> {{ t('Receive Goods') }}</button></div>
       </div>
     </form>

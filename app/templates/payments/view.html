@@ -325,8 +325,8 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Document Format') }}</label>
-                        <select class="form-select" name="format" required>
+                        <label class="form-label" for="f_format">{{ t('Document Format') }}</label>
+                        <select class="form-select" name="format" required id="f_format">
                             <option value="docx">DOCX (Word)</option>
                             <option value="pdf">PDF</option>
                         </select>

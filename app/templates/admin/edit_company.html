@@ -21,40 +21,40 @@
                             <input type="text" class="form-control" value="{{ company.company_code }}" disabled>
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label fw-semibold">Company Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required value="{{ company.name }}">
+                            <label class="form-label fw-semibold" for="f_name">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required value="{{ company.name }}" id="f_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" required value="{{ company.email }}">
+                            <label class="form-label fw-semibold" for="f_email">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" required value="{{ company.email }}" id="f_email">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Phone</label>
-                            <input type="text" name="phone" class="form-control" value="{{ company.phone or '' }}">
+                            <label class="form-label fw-semibold" for="f_phone">Phone</label>
+                            <input type="text" name="phone" class="form-control" value="{{ company.phone or '' }}" id="f_phone">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tax Code</label>
-                            <input type="text" name="tax_code" class="form-control" value="{{ company.tax_code or '' }}">
+                            <label class="form-label fw-semibold" for="f_tax_code">Tax Code</label>
+                            <input type="text" name="tax_code" class="form-control" value="{{ company.tax_code or '' }}" id="f_tax_code">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">VAT (%)</label>
-                            <input type="number" name="vat_rate" class="form-control" value="{{ company.vat_rate or 8 }}" step="0.1">
+                            <label class="form-label fw-semibold" for="f_vat_rate">VAT (%)</label>
+                            <input type="number" name="vat_rate" class="form-control" value="{{ company.vat_rate or 8 }}" step="0.1" id="f_vat_rate">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">City</label>
-                            <input type="text" name="city" class="form-control" value="{{ company.city or '' }}">
+                            <label class="form-label fw-semibold" for="f_city">City</label>
+                            <input type="text" name="city" class="form-control" value="{{ company.city or '' }}" id="f_city">
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Address</label>
-                            <input type="text" name="address" class="form-control" value="{{ company.address or '' }}">
+                            <label class="form-label fw-semibold" for="f_address">Address</label>
+                            <input type="text" name="address" class="form-control" value="{{ company.address or '' }}" id="f_address">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Representative Name</label>
-                            <input type="text" name="representative_name" class="form-control" value="{{ company.representative_name or '' }}">
+                            <label class="form-label fw-semibold" for="f_representative_name">Representative Name</label>
+                            <input type="text" name="representative_name" class="form-control" value="{{ company.representative_name or '' }}" id="f_representative_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Title</label>
-                            <input type="text" name="representative_title" class="form-control" value="{{ company.representative_title or 'Director' }}">
+                            <label class="form-label fw-semibold" for="f_representative_title">Title</label>
+                            <input type="text" name="representative_title" class="form-control" value="{{ company.representative_title or 'Director' }}" id="f_representative_title">
                         </div>
                     </div>
                 </div>

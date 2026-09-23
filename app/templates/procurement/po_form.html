@@ -12,34 +12,34 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="card mb-3"><div class="card-body row g-3">
     <div class="col-md-4">
-      <label class="form-label">{{ t('Supplier') }}</label>
-      <select class="form-select" name="supplier_id">
+      <label class="form-label" for="f_supplier_id">{{ t('Supplier') }}</label>
+      <select class="form-select" name="supplier_id" id="f_supplier_id">
         <option value="">{{ t('-- not assigned --') }}</option>
         {% for s in suppliers %}<option value="{{ s.id }}" {% if po and po.supplier_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-3">
-      <label class="form-label">{{ t('Receiving Store') }}</label>
-      <select class="form-select" name="store_id">
+      <label class="form-label" for="f_store_id">{{ t('Receiving Store') }}</label>
+      <select class="form-select" name="store_id" id="f_store_id">
         <option value="">{{ t('Main warehouse (company)') }}</option>
         {% for s in stores %}<option value="{{ s.id }}" {% if po and po.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-2">
-      <label class="form-label">{{ t('Order Date') }}</label>
-      <input type="date" class="form-control" name="order_date" value="{{ po.order_date.isoformat() if po and po.order_date else '' }}">
+      <label class="form-label" for="f_order_date">{{ t('Order Date') }}</label>
+      <input type="date" class="form-control" name="order_date" value="{{ po.order_date.isoformat() if po and po.order_date else '' }}" id="f_order_date">
     </div>
     <div class="col-md-2">
-      <label class="form-label">{{ t('Expected Delivery') }}</label>
-      <input type="date" class="form-control" name="expected_date" value="{{ po.expected_date.isoformat() if po and po.expected_date else '' }}">
+      <label class="form-label" for="f_expected_date">{{ t('Expected Delivery') }}</label>
+      <input type="date" class="form-control" name="expected_date" value="{{ po.expected_date.isoformat() if po and po.expected_date else '' }}" id="f_expected_date">
     </div>
     <div class="col-md-1">
-      <label class="form-label">VAT %</label>
-      <input type="number" step="0.01" min="0" class="form-control" name="vat_rate" value="{{ po.vat_rate|float if po else 0 }}">
+      <label class="form-label" for="f_vat_rate">VAT %</label>
+      <input type="number" step="0.01" min="0" class="form-control" name="vat_rate" value="{{ po.vat_rate|float if po else 0 }}" id="f_vat_rate">
     </div>
     <div class="col-12">
-      <label class="form-label">{{ t('Notes') }}</label>
-      <textarea class="form-control" name="notes" rows="1">{{ po.notes if po else '' }}</textarea>
+      <label class="form-label" for="f_notes">{{ t('Notes') }}</label>
+      <textarea class="form-control" name="notes" rows="1" id="f_notes">{{ po.notes if po else '' }}</textarea>
     </div>
   </div></div>
 

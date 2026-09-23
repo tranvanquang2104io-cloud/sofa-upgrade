@@ -20,29 +20,29 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-12">
-                            <label class="form-label fw-semibold">{{ t('Store Name') }} <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="f_name">{{ t('Store Name') }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" required
-                                   value="{{ store.name }}" maxlength="255">
+                                   value="{{ store.name }}" maxlength="255" id="f_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('Manager Name') }}</label>
+                            <label class="form-label fw-semibold" for="f_manager_name">{{ t('Manager Name') }}</label>
                             <input type="text" class="form-control" name="manager_name"
-                                   value="{{ store.manager_name or '' }}" maxlength="255">
+                                   value="{{ store.manager_name or '' }}" maxlength="255" id="f_manager_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('Phone') }}</label>
+                            <label class="form-label fw-semibold" for="f_phone">{{ t('Phone') }}</label>
                             <input type="text" class="form-control" name="phone"
-                                   value="{{ store.phone or '' }}" maxlength="20">
+                                   value="{{ store.phone or '' }}" maxlength="20" id="f_phone">
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">{{ t('Address') }}</label>
+                            <label class="form-label fw-semibold" for="f_address">{{ t('Address') }}</label>
                             <input type="text" class="form-control" name="address"
-                                   value="{{ store.address or '' }}" maxlength="500">
+                                   value="{{ store.address or '' }}" maxlength="500" id="f_address">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('City / Province') }}</label>
+                            <label class="form-label fw-semibold" for="f_city">{{ t('City / Province') }}</label>
                             <input type="text" class="form-control" name="city"
-                                   value="{{ store.city or '' }}" maxlength="100">
+                                   value="{{ store.city or '' }}" maxlength="100" id="f_city">
                         </div>
                     </div>
 

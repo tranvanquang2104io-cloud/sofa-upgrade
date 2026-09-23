@@ -3494,7 +3494,8 @@ def workflow_settings():
     """
     from app.models.models import WorkflowRule
     from app.services.workflow_service import (
-        ALL_ACTIONS, PREREQUISITE_LABELS, WorkflowService,
+        ACTION_LABELS_VI, ALL_ACTIONS, PREREQUISITE_LABELS,
+        PREREQUISITE_LABELS_VI, WorkflowService,
     )
 
     company_id = get_current_company_id()
@@ -3566,7 +3567,12 @@ def workflow_settings():
     return render_template('settings/workflow.html',
                            rules=rules,
                            actions=ALL_ACTIONS,
-                           prerequisite_labels=PREREQUISITE_LABELS,
+                           # The English map is what the block MESSAGES are
+                           # built from; the screen itself is read by
+                           # Vietnamese users, and t() cannot translate a key
+                           # that only exists as a variable.
+                           prerequisite_labels=PREREQUISITE_LABELS_VI,
+                           action_labels=ACTION_LABELS_VI,
                            grid=grid,
                            modes=WorkflowRule.MODES)
 

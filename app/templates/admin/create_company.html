@@ -18,47 +18,47 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Company Code <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="f_company_code">Company Code <span class="text-danger">*</span></label>
                             <input type="text" name="company_code" class="form-control text-uppercase" required
                                    placeholder="E.g. SOFA01" style="text-transform:uppercase"
-                                   oninput="this.value=this.value.toUpperCase()">
+                                   oninput="this.value=this.value.toUpperCase()" id="f_company_code">
                             <div class="form-text">Used as folder name, letters and numbers only.</div>
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label fw-semibold">Company Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required placeholder="Company full name">
+                            <label class="form-label fw-semibold" for="f_name">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required placeholder="Company full name" id="f_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" required>
+                            <label class="form-label fw-semibold" for="f_email">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" required id="f_email">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Phone</label>
-                            <input type="text" name="phone" class="form-control">
+                            <label class="form-label fw-semibold" for="f_phone">Phone</label>
+                            <input type="text" name="phone" class="form-control" id="f_phone">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tax Code</label>
-                            <input type="text" name="tax_code" class="form-control">
+                            <label class="form-label fw-semibold" for="f_tax_code">Tax Code</label>
+                            <input type="text" name="tax_code" class="form-control" id="f_tax_code">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">VAT (%)</label>
-                            <input type="number" name="vat_rate" class="form-control" value="8" min="0" max="100" step="0.1">
+                            <label class="form-label fw-semibold" for="f_vat_rate">VAT (%)</label>
+                            <input type="number" name="vat_rate" class="form-control" value="8" min="0" max="100" step="0.1" id="f_vat_rate">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">City</label>
-                            <input type="text" name="city" class="form-control">
+                            <label class="form-label fw-semibold" for="f_city">City</label>
+                            <input type="text" name="city" class="form-control" id="f_city">
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Address</label>
-                            <input type="text" name="address" class="form-control">
+                            <label class="form-label fw-semibold" for="f_address">Address</label>
+                            <input type="text" name="address" class="form-control" id="f_address">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Representative Name</label>
-                            <input type="text" name="representative_name" class="form-control" placeholder="Full name">
+                            <label class="form-label fw-semibold" for="f_representative_name">Representative Name</label>
+                            <input type="text" name="representative_name" class="form-control" placeholder="Full name" id="f_representative_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Title</label>
-                            <input type="text" name="representative_title" class="form-control" value="Director">
+                            <label class="form-label fw-semibold" for="f_representative_title">Title</label>
+                            <input type="text" name="representative_title" class="form-control" value="Director" id="f_representative_title">
                         </div>
                     </div>
                 </div>
@@ -69,20 +69,20 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
-                            <input type="text" name="admin_username" class="form-control" required>
+                            <label class="form-label fw-semibold" for="f_admin_username">Username <span class="text-danger">*</span></label>
+                            <input type="text" name="admin_username" class="form-control" required id="f_admin_username">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
-                            <input type="password" name="admin_password" class="form-control" required minlength="6">
+                            <label class="form-label fw-semibold" for="f_admin_password">Password <span class="text-danger">*</span></label>
+                            <input type="password" name="admin_password" class="form-control" required minlength="6" id="f_admin_password">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="admin_fullname" class="form-control" required>
+                            <label class="form-label fw-semibold" for="f_admin_fullname">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="admin_fullname" class="form-control" required id="f_admin_fullname">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Account Email</label>
-                            <input type="email" name="admin_email" class="form-control" placeholder="Leave blank to use company email">
+                            <label class="form-label fw-semibold" for="f_admin_email">Account Email</label>
+                            <input type="email" name="admin_email" class="form-control" placeholder="Leave blank to use company email" id="f_admin_email">
                         </div>
                     </div>
                 </div>

@@ -94,16 +94,16 @@
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Name') }} <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="name" required placeholder="{{ t('e.g. Vải bọc') }}">
+                        <label class="form-label" for="f_name">{{ t('Name') }} <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="name" required placeholder="{{ t('e.g. Vải bọc') }}" id="f_name">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Description') }}</label>
-                        <textarea class="form-control" name="description" rows="2"></textarea>
+                        <label class="form-label" for="f_description">{{ t('Description') }}</label>
+                        <textarea class="form-control" name="description" rows="2" id="f_description"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Sort Order') }}</label>
-                        <input type="number" class="form-control" name="sort_order" value="0" min="0">
+                        <label class="form-label" for="f_sort_order">{{ t('Sort Order') }}</label>
+                        <input type="number" class="form-control" name="sort_order" value="0" min="0" id="f_sort_order">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -129,15 +129,15 @@
                 <input type="hidden" name="cat_id" id="editCatId">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Name') }} <span class="text-danger">*</span></label>
+                        <label class="form-label" for="editName">{{ t('Name') }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="name" id="editName" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Description') }}</label>
+                        <label class="form-label" for="editDescription">{{ t('Description') }}</label>
                         <textarea class="form-control" name="description" id="editDescription" rows="2"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Sort Order') }}</label>
+                        <label class="form-label" for="editSort">{{ t('Sort Order') }}</label>
                         <input type="number" class="form-control" name="sort_order" id="editSort" min="0">
                     </div>
                 </div>

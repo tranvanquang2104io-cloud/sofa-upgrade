@@ -353,3 +353,22 @@ footer p {
     border-top: 1px solid var(--bs-border-color, #dee2e6);
     padding-top: 1rem;
 }
+
+/* --- Tick boxes ---
+   Bootstrap ships these at 16x16. The audit found 215 of them, most in the
+   settings grids where a whole column is ticked one cell at a time, and this
+   product is used on a tablet in a showroom with a finger rather than a mouse.
+   24px is the smallest target WCAG 2.2 accepts, and missing a cell in a grid
+   does not just fail to tick — it ticks the wrong rule. */
+.form-check-input {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: 0.125em;
+}
+
+/* Inside a dense table the box is the whole cell, so give the row enough
+   height for the larger box rather than letting it crowd the text. */
+.table td .form-check-input {
+    margin-top: 0;
+    vertical-align: middle;
+}

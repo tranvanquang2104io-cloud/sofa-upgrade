@@ -139,12 +139,12 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">{{ t('Template Name') }} <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" required placeholder="VD: Hợp Đồng Mua Bán Sofa 2024">
+                        <label class="form-label fw-bold" for="f_name">{{ t('Template Name') }} <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="VD: Hợp Đồng Mua Bán Sofa 2024" id="f_name">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">{{ t('Document Type') }} <span class="text-danger">*</span></label>
-                        <select name="document_type" class="form-select" required>
+                        <label class="form-label fw-bold" for="f_document_type">{{ t('Document Type') }} <span class="text-danger">*</span></label>
+                        <select name="document_type" class="form-select" required id="f_document_type">
                             <option value="">-- Select type --</option>
                             <option value="quotation">Quotation</option>
                             <option value="contract">Contract</option>
@@ -156,13 +156,13 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Template File (.docx) <span class="text-danger">*</span></label>
-                        <input type="file" name="template_file" class="form-control" accept=".docx" required>
+                        <label class="form-label fw-bold" for="f_template_file">Template File (.docx) <span class="text-danger">*</span></label>
+                        <input type="file" name="template_file" class="form-control" accept=".docx" required id="f_template_file">
                         <div class="form-text">Only Word (.docx) files are supported. Use <code>{{variable}}</code> syntax in the file.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea name="description" class="form-control" rows="2" placeholder="Optional"></textarea>
+                        <label class="form-label" for="f_description">Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Optional" id="f_description"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

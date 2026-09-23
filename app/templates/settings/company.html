@@ -21,28 +21,28 @@
                 <div class="row">
                     <div class="col-md-8">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Company Name *') }}</label>
-                            <input type="text" class="form-control" name="name" value="{{ company.name }}" required>
+                            <label class="form-label" for="f_name">{{ t('Company Name *') }}</label>
+                            <input type="text" class="form-control" name="name" value="{{ company.name }}" required id="f_name">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Tax Code') }}</label>
-                            <input type="text" class="form-control" name="tax_code" value="{{ company.tax_code or '' }}" placeholder="e.g., 0312742744">
+                            <label class="form-label" for="f_tax_code">{{ t('Tax Code') }}</label>
+                            <input type="text" class="form-control" name="tax_code" value="{{ company.tax_code or '' }}" placeholder="e.g., 0312742744" id="f_tax_code">
                         </div>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Business Registration No.') }}</label>
-                            <input type="text" class="form-control" name="business_registration_number" value="{{ company.business_registration_number or '' }}" placeholder="Số ĐKKD / GPKD">
+                            <label class="form-label" for="f_business_registration_number">{{ t('Business Registration No.') }}</label>
+                            <input type="text" class="form-control" name="business_registration_number" value="{{ company.business_registration_number or '' }}" placeholder="Số ĐKKD / GPKD" id="f_business_registration_number">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Website') }}</label>
-                            <input type="text" class="form-control" name="website" value="{{ company.website or '' }}" placeholder="https://...">
+                            <label class="form-label" for="f_website">{{ t('Website') }}</label>
+                            <input type="text" class="form-control" name="website" value="{{ company.website or '' }}" placeholder="https://..." id="f_website">
                         </div>
                     </div>
                 </div>
@@ -50,39 +50,39 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Email *') }}</label>
-                            <input type="email" class="form-control" name="email" value="{{ company.email }}" required>
+                            <label class="form-label" for="f_email">{{ t('Email *') }}</label>
+                            <input type="email" class="form-control" name="email" value="{{ company.email }}" required id="f_email">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Phone') }}</label>
-                            <input type="text" class="form-control" name="phone" value="{{ company.phone or '' }}">
+                            <label class="form-label" for="f_phone">{{ t('Phone') }}</label>
+                            <input type="text" class="form-control" name="phone" value="{{ company.phone or '' }}" id="f_phone">
                         </div>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">{{ t('Registered / Head-office Address') }}</label>
-                    <textarea class="form-control" name="address" rows="2">{{ company.address or '' }}</textarea>
+                    <label class="form-label" for="f_address">{{ t('Registered / Head-office Address') }}</label>
+                    <textarea class="form-control" name="address" rows="2" id="f_address">{{ company.address or '' }}</textarea>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">{{ t('Production / Manufacturing Address') }}</label>
-                    <textarea class="form-control" name="production_address" rows="2">{{ company.production_address or '' }}</textarea>
+                    <label class="form-label" for="f_production_address">{{ t('Production / Manufacturing Address') }}</label>
+                    <textarea class="form-control" name="production_address" rows="2" id="f_production_address">{{ company.production_address or '' }}</textarea>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('City') }}</label>
-                            <input type="text" class="form-control" name="city" value="{{ company.city or '' }}" placeholder="e.g., TP. Hồ Chí Minh">
+                            <label class="form-label" for="f_city">{{ t('City') }}</label>
+                            <input type="text" class="form-control" name="city" value="{{ company.city or '' }}" placeholder="e.g., TP. Hồ Chí Minh" id="f_city">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Country') }}</label>
-                            <input type="text" class="form-control" name="country" value="{{ company.country or '' }}" placeholder="Vietnam">
+                            <label class="form-label" for="f_country">{{ t('Country') }}</label>
+                            <input type="text" class="form-control" name="country" value="{{ company.country or '' }}" placeholder="Vietnam" id="f_country">
                         </div>
                     </div>
                 </div>
@@ -96,14 +96,14 @@
                 <div class="row">
                     <div class="col-md-8">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Representative Name') }}</label>
-                            <input type="text" class="form-control" name="representative_name" value="{{ company.representative_name or '' }}" placeholder="e.g., Lê Thị Thắm">
+                            <label class="form-label" for="f_representative_name">{{ t('Representative Name') }}</label>
+                            <input type="text" class="form-control" name="representative_name" value="{{ company.representative_name or '' }}" placeholder="e.g., Lê Thị Thắm" id="f_representative_name">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('Title / Position') }}</label>
-                            <input type="text" class="form-control" name="representative_title" value="{{ company.representative_title or 'Director' }}" placeholder="Director">
+                            <label class="form-label" for="f_representative_title">{{ t('Title / Position') }}</label>
+                            <input type="text" class="form-control" name="representative_title" value="{{ company.representative_title or 'Director' }}" placeholder="Director" id="f_representative_title">
                         </div>
                     </div>
                 </div>
@@ -116,8 +116,8 @@
             <div class="card-body">
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label class="form-label">{{ t('Default VAT Rate (%)') }}</label>
-                        <input type="number" class="form-control" name="vat_rate" value="{{ company.vat_rate or 8 }}" step="0.01" min="0" max="100">
+                        <label class="form-label" for="f_vat_rate">{{ t('Default VAT Rate (%)') }}</label>
+                        <input type="number" class="form-control" name="vat_rate" value="{{ company.vat_rate or 8 }}" step="0.01" min="0" max="100" id="f_vat_rate">
                         <div class="form-text">{{ t('This default is pre-filled in all new documents.') }}</div>
                     </div>
                 </div>

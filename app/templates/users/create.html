@@ -16,40 +16,40 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="f_full_name">Full Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="full_name" required
-                                   placeholder="Nguyễn Văn A" maxlength="255">
+                                   placeholder="Nguyễn Văn A" maxlength="255" id="f_full_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="f_username">Username <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="username" required
-                                   placeholder="nvana" maxlength="100">
+                                   placeholder="nvana" maxlength="100" id="f_username">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="f_email">Email <span class="text-danger">*</span></label>
                             <input type="email" class="form-control" name="email" required
-                                   placeholder="nvana@company.com" maxlength="255">
+                                   placeholder="nvana@company.com" maxlength="255" id="f_email">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="f_password">Password <span class="text-danger">*</span></label>
                             <input type="password" class="form-control" name="password" required
-                                   placeholder="Tối thiểu 6 ký tự" minlength="6">
+                                   placeholder="Tối thiểu 6 ký tự" minlength="6" id="f_password">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Phone</label>
+                            <label class="form-label fw-semibold" for="f_phone">Phone</label>
                             <input type="text" class="form-control" name="phone"
-                                   placeholder="0909..." maxlength="20">
+                                   placeholder="0909..." maxlength="20" id="f_phone">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Position</label>
+                            <label class="form-label fw-semibold" for="f_position">Position</label>
                             <input type="text" class="form-control" name="position"
-                                   placeholder="Nhân viên kinh doanh" maxlength="100">
+                                   placeholder="Nhân viên kinh doanh" maxlength="100" id="f_position">
                         </div>
 
                         <div class="col-12"><hr class="my-1"></div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Role <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="roleSelect">Role <span class="text-danger">*</span></label>
                             <select class="form-select" name="role" id="roleSelect" onchange="toggleStoreField()">
                                 <option value="user">{{ t('Employee') }}</option>
                                 <option value="store_admin">{{ t('Store Manager') }}</option>
@@ -64,7 +64,7 @@
                             </div>
                         </div>
                         <div class="col-md-6" id="storeFieldGroup">
-                            <label class="form-label fw-semibold">Store <span class="text-danger" id="storeRequired">*</span></label>
+                            <label class="form-label fw-semibold" for="storeSelect">Store <span class="text-danger" id="storeRequired">*</span></label>
                             <select class="form-select" name="store_id" id="storeSelect">
                                 <option value="">{{ t('— Select store —') }}</option>
                                 {% for store in stores %}

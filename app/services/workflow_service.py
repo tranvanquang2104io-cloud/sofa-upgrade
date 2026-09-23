@@ -56,6 +56,22 @@ ALL_ACTIONS = (
     ACTION_PAYMENT_FINAL,
 )
 
+# Vietnamese names for the steps themselves. The settings screen listed the
+# action codes alone (`payment.advance`), which tells an administrator who
+# already knows the system nothing new and tells everyone else nothing at all.
+# The code stays visible next to the name — it is what the rule is keyed on,
+# and hiding it would make the screen impossible to reason about — but the
+# name is what the row is called.
+ACTION_LABELS_VI = {
+    ACTION_QUOTATION_APPROVE: 'Duyệt báo giá',
+    ACTION_CONTRACT_CREATE: 'Lập hợp đồng',
+    ACTION_CONTRACT_SIGN: 'Ký hợp đồng',
+    ACTION_HANDOVER_CREATE: 'Lập biên bản bàn giao',
+    ACTION_HANDOVER_CONFIRM: 'Xác nhận bàn giao',
+    ACTION_PAYMENT_ADVANCE: 'Ghi nhận tạm ứng',
+    ACTION_PAYMENT_FINAL: 'Ghi nhận thanh toán cuối',
+}
+
 # Human-readable labels for lifecycle flags, used to build block messages.
 PREREQUISITE_LABELS = {
     'quotation_created': 'a quotation has been created',

@@ -22,13 +22,13 @@
     <div class="card-header">{{ t('Parties and validity') }}</div>
     <div class="card-body row g-3">
       <div class="col-md-4">
-        <label class="form-label">{{ t('Agreement Number') }} <span class="text-danger">*</span></label>
+        <label class="form-label" for="f_agreement_number">{{ t('Agreement Number') }} <span class="text-danger">*</span></label>
         <input type="text" name="agreement_number" class="form-control" required
-               value="{{ agreement.agreement_number }}">
+               value="{{ agreement.agreement_number }}" id="f_agreement_number">
       </div>
       <div class="col-md-5">
-        <label class="form-label">{{ t('Customer') }} <span class="text-danger">*</span></label>
-        <select name="customer_id" class="form-select" required>
+        <label class="form-label" for="f_customer_id">{{ t('Customer') }} <span class="text-danger">*</span></label>
+        <select name="customer_id" class="form-select" required id="f_customer_id">
           <option value="">{{ t('-- Select --') }}</option>
           {% for c in customers %}
           <option value="{{ c.id }}" {% if c.id == agreement.customer_id %}selected{% endif %}>{{ c.name }}</option>
@@ -36,25 +36,25 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ t('Signed Date') }}</label>
+        <label class="form-label" for="f_signed_date">{{ t('Signed Date') }}</label>
         <input type="date" name="signed_date" class="form-control"
-               value="{{ agreement.signed_date.strftime('%Y-%m-%d') if agreement.signed_date else '' }}">
+               value="{{ agreement.signed_date.strftime('%Y-%m-%d') if agreement.signed_date else '' }}" id="f_signed_date">
       </div>
 
       <div class="col-md-3">
-        <label class="form-label">{{ t('Effective From') }} <span class="text-danger">*</span></label>
+        <label class="form-label" for="f_effective_from">{{ t('Effective From') }} <span class="text-danger">*</span></label>
         <input type="date" name="effective_from" class="form-control" required
-               value="{{ agreement.effective_from.strftime('%Y-%m-%d') if agreement.effective_from else '' }}">
+               value="{{ agreement.effective_from.strftime('%Y-%m-%d') if agreement.effective_from else '' }}" id="f_effective_from">
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ t('Effective To') }}</label>
+        <label class="form-label" for="f_effective_to">{{ t('Effective To') }}</label>
         <input type="date" name="effective_to" class="form-control"
-               value="{{ agreement.effective_to.strftime('%Y-%m-%d') if agreement.effective_to else '' }}">
+               value="{{ agreement.effective_to.strftime('%Y-%m-%d') if agreement.effective_to else '' }}" id="f_effective_to">
         <div class="form-text">{{ t('Leave empty for open-ended (vô thời hạn)') }}</div>
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ t('Renewal Notice (days)') }}</label>
-        <input type="number" name="renewal_notice_days" class="form-control" value="{{ agreement.renewal_notice_days or 30 }}" min="0">
+        <label class="form-label" for="f_renewal_notice_days">{{ t('Renewal Notice (days)') }}</label>
+        <input type="number" name="renewal_notice_days" class="form-control" value="{{ agreement.renewal_notice_days or 30 }}" min="0" id="f_renewal_notice_days">
       </div>
       <div class="col-md-3 d-flex align-items-end">
         <div class="form-check">
@@ -69,29 +69,29 @@
     <div class="card-header">{{ t('Commercial terms') }}</div>
     <div class="card-body row g-3">
       <div class="col-12">
-        <label class="form-label">{{ t('Scope of cooperation') }} (phạm vi hợp tác)</label>
-        <textarea name="scope_description" rows="3" class="form-control">{{ agreement.scope_description or '' }}</textarea>
+        <label class="form-label" for="f_scope_description">{{ t('Scope of cooperation') }} (phạm vi hợp tác)</label>
+        <textarea name="scope_description" rows="3" class="form-control" id="f_scope_description">{{ agreement.scope_description or '' }}</textarea>
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ t('Payment Terms') }}</label>
-        <textarea name="payment_terms" rows="3" class="form-control">{{ agreement.payment_terms or '' }}</textarea>
+        <label class="form-label" for="f_payment_terms">{{ t('Payment Terms') }}</label>
+        <textarea name="payment_terms" rows="3" class="form-control" id="f_payment_terms">{{ agreement.payment_terms or '' }}</textarea>
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ t('Delivery Terms') }}</label>
-        <textarea name="delivery_terms" rows="3" class="form-control">{{ agreement.delivery_terms or '' }}</textarea>
+        <label class="form-label" for="f_delivery_terms">{{ t('Delivery Terms') }}</label>
+        <textarea name="delivery_terms" rows="3" class="form-control" id="f_delivery_terms">{{ agreement.delivery_terms or '' }}</textarea>
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ t('Quality Terms') }}</label>
-        <textarea name="quality_terms" rows="3" class="form-control">{{ agreement.quality_terms or '' }}</textarea>
+        <label class="form-label" for="f_quality_terms">{{ t('Quality Terms') }}</label>
+        <textarea name="quality_terms" rows="3" class="form-control" id="f_quality_terms">{{ agreement.quality_terms or '' }}</textarea>
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ t('Dispute Resolution') }}</label>
-        <textarea name="dispute_resolution" rows="3" class="form-control">{{ agreement.dispute_resolution or '' }}</textarea>
+        <label class="form-label" for="f_dispute_resolution">{{ t('Dispute Resolution') }}</label>
+        <textarea name="dispute_resolution" rows="3" class="form-control" id="f_dispute_resolution">{{ agreement.dispute_resolution or '' }}</textarea>
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ t('Penalty %') }}</label>
+        <label class="form-label" for="f_penalty_pct">{{ t('Penalty %') }}</label>
         <input type="number" name="penalty_pct" class="form-control" value="{{ agreement.penalty_pct or 8 }}"
-               min="0" max="8" step="0.1">
+               min="0" max="8" step="0.1" id="f_penalty_pct">
         <div class="form-text">
           {{ t('Capped at 8% of the value of the breached obligation (Điều 301 Luật Thương mại 2005)') }}
         </div>
@@ -103,16 +103,16 @@
     <div class="card-header">{{ t('Signatories') }}</div>
     <div class="card-body row g-3">
       <div class="col-md-6">
-        <label class="form-label">{{ t('Our representative') }}</label>
-        <input type="text" name="seller_representative" class="form-control" value="{{ agreement.seller_representative or '' }}">
+        <label class="form-label" for="f_seller_representative">{{ t('Our representative') }}</label>
+        <input type="text" name="seller_representative" class="form-control" value="{{ agreement.seller_representative or '' }}" id="f_seller_representative">
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ t('Customer representative') }}</label>
-        <input type="text" name="buyer_representative" class="form-control" value="{{ agreement.buyer_representative or '' }}">
+        <label class="form-label" for="f_buyer_representative">{{ t('Customer representative') }}</label>
+        <input type="text" name="buyer_representative" class="form-control" value="{{ agreement.buyer_representative or '' }}" id="f_buyer_representative">
       </div>
       <div class="col-12">
-        <label class="form-label">{{ t('Notes') }}</label>
-        <textarea name="notes" rows="2" class="form-control">{{ agreement.notes or '' }}</textarea>
+        <label class="form-label" for="f_notes">{{ t('Notes') }}</label>
+        <textarea name="notes" rows="2" class="form-control" id="f_notes">{{ agreement.notes or '' }}</textarea>
       </div>
     </div>
   </div>

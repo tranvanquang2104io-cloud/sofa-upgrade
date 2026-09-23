@@ -172,26 +172,26 @@
       <form method="POST" action="{{ url_for('dashboard.add_plan_material', plan_id=plan.id) }}" class="row g-2 align-items-end">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="col-md-4">
-          <label class="form-label">{{ t('Material') }}</label>
-          <select class="form-select" name="material_id" required>
+          <label class="form-label" for="f_material_id">{{ t('Material') }}</label>
+          <select class="form-select" name="material_id" required id="f_material_id">
             <option value="">{{ t('Select a material') }}</option>
             {% for m in materials %}<option value="{{ m.id }}">{{ m.material_code }} — {{ m.name }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">{{ t('For item') }}</label>
-          <select class="form-select" name="plan_item_id">
+          <label class="form-label" for="f_plan_item_id">{{ t('For item') }}</label>
+          <select class="form-select" name="plan_item_id" id="f_plan_item_id">
             <option value="">{{ t('(overall)') }}</option>
             {% for it in plan.items %}<option value="{{ it.id }}">{{ it.source_name }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">{{ t('Required') }}</label>
-          <input type="number" step="0.01" min="0" class="form-control" name="quantity_required" value="0">
+          <label class="form-label" for="f_quantity_required">{{ t('Required') }}</label>
+          <input type="number" step="0.01" min="0" class="form-control" name="quantity_required" value="0" id="f_quantity_required">
         </div>
         <div class="col-md-2">
-          <label class="form-label">{{ t('Unit') }}</label>
-          <select class="form-select" name="unit">
+          <label class="form-label" for="f_unit">{{ t('Unit') }}</label>
+          <select class="form-select" name="unit" id="f_unit">
             <option value="">--</option>
             {% for u in units %}<option value="{{ u.name }}">{{ u.name }}</option>{% endfor %}
           </select>

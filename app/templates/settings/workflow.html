@@ -43,7 +43,7 @@
             <th style="min-width: 12rem">{{ t('Step') }}</th>
             {% for prerequisite, label in prerequisite_labels.items() %}
             <th class="small text-center" style="min-width: 9rem">
-              <span title="{{ prerequisite }}">{{ t(label) }}</span>
+              <span title="{{ prerequisite }}">{{ label }}</span>
             </th>
             {% endfor %}
           </tr>
@@ -51,10 +51,18 @@
         <tbody>
           {% for action in actions %}
           <tr>
-            <td><code>{{ action }}</code></td>
+            <td>
+              <div>{{ action_labels.get(action, action) }}</div>
+              <code class="text-muted small">{{ action }}</code>
+            </td>
             {% for prerequisite, label in prerequisite_labels.items() %}
             <td>
+              {# One cell is one (step, prerequisite) pairing. Read on its own
+                 it is an unnamed dropdown in a grid of dropdowns, so it says
+                 which pairing it controls. #}
               <select name="cell_{{ action }}_{{ prerequisite }}"
+                      title="{{ action_labels.get(action, action) }} — {{ label }}"
+                      aria-label="{{ action_labels.get(action, action) }} — {{ label }}"
                       class="form-select form-select-sm">
                 <option value="">—</option>
                 {% for mode in modes %}
@@ -102,12 +110,20 @@
         <tr>
           <td>
             <input type="checkbox" class="form-check-input"
+                   id="active_{{ rule.id }}"
+                   title="{{ t('Áp dụng quy tắc này') }}"
+                   aria-label="{{ t('Áp dụng quy tắc này') }}: {{ action_labels.get(rule.action, rule.action) }} — {{ prerequisite_labels.get(rule.prerequisite, rule.prerequisite) }}"
                    name="active_{{ rule.id }}" {% if rule.is_active %}checked{% endif %}>
           </td>
-          <td><code>{{ rule.action }}</code></td>
-          <td>{{ t(prerequisite_labels.get(rule.prerequisite, rule.prerequisite)) }}</td>
           <td>
-            <select name="mode_{{ rule.id }}" class="form-select form-select-sm">
+            <div>{{ action_labels.get(rule.action, rule.action) }}</div>
+            <code class="text-muted small">{{ rule.action }}</code>
+          </td>
+          <td>{{ prerequisite_labels.get(rule.prerequisite, rule.prerequisite) }}</td>
+          <td>
+            <select name="mode_{{ rule.id }}" class="form-select form-select-sm"
+                    title="{{ t('Enforcement') }}"
+                    aria-label="{{ t('Enforcement') }}: {{ action_labels.get(rule.action, rule.action) }}">
               {% for m in modes %}
               <option value="{{ m }}" {% if rule.mode == m %}selected{% endif %}>{{ t(m) }}</option>
               {% endfor %}
@@ -116,6 +132,7 @@
           <td>
             <input type="text" class="form-control form-control-sm"
                    name="message_{{ rule.id }}" value="{{ rule.message or '' }}"
+                   aria-label="{{ t('Message shown when blocked') }}: {{ action_labels.get(rule.action, rule.action) }}"
                    placeholder="{{ t('Leave empty for the default message') }}">
           </td>
         </tr>

@@ -24,35 +24,35 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('Full Name') }}</label>
+                            <label class="form-label fw-semibold" for="f_full_name">{{ t('Full Name') }}</label>
                             <input type="text" class="form-control" name="full_name"
-                                   value="{{ target.full_name }}" maxlength="255">
+                                   value="{{ target.full_name }}" maxlength="255" id="f_full_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('Email') }}</label>
+                            <label class="form-label fw-semibold" for="f_email">{{ t('Email') }}</label>
                             <input type="email" class="form-control" name="email"
-                                   value="{{ target.email }}" maxlength="255">
+                                   value="{{ target.email }}" maxlength="255" id="f_email">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('Phone') }}</label>
+                            <label class="form-label fw-semibold" for="f_phone">{{ t('Phone') }}</label>
                             <input type="text" class="form-control" name="phone"
-                                   value="{{ target.phone or '' }}" maxlength="20">
+                                   value="{{ target.phone or '' }}" maxlength="20" id="f_phone">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('Position') }}</label>
+                            <label class="form-label fw-semibold" for="f_position">{{ t('Position') }}</label>
                             <input type="text" class="form-control" name="position"
-                                   value="{{ target.position or '' }}" maxlength="100">
+                                   value="{{ target.position or '' }}" maxlength="100" id="f_position">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('New Password') }}</label>
+                            <label class="form-label fw-semibold" for="f_password">{{ t('New Password') }}</label>
                             <input type="password" class="form-control" name="password"
-                                   placeholder="{{ t('Leave blank to keep current password') }}" minlength="6">
+                                   placeholder="{{ t('Leave blank to keep current password') }}" minlength="6" id="f_password">
                         </div>
 
                         <div class="col-12"><hr class="my-1"></div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ t('Role') }}</label>
+                            <label class="form-label fw-semibold" for="roleSelect">{{ t('Role') }}</label>
                             <select class="form-select" name="role" id="roleSelect" onchange="toggleStoreField()">
                                 <option value="user" {% if target.role == 'user' %}selected{% endif %}>{{ t('Employee') }}</option>
                                 <option value="store_admin" {% if target.role == 'store_admin' %}selected{% endif %}>{{ t('Store Manager') }}</option>
@@ -62,7 +62,7 @@
                             </select>
                         </div>
                         <div class="col-md-6" id="storeFieldGroup">
-                            <label class="form-label fw-semibold">{{ t('Store') }}</label>
+                            <label class="form-label fw-semibold" for="storeSelect">{{ t('Store') }}</label>
                             <select class="form-select" name="store_id" id="storeSelect">
                                 <option value="">{{ t('— Select store —') }}</option>
                                 {% for store in stores %}

@@ -36,18 +36,21 @@
       <tbody>
       {% for s in slots %}
         <tr>
-          <td><input type="checkbox" class="form-check-input" name="{{ s.field_key }}_enabled" {% if s.is_enabled %}checked{% endif %}></td>
+          {# Every control names the slot it belongs to. Ten identical rows of
+             unnamed boxes are indistinguishable once the header scrolls away. #}
+          <td><input type="checkbox" class="form-check-input" name="{{ s.field_key }}_enabled" title="{{ t('On') }}" aria-label="{{ t('On') }}: {{ s.field_key }}" {% if s.is_enabled %}checked{% endif %}></td>
           <td><code>{{ s.field_key }}</code></td>
-          <td><input type="text" class="form-control form-control-sm" name="{{ s.field_key }}_label" value="{{ s.label or '' }}" placeholder="{{ t('e.g. PO Number') }}"></td>
+          <td><input type="text" class="form-control form-control-sm" name="{{ s.field_key }}_label" value="{{ s.label or '' }}" aria-label="{{ t('Label') }}: {{ s.field_key }}" placeholder="{{ t('e.g. PO Number') }}"></td>
           <td>
-            <select class="form-select form-select-sm" name="{{ s.field_key }}_type">
+            <select class="form-select form-select-sm" name="{{ s.field_key }}_type"
+                    title="{{ t('Data Type') }}" aria-label="{{ t('Data Type') }}: {{ s.field_key }}">
               {% for dt in data_types %}
               <option value="{{ dt }}" {% if s.data_type == dt %}selected{% endif %}>{{ t(dt|capitalize) }}</option>
               {% endfor %}
             </select>
           </td>
-          <td><input type="checkbox" class="form-check-input" name="{{ s.field_key }}_required" {% if s.is_required %}checked{% endif %}></td>
-          <td><input type="number" class="form-control form-control-sm" name="{{ s.field_key }}_order" value="{{ s.sort_order or 0 }}" min="0"></td>
+          <td><input type="checkbox" class="form-check-input" name="{{ s.field_key }}_required" title="{{ t('Required') }}" aria-label="{{ t('Required') }}: {{ s.field_key }}" {% if s.is_required %}checked{% endif %}></td>
+          <td><input type="number" class="form-control form-control-sm" name="{{ s.field_key }}_order" value="{{ s.sort_order or 0 }}" min="0" title="{{ t('Order') }}" aria-label="{{ t('Order') }}: {{ s.field_key }}"></td>
         </tr>
       {% endfor %}
       </tbody>

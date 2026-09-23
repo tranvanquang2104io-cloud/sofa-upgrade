@@ -114,16 +114,16 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">{{ t('Name') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="name" required placeholder="m²">
+                            <label class="form-label" for="f_name">{{ t('Name') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required placeholder="m²" id="f_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">{{ t('Abbreviation') }}</label>
-                            <input type="text" class="form-control" name="abbreviation" placeholder="m²">
+                            <label class="form-label" for="f_abbreviation">{{ t('Abbreviation') }}</label>
+                            <input type="text" class="form-control" name="abbreviation" placeholder="m²" id="f_abbreviation">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">{{ t('Description') }}</label>
-                            <input type="text" class="form-control" name="description" placeholder="{{ t('e.g. Mét vuông - dùng cho vải và da') }}">
+                            <label class="form-label" for="f_description">{{ t('Description') }}</label>
+                            <input type="text" class="form-control" name="description" placeholder="{{ t('e.g. Mét vuông - dùng cho vải và da') }}" id="f_description">
                         </div>
                     </div>
                 </div>
@@ -151,15 +151,15 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">{{ t('Name') }} <span class="text-danger">*</span></label>
+                            <label class="form-label" for="editName">{{ t('Name') }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" id="editName" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">{{ t('Abbreviation') }}</label>
+                            <label class="form-label" for="editAbbreviation">{{ t('Abbreviation') }}</label>
                             <input type="text" class="form-control" name="abbreviation" id="editAbbreviation">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">{{ t('Description') }}</label>
+                            <label class="form-label" for="editDescription">{{ t('Description') }}</label>
                             <input type="text" class="form-control" name="description" id="editDescription">
                         </div>
                     </div>

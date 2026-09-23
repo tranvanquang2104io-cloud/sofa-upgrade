@@ -22,30 +22,30 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">{{ t('Customer / Company Name') }} <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold" for="f_name">{{ t('Customer / Company Name') }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="name"
                                value="{{ customer.name }}" required
-                               placeholder="Nhập tên khách hàng hoặc tên công ty">
+                               placeholder="Nhập tên khách hàng hoặc tên công ty" id="f_name">
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">{{ t('Phone') }}</label>
+                            <label class="form-label fw-bold" for="f_phone">{{ t('Phone') }}</label>
                             <input type="tel" class="form-control" name="phone"
                                    value="{{ customer.phone or '' }}"
-                                   placeholder="VD: 0912 345 678">
+                                   placeholder="VD: 0912 345 678" id="f_phone">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">{{ t('Email') }}</label>
+                            <label class="form-label fw-bold" for="f_email">{{ t('Email') }}</label>
                             <input type="email" class="form-control" name="email"
                                    value="{{ customer.email or '' }}"
-                                   placeholder="VD: email@congty.com">
+                                   placeholder="VD: email@congty.com" id="f_email">
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">{{ t('Tax Code') }}</label>
+                        <label class="form-label fw-bold" for="f_tax_code">{{ t('Tax Code') }}</label>
                         <input type="text" class="form-control" name="tax_code"
                                value="{{ customer.tax_code or '' }}"
-                               placeholder="Nhập mã số thuế (nếu có)">
+                               placeholder="Nhập mã số thuế (nếu có)" id="f_tax_code">
                     </div>
                 </div>
             </div>
@@ -58,16 +58,16 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-7 mb-3">
-                            <label class="form-label fw-bold">{{ t('Representative Name') }}</label>
+                            <label class="form-label fw-bold" for="f_representative_name">{{ t('Representative Name') }}</label>
                             <input type="text" class="form-control" name="representative_name"
                                    value="{{ customer.representative_name or '' }}"
-                                   placeholder="Họ và tên người đại diện">
+                                   placeholder="Họ và tên người đại diện" id="f_representative_name">
                         </div>
                         <div class="col-md-5 mb-3">
-                            <label class="form-label fw-bold">{{ t('Position') }}</label>
+                            <label class="form-label fw-bold" for="f_representative_title">{{ t('Position') }}</label>
                             <input type="text" class="form-control" name="representative_title"
                                    value="{{ customer.representative_title or '' }}"
-                                   placeholder="VD: Giám Đốc, Trưởng Phòng">
+                                   placeholder="VD: Giám Đốc, Trưởng Phòng" id="f_representative_title">
                         </div>
                     </div>
                 </div>
@@ -80,29 +80,29 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">{{ t('Address') }}</label>
+                        <label class="form-label fw-bold" for="f_address">{{ t('Address') }}</label>
                         <input type="text" class="form-control" name="address"
                                value="{{ customer.address or '' }}"
-                               placeholder="Số nhà, tên đường, phường/xã">
+                               placeholder="Số nhà, tên đường, phường/xã" id="f_address">
                     </div>
                     <div class="row">
                         <div class="col-md-5 mb-3">
-                            <label class="form-label fw-bold">{{ t('City / Province') }}</label>
+                            <label class="form-label fw-bold" for="f_city">{{ t('City / Province') }}</label>
                             <input type="text" class="form-control" name="city"
                                    value="{{ customer.city or '' }}"
-                                   placeholder="VD: Hà Nội, TP. HCM">
+                                   placeholder="VD: Hà Nội, TP. HCM" id="f_city">
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold">{{ t('Postal Code') }}</label>
+                            <label class="form-label fw-bold" for="f_postal_code">{{ t('Postal Code') }}</label>
                             <input type="text" class="form-control" name="postal_code"
                                    value="{{ customer.postal_code or '' }}"
-                                   placeholder="VD: 100000">
+                                   placeholder="VD: 100000" id="f_postal_code">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold">{{ t('Country') }}</label>
+                            <label class="form-label fw-bold" for="f_country">{{ t('Country') }}</label>
                             <input type="text" class="form-control" name="country"
                                    value="{{ customer.country or 'Việt Nam' }}"
-                                   placeholder="VD: Việt Nam">
+                                   placeholder="VD: Việt Nam" id="f_country">
                         </div>
                     </div>
                 </div>
@@ -115,9 +115,9 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">{{ t('Additional Notes') }}</label>
+                        <label class="form-label fw-bold" for="f_notes">{{ t('Additional Notes') }}</label>
                         <textarea class="form-control" name="notes" rows="4"
-                                  placeholder="Thêm ghi chú về khách hàng...">{{ customer.notes or '' }}</textarea>
+                                  placeholder="Thêm ghi chú về khách hàng..." id="f_notes">{{ customer.notes or '' }}</textarea>
                     </div>
                 </div>
             </div>

@@ -12,20 +12,20 @@
                 <form method="POST" action="{{ url_for('admin.create_admin') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
-                        <input type="text" name="username" class="form-control" required>
+                        <label class="form-label fw-semibold" for="f_username">Username <span class="text-danger">*</span></label>
+                        <input type="text" name="username" class="form-control" required id="f_username">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                        <input type="text" name="full_name" class="form-control" required>
+                        <label class="form-label fw-semibold" for="f_full_name">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" name="full_name" class="form-control" required id="f_full_name">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                        <input type="email" name="email" class="form-control" required>
+                        <label class="form-label fw-semibold" for="f_email">Email <span class="text-danger">*</span></label>
+                        <input type="email" name="email" class="form-control" required id="f_email">
                     </div>
                     <div class="mb-4">
-                        <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
-                        <input type="password" name="password" class="form-control" required minlength="6">
+                        <label class="form-label fw-semibold" for="f_password">Password <span class="text-danger">*</span></label>
+                        <input type="password" name="password" class="form-control" required minlength="6" id="f_password">
                     </div>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">

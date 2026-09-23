@@ -367,8 +367,8 @@
                                                             <strong>{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
                                                           </div>
                                                           <div class="mb-2">
-                                                            <label class="form-label">{{ t('Payment proof (image/PDF)') }} <span class="text-muted">({{ t('optional') }})</span></label>
-                                                            <input type="file" name="proof_file" class="form-control form-control-sm" accept="image/*,application/pdf">
+                                                            <label class="form-label" for="f_proof_file">{{ t('Payment proof (image/PDF)') }} <span class="text-muted">({{ t('optional') }})</span></label>
+                                                            <input type="file" name="proof_file" class="form-control form-control-sm" accept="image/*,application/pdf" id="f_proof_file">
                                                           </div>
                                                         </div>
                                                         <div class="modal-footer">
@@ -557,8 +557,8 @@
                                                             <strong>{{ payment.report_number }}</strong> — {{ "{:,.0f}".format(payment.amount|float) }} ₫
                                                           </div>
                                                           <div class="mb-2">
-                                                            <label class="form-label">{{ t('Payment proof (image/PDF)') }} <span class="text-muted">({{ t('optional') }})</span></label>
-                                                            <input type="file" name="proof_file" class="form-control form-control-sm" accept="image/*,application/pdf">
+                                                            <label class="form-label" for="f_proof_file_1">{{ t('Payment proof (image/PDF)') }} <span class="text-muted">({{ t('optional') }})</span></label>
+                                                            <input type="file" name="proof_file" class="form-control form-control-sm" accept="image/*,application/pdf" id="f_proof_file_1">
                                                           </div>
                                                         </div>
                                                         <div class="modal-footer">

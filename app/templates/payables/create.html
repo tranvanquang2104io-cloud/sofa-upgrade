@@ -21,26 +21,26 @@
     <div class="card-header">{{ t('Invoice details') }} (hóa đơn GTGT)</div>
     <div class="card-body row g-3">
       <div class="col-md-2">
-        <label class="form-label">{{ t('Series') }} (ký hiệu)</label>
-        <input type="text" name="invoice_series" class="form-control" placeholder="1C26TAA">
+        <label class="form-label" for="f_invoice_series">{{ t('Series') }} (ký hiệu)</label>
+        <input type="text" name="invoice_series" class="form-control" placeholder="1C26TAA" id="f_invoice_series">
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ t('Invoice Number') }} <span class="text-danger">*</span></label>
-        <input type="text" name="invoice_number" class="form-control" required placeholder="0000123">
+        <label class="form-label" for="f_invoice_number">{{ t('Invoice Number') }} <span class="text-danger">*</span></label>
+        <input type="text" name="invoice_number" class="form-control" required placeholder="0000123" id="f_invoice_number">
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ t('Invoice Date') }} <span class="text-danger">*</span></label>
-        <input type="date" name="invoice_date" class="form-control" required>
+        <label class="form-label" for="f_invoice_date">{{ t('Invoice Date') }} <span class="text-danger">*</span></label>
+        <input type="date" name="invoice_date" class="form-control" required id="f_invoice_date">
       </div>
       <div class="col-md-2">
-        <label class="form-label">{{ t('VAT %') }}</label>
+        <label class="form-label" for="f_vat_rate">{{ t('VAT %') }}</label>
         <input type="number" name="vat_rate" class="form-control"
-               value="{{ po.vat_rate or 8 }}" min="0" max="100" step="0.1">
+               value="{{ po.vat_rate or 8 }}" min="0" max="100" step="0.1" id="f_vat_rate">
       </div>
       <div class="col-md-2">
-        <label class="form-label">{{ t('Seller Tax Code') }}</label>
+        <label class="form-label" for="f_seller_tax_code">{{ t('Seller Tax Code') }}</label>
         <input type="text" name="seller_tax_code" class="form-control"
-               value="{{ po.supplier.tax_code if po.supplier else '' }}">
+               value="{{ po.supplier.tax_code if po.supplier else '' }}" id="f_seller_tax_code">
       </div>
     </div>
   </div>
@@ -86,8 +86,8 @@
   </div>
 
   <div class="mb-3">
-    <label class="form-label">{{ t('Notes') }}</label>
-    <textarea name="notes" rows="2" class="form-control"></textarea>
+    <label class="form-label" for="f_notes">{{ t('Notes') }}</label>
+    <textarea name="notes" rows="2" class="form-control" id="f_notes"></textarea>
   </div>
 
   {{ form_actions(t('Record Invoice'),

@@ -27,17 +27,17 @@
         <input type="text" class="form-control" value="{{ order.order_code }}" disabled>
       </div>
       <div class="col-12">
-        <label class="form-label">{{ t('Title') }} <span class="text-danger">*</span></label>
+        <label class="form-label" for="f_title">{{ t('Title') }} <span class="text-danger">*</span></label>
         <input type="text" name="title" class="form-control" required
-               value="{{ order.title or '' }}">
+               value="{{ order.title or '' }}" id="f_title">
       </div>
       <div class="col-12">
-        <label class="form-label">{{ t('Description') }}</label>
-        <textarea name="description" rows="3" class="form-control">{{ order.description or '' }}</textarea>
+        <label class="form-label" for="f_description">{{ t('Description') }}</label>
+        <textarea name="description" rows="3" class="form-control" id="f_description">{{ order.description or '' }}</textarea>
       </div>
       <div class="col-12">
-        <label class="form-label">{{ t('Notes') }}</label>
-        <textarea name="notes" rows="2" class="form-control">{{ order.notes or '' }}</textarea>
+        <label class="form-label" for="f_notes">{{ t('Notes') }}</label>
+        <textarea name="notes" rows="2" class="form-control" id="f_notes">{{ order.notes or '' }}</textarea>
       </div>
     </div>
   </div>

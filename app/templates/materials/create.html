@@ -18,16 +18,16 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">{{ t('Material Code') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="material_code" required placeholder="VB-001">
+                            <label class="form-label" for="f_material_code">{{ t('Material Code') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="material_code" required placeholder="VB-001" id="f_material_code">
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label">{{ t('Name') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="name" required placeholder="{{ t('e.g. Vải bọc nhung xanh navy') }}">
+                            <label class="form-label" for="f_name">{{ t('Name') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required placeholder="{{ t('e.g. Vải bọc nhung xanh navy') }}" id="f_name">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">{{ t('Category') }}</label>
-                            <select class="form-select" name="category_id">
+                            <label class="form-label" for="f_category_id">{{ t('Category') }}</label>
+                            <select class="form-select" name="category_id" id="f_category_id">
                                 <option value="">-- {{ t('No category') }} --</option>
                                 {% for cat in categories %}
                                 <option value="{{ cat.id }}">{{ cat.name }}</option>
@@ -35,8 +35,8 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Unit') }}</label>
-                            <select class="form-select" name="unit_id">
+                            <label class="form-label" for="f_unit_id">{{ t('Unit') }}</label>
+                            <select class="form-select" name="unit_id" id="f_unit_id">
                                 <option value="">-- {{ t('Select unit') }} --</option>
                                 {% for unit in units %}
                                 <option value="{{ unit.id }}">{{ unit.name }}{% if unit.abbreviation %} ({{ unit.abbreviation }}){% endif %}</option>
@@ -44,12 +44,12 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Color') }}</label>
-                            <input type="text" class="form-control" name="color" placeholder="{{ t('e.g. Xanh navy') }}">
+                            <label class="form-label" for="f_color">{{ t('Color') }}</label>
+                            <input type="text" class="form-control" name="color" placeholder="{{ t('e.g. Xanh navy') }}" id="f_color">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">{{ t('Description') }}</label>
-                            <textarea class="form-control" name="description" rows="2"></textarea>
+                            <label class="form-label" for="f_description">{{ t('Description') }}</label>
+                            <textarea class="form-control" name="description" rows="2" id="f_description"></textarea>
                         </div>
                     </div>
                 </div>
@@ -80,8 +80,8 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-8">
-                            <label class="form-label">{{ t('Supplier') }}</label>
-                            <select class="form-select" name="supplier_id">
+                            <label class="form-label" for="f_supplier_id">{{ t('Supplier') }}</label>
+                            <select class="form-select" name="supplier_id" id="f_supplier_id">
                                 <option value="">-- {{ t('No supplier') }} --</option>
                                 {% for sup in suppliers %}
                                 <option value="{{ sup.id }}">{{ sup.name }} ({{ sup.supplier_code }})</option>
@@ -90,8 +90,8 @@
                             <div class="form-text"><a href="{{ url_for('dashboard.material_suppliers') }}" target="_blank">{{ t('Manage suppliers') }} <i class="bi bi-box-arrow-up-right"></i></a></div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ t("Supplier's SKU") }}</label>
-                            <input type="text" class="form-control" name="supplier_sku" placeholder="{{ t('Supplier product code') }}">
+                            <label class="form-label" for="f_supplier_sku">{{ t("Supplier's SKU") }}</label>
+                            <input type="text" class="form-control" name="supplier_sku" placeholder="{{ t('Supplier product code') }}" id="f_supplier_sku">
                         </div>
                     </div>
                 </div>
@@ -103,24 +103,24 @@
                     <h6 class="text-muted small mb-3">{{ t('Dimensions & Weight') }}</h6>
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Width (cm)') }}</label>
-                            <input type="number" class="form-control" name="spec_width_cm" step="0.01" min="0" placeholder="140">
+                            <label class="form-label" for="f_spec_width_cm">{{ t('Width (cm)') }}</label>
+                            <input type="number" class="form-control" name="spec_width_cm" step="0.01" min="0" placeholder="140" id="f_spec_width_cm">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Thickness (mm)') }}</label>
-                            <input type="number" class="form-control" name="spec_thickness_mm" step="0.01" min="0" placeholder="5.5">
+                            <label class="form-label" for="f_spec_thickness_mm">{{ t('Thickness (mm)') }}</label>
+                            <input type="number" class="form-control" name="spec_thickness_mm" step="0.01" min="0" placeholder="5.5" id="f_spec_thickness_mm">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Roll Length (m)') }}</label>
-                            <input type="number" class="form-control" name="spec_roll_length_m" step="0.01" min="0" placeholder="50">
+                            <label class="form-label" for="f_spec_roll_length_m">{{ t('Roll Length (m)') }}</label>
+                            <input type="number" class="form-control" name="spec_roll_length_m" step="0.01" min="0" placeholder="50" id="f_spec_roll_length_m">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">{{ t('Weight / Unit') }}</label>
-                            <input type="number" class="form-control" name="spec_weight_per_unit" step="0.001" min="0" placeholder="220">
+                            <label class="form-label" for="f_spec_weight_per_unit">{{ t('Weight / Unit') }}</label>
+                            <input type="number" class="form-control" name="spec_weight_per_unit" step="0.001" min="0" placeholder="220" id="f_spec_weight_per_unit">
                         </div>
                         <div class="col-md-1">
-                            <label class="form-label">{{ t('Unit') }}</label>
-                            <select class="form-select" name="spec_weight_unit">
+                            <label class="form-label" for="f_spec_weight_unit">{{ t('Unit') }}</label>
+                            <select class="form-select" name="spec_weight_unit" id="f_spec_weight_unit">
                                 <option value="">-</option>
                                 <option>g/m²</option>
                                 <option>g/m</option>
@@ -132,12 +132,12 @@
                     <h6 class="text-muted small mb-3">{{ t('Composition & Appearance') }}</h6>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">{{ t('Composition') }}</label>
-                            <input type="text" class="form-control" name="spec_composition" placeholder="{{ t('e.g. 100% Polyester, Da bò thật Grade A') }}">
+                            <label class="form-label" for="f_spec_composition">{{ t('Composition') }}</label>
+                            <input type="text" class="form-control" name="spec_composition" placeholder="{{ t('e.g. 100% Polyester, Da bò thật Grade A') }}" id="f_spec_composition">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Pattern') }}</label>
-                            <select class="form-select" name="spec_pattern">
+                            <label class="form-label" for="f_spec_pattern">{{ t('Pattern') }}</label>
+                            <select class="form-select" name="spec_pattern" id="f_spec_pattern">
                                 <option value="">--</option>
                                 <option>Trơn</option>
                                 <option>Kẻ sọc</option>
@@ -147,8 +147,8 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Finish') }}</label>
-                            <select class="form-select" name="spec_finish">
+                            <label class="form-label" for="f_spec_finish">{{ t('Finish') }}</label>
+                            <select class="form-select" name="spec_finish" id="f_spec_finish">
                                 <option value="">--</option>
                                 <option>Matt</option>
                                 <option>Bóng</option>
@@ -161,20 +161,20 @@
                     <h6 class="text-muted small mb-3">{{ t('Quality & Performance') }}</h6>
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Durability (Martindale)') }}</label>
-                            <input type="number" class="form-control" name="spec_durability_cycles" min="0" placeholder="50000">
+                            <label class="form-label" for="f_spec_durability_cycles">{{ t('Durability (Martindale)') }}</label>
+                            <input type="number" class="form-control" name="spec_durability_cycles" min="0" placeholder="50000" id="f_spec_durability_cycles">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Foam Density (kg/m³)') }}</label>
-                            <input type="number" class="form-control" name="spec_density_kg_m3" step="0.01" min="0" placeholder="35">
+                            <label class="form-label" for="f_spec_density_kg_m3">{{ t('Foam Density (kg/m³)') }}</label>
+                            <input type="number" class="form-control" name="spec_density_kg_m3" step="0.01" min="0" placeholder="35" id="f_spec_density_kg_m3">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Hardness / Grade') }}</label>
-                            <input type="text" class="form-control" name="spec_hardness" placeholder="ILD 28, Grade A">
+                            <label class="form-label" for="f_spec_hardness">{{ t('Hardness / Grade') }}</label>
+                            <input type="text" class="form-control" name="spec_hardness" placeholder="ILD 28, Grade A" id="f_spec_hardness">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ t('Fire Resistance') }}</label>
-                            <select class="form-select" name="spec_fire_resistance">
+                            <label class="form-label" for="f_spec_fire_resistance">{{ t('Fire Resistance') }}</label>
+                            <select class="form-select" name="spec_fire_resistance" id="f_spec_fire_resistance">
                                 <option value="">{{ t('None') }}</option>
                                 <option>BS5852</option>
                                 <option>California TB117</option>
@@ -182,16 +182,16 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ t('Water Resistance') }}</label>
-                            <select class="form-select" name="spec_water_resistance">
+                            <label class="form-label" for="f_spec_water_resistance">{{ t('Water Resistance') }}</label>
+                            <select class="form-select" name="spec_water_resistance" id="f_spec_water_resistance">
                                 <option value="">{{ t('None') }}</option>
                                 <option>Kháng nước</option>
                                 <option>Chống thấm</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ t('UV Resistance') }}</label>
-                            <select class="form-select" name="spec_uv_resistance">
+                            <label class="form-label" for="f_spec_uv_resistance">{{ t('UV Resistance') }}</label>
+                            <select class="form-select" name="spec_uv_resistance" id="f_spec_uv_resistance">
                                 <option value="">{{ t('None') }}</option>
                                 <option>Trung bình</option>
                                 <option>Cao</option>
@@ -201,12 +201,12 @@
                     <h6 class="text-muted small mb-3">{{ t('Origin & Compliance') }}</h6>
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">{{ t('Country of Origin') }}</label>
-                            <input type="text" class="form-control" name="spec_country_of_origin" placeholder="Việt Nam">
+                            <label class="form-label" for="f_spec_country_of_origin">{{ t('Country of Origin') }}</label>
+                            <input type="text" class="form-control" name="spec_country_of_origin" placeholder="Việt Nam" id="f_spec_country_of_origin">
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label">{{ t('Certifications') }}</label>
-                            <input type="text" class="form-control" name="spec_certifications" placeholder="OEKO-TEX Standard 100, ISO 9001">
+                            <label class="form-label" for="f_spec_certifications">{{ t('Certifications') }}</label>
+                            <input type="text" class="form-control" name="spec_certifications" placeholder="OEKO-TEX Standard 100, ISO 9001" id="f_spec_certifications">
                         </div>
                     </div>
                 </div>

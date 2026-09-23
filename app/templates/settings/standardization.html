@@ -29,8 +29,9 @@
    the effect on a sample before committing to it. #}
 <form method="GET" class="row g-2 align-items-end mb-3">
   <div class="col-12 col-md-6">
-    <label class="form-label small text-muted mb-1">{{ t('Preview sample text') }}</label>
-    <input type="text" name="sample" value="{{ sample }}" class="form-control">
+    <label class="form-label small text-muted mb-1" for="f_sample">{{ t('Preview sample text') }}</label>
+    <input type="text" name="sample" value="{{ sample }}" class="form-control"
+           aria-label="{{ t('Preview sample text') }}" id="f_sample">
   </div>
   <div class="col-auto">
     <button type="submit" class="btn btn-outline-secondary">
@@ -96,6 +97,8 @@
                 <input type="checkbox" class="form-check-input"
                        name="primitives_{{ entity }}_{{ field.field_name }}"
                        value="{{ key }}"
+                       title="{{ field.field_name }} — {{ t(meta[2]) }}"
+                       aria-label="{{ field.field_name }} — {{ t(meta[2]) }}"
                        {% if key in field.primitives %}checked{% endif %}>
               {% endif %}
             </td>
@@ -103,6 +106,8 @@
             <td>
               {% if not field.protected %}
               <select name="mode_{{ entity }}_{{ field.field_name }}"
+                      title="{{ t('Enforcement') }}"
+                      aria-label="{{ t('Enforcement') }}: {{ field.field_name }}"
                       class="form-select form-select-sm">
                 <option value="auto" {% if field.mode == 'auto' %}selected{% endif %}>{{ t('auto') }}</option>
                 <option value="confirm" {% if field.mode == 'confirm' %}selected{% endif %}>{{ t('confirm') }}</option>
@@ -147,6 +152,8 @@
         <tr>
           <td>
             <input type="checkbox" class="form-check-input"
+                   title="{{ t('Áp dụng quy tắc này') }}"
+                   aria-label="{{ t('Áp dụng quy tắc này') }}: {{ rule.field_name }}"
                    name="active_{{ rule.id }}" {% if rule.is_active %}checked{% endif %}>
           </td>
           <td>{{ t(rule.entity_type|capitalize) }}</td>
@@ -160,6 +167,8 @@
           </td>
           <td>
             <select name="primitives_{{ rule.id }}" class="form-select form-select-sm"
+                    title="{{ t('Transforms') }}"
+                    aria-label="{{ t('Transforms') }}: {{ rule.field_name }}"
                     multiple size="4">
               {% for key, meta in primitives.items() %}
               <option value="{{ key }}" {% if key in (rule.primitives or []) %}selected{% endif %}>
@@ -169,7 +178,9 @@
             </select>
           </td>
           <td>
-            <select name="mode_{{ rule.id }}" class="form-select form-select-sm">
+            <select name="mode_{{ rule.id }}" class="form-select form-select-sm"
+                    title="{{ t('Mode') }}"
+                    aria-label="{{ t('Mode') }}: {{ rule.field_name }}">
               <option value="auto" {% if rule.mode == 'auto' %}selected{% endif %}>{{ t('auto') }}</option>
               <option value="confirm" {% if rule.mode == 'confirm' %}selected{% endif %}>{{ t('confirm') }}</option>
             </select>

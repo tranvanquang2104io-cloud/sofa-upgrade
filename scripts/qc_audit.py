@@ -183,9 +183,14 @@ AUDIT_JS = r"""
 
   // 8. Two interactive controls overlapping each other: one of them cannot be
   //    clicked reliably.
+  // A dialog we forced open floats over the page, so every button in it
+  // "overlaps" every button beneath it. That is the reveal, not the product:
+  // compare controls only against controls in the same layer.
   const controls = [...document.querySelectorAll('a.btn, button.btn')].filter(visible);
+  const layer = el => (el.closest('.modal') || {}).id || '(page)';
   for (let i = 0; i < controls.length; i++) {
     for (let j = i + 1; j < controls.length; j++) {
+      if (layer(controls[i]) !== layer(controls[j])) continue;
       const a = controls[i].getBoundingClientRect();
       const b = controls[j].getBoundingClientRect();
       const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
@@ -202,21 +207,43 @@ AUDIT_JS = r"""
   //    used on tablets in a showroom.
   document.querySelectorAll('a.btn, button.btn, input[type=checkbox]').forEach(el => {
     if (!visible(el)) return;
-    const r = el.getBoundingClientRect();
+    // Clicking a checkbox's label toggles it, so the label is part of the
+    // target. Measuring the 16px box alone called every checkbox in the
+    // product too small, which is true of the box and false of the control.
+    const label = el.labels && el.labels.length ? el.labels[0] : null;
+    const r = label ? label.getBoundingClientRect() : el.getBoundingClientRect();
     if (r.height < 22 || r.width < 22) {
       add('target-too-small',
           Math.round(r.width) + 'x' + Math.round(r.height) + 'px', el);
     }
   });
 
-  // 10. Untranslated interface text: a raw t() key or an English label left
-  //     on a Vietnamese screen is a half-finished page.
-  const body = document.body.innerText || '';
-  ['Create ', 'Edit ', 'Delete', 'Save Changes', 'Back to', 'Action']
-    .forEach(word => {
-      if (body.includes(word)) add('untranslated', 'English on screen: ' + word.trim(), null);
-    });
+  // 10. Untranslated interface text. Matching English words anywhere in
+  //     innerText flagged every screen, including ones where the word was
+  //     inside customer data — a supplier really can be called "Delta". The
+  //     static i18n lint reads the templates instead and is exact, so this
+  //     now only looks at the one thing a template scan cannot see: a control
+  //     whose visible text is a literal t() key that got through unrendered.
+  document.querySelectorAll('a, button, label, th, h1, h2, h3').forEach(el => {
+    if (!visible(el)) return;
+    const text = (el.innerText || '').trim();
+    if (/^\{\{.*\}\}$/.test(text) || /^t\(/.test(text)) {
+      add('untranslated', 'unrendered template expression: ' + text, el);
+    }
+  });
 
+
+  // 10b. Two elements sharing an id. The browser accepts it silently and then
+  //      a `<label for=...>` focuses whichever came first, so a label can name
+  //      one field and operate another. This is the failure mode of linking
+  //      labels to controls in templates that render a form more than once.
+  const seen = {};
+  document.querySelectorAll('[id]').forEach(el => {
+    seen[el.id] = (seen[el.id] || 0) + 1;
+  });
+  Object.keys(seen).filter(id => seen[id] > 1).forEach(id => {
+    add('duplicate-id', id + ' appears ' + seen[id] + ' times', null);
+  });
 
   // ---- pixel alignment ---------------------------------------------------
   // Things that sit in the same visual row must share an edge exactly. One or
@@ -279,11 +306,20 @@ AUDIT_JS = r"""
   const main = document.querySelector('.main-content > .container-fluid')
             || document.querySelector('main')
             || document.querySelector('.container-fluid');
+  // A `.row` pulls itself 12px left with a negative margin and gives the 12px
+  // straight back as padding on its columns, so its own box starts at 0 while
+  // everything a user can see still starts at 12. Comparing the wrapper boxes
+  // reported 26 screens as ragged when every one of them lines up on screen.
+  const contentLeft = el => {
+    const r = rect(el);
+    const m = parseFloat(getComputedStyle(el).marginLeft) || 0;
+    return Math.round(m < 0 ? r.left - m : r.left);
+  };
   const blocks = main
     ? [...main.children].filter(visible).filter(el => rect(el).width > 200)
     : [];
   if (blocks.length > 1) {
-    const lefts = blocks.map(el => Math.round(rect(el).left));
+    const lefts = blocks.map(contentLeft);
     const spread = Math.max(...lefts) - Math.min(...lefts);
     if (spread > 1) add('left-edge-ragged',
       'top-level blocks start at ' + [...new Set(lefts)].join('/') + 'px', null);
@@ -305,6 +341,10 @@ AUDIT_JS = r"""
     const b = rect(box);
     const pad = parseFloat(getComputedStyle(box).paddingLeft) || 0;
     [...box.children].filter(visible).forEach(el => {
+      // A Bootstrap `.row` cancels the gutter with a negative left margin by
+      // design; its children land back inside the padding. Reporting it said
+      // "4px into the padding" on every screen with a filter bar in a card.
+      if (parseFloat(getComputedStyle(el).marginLeft) < 0) return;
       const r = rect(el);
       if (r.left < b.left + pad - 1.5) add('breaks-padding',
         Math.round(b.left + pad - r.left) + 'px into the padding', el);
