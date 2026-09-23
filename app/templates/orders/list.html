@@ -100,16 +100,16 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        <strong>Note:</strong> This action cannot be undone. The order will be marked as cancelled.
+                        <strong>{{ t('Lưu ý') }}:</strong> {{ t('Hành động này không thể hoàn tác. Đơn hàng sẽ được đánh dấu là đã hủy.') }}
                     </div>
                     <div class="alert alert-info">
-                        <strong>Order Code:</strong> {{ order.order_code }}<br>
-                        <strong>Customer:</strong> {{ order.customer.name }}<br>
-                        <strong>Value:</strong> {{ "{:,.0f}".format(order.total_amount|default(0)|float) }} ₫
+                        <strong>{{ t('Order Code') }}:</strong> {{ order.order_code }}<br>
+                        <strong>{{ t('Customer') }}:</strong> {{ order.customer.name }}<br>
+                        <strong>{{ t('Value') }}:</strong> {{ "{:,.0f}".format(order.total_amount|default(0)|float) }} ₫
                     </div>
                     <div class="mb-3">
                         <label for="canceled_reason{{ order.id }}" class="form-label">{{ t('Cancellation Reason *') }}</label>
-                        <textarea class="form-control" id="canceled_reason{{ order.id }}" name="canceled_reason" rows="3" required placeholder="Vui lòng nhập lý do hủy đơn hàng..."></textarea>
+                        <textarea class="form-control" id="canceled_reason{{ order.id }}" name="canceled_reason" rows="3" required placeholder="{{ t('Vui lòng nhập lý do hủy đơn hàng...') }}"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

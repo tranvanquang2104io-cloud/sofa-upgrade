@@ -102,7 +102,12 @@ def test_a_mismatch_is_surfaced_on_the_page_not_blocked(app, client, login, po):
         inv = SupplierInvoice.query.filter_by(invoice_number='0001000').first()
         assert inv is not None, "the invoice must still be recorded"
         assert inv.match_status == SupplierInvoice.MATCH_NO_RECEIPT
-    assert 'discrepancy' in body.lower() or 'match' in body.lower()
+    # The warning is composed in Python and now reaches the user in
+    # Vietnamese; assert on what they actually read.
+    from app.utils.i18n import t
+    assert t('Invoice recorded with a matching discrepancy: ').strip() in body, (
+        'the user must be told the invoice did not match what was received'
+    )
 
 
 def test_confirm_then_pay_settles_the_invoice(app, client, login, po):
@@ -153,7 +158,9 @@ def test_a_cash_payment_is_flagged_for_vat_review(app, client, login, po):
         'amount': str(int(total)), 'method': 'cash',
     }, follow_redirects=True)
 
-    assert 'VAT' in resp.get_data(as_text=True), (
+    from app.utils.i18n import t
+    assert t('Payment recorded in CASH — check input-VAT deductibility with '
+             'your accountant') in resp.get_data(as_text=True), (
         "a cash payment should prompt the user to check VAT deductibility"
     )
 

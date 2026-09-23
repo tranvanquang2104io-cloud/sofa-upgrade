@@ -45,7 +45,7 @@
         {% if a.effective_to %}{{ a.effective_to.strftime('%d/%m/%Y') }}
         {% else %}<span class="text-muted">{{ t('Open-ended') }}</span>{% endif %}
       </td>
-      <td>{{ status_badge(a.status, 'document') }}</td>
+      <td>{{ status_badge(a.status, 'agreement') }}</td>
       <td class="text-end">
         <a href="{{ url_for('dashboard.view_agreement', agreement_id=a.id) }}"
            class="btn btn-outline-secondary btn-sm">{{ t('View') }}</a>
@@ -58,6 +58,6 @@
 {% else %}
 {{ empty_state('No framework agreements yet.', icon='bi-file-earmark-text',
                action_url=url_for('dashboard.create_agreement'),
-               action_label='New Agreement') }}
+               action_label=t('New Framework Agreement')) }}
 {% endif %}
 {% endblock %}

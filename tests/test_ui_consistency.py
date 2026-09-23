@@ -296,6 +296,40 @@ def test_every_translation_key_has_a_vietnamese_entry():
     )
 
 
+def test_every_translation_key_in_PYTHON_has_a_vietnamese_entry():
+    """The same guard, pointed at the routes and services.
+
+    The template scan above was widened once already, after two settings
+    screens shipped in English. It still looked only at templates — and the
+    messages that CONFIRM or REJECT a save are composed in Python. 114 of them
+    reached Vietnamese users in English, including every "created
+    successfully" and the login screen's "Invalid email or password".
+
+    A lint scoped to where the last problem was found will miss the next one.
+    This one is scoped to every t() call in the app, whatever file it is in.
+    """
+    import pathlib
+    import re
+    from app.utils.i18n import TRANSLATIONS
+
+    app_dir = pathlib.Path(__file__).resolve().parents[1] / 'app'
+    vi = TRANSLATIONS['vi']
+    missing = []
+    for path in sorted(app_dir.rglob('*.py')):
+        text = io.open(path, encoding='utf-8').read()
+        # Lookaround, not a bare `t\(`: `get(` and `format(` both end in `t(`,
+        # and matching those is how an earlier sweep reported twice the hits it
+        # should have.
+        for key in re.findall(r"(?<![A-Za-z0-9_])t\(\s*'([^']+)'", text):
+            if key not in vi:
+                missing.append(f"{path.relative_to(app_dir)}: {key!r}")
+
+    assert missing == [], (
+        'these messages are built in Python and reach a Vietnamese user in '
+        f'English: {missing}'
+    )
+
+
 # --- template directory naming -------------------------------------------
 
 def test_no_singular_plural_duplicate_template_directories():

@@ -112,7 +112,22 @@ PO_PAYMENT_STATUS = {
     'paid': ('success', 'Paid'),
 }
 
+# A framework agreement (HĐNT) has its own lifecycle, and it is not a
+# document's. `active`, `suspended` and `terminated` were absent from every
+# map, so status_meta() fell through and printed the raw database value in
+# lowercase — and coloured all three 'neutral', which made a TERMINATED
+# agreement look exactly like a live one. The colour is the state here: an
+# agreement nobody may cite any more must not read as available.
+AGREEMENT_STATUS = {
+    'draft': ('neutral', 'Draft'),
+    'active': ('success', 'Đang hiệu lực'),
+    'suspended': ('attention', 'Tạm ngưng'),
+    'terminated': ('critical', 'Đã chấm dứt'),
+    'expired': ('critical', 'Hết hiệu lực'),
+}
+
 ENTITY_MAPS = {
+    'agreement': AGREEMENT_STATUS,
     'document': DOCUMENT_STATUS,
     'quotation': DOCUMENT_STATUS,
     'contract': DOCUMENT_STATUS,

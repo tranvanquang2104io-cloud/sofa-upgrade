@@ -407,7 +407,12 @@ def test_the_invoice_page_shows_how_the_whole_order_stands(app, client, login, p
 
     login("admin")
     body = client.get(f'/supplier-invoices/{invoice_id}').get_data(as_text=True)
-    assert ('Partially Paid' in body or 'Trả Một Phần' in body
-            or 'Thanh Toán Một Phần' in body), (
+    # Asserted against the status map rather than a literal, so translating a
+    # label cannot make this test fail while the screen stays correct — which
+    # is exactly what happened when these labels were given Vietnamese.
+    from app.utils.status_tokens import status_meta
+    _token, label = status_meta('partially_paid', 'po_payment')
+    from app.utils.i18n import t
+    assert t(label) in body, (
         "the order's overall payment state must be visible on the invoice page"
     )
