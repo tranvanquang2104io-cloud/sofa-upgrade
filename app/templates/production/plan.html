@@ -149,7 +149,7 @@
           <form method="POST" action="{{ url_for('dashboard.delete_plan_material', plan_id=plan.id, line_id=ln.id) }}" class="d-inline"
                 onsubmit="return confirm('{{ t('Delete this material line?') }}');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-outline-danger btn-sm" title="{{ t('Delete') }}" aria-label="{{ t('Delete') }}"><i class="bi bi-trash"></i></button>
           </form>
           {% endif %}
         </td>
@@ -197,7 +197,7 @@
           </select>
         </div>
         <div class="col-md-1">
-          <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i></button>
+          <button type="submit" class="btn btn-success w-100" title="{{ t('Add') }}" aria-label="{{ t('Add') }}"><i class="bi bi-plus-lg"></i></button>
         </div>
       </form>
     </div>

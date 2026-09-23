@@ -174,7 +174,7 @@
                                         data-bs-target="#stockModal"
                                         data-store-id="{{ item.entry.store_id or '' }}"
                                         data-store-name="{{ item.store_name }}"
-                                        data-qty="{{ item.entry.current_quantity }}">
+                                        data-qty="{{ item.entry.current_quantity }}" title="{{ t('Adjust stock') }}" aria-label="{{ t('Adjust stock') }}">
                                     <i class="bi bi-pencil-square"></i>
                                 </button>
                             </td>
@@ -220,7 +220,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-archive"></i> {{ t('Update Stock') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.update_material_stock', material_id=material.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

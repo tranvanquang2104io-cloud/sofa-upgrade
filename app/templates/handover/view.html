@@ -185,7 +185,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-check-circle"></i> {{ t('Confirm Handover') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -213,7 +213,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-file-earmark-arrow-down"></i> {{ t('Generate Document') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -243,7 +243,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{{ t('Cancel Handover Record') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_handover', handover_id=handover.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -271,20 +271,25 @@ def test_procurement_templates_have_no_bare_vietnamese_headings():
     )
 
 
-def test_every_translation_key_used_in_procurement_templates_exists():
-    """A t('...') call with no entry renders the English key to a VI user."""
+def test_every_translation_key_has_a_vietnamese_entry():
+    """A t('...') call with no entry renders the English key to a VI user.
+
+    Scans EVERY template, not two directories. It used to scan only
+    `procurement` and `production`, which is why two whole settings screens
+    shipped rendering in English: the guard was never pointed at them. A lint
+    scoped to where the last problem was found will miss the next one.
+    """
     import re
     from app.utils.i18n import TRANSLATIONS
 
     vi = TRANSLATIONS['vi']
     missing = []
-    for sub in ('procurement', 'production'):
-        for path in sorted((TEMPLATES / sub).glob('*.html')):
-            text = io.open(path, encoding='utf-8').read()
-            # only Jinja calls, not JS like createElement('tr')
-            for key in re.findall(r"\{\{-?\s*t\('([^']+)'\)", text):
-                if key not in vi:
-                    missing.append(f"{path.name}: {key!r}")
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        # only Jinja calls, not JS like createElement('tr')
+        for key in re.findall(r"\{\{-?\s*t\('([^']+)'\)", text):
+            if key not in vi:
+                missing.append(f"{'/'.join(path.relative_to(TEMPLATES).parts)}: {key!r}")
 
     assert missing == [], (
         f"these t() keys have no Vietnamese translation registered: {missing}"

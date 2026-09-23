@@ -147,7 +147,7 @@
                                    data-field="account_holder" value="{{ acct.account_holder or '' }}">
                         </div>
                         <div class="col-md-1">
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)"><i class="bi bi-trash"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)" title="{{ t('Remove this bank account') }}" aria-label="{{ t('Remove this bank account') }}"><i class="bi bi-trash"></i></button>
                         </div>
                     </div>
                     {% endfor %}
@@ -196,7 +196,7 @@ function addBankRow() {
         <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="Bank name (e.g. LPBank)" data-field="bank_name" value=""></div>
         <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="Account number" data-field="account_number" value=""></div>
         <div class="col-md-3"><input type="text" class="form-control form-control-sm" placeholder="Account holder" data-field="account_holder" value=""></div>
-        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)"><i class="bi bi-trash"></i></button></div>
+        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)" title="{{ t('Remove this bank account') }}" aria-label="{{ t('Remove this bank account') }}"><i class="bi bi-trash"></i></button></div>
     `;
     container.appendChild(row);
 }

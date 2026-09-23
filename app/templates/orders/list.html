@@ -79,7 +79,7 @@
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> {{ t('Cancel Order') }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_order', order_id=order.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

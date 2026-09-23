@@ -147,7 +147,7 @@
                                             <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
                                             <input type="hidden" name="item_existing_image[]" value="{{ item.get('image_path', '') }}">
                                         </td>
-                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
+                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-x"></i></button></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -275,7 +275,7 @@ function addItemRow() {
             <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
             <input type="hidden" name="item_existing_image[]" value="">
         </td>
-        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)"><i class="bi bi-x"></i></button></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-x"></i></button></td>
     `;
     tbody.appendChild(row);
     row.querySelectorAll('.delivered-qty,.accepted-qty,.price-input').forEach(inp => inp.addEventListener('input', recalcAll));

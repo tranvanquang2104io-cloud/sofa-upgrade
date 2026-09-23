@@ -40,7 +40,7 @@
                         <label for="customer_code" class="form-label">{{ t('Customer Code *') }}</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="customer_code" name="customer_code" required placeholder="{{ t('Loading...') }}">
-                            <button type="button" class="btn btn-outline-secondary" onclick="refreshCode()" title="{{ t('Get New Code') }}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="refreshCode()" title="{{ t('Get New Code') }}" aria-label="{{ t('Get New Code') }}">
                                 <i class="bi bi-arrow-clockwise"></i>
                             </button>
                         </div>

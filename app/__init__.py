@@ -78,16 +78,37 @@ def create_app(config_name=None):
         csrf.exempt(_check_code)
     
     # Error handlers
+    def _restore_chrome():
+        """Put the logged-in user back into `g` before an error page renders.
+
+        `g.user` is set by the `login_required` decorator, which runs on the
+        *view* — and an error response never reaches one. Without this, every
+        404/403/500 comes back with no navigation bar and no sidebar, so
+        someone who mistypes a URL is dropped onto a bare page that looks like
+        the app itself has broken.
+        """
+        if 'user_id' not in session or g.get('user') is not None:
+            return
+        from app.utils.auth_utils import _load_user_to_g
+        try:
+            _load_user_to_g()
+        except Exception:
+            # An error page must never raise a second error.
+            pass
+
     @app.errorhandler(404)
     def not_found(error):
+        _restore_chrome()
         return render_template('errors/404.html'), 404
-    
+
     @app.errorhandler(403)
     def forbidden(error):
+        _restore_chrome()
         return render_template('errors/403.html'), 403
-    
+
     @app.errorhandler(500)
     def internal_error(error):
+        _restore_chrome()
         return render_template('errors/500.html'), 500
     
     # Context processors

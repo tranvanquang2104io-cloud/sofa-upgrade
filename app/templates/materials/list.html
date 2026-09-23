@@ -100,10 +100,10 @@
                         </td>
                         <td>
                             <a href="{{ url_for('dashboard.view_material', material_id=mat.id) }}"
-                               class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                               class="btn btn-sm btn-info" title="{{ t('View') }}" aria-label="{{ t('View') }}"><i class="bi bi-eye"></i></a>
                             {% if session.role in ('company_admin', 'store_admin') %}
                             <a href="{{ url_for('dashboard.edit_material', material_id=mat.id) }}"
-                               class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                               class="btn btn-sm btn-warning" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}"><i class="bi bi-pencil"></i></a>
                             {% endif %}
                         </td>
                     </tr>

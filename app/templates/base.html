@@ -141,7 +141,7 @@
                                 <i class="bi bi-person-circle fs-5"></i>
                                 <span class="d-flex flex-column lh-1">
                                     <span style="font-size:.9rem">{{ session.full_name }}</span>
-                                    <span class="badge bg-secondary mt-1" style="font-size:.6rem;font-weight:500;align-self:flex-start">{% if session.role == 'company_admin' %}{{ t('Company Admin') }}{% elif session.role == 'store_admin' %}{{ t('Store Admin') }}{% else %}{{ t('Staff') }}{% endif %}</span>
+                                    <span class="badge bg-secondary mt-1" style="font-weight:500;align-self:flex-start">{% if session.role == 'company_admin' %}{{ t('Company Admin') }}{% elif session.role == 'store_admin' %}{{ t('Store Admin') }}{% else %}{{ t('Staff') }}{% endif %}</span>
                                 </span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
@@ -168,7 +168,7 @@
                 {% for category, message in messages %}
                     <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('Close') }}"></button>
                     </div>
                 {% endfor %}
             {% endif %}

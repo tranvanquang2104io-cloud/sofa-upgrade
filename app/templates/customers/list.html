@@ -48,11 +48,11 @@
                         <td>{{ customer.city or '—' }}</td>
                         <td class="text-end text-nowrap">
                             <a href="{{ url_for('dashboard.view_customer', customer_id=customer.id) }}"
-                               class="btn btn-sm btn-outline-secondary" title="{{ t('View') }}">
+                               class="btn btn-sm btn-outline-secondary" title="{{ t('View') }}" aria-label="{{ t('View') }}">
                                 <i class="bi bi-eye"></i>
                             </a>
                             <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}"
-                               class="btn btn-sm btn-outline-primary" title="{{ t('Edit') }}">
+                               class="btn btn-sm btn-outline-primary" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                 <i class="bi bi-pencil"></i>
                             </a>
                         </td>

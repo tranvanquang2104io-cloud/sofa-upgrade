@@ -129,4 +129,7 @@ def test_nothing_is_said_when_there_is_nothing_to_suggest(app, client, login,
         'store_id': str(confirm_rule['store_id']),
     }, follow_redirects=True).get_data(as_text=True)
 
-    assert 'chuẩn hóa' not in body.lower()
+    # Match the suggestion message itself, not the words "chuẩn hóa" — those
+    # also name the Data Standardization screen in the navigation bar, which
+    # is on every page.
+    assert 'nên viết là' not in body.lower()

@@ -2,7 +2,7 @@
 {% block title %}Create New Company – Master Admin{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center mb-4">
-    <a href="{{ url_for('admin.companies') }}" class="btn btn-outline-secondary me-3">
+    <a href="{{ url_for('admin.companies') }}" class="btn btn-outline-secondary me-3" title="{{ t('Back') }}" aria-label="{{ t('Back') }}">
         <i class="bi bi-arrow-left"></i>
     </a>
     <h2 class="mb-0"><i class="bi bi-building-add me-2"></i>Create New Company</h2>

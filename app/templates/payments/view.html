@@ -287,7 +287,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-check-circle"></i> {{ t('Confirm Payment') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.confirm_payment', payment_id=payment.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -319,7 +319,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-file-earmark-arrow-down"></i> {{ t('Generate Document') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -349,7 +349,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{{ t('Cancel Payment') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_payment', payment_id=payment.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -172,24 +172,24 @@
                                             {{ doc_badge(quotation) }}
                                         </div>
                                         <div class="d-flex gap-1">
-                                            <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
+                                            <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if not quotation.is_approved %}
-                                            <a href="{{ url_for('dashboard.edit_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
+                                            <a href="{{ url_for('dashboard.edit_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if quotation.can_approve() %}
                                             <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Approve this quotation? After approval it can no longer be edited.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" onclick="return confirm('{{ t("Approve this quotation?") }}')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" aria-label="Approve" onclick="return confirm('{{ t("Approve this quotation?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
                                             {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ quotation.id }}" title="Generate">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ quotation.id }}" title="Generate" aria-label="Generate">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -201,7 +201,7 @@
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='quotation', ref_id=quotation.id) }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -254,24 +254,24 @@
                                             {{ doc_badge(contract) }}
                                         </div>
                                         <div class="d-flex gap-1">
-                                            <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
+                                            <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if not contract.is_signed %}
-                                            <a href="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
+                                            <a href="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if contract.can_sign() %}
                                             <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Mark this contract as signed? A signed contract can no longer be edited or cancelled.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" onclick="return confirm('{{ t("Sign this contract?") }}')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" aria-label="Sign" onclick="return confirm('{{ t("Sign this contract?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
                                             {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ contract.id }}" title="Generate">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ contract.id }}" title="Generate" aria-label="Generate">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -283,7 +283,7 @@
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -342,14 +342,14 @@
                                                 {{ doc_badge(payment) }}
                                             </div>
                                             <div class="d-flex gap-1">
-                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
+                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                                 {% if not payment.is_confirmed and not payment.is_canceled %}
-                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
+                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                                 <div class="modal fade" id="confirmPayModal{{ payment.id }}" tabindex="-1">
@@ -359,7 +359,7 @@
                                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                         <div class="modal-header">
                                                           <h5 class="modal-title">{{ t('Confirm Payment') }}</h5>
-                                                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                                         </div>
                                                         <div class="modal-body text-start">
                                                           <p>{{ t('Confirm that this payment has been received?') }}</p>
@@ -381,7 +381,7 @@
                                                 </div>
                                                 {% endif %}
                                                 {% if not payment.is_canceled %}
-                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="Generate">
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="Generate" aria-label="Generate">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
                                                 {% endif %}
@@ -394,7 +394,7 @@
                                             <div class="modal-content">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                                 </div>
                                                 <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -451,22 +451,22 @@
                                             {{ doc_badge(handover) }}
                                         </div>
                                         <div class="d-flex gap-1">
-                                            <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
+                                            <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if not handover.is_confirmed %}
-                                            <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
+                                            <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Confirm this handover? It records that the customer accepted the goods and cannot be undone.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" onclick="return confirm('{{ t("Confirm this handover?") }}')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm" onclick="return confirm('{{ t("Confirm this handover?") }}')">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalHO{{ handover.id }}" title="Generate">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalHO{{ handover.id }}" title="Generate" aria-label="Generate">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -478,7 +478,7 @@
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                             </div>
                                             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -532,14 +532,14 @@
                                                 {{ doc_badge(payment) }}
                                             </div>
                                             <div class="d-flex gap-1">
-                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View">
+                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                                 {% if not payment.is_confirmed and not payment.is_canceled %}
-                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit">
+                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                                 <div class="modal fade" id="confirmPayModal{{ payment.id }}" tabindex="-1">
@@ -549,7 +549,7 @@
                                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                         <div class="modal-header">
                                                           <h5 class="modal-title">{{ t('Confirm Payment') }}</h5>
-                                                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                                         </div>
                                                         <div class="modal-body text-start">
                                                           <p>{{ t('Confirm that this payment has been received?') }}</p>
@@ -571,7 +571,7 @@
                                                 </div>
                                                 {% endif %}
                                                 {% if not payment.is_canceled %}
-                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate">
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate" aria-label="Generate">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
                                                 {% endif %}
@@ -584,7 +584,7 @@
                                             <div class="modal-content">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                                 </div>
                                                 <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -767,7 +767,7 @@
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title"><i class="bi bi-skip-forward"></i> Bỏ qua tạm ứng</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-warning">
@@ -797,7 +797,7 @@
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> {{ t('Cancel Order') }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.cancel_order', order_id=order.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -834,7 +834,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{{ t('Payment Request') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment_request', ref_id=order.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

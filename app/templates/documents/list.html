@@ -45,7 +45,7 @@
                                     data-bs-toggle="modal"
                                     data-bs-target="#deleteModal"
                                     data-doc-id="{{ document.id }}"
-                                    data-doc-name="{{ document.document_name }}">
+                                    data-doc-name="{{ document.document_name }}" title="{{ t('Delete this file') }}" aria-label="{{ t('Delete this file') }}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </td>
@@ -65,7 +65,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="deleteModalLabel"><i class="bi bi-trash text-danger"></i> {{ t('Delete Document') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
             </div>
             <div class="modal-body">
                 {{ t('Are you sure you want to delete') }} <strong id="deleteDocName"></strong>?

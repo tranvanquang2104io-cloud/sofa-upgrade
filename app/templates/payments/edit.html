@@ -133,7 +133,7 @@
                         <label for="amount_in_words" class="form-label">Amount in Words</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="amount_in_words" name="amount_in_words" value="{{ payment.amount_in_words or '' }}">
-                            <button type="button" class="btn btn-outline-secondary" title="Auto-fill" onclick="autoFillWords()">
+                            <button type="button" class="btn btn-outline-secondary" title="Auto-fill" aria-label="Auto-fill" onclick="autoFillWords()">
                                 <i class="bi bi-arrow-clockwise"></i>
                             </button>
                         </div>
@@ -191,7 +191,7 @@
                                 <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="Bank name" value="{{ bank.bank_name or '' }}"></div>
                                 <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="Account number" value="{{ bank.account_number or '' }}"></div>
                                 <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="Account holder" value="{{ bank.account_holder or '' }}"></div>
-                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.bank-row').remove()"><i class="bi bi-trash"></i></button></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.bank-row').remove()" title="{{ t('Remove this bank account') }}" aria-label="{{ t('Remove this bank account') }}"><i class="bi bi-trash"></i></button></div>
                             </div>
                             {% endif %}
                             {% endfor %}
@@ -243,7 +243,7 @@ function addBankRow(bankName='', accountNumber='', accountHolder='') {
         <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="Bank name" value="${bankName}"></div>
         <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="Account number" value="${accountNumber}"></div>
         <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="Account holder" value="${accountHolder}"></div>
-        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)"><i class="bi bi-trash"></i></button></div>
+        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)" title="{{ t('Remove this bank account') }}" aria-label="{{ t('Remove this bank account') }}"><i class="bi bi-trash"></i></button></div>
     `;
     container.appendChild(div);
 }

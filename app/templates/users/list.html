@@ -62,13 +62,13 @@
                         <td class="text-center">
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('dashboard.edit_user', user_id=u.id) }}"
-                                   class="btn btn-outline-primary" title="{{ t('Edit') }}">
+                                   class="btn btn-outline-primary" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 {% if u.id|string != session.user_id %}
                                 <button type="button" class="btn btn-outline-danger"
                                         data-bs-toggle="modal" data-bs-target="#deactivateUserModal{{ loop.index }}"
-                                        title="{{ t('Deactivate') }}">
+                                        title="{{ t('Deactivate') }}" aria-label="{{ t('Deactivate') }}">
                                     <i class="bi bi-person-x"></i>
                                 </button>
                                 {% endif %}
@@ -82,7 +82,7 @@
                             <div class="modal-content">
                                 <div class="modal-header bg-danger text-white">
                                     <h5 class="modal-title"><i class="bi bi-person-x"></i> {{ t('Deactivate Account') }}</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
                                 </div>
                                 <div class="modal-body">
                                     {{ t('Deactivate account') }} <strong>{{ u.full_name }}</strong> ({{ u.username }})?

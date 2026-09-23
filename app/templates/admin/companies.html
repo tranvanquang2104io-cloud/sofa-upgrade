@@ -48,7 +48,7 @@
                         <td class="text-center"><small>{{ c.created_at.strftime('%d/%m/%Y') if c.created_at else '—' }}</small></td>
                         <td class="text-end">
                             <a href="{{ url_for('admin.edit_company', company_id=c.id) }}"
-                               class="btn btn-sm btn-outline-primary me-1">
+                               class="btn btn-sm btn-outline-primary me-1" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <form method="POST"
@@ -57,7 +57,7 @@
                                   onsubmit="return confirm('{{ 'Deactivate' if c.is_active else 'Activate' }} this company?')">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit"
-                                        class="btn btn-sm {{ 'btn-outline-danger' if c.is_active else 'btn-outline-success' }}">
+                                        class="btn btn-sm {{ 'btn-outline-danger' if c.is_active else 'btn-outline-success' }}" title="{{ t('Deactivate') if c.is_active else t('Activate') }}" aria-label="{{ t('Deactivate') if c.is_active else t('Activate') }}">
                                     <i class="bi {{ 'bi-x-circle' if c.is_active else 'bi-check-circle' }}"></i>
                                 </button>
                             </form>

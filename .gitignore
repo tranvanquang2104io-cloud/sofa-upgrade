@@ -60,3 +60,4 @@ htmlcov/
 devdata.sqlite3
 devdata.sqlite3.bak
 *.sqlite3
+QC-FINDINGS.txt

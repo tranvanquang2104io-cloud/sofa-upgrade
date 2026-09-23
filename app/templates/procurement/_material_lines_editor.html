@@ -22,7 +22,7 @@
   <td><input type="number" step="1" min="0" name="line_price[]" class="form-control form-control-sm line-price"
              style="width:130px" placeholder="giá NVL" value="{{ (ln.unit_price if ln and ln.unit_price is defined else '') }}"></td>
   {% endif %}
-  <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()"><i class="bi bi-x-lg"></i></button></td>
+  <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-x-lg"></i></button></td>
 </tr>
 {% endmacro %}
 

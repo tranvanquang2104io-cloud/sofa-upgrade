@@ -133,7 +133,7 @@ Options: allow cancelling a signed contract with a mandatory reason, or have
 "Huỷ đơn hàng" cascade to its contract. **Which matches how you actually
 handle this?**
 
-**3.2 Bàn giao + Thanh toán cuối are one checkbox.**
+**3.3 Bàn giao + Thanh toán cuối are one checkbox.**
 Ticking it confirms the handover *and* creates the final payment in one
 action, with no review of the amount in between. They are two different
 business events. Split them, or show a summary before committing both?

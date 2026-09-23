@@ -126,7 +126,11 @@ a:hover {
 /* --- Badges --- */
 .badge {
     padding: 0.4em 0.65em;
-    font-size: 0.75em;
+    /* em keeps a badge proportional to the text it sits in, but inside a
+       small or line-height-compressed parent that lands under 11px, which is
+       below what most people can read comfortably. The floor caps the shrink
+       without flattening the proportional behaviour everywhere else. */
+    font-size: max(0.75em, 0.75rem);
     font-weight: 600;
     letter-spacing: 0.02em;
 }
