@@ -52,6 +52,12 @@ def feature_for_endpoint(endpoint):
     # Order matters: 'purchase'/'requisition'/'goods_receipt' MUST be tested before
     # 'order' (else 'purchase_orders' matches 'order').
     rules = (
+        # A REPORT is behind the reports permission, whatever it reports on.
+        # `customer_receivables` used to hit the `customer` rule below and so
+        # was readable by anyone granted Khách hàng — and not by someone
+        # granted Báo cáo. Same trap as supplier invoices under inventory:
+        # a name correct in one area borrowed by another.
+        ('receivable', 'reports'), ('report', 'reports'),
         ('customer', 'customers'),
         # 'supplier_invoice' MUST precede the bare 'supplier' rule. The bare
         # rule exists for the supplier MASTER in the materials area; supplier
@@ -67,7 +73,6 @@ def feature_for_endpoint(endpoint):
         ('agreement', 'orders'),
         ('quotation', 'orders'), ('contract', 'orders'), ('handover', 'orders'),
         ('payment', 'orders'), ('production', 'orders'), ('document', 'orders'), ('order', 'orders'),
-        ('report', 'reports'),
     )
     # admin areas are handled by role decorators, never feature-gated here
     if any(k in name for k in ('store', 'user', 'setting', 'template', 'extension')):

@@ -1405,3 +1405,11 @@ TRANSLATIONS['vi'].update({
     'Mỗi trường văn bản đã là một dòng sẵn ở đây, nên không có nút “Tạo mới”: tick vào ô là áp dụng, bỏ tick hết cả dòng là thôi không chuẩn hóa trường đó nữa.':
         'Mỗi trường văn bản đã là một dòng sẵn ở đây, nên không có nút “Tạo mới”: tick vào ô là áp dụng, bỏ tick hết cả dòng là thôi không chuẩn hóa trường đó nữa.',
 })
+
+TRANSLATIONS['vi'].update({'Tổng quan': 'Tổng quan'})
+
+TRANSLATIONS['vi'].update({
+    'Các báo cáo': 'Các báo cáo',
+    'Ai đang nợ, nợ bao nhiêu, và khoản nào đang chờ xác nhận.':
+        'Ai đang nợ, nợ bao nhiêu, và khoản nào đang chờ xác nhận.',
+})

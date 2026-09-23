@@ -105,10 +105,19 @@
                         </li>
                         {% endif %}
                         {% if can_feature('reports') %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if 'report' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.reports') }}">
+                        <li class="nav-item dropdown">
+                            {# Customer debt used to live in the Administration
+                               dropdown, beside Stores and Company Settings — a
+                               report filed among the settings, while the
+                               Reports menu did not know it existed. #}
+                            <a class="nav-link dropdown-toggle {% if 'report' in (request.endpoint or '') or 'receivable' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-graph-up-arrow"></i> {{ t('Reports') }}
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.reports') }}"><i class="bi bi-speedometer2"></i> {{ t('Tổng quan') }}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.customer_receivables') }}"><i class="bi bi-cash-stack"></i> {{ t('Customer Debt') }}</a></li>
+                            </ul>
                         </li>
                         {% endif %}
                         {# ── Quản trị ── #}
@@ -127,8 +136,6 @@
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.extension_fields_settings') }}"><i class="bi bi-input-cursor-text"></i> {{ t('Extension Fields') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.workflow_settings') }}"><i class="bi bi-diagram-3"></i> {{ t('Order Workflow') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.standardization_settings') }}"><i class="bi bi-magic"></i> {{ t('Data Standardization') }}</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('dashboard.customer_receivables') }}"><i class="bi bi-cash-stack"></i> {{ t('Customer Debt') }}</a></li>
                                 {% endif %}
                             </ul>
                         </li>
