@@ -887,6 +887,64 @@ class HandoverRecordService:
             raise
 
 
+def order_agreed_value(order):
+    """What this order is worth, as currently agreed.
+
+    One definition, because two of them disagreed. The margin calculation
+    resolved it with `Contract.query.filter_by(is_signed=True,
+    is_canceled=False).first()` — no `is_active`, so a renegotiated order could
+    be valued at the contract it had replaced, and no ORDER BY, so WHICH of the
+    two it picked was whatever the database happened to return first.
+
+    A framework-agreement order has no contract at all; its value lives on the
+    confirmed Đơn đặt hàng.
+
+    Returns Decimal('0') when nothing has been agreed yet — an order that is
+    still only a quotation is not owed anything.
+    """
+    from decimal import Decimal
+
+    from app.models.models import Contract as _Contract
+    from app.models.models import OrderConfirmation as _Confirmation
+
+    contract = _Contract.query.filter_by(
+        order_id=order.id, is_signed=True, is_canceled=False, is_active=True,
+    ).order_by(_Contract.contract_date.desc()).first()
+    if contract:
+        return Decimal(str(contract.contract_value or 0))
+
+    confirmation = _Confirmation.query.filter_by(
+        order_id=order.id, status=_Confirmation.STATUS_CONFIRMED,
+        is_canceled=False,
+    ).order_by(_Confirmation.confirmation_date.desc()).first()
+    if confirmation:
+        return Decimal(str(confirmation.total_amount or 0))
+
+    return Decimal('0')
+
+
+def order_amount_collected(order_id):
+    """Confirmed, uncancelled money received against this order.
+
+    Same rule the reports use, so the lifecycle flag and the receivable figure
+    cannot disagree about whether a customer has paid.
+    """
+    from decimal import Decimal
+
+    from app.models.models import PaymentReport as _Payment
+
+    total = Decimal('0')
+    payments = _Payment.query.filter_by(
+        order_id=order_id, is_confirmed=True, is_canceled=False).all()
+    for payment in payments:
+        if payment.payment_type == 'advance':
+            amount = payment.advance_amount or payment.amount or 0
+        else:
+            amount = payment.remaining_amount or payment.amount or 0
+        total += Decimal(str(amount))
+    return total
+
+
 class PaymentReportService:
     """Service for payment report management"""
     
@@ -978,12 +1036,25 @@ class PaymentReportService:
                 lifecycle.advance_paid_at = datetime.utcnow()
                 logger.info(f"Advance payment confirmed for order {order_id}")
             elif report.payment_type == 'final':
-                lifecycle.fully_paid = True
-                lifecycle.fully_paid_at = datetime.utcnow()
-                # Mark order as completed only when final payment is done
-                lifecycle.completed = True
-                lifecycle.completed_at = datetime.utcnow()
-                logger.info(f"Final payment confirmed - order {order_id} completed")
+                # Paying the balance in two instalments is ordinary, and it
+                # produces two 'final' slips. Marking the order paid on the
+                # first one closed it while the customer still owed money —
+                # and because the receivable is computed from the payments
+                # rather than from this flag, the totals stayed right while
+                # the work queue lied.
+                agreed = order_agreed_value(report.order)
+                collected = order_amount_collected(order_id)
+                if agreed and collected < agreed:
+                    logger.info(
+                        "Payment confirmed for order %s: %s of %s collected, "
+                        "still outstanding", order_id, collected, agreed)
+                else:
+                    lifecycle.fully_paid = True
+                    lifecycle.fully_paid_at = datetime.utcnow()
+                    lifecycle.completed = True
+                    lifecycle.completed_at = datetime.utcnow()
+                    logger.info(
+                        f"Final payment confirmed - order {order_id} completed")
             
             # Make all updates atomic - add both to session before committing
             db.session.add(report)
@@ -1748,26 +1819,43 @@ class ProductionPlanService:
         from app.models.models import ProductionPlan
         return ProductionPlan.query.filter_by(order_id=order_id).first()
 
-    def create_from_contract(self, contract):
-        """Idempotent: tạo 1 ProductionPlan (draft) cho order của hợp đồng, copy
-        item hợp đồng, và gợi ý ProductionMaterialLine từ MaterialNorm khớp tên."""
+    def create_from_contract(self, commitment):
+        """Idempotent: tạo 1 ProductionPlan (draft) cho order, copy item và gợi
+        ý ProductionMaterialLine từ MaterialNorm khớp tên.
+
+        ``commitment`` is whatever the customer actually agreed to: a signed
+        Contract, or — on the framework-agreement path — a confirmed Đơn đặt
+        hàng, which has no Contract at all.
+
+        This used to take a Contract only, and was called from exactly one
+        place: contract signing. So an order placed under a HĐNT reached the
+        workshop never: no material lines, no stock deduction, no cost, no
+        margin, and it never appeared on the production list. The fabric those
+        jobs consumed stayed on the books — for exactly the repeat customers a
+        workshop most wants to keep supplying.
+        """
         from decimal import Decimal
         from app.models.models import (ProductionPlan, ProductionPlanItem,
                                         ProductionMaterialLine, MaterialNorm)
+        from app.models.models import Contract as _Contract
         from app.repositories.repository import OrderRepository
-        order = OrderRepository().get_by_id(contract.order_id)
+        order = OrderRepository().get_by_id(commitment.order_id)
         if order is None:
             return None
-        existing = ProductionPlan.query.filter_by(order_id=contract.order_id).first()
+        existing = ProductionPlan.query.filter_by(order_id=commitment.order_id).first()
         if existing:
             return existing
         plan = ProductionPlan(
-            order_id=contract.order_id, contract_id=contract.id, company_id=order.company_id,
+            order_id=commitment.order_id,
+            # Only a Contract may fill contract_id; the column is a foreign key
+            # to contracts, and an Đơn đặt hàng is not one.
+            contract_id=commitment.id if isinstance(commitment, _Contract) else None,
+            company_id=order.company_id,
             plan_number=self._gen_plan_number(order.company_id),
             status=ProductionPlan.STATUS_DRAFT)
         db.session.add(plan)
         db.session.flush()
-        for it in (contract.items or []):
+        for it in (commitment.items or []):
             qty = Decimal(str(it.get('quantity', 0) or 0))
             pi = ProductionPlanItem(plan_id=plan.id, source_name=it.get('name', ''),
                                     quantity=qty, unit=it.get('unit', ''))
@@ -1922,18 +2010,7 @@ class ProductionPlanService:
         order = plan.order
         cost = self.material_cost(plan)
 
-        revenue = Decimal('0')
-        contract = Contract.query.filter_by(
-            order_id=order.id, is_signed=True, is_canceled=False).first()
-        if contract:
-            revenue = Decimal(str(contract.contract_value or 0))
-        else:
-            confirmation = OrderConfirmation.query.filter_by(
-                order_id=order.id,
-                status=OrderConfirmation.STATUS_CONFIRMED,
-                is_canceled=False).first()
-            if confirmation:
-                revenue = Decimal(str(confirmation.total_amount or 0))
+        revenue = order_agreed_value(order)
 
         material_total = Decimal(str(cost['total']))
         return {

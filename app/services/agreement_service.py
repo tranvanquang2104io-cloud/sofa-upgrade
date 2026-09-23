@@ -278,6 +278,14 @@ class AgreementService:
 
         db.session.add(lifecycle)
         db.session.commit()
+
+        # An Đơn đặt hàng is this order's commitment, exactly as a signed
+        # contract is on the ordinary path — so it starts the workshop the same
+        # way. Without this the job never got a production plan, and its
+        # materials were never taken off stock.
+        from app.services.services import ProductionPlanService
+        ProductionPlanService().create_from_contract(confirmation)
+
         return confirmation
 
     @staticmethod
