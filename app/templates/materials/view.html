@@ -204,9 +204,9 @@
             <div class="card-body">
                 <dl class="row mb-0 small">
                     <dt class="col-sm-5">{{ t('Created') }}</dt>
-                    <dd class="col-sm-7">{{ material.created_at.strftime('%d/%m/%Y') }}</dd>
+                    <dd class="col-sm-7">{{ material.created_at.strftime('%d/%m/%Y') if material.created_at else '—' }}</dd>
                     <dt class="col-sm-5">{{ t('Updated') }}</dt>
-                    <dd class="col-sm-7">{{ material.updated_at.strftime('%d/%m/%Y') }}</dd>
+                    <dd class="col-sm-7">{{ material.updated_at.strftime('%d/%m/%Y') if material.updated_at else '—' }}</dd>
                 </dl>
             </div>
         </div>

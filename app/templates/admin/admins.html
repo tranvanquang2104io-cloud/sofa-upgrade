@@ -33,7 +33,7 @@
                         {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
                     </td>
                     <td class="text-center"><small>{{ a.last_login.strftime('%d/%m/%Y %H:%M') if a.last_login else '—' }}</small></td>
-                    <td class="text-center"><small>{{ a.created_at.strftime('%d/%m/%Y') }}</small></td>
+                    <td class="text-center"><small>{{ a.created_at.strftime('%d/%m/%Y') if a.created_at else '—' }}</small></td>
                 </tr>
                 {% endfor %}
             </tbody>

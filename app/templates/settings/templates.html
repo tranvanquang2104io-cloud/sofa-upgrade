@@ -71,7 +71,7 @@
                                 <span class="badge bg-secondary">{{ t('Inactive') }}</span>
                             {% endif %}
                         </td>
-                        <td><small>{{ tpl.created_at.strftime('%d/%m/%Y') }}</small></td>
+                        <td><small>{{ tpl.created_at.strftime('%d/%m/%Y') if tpl.created_at else '—' }}</small></td>
                         <td class="text-end">
                             {% if tpl.is_active %}
                             <form method="POST" action="{{ url_for('dashboard.deactivate_template', template_id=tpl.id) }}"

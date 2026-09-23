@@ -58,4 +58,5 @@ htmlcov/
 
 # Local scratch dev database (SQLite)
 devdata.sqlite3
+devdata.sqlite3.bak
 *.sqlite3

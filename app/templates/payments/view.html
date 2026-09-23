@@ -29,7 +29,7 @@
                     </div>
                     <div class="col-md-4">
                         <small class="text-muted d-block">{{ t('Contract Date') }}</small>
-                        <strong>{{ active_contract.contract_date.strftime('%d/%m/%Y') }}</strong>
+                        <strong>{{ active_contract.contract_date.strftime('%d/%m/%Y') if active_contract.contract_date else '—' }}</strong>
                     </div>
                     <div class="col-md-4">
                         <small class="text-muted d-block">{{ t('Contract Status') }}</small>
@@ -92,9 +92,9 @@
                     <dt class="col-sm-4">{{ t('Status:') }}</dt>
                     <dd class="col-sm-8">
                         {% if payment.is_confirmed %}
-                            {{ t('Confirmed on') }} {{ payment.confirmed_date.strftime('%d/%m/%Y %H:%M') }}
+                            {{ t('Confirmed on') }} {{ payment.confirmed_date.strftime('%d/%m/%Y %H:%M') if payment.confirmed_date else '—' }}
                         {% elif payment.is_canceled %}
-                            {{ t('Cancelled on') }} {{ payment.canceled_at.strftime('%d/%m/%Y %H:%M') }}
+                            {{ t('Cancelled on') }} {{ payment.canceled_at.strftime('%d/%m/%Y %H:%M') if payment.canceled_at else '—' }}
                             {% if payment.canceled_reason %}
                                 <br><small class="text-muted">{{ t('Reason:') }} {{ payment.canceled_reason }}</small>
                             {% endif %}

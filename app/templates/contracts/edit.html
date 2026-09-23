@@ -24,7 +24,7 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">{{ t('Signing Date') }}</label>
-                            <input type="date" class="form-control" disabled value="{{ contract.contract_date.strftime('%Y-%m-%d') }}">
+                            <input type="date" class="form-control" disabled value="{{ contract.contract_date.strftime('%Y-%m-%d') if contract.contract_date else '—' }}">
                             <small class="text-muted">{{ t('Signing date cannot be changed') }}</small>
                         </div>
                         <div class="col-md-4 mb-3">

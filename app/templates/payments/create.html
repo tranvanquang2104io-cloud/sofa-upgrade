@@ -19,7 +19,7 @@
                     <h6 class="mb-0 text-primary">
                         <i class="bi bi-file-earmark-text"></i>
                         {{ t('Reference Contract:') }} <strong>{{ active_contract.contract_number }}</strong>
-                        <span class="badge bg-secondary ms-1">{{ active_contract.contract_date.strftime('%d/%m/%Y') }}</span>
+                        <span class="badge bg-secondary ms-1">{{ active_contract.contract_date.strftime('%d/%m/%Y') if active_contract.contract_date else '—' }}</span>
                     </h6>
                     <button type="button" class="btn btn-sm btn-primary" id="load-contract-btn">
                         <i class="bi bi-download"></i> {{ t('Load items from contract') }}

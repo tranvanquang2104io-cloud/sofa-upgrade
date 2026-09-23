@@ -35,7 +35,7 @@
                                 {% if doc.file_size %}
                                 &bull; {{ (doc.file_size / 1024) | round(1) }} KB
                                 {% endif %}
-                                &bull; {{ doc.generated_at.strftime('%Y-%m-%d %H:%M') }}
+                                &bull; {{ doc.generated_at.strftime('%Y-%m-%d %H:%M') if doc.generated_at else '—' }}
                             </small>
                         </div>
                         <div class="btn-group flex-shrink-0">

@@ -440,14 +440,14 @@
                             {{ t('Handover Record') }}
                             {% if handover_records %}
                                 {% for handover in handover_records %}
-                                <p class="text-muted small">Created: {{ handover.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                <p class="text-muted small">Created: {{ handover.created_at.strftime('%Y-%m-%d %H:%M') if handover.created_at else '—' }}</p>
                                 {% if handover.is_confirmed %}
-                                <p class="text-muted small">Confirmed: {{ handover.confirmed_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                                <p class="text-muted small">Confirmed: {{ handover.confirmed_date.strftime('%Y-%m-%d %H:%M') if handover.confirmed_date else '—' }}</p>
                                 {% endif %}
                                 <div class="alert {% if handover.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <strong>{{ handover.report_number }}</strong> - {{ handover.handover_date.strftime('%Y-%m-%d') }}
+                                            <strong>{{ handover.report_number }}</strong> - {{ handover.handover_date.strftime('%Y-%m-%d') if handover.handover_date else '—' }}
                                             {{ doc_badge(handover) }}
                                         </div>
                                         <div class="d-flex gap-1">
@@ -521,9 +521,9 @@
                             {% set final_payments = payment_reports|selectattr('payment_type', 'equalto', 'final')|list %}
                             {% if final_payments %}
                                 {% for payment in final_payments %}
-                                    <p class="text-muted small">Created: {{ payment.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                    <p class="text-muted small">Created: {{ payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else '—' }}</p>
                                     {% if payment.is_confirmed %}
-                                    <p class="text-muted small">Confirmed: {{ payment.confirmed_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                                    <p class="text-muted small">Confirmed: {{ payment.confirmed_date.strftime('%Y-%m-%d %H:%M') if payment.confirmed_date else '—' }}</p>
                                     {% endif %}
                                     <div class="alert {% if payment.is_canceled %}alert-secondary{% elif payment.is_confirmed %}alert-success{% else %}alert-info{% endif %} py-2 px-3 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">

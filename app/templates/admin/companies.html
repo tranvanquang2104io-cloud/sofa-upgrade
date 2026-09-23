@@ -45,7 +45,7 @@
                                 <span class="badge bg-danger">Inactive</span>
                             {% endif %}
                         </td>
-                        <td class="text-center"><small>{{ c.created_at.strftime('%d/%m/%Y') }}</small></td>
+                        <td class="text-center"><small>{{ c.created_at.strftime('%d/%m/%Y') if c.created_at else '—' }}</small></td>
                         <td class="text-end">
                             <a href="{{ url_for('admin.edit_company', company_id=c.id) }}"
                                class="btn btn-sm btn-outline-primary me-1">

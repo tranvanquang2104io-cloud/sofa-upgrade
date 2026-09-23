@@ -19,7 +19,7 @@
                         <div class="col-md-4 mb-3">
                             <label for="quotation_date" class="form-label">{{ t('Quotation Date *') }}</label>
                             <input type="date" class="form-control" id="quotation_date" name="quotation_date"
-                                   value="{{ quotation.quotation_date.strftime('%Y-%m-%d') }}" required>
+                                   value="{{ quotation.quotation_date.strftime('%Y-%m-%d') if quotation.quotation_date else '—' }}" required>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="validity_days" class="form-label">{{ t('Validity (Days)') }}</label>

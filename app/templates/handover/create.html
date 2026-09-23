@@ -234,7 +234,7 @@
                     <dt class="col-sm-5">Contract No.:</dt>
                     <dd class="col-sm-7"><strong>{{ active_contract.contract_number }}</strong></dd>
                     <dt class="col-sm-5">Sign Date:</dt>
-                    <dd class="col-sm-7">{{ active_contract.contract_date.strftime('%d/%m/%Y') }}</dd>
+                    <dd class="col-sm-7">{{ active_contract.contract_date.strftime('%d/%m/%Y') if active_contract.contract_date else '—' }}</dd>
                     <dt class="col-sm-5">Value:</dt>
                     <dd class="col-sm-7">{{ "{:,.0f}".format(active_contract.contract_value) }} ₫</dd>
                     <dt class="col-sm-5">VAT:</dt>
