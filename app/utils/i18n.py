@@ -1108,3 +1108,29 @@ TRANSLATIONS['vi'].update({
     'Tìm theo mã đơn, tên công việc, khách hàng hoặc số chứng từ...':
         'Tìm theo mã đơn, tên công việc, khách hàng hoặc số chứng từ...',
 })
+
+TRANSLATIONS['vi'].update({
+    'Production': 'Sản xuất',
+    'Production Plans': 'Kế hoạch sản xuất',
+    'Đang sản xuất': 'Đang sản xuất',
+    'Đang bị chậm': 'Đang bị chậm',
+    'Nháp': 'Nháp',
+    'Đã xong': 'Đã xong',
+    'Đã nghiệm thu': 'Đã nghiệm thu',
+    'Kế hoạch sản xuất được tạo tự động sau khi hợp đồng được ký. Các kế hoạch bị chậm luôn nằm ở đầu danh sách.':
+        'Kế hoạch sản xuất được tạo tự động sau khi hợp đồng được ký. Các kế hoạch bị chậm luôn nằm ở đầu danh sách.',
+    'Chưa có kế hoạch sản xuất nào. Kế hoạch được tạo tự động khi hợp đồng được ký.':
+        'Chưa có kế hoạch sản xuất nào. Kế hoạch được tạo tự động khi hợp đồng được ký.',
+})
+
+TRANSLATIONS['vi'].update({'Tồn kho': 'Tồn kho', 'thiếu': 'thiếu'})
+
+TRANSLATIONS['vi'].update({
+    'Chờ xác nhận': 'Chờ xác nhận',
+    'Date': 'Ngày',
+    'Amount': 'Số tiền',
+    'Các phiếu thanh toán đã ghi nhận nhưng chưa được xác nhận. Cho đến khi xác nhận, số tiền này vẫn bị tính là khách còn nợ.':
+        'Các phiếu thanh toán đã ghi nhận nhưng chưa được xác nhận. Cho đến khi xác nhận, số tiền này vẫn bị tính là khách còn nợ.',
+    'Phiếu cũ nhất ở trên: để càng lâu thì càng dễ bị bỏ quên vì ai cũng tưởng người khác đã xử lý.':
+        'Phiếu cũ nhất ở trên: để càng lâu thì càng dễ bị bỏ quên vì ai cũng tưởng người khác đã xử lý.',
+})

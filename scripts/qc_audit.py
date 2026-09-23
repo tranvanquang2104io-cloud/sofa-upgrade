@@ -437,6 +437,7 @@ def screens():
              '/materials/purchase-suggestions', '/materials/categories',
              '/materials/suppliers', '/materials/units',
              '/purchase-orders', '/requisitions', '/goods-receipts',
+             '/production',
              '/agreements', '/supplier-invoices', '/reports',
              '/reports/receivables', '/settings/company',
              '/settings/standardization', '/settings/workflow',

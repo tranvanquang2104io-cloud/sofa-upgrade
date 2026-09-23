@@ -1790,6 +1790,42 @@ class ProductionPlanService:
             st = MaterialStock.query.filter_by(material_id=material_id, store_id=None).first()
         return st
 
+    def stock_levels(self, plan):
+        """What the store holds for each material this plan needs.
+
+        The plan screen listed what the job requires and what has been handed
+        over, but not what is actually there — so the only way to find out the
+        fabric was short was to press Cấp phát and be refused. Telling someone
+        afterwards is not a smaller version of telling them before: before,
+        they can raise a requisition and carry on; after, they have already
+        promised the workshop a start date.
+
+        Uses the same `_stock_for` lookup the allocation uses, so the screen
+        and the refusal can never disagree.
+
+        Returns ``{line_id: {name, available, still_required, missing, short}}``.
+        """
+        from decimal import Decimal
+
+        levels = {}
+        for line in plan.material_lines:
+            still = (Decimal(str(line.quantity_required or 0))
+                     - Decimal(str(line.quantity_issued or 0)))
+            entry = self._stock_for(line.material_id, plan.order.store_id
+                                    if plan.order else None)
+            # No stock row at all is the ordinary state of a material nobody
+            # has bought yet — zero, not an error and not unknown.
+            available = Decimal(str(entry.current_quantity)) if entry else Decimal('0')
+            missing = still - available
+            levels[str(line.id)] = {
+                'name': line.material.name if line.material else '',
+                'available': float(available),
+                'still_required': float(still),
+                'missing': float(missing) if missing > 0 else 0.0,
+                'short': bool(still > 0 and missing > 0),
+            }
+        return levels
+
     def issue_materials(self, plan):
         """Cấp phát: kiểm tồn trước; nếu thiếu → trả danh sách shortage, KHÔNG trừ.
         Nếu đủ → trừ MaterialStock, set quantity_issued, status=in_progress."""

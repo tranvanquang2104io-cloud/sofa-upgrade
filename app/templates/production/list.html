@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, empty_state, search_bar, table_open, table_close, status_badge with context %}
+{% block title %}{{ t('Production Plans') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Production Plans'), icon='bi-hammer',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Production Plans'), None)]) }}
+
+<p class="text-muted">{{ t('Kế hoạch sản xuất được tạo tự động sau khi hợp đồng được ký. Các kế hoạch bị chậm luôn nằm ở đầu danh sách.') }}</p>
+
+{% set status_filter = [{'name': 'status', 'label': 'Status',
+                         'options': [('processing', 'Đang sản xuất'),
+                                     ('delayed', 'Đang bị chậm'),
+                                     ('draft', 'Nháp'),
+                                     ('completed', 'Đã xong'),
+                                     ('finished', 'Đã nghiệm thu')],
+                         'selected': selected_status}] %}
+
+{{ search_bar(url_for('dashboard.list_production_plans'),
+              filters=status_filter,
+              reset_url=url_for('dashboard.list_production_plans') if selected_status else None) }}
+
+<div class="card">
+  <div class="card-body">
+    {% if plans %}
+      {{ table_open() }}
+        <thead>
+          <tr>
+            <th>{{ t('Number') }}</th>
+            <th>{{ t('Order') }}</th>
+            <th>{{ t('Customer') }}</th>
+            <th>{{ t('Status') }}</th>
+            <th>{{ t('Reason') }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for plan in plans %}
+          <tr>
+            <td><strong>{{ plan.plan_number }}</strong></td>
+            <td>
+              {% if plan.order %}
+                <a href="{{ url_for('dashboard.view_order', order_id=plan.order.id) }}">{{ plan.order.order_code }}</a>
+                <div class="text-muted small">{{ plan.order.title }}</div>
+              {% else %}—{% endif %}
+            </td>
+            <td>{{ plan.order.customer.name if plan.order and plan.order.customer else '—' }}</td>
+            <td>
+              {{ status_badge(plan.status, entity='production') }}
+              {# The delay is a separate fact from the stage: a plan can be in
+                 production AND late, and the late part is the one that needs
+                 a decision. #}
+              {% if plan.is_delayed %}
+                <span class="badge bg-danger">{{ t('Đang bị chậm') }}</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ plan.delay_reason or '—' }}</td>
+            <td class="text-end">
+              {% if plan.order %}
+              <a href="{{ url_for('dashboard.view_production_plan', order_id=plan.order.id) }}"
+                 class="btn btn-outline-secondary btn-sm">{{ t('View') }}</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      {{ table_close() }}
+
+      {% set extra_query = {} %}
+      {% if selected_status %}{% set _ = extra_query.update({'status': selected_status}) %}{% endif %}
+      {% include '_pagination.html' %}
+    {% else %}
+      {{ empty_state('Chưa có kế hoạch sản xuất nào. Kế hoạch được tạo tự động khi hợp đồng được ký.',
+                     icon='bi-hammer') }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

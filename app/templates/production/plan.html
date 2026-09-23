@@ -136,14 +136,29 @@
   <div class="table-responsive"><table class="table table-sm table-bordered">
     <thead class="table-light"><tr>
       <th>{{ t('Material') }}</th><th>{{ t('For item') }}</th><th>{{ t('Required') }}</th>
-      <th>{{ t('Issued') }}</th><th>{{ t('Unit') }}</th><th></th>
+      <th>{{ t('Issued') }}</th><th>{{ t('Tồn kho') }}</th><th>{{ t('Unit') }}</th><th></th>
     </tr></thead>
     <tbody>
     {% for ln in plan.material_lines %}
       <tr>
         <td>{{ ln.material.name if ln.material else ln.material_id }}</td>
         <td>{{ ln.plan_item.source_name if ln.plan_item else t('(overall)') }}</td>
-        <td>{{ ln.quantity_required }}</td><td>{{ ln.quantity_issued }}</td><td>{{ ln.unit }}</td>
+        <td>{{ ln.quantity_required }}</td><td>{{ ln.quantity_issued }}</td>
+        {% set level = stock.get(ln.id|string) %}
+        <td>
+          {# Colour never carries the meaning on its own: the shortfall is
+             written out, so it survives a black-and-white printout and a
+             reader who does not see red. #}
+          {% if level %}
+            {% if level.short %}
+              <span class="text-danger fw-semibold">{{ '%g'|format(level.available) }}</span>
+              <div class="small text-danger">{{ t('thiếu') }} {{ '%g'|format(level.missing) }} {{ ln.unit or '' }}</div>
+            {% else %}
+              {{ '%g'|format(level.available) }}
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ ln.unit }}</td>
         <td class="text-end">
           {% if plan.can_edit() %}
           <form method="POST" action="{{ url_for('dashboard.delete_plan_material', plan_id=plan.id, line_id=ln.id) }}" class="d-inline"

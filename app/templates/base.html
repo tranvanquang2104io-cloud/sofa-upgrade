@@ -65,6 +65,17 @@
                             </a>
                         </li>
                         {% endif %}
+                        {# ── Sản xuất ──
+                           Production was the only working area with no way in
+                           from the menu: a plan could be reached only through
+                           its own order. #}
+                        {% if can_feature('orders') %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'production' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_production_plans') }}">
+                                <i class="bi bi-hammer"></i> {{ t('Production') }}
+                            </a>
+                        </li>
+                        {% endif %}
                         {# ── Kho & Vật tư ── #}
                         {% if can_feature('inventory') %}
                         <li class="nav-item dropdown">

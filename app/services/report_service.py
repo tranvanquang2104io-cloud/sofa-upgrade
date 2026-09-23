@@ -98,6 +98,45 @@ class ReportService:
             totals[key] = totals.get(key, Decimal('0')) + Decimal(str(amount))
         return totals
 
+    def unconfirmed_payments(self, company_id):
+        """Payments recorded but not yet confirmed.
+
+        Every figure in the product counts a payment only once `is_confirmed`
+        is set — correctly, because until then it is a claim rather than cash.
+        But nothing listed the claims, so a slip recorded on Friday and never
+        confirmed keeps the customer looking like a debtor until somebody
+        happens to open that order, and whoever is chasing the debt has no way
+        to discover that the answer is "it is waiting in the queue".
+
+        Oldest first: the longer one has been sitting, the more likely it is
+        that everybody assumes somebody else dealt with it.
+        """
+        rows = db.session.query(PaymentReport, Order, Customer).join(
+            Order, PaymentReport.order_id == Order.id).outerjoin(
+            Customer, Order.customer_id == Customer.id).filter(
+            PaymentReport.company_id == company_id,
+            PaymentReport.is_confirmed == False,
+            PaymentReport.is_canceled == False,
+        ).order_by(PaymentReport.report_date.asc()).all()
+
+        result = []
+        for payment, order, customer in rows:
+            if payment.payment_type == 'advance':
+                amount = payment.advance_amount or payment.amount or 0
+            else:
+                amount = payment.remaining_amount or payment.amount or 0
+            result.append({
+                'payment_id': str(payment.id),
+                'report_number': payment.report_number,
+                'report_date': payment.report_date,
+                'payment_type': payment.payment_type,
+                'amount': float(amount),
+                'order_id': str(order.id),
+                'order_code': order.order_code,
+                'customer_name': customer.name if customer else '',
+            })
+        return result
+
     def customer_receivables(self, company_id):
         """Who owes us money, and how much.
 

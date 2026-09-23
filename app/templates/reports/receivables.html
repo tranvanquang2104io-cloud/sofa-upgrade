@@ -70,4 +70,48 @@
 {% else %}
 {{ empty_state('No customer has an outstanding balance.', icon='bi-cash-stack') }}
 {% endif %}
+
+{# The queue that explains part of the figure above. It sits here rather than
+   on a screen of its own because this is where somebody asks "why does this
+   customer still owe us?" — a separate screen would be one more place to
+   remember to visit. Hidden entirely when empty: an empty panel is clutter. #}
+{% if pending %}
+<div class="card mt-4">
+  <div class="card-header fw-semibold">
+    <i class="bi bi-hourglass-split"></i> {{ t('Chờ xác nhận') }}
+    <span class="badge bg-warning text-dark ms-1">{{ pending|length }}</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small">{{ t('Các phiếu thanh toán đã ghi nhận nhưng chưa được xác nhận. Cho đến khi xác nhận, số tiền này vẫn bị tính là khách còn nợ.') }}</p>
+    {{ table_open() }}
+      <thead>
+        <tr>
+          <th>{{ t('Payment No.') }}</th>
+          <th>{{ t('Date') }}</th>
+          <th>{{ t('Customer') }}</th>
+          <th>{{ t('Order') }}</th>
+          <th class="text-end">{{ t('Amount') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pending %}
+        <tr>
+          <td><strong>{{ p.report_number }}</strong></td>
+          <td>{{ p.report_date.strftime('%d/%m/%Y') if p.report_date else '—' }}</td>
+          <td>{{ p.customer_name or '—' }}</td>
+          <td><a href="{{ url_for('dashboard.view_order', order_id=p.order_id) }}">{{ p.order_code }}</a></td>
+          <td class="text-end">{{ "{:,.0f}".format(p.amount) }} đ</td>
+          <td class="text-end">
+            <a href="{{ url_for('dashboard.view_payment', payment_id=p.payment_id) }}"
+               class="btn btn-outline-secondary btn-sm">{{ t('View') }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    {{ table_close() }}
+    <p class="text-muted small mt-2">{{ t('Phiếu cũ nhất ở trên: để càng lâu thì càng dễ bị bỏ quên vì ai cũng tưởng người khác đã xử lý.') }}</p>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

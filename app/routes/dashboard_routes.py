@@ -2493,9 +2493,15 @@ def customer_receivables():
     if request.args.get('only') == 'owing':
         rows = [r for r in rows if not r['settled']]
 
+    # The footnote on this screen already said that money promised but not
+    # confirmed still shows as owed. Listing those payments here turns that
+    # caveat into something the reader can act on without leaving the page.
+    pending = ReportService().unconfirmed_payments(company_id)
+
     return render_template(
         'reports/receivables.html',
         rows=rows,
+        pending=pending,
         only=request.args.get('only') or '',
         total_outstanding=sum(r['outstanding'] for r in rows),
         owing_count=sum(1 for r in rows if not r['settled']))
@@ -4313,6 +4319,49 @@ def _owned_plan(plan_id, company_id):
     return plan
 
 
+@dashboard_bp.route('/production')
+@login_required
+def list_production_plans():
+    """What the workshop is building, and what is running late.
+
+    A plan used to be reachable only through its own order, so answering "what
+    is in production this week" meant opening orders one at a time. Production
+    was the only working area of the product with no way in from the menu.
+    """
+    from app.models.models import ProductionPlan as _Plan
+    from app.models.models import Order as _Order
+
+    company_id = get_current_company_id()
+    page = request.args.get('page', 1, type=int)
+    status = (request.args.get('status') or '').strip()
+    per_page = current_app.config.get('ITEMS_PER_PAGE', 20)
+
+    query = _Plan.query.filter(_Plan.company_id == company_id).join(
+        _Order, _Order.id == _Plan.order_id)
+    if not is_company_admin():
+        query = query.filter(_Order.store_id.in_(get_accessible_store_ids(company_id)))
+
+    if status == 'delayed':
+        query = query.filter(_Plan.is_delayed == True)
+    elif status == 'processing':
+        # What is on the floor right now: approved and being worked, not
+        # finished and not yet started.
+        query = query.filter(_Plan.status.in_((_Plan.STATUS_APPROVED,
+                                               _Plan.STATUS_PROCESSING)))
+    elif status:
+        query = query.filter(_Plan.status == status)
+
+    # Late first. A list ordered only by date buries the rows that need a
+    # decision today under the ones that do not.
+    query = query.options(joinedload(_Plan.order)).order_by(
+        _Plan.is_delayed.desc(), _Plan.created_at.desc())
+
+    pagination = db.paginate(query, page=page, per_page=per_page,
+                             error_out=False)
+    return render_template('production/list.html', plans=pagination.items,
+                           pagination=pagination, selected_status=status)
+
+
 @dashboard_bp.route('/orders/<order_id>/production-plan', methods=['GET'])
 @login_required
 def view_production_plan(order_id):
@@ -4331,10 +4380,13 @@ def view_production_plan(order_id):
     # sold for. Only meaningful once a plan exists.
     margin = ProductionPlanService().order_margin(plan) if plan else None
     cost = ProductionPlanService().material_cost(plan) if plan else None
+    # What the store actually holds, so a shortage is visible while the manager
+    # is still reading the plan rather than only when Cấp phát refuses.
+    stock = ProductionPlanService().stock_levels(plan) if plan else {}
 
     return render_template('production/plan.html', order=order, plan=plan,
                            materials=materials, units=units,
-                           margin=margin, cost=cost)
+                           margin=margin, cost=cost, stock=stock)
 
 
 @dashboard_bp.route('/production-plan/<plan_id>/status/<action>', methods=['POST'])
