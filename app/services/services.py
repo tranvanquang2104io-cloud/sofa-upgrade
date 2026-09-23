@@ -1805,8 +1805,21 @@ class ProductionPlanService:
             st = self._stock_for(line.material_id, order.store_id)
             avail = Decimal(str(st.current_quantity)) if st else Decimal('0')
             if avail < need:
-                shortages.append({'material_id': str(line.material_id),
-                                  'need': float(need), 'available': float(avail)})
+                # Name the material and do the subtraction here. The caller
+                # used to get an id and a count, so the message on screen
+                # could only say "3 materials" — leaving the workshop manager
+                # to find which three by hand, from data this loop already has.
+                material = line.material
+                shortages.append({
+                    'material_id': str(line.material_id),
+                    'material_code': material.material_code if material else '',
+                    'name': material.name if material else '',
+                    'unit': line.unit or (material.unit.name
+                                          if material and material.unit else ''),
+                    'need': float(need),
+                    'available': float(avail),
+                    'missing': float(need - avail),
+                })
         if shortages:
             return shortages
         for line, need in needs:

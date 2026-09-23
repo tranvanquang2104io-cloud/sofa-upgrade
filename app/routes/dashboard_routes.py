@@ -466,11 +466,12 @@ def upload_template():
         )
         db.session.add(new_tpl)
         db.session.commit()
-        flash(t(f'Mẫu "{name}" đã được tải lên thành công.'), 'success')
+        flash(t('Mẫu "%(name)s" đã được tải lên thành công.') % {'name': name}, 'success')
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error uploading template: {str(e)}", exc_info=True)
-        flash(t(f'Lỗi khi tải lên mẫu: {str(e)}'), 'error')
+        flash(t('Không tải lên được mẫu. Vui lòng kiểm tra tệp và thử lại.'),
+              'error')
 
     return redirect(url_for('dashboard.list_templates'))
 
@@ -487,7 +488,7 @@ def deactivate_template(template_id):
     else:
         tpl.is_active = False
         db.session.commit()
-        flash(t(f'Mẫu "{tpl.name}" đã được vô hiệu hóa.'), 'success')
+        flash(t('Mẫu "%(name)s" đã được vô hiệu hóa.') % {'name': tpl.name}, 'success')
     return redirect(url_for('dashboard.list_templates'))
 
 
@@ -566,10 +567,11 @@ def activate_template(template_id):
             # Say what was retired, or the user cannot tell an exclusive
             # switch from an additive one.
             names = ', '.join(o.name for o in replaced)
-            flash(t(f'Mẫu "{tpl.name}" đã được kích hoạt, thay cho: {names}.'),
+            flash(t('Mẫu "%(name)s" đã được kích hoạt, thay cho: %(replaced)s.')
+                  % {'name': tpl.name, 'replaced': names},
                   'success')
         else:
-            flash(t(f'Mẫu "{tpl.name}" đã được kích hoạt.'), 'success')
+            flash(t('Mẫu "%(name)s" đã được kích hoạt.') % {'name': tpl.name}, 'success')
     return redirect(url_for('dashboard.list_templates'))
 
 
@@ -1065,7 +1067,8 @@ def create_quotation(order_id):
             from app.models.models import Quotation
             existing = quotation_repo.get_by_company_and_number(company_id, quotation_number)
             if existing:
-                flash(t(f'Quotation number "{quotation_number}" is already taken. Please use a different number.'), 'error')
+                flash(t('Số báo giá "%(number)s" đã được dùng. Vui lòng chọn số khác.')
+                      % {'number': quotation_number}, 'error')
                 return render_template('quotations/create.html', order=order, company_vat_rate=company_vat_rate)
             
             # Parse items from request
@@ -1110,7 +1113,7 @@ def create_quotation(order_id):
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
         except ValueError as e:
-            flash(t(f'Error: {str(e)}'), 'error')
+            flash(t('Không lưu được: %(message)s') % {'message': e}, 'error')
         except Exception as e:
             logger.error(f"Error creating quotation: {str(e)}")
             flash(t('Error creating quotation'), 'error')
@@ -1184,7 +1187,7 @@ def edit_quotation(quotation_id):
             return redirect(url_for('dashboard.view_quotation', quotation_id=quotation_id))
             
         except ValueError as e:
-            flash(t(f'Error: {str(e)}'), 'error')
+            flash(t('Không lưu được: %(message)s') % {'message': e}, 'error')
         except Exception as e:
             logger.error(f"Error updating quotation: {str(e)}")
             flash(t('Error updating quotation'), 'error')
@@ -1210,7 +1213,7 @@ def approve_quotation(quotation_id):
         return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
 
     except ValueError as e:
-        flash(t(f'Error: {str(e)}'), 'error')
+        flash(t('Không lưu được: %(message)s') % {'message': e}, 'error')
     except Exception as e:
         logger.error(f"Error approving quotation: {str(e)}")
         flash(t('Error approving quotation'), 'error')
@@ -1237,7 +1240,7 @@ def cancel_quotation(quotation_id):
         return redirect(url_for('dashboard.view_order', order_id=quotation.order_id))
 
     except ValueError as e:
-        flash(t(f'Error: {str(e)}'), 'error')
+        flash(t('Không lưu được: %(message)s') % {'message': e}, 'error')
     except Exception as e:
         logger.error(f"Error canceling quotation: {str(e)}")
         flash(t('Error canceling quotation'), 'error')
@@ -1270,7 +1273,8 @@ def create_contract(order_id):
             from app.repositories.repository import ContractRepository as _ContractRepo
             existing = _ContractRepo().get_by_company_and_number(company_id, contract_number)
             if existing:
-                flash(t(f'Contract number "{contract_number}" is already taken. Please use a different number.'), 'error')
+                flash(t('Số hợp đồng "%(number)s" đã được dùng. Vui lòng chọn số khác.')
+                      % {'number': contract_number}, 'error')
                 from app.models.models import Company as _CompanyC
                 _co = db.session.get(_CompanyC, order.company_id)
                 return render_template('contracts/create.html', order=order, quotations=quotations, company=_co)
@@ -1664,7 +1668,8 @@ def create_handover(order_id):
             from app.repositories.repository import HandoverRecordRepository as _HandoverRepo
             existing = _HandoverRepo().get_by_company_and_number(company_id, report_number)
             if existing:
-                flash(t(f'Handover record number "{report_number}" is already taken. Please use a different number.'), 'error')
+                flash(t('Số biên bản bàn giao "%(number)s" đã được dùng. Vui lòng chọn số khác.')
+                      % {'number': report_number}, 'error')
                 # Get contract items for re-render
                 contract_items = []
                 active_contracts = [c for c in order.contracts if c.is_active and not c.is_canceled]
@@ -1937,7 +1942,7 @@ def edit_handover(handover_id):
             return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
             
         except ValueError as e:
-            flash(t(f'Error: {str(e)}'), 'error')
+            flash(t('Không lưu được: %(message)s') % {'message': e}, 'error')
         except Exception as e:
             logger.error(f"Error updating handover record: {str(e)}")
             flash(t('Error updating handover record'), 'error')
@@ -1964,8 +1969,8 @@ def cancel_handover(handover_id):
         handover_service.cancel_handover(handover_id, handover.order_id, reason)
         flash(t('Handover record canceled successfully'), 'success')
     except Exception as e:
-        logger.error(f"Error canceling handover: {str(e)}")
-        flash(t(f'Error canceling handover: {str(e)}'), 'error')
+        logger.error("Error canceling handover: %s", e, exc_info=True)
+        flash(t('Không hủy được biên bản bàn giao. Vui lòng thử lại.'), 'error')
     
     return redirect(url_for('dashboard.view_handover', handover_id=handover_id))
 
@@ -2000,7 +2005,8 @@ def create_payment(order_id):
             from app.repositories.repository import PaymentReportRepository as _PaymentRepo
             existing = _PaymentRepo().get_by_company_and_number(company_id, report_number)
             if existing:
-                flash(t(f'Payment report number "{report_number}" is already taken. Please use a different number.'), 'error')
+                flash(t('Số phiếu thanh toán "%(number)s" đã được dùng. Vui lòng chọn số khác.')
+                      % {'number': report_number}, 'error')
                 from app.models.models import PaymentReport as _PR
                 _adv = db.session.query(_PR).filter(_PR.order_id==order_id, _PR.payment_type=='advance', _PR.is_confirmed==True, _PR.is_canceled==False).all()
                 return render_template('payments/create.html', order=order, default_type=default_type,
@@ -2102,7 +2108,7 @@ def create_payment(order_id):
             return redirect(url_for('dashboard.view_order', order_id=order_id))
             
         except ValueError as e:
-            flash(t(f'Error: {str(e)}'), 'error')
+            flash(t('Không lưu được: %(message)s') % {'message': e}, 'error')
         except Exception as e:
             logger.error(f"Error creating payment report: {str(e)}")
             flash(t('Error creating payment report'), 'error')
@@ -2159,7 +2165,7 @@ def skip_advance_payment(order_id):
         except ValueError as waiver_error:
             # A company that has configured advance_paid as `required` has
             # deliberately disallowed skipping; respect that configuration.
-            flash(t(f'Cannot skip advance payment: {waiver_error}'), 'error')
+            flash(t('Không thể bỏ qua tạm ứng: %(message)s') % {'message': waiver_error}, 'error')
             return redirect(url_for('dashboard.view_order', order_id=order_id))
 
         lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
@@ -2288,7 +2294,7 @@ def edit_payment(payment_id):
             return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
             
         except ValueError as e:
-            flash(t(f'Error: {str(e)}'), 'error')
+            flash(t('Không lưu được: %(message)s') % {'message': e}, 'error')
         except Exception as e:
             logger.error(f"Error updating payment report: {str(e)}")
             flash(t('Error updating payment report'), 'error')
@@ -2317,8 +2323,8 @@ def cancel_payment(payment_id):
         payment_service.cancel_payment(payment_id, payment.order_id, reason)
         flash(t('Payment report canceled successfully'), 'success')
     except Exception as e:
-        logger.error(f"Error canceling payment: {str(e)}")
-        flash(t(f'Error canceling payment: {str(e)}'), 'error')
+        logger.error("Error canceling payment: %s", e, exc_info=True)
+        flash(t('Không hủy được phiếu thanh toán. Vui lòng thử lại.'), 'error')
     
     return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
 
@@ -2391,8 +2397,9 @@ def generate_document(doc_type, ref_id):
             flash(t('Đã tạo tài liệu (%(fmt)s) thành công.') % {'fmt': actual.upper()}, 'success')
         
     except Exception as e:
-        logger.error(f"Error generating document: {str(e)}")
-        flash(t(f'Error generating document: {str(e)}'), 'error')
+        logger.error("Error generating document: %s", e, exc_info=True)
+        flash(t('Không tạo được tài liệu. Vui lòng kiểm tra mẫu và thử lại.'),
+              'error')
     
     return redirect(_safe_back_url(url_for('dashboard.list_orders')))
 
@@ -2859,7 +2866,7 @@ def deactivate_store(store_id):
     else:
         try:
             StoreService().deactivate_store(store_id)
-            flash(t(f'Cửa hàng "{store.name}" đã bị vô hiệu hóa'), 'warning')
+            flash(t('Cửa hàng "%(name)s" đã bị vô hiệu hóa') % {'name': store.name}, 'warning')
         except Exception as e:
             logger.error(f"Error deactivating store: {e}", exc_info=True)
             flash(t('Lỗi khi vô hiệu hóa cửa hàng'), 'error')
@@ -3026,7 +3033,7 @@ def deactivate_user(user_id):
     else:
         try:
             UserService().deactivate_user(user_id)
-            flash(t(f'Tài khoản "{target.full_name}" đã bị vô hiệu hóa'), 'warning')
+            flash(t('Tài khoản "%(name)s" đã bị vô hiệu hóa') % {'name': target.full_name}, 'warning')
         except Exception as e:
             logger.error(f"Error deactivating user: {e}", exc_info=True)
             flash(t('Lỗi khi vô hiệu hóa tài khoản'), 'error')
@@ -3274,7 +3281,7 @@ def create_material():
                 db.session.commit()
             # Ensure stock rows exist for all stores
             svc.ensure_stock_entries_for_stores(mat.id, company_id)
-            flash(t(f'Nguyên vật liệu "{mat.name}" đã được tạo'), 'success')
+            flash(t('Nguyên vật liệu "%(name)s" đã được tạo') % {'name': mat.name}, 'success')
             return redirect(url_for('dashboard.view_material', material_id=mat.id))
         except ValueError as e:
             flash(str(e), 'error')
@@ -3396,7 +3403,7 @@ def deactivate_material(material_id):
         if not mat:
             abort(404)
         svc.deactivate_material(material_id, company_id)
-        flash(t(f'NVL "{mat.name}" đã bị vô hiệu hóa'), 'warning')
+        flash(t('NVL "%(name)s" đã bị vô hiệu hóa') % {'name': mat.name}, 'warning')
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
@@ -4388,7 +4395,21 @@ def issue_plan_materials(plan_id):
     try:
         shortages = ProductionPlanService().issue_materials(plan)
         if shortages:
-            flash(t(f'Không đủ tồn kho cho {len(shortages)} vật tư — chưa trừ kho.'), 'error')
+            # Name what is short and by how much. Interpolating the value
+            # into the key would build a different key on every call, so the
+            # sentence stays constant and the data is passed in.
+            detail = '; '.join(
+                '{name} ({code}): {missing}{unit}'.format(
+                    name=item['name'] or item['material_code'],
+                    code=item['material_code'],
+                    missing=f"{item['missing']:g}",
+                    unit=f" {item['unit']}" if item['unit'] else '')
+                for item in shortages[:5])
+            if len(shortages) > 5:
+                detail += t(' … và %(n)d vật tư khác') % {
+                    'n': len(shortages) - 5}
+            flash(t('Không đủ tồn kho — chưa trừ kho. Còn thiếu: %(detail)s')
+                  % {'detail': detail}, 'error')
         else:
             flash(t('Đã cấp phát và trừ kho vật tư thành công.'), 'success')
     except Exception as e:

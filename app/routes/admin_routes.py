@@ -107,7 +107,7 @@ def create_company():
             return render_template('admin/create_company.html')
 
         if Company.query.filter_by(company_code=company_code).first():
-            flash(t(f'Mã công ty "{company_code}" đã tồn tại.'), 'error')
+            flash(t('Mã công ty "%(code)s" đã tồn tại.') % {'code': company_code}, 'error')
             return render_template('admin/create_company.html')
 
         try:
@@ -160,14 +160,15 @@ def create_company():
             db.session.add(admin_user)
             db.session.commit()
 
-            flash(t(f'Công ty "{name}" ({company_code}) đã được tạo thành công.'), 'success')
+            flash(t('Công ty "%(name)s" (%(code)s) đã được tạo thành công.')
+                  % {'name': name, 'code': company_code}, 'success')
             logger.info(f"Master admin created company: {company_code}")
             return redirect(url_for('admin.companies'))
 
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error creating company: {e}", exc_info=True)
-            flash(t(f'Lỗi: {e}'), 'error')
+            flash(t('Không thực hiện được. Vui lòng thử lại.'), 'error')
 
     return render_template('admin/create_company.html')
 
@@ -198,7 +199,7 @@ def edit_company(company_id):
             return redirect(url_for('admin.companies'))
         except Exception as e:
             db.session.rollback()
-            flash(t(f'Lỗi: {e}'), 'error')
+            flash(t('Không thực hiện được. Vui lòng thử lại.'), 'error')
 
     users = User.query.filter_by(company_id=company.id).order_by(User.role, User.full_name).all()
     return render_template('admin/edit_company.html', company=company, users=users)
@@ -214,7 +215,8 @@ def toggle_company(company_id):
         company.is_active = not company.is_active
         db.session.commit()
         state = 'kích hoạt' if company.is_active else 'vô hiệu hóa'
-        flash(t(f'Công ty "{company.name}" đã được {state}.'), 'success')
+        flash(t('Công ty "%(name)s" đã được %(state)s.')
+              % {'name': company.name, 'state': state}, 'success')
     return redirect(url_for('admin.companies'))
 
 
@@ -243,14 +245,14 @@ def create_admin():
             return render_template('admin/create_admin.html')
 
         if MasterAdmin.query.filter_by(username=username).first():
-            flash(t(f'Tên đăng nhập "{username}" đã tồn tại.'), 'error')
+            flash(t('Tên đăng nhập "%(username)s" đã tồn tại.') % {'username': username}, 'error')
             return render_template('admin/create_admin.html')
 
         new_admin = MasterAdmin(username=username, email=email, full_name=fullname)
         new_admin.set_password(password)
         db.session.add(new_admin)
         db.session.commit()
-        flash(t(f'Master admin "{username}" đã được tạo.'), 'success')
+        flash(t('Master admin "%(username)s" đã được tạo.') % {'username': username}, 'success')
         return redirect(url_for('admin.list_admins'))
 
     return render_template('admin/create_admin.html')

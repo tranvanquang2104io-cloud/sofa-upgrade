@@ -1057,3 +1057,43 @@ TRANSLATIONS['vi'].update({
 })
 
 TRANSLATIONS['vi'].update({'Áp dụng quy tắc này': 'Áp dụng quy tắc này'})
+
+# --- Messages that carry a value, so the key holds a placeholder rather than
+# --- being built with an f-string (which would be a new key every call). ---
+TRANSLATIONS['vi'].update({
+    'Không lưu được: %(message)s': 'Không lưu được: %(message)s',
+    'Không hủy được biên bản bàn giao: %(message)s':
+        'Không hủy được biên bản bàn giao: %(message)s',
+    'Không hủy được phiếu thanh toán: %(message)s':
+        'Không hủy được phiếu thanh toán: %(message)s',
+    'Không tạo được tài liệu: %(message)s': 'Không tạo được tài liệu: %(message)s',
+    'Không thể bỏ qua tạm ứng: %(message)s': 'Không thể bỏ qua tạm ứng: %(message)s',
+    'Số báo giá "%(number)s" đã được dùng. Vui lòng chọn số khác.':
+        'Số báo giá "%(number)s" đã được dùng. Vui lòng chọn số khác.',
+    'Số hợp đồng "%(number)s" đã được dùng. Vui lòng chọn số khác.':
+        'Số hợp đồng "%(number)s" đã được dùng. Vui lòng chọn số khác.',
+    'Số biên bản bàn giao "%(number)s" đã được dùng. Vui lòng chọn số khác.':
+        'Số biên bản bàn giao "%(number)s" đã được dùng. Vui lòng chọn số khác.',
+    'Số phiếu thanh toán "%(number)s" đã được dùng. Vui lòng chọn số khác.':
+        'Số phiếu thanh toán "%(number)s" đã được dùng. Vui lòng chọn số khác.',
+    'Không đủ tồn kho — chưa trừ kho. Còn thiếu: %(detail)s':
+        'Không đủ tồn kho — chưa trừ kho. Còn thiếu: %(detail)s',
+    ' … và %(n)d vật tư khác': ' … và %(n)d vật tư khác',
+})
+
+TRANSLATIONS['vi'].update({
+    'Mẫu "%(name)s" đã được tải lên thành công.': 'Mẫu "%(name)s" đã được tải lên thành công.',
+    'Mẫu "%(name)s" đã được vô hiệu hóa.': 'Mẫu "%(name)s" đã được vô hiệu hóa.',
+    'Mẫu "%(name)s" đã được kích hoạt, thay cho: %(replaced)s.': 'Mẫu "%(name)s" đã được kích hoạt, thay cho: %(replaced)s.',
+    'Mẫu "%(name)s" đã được kích hoạt.': 'Mẫu "%(name)s" đã được kích hoạt.',
+    'Cửa hàng "%(name)s" đã bị vô hiệu hóa': 'Cửa hàng "%(name)s" đã bị vô hiệu hóa',
+    'Tài khoản "%(name)s" đã bị vô hiệu hóa': 'Tài khoản "%(name)s" đã bị vô hiệu hóa',
+    'Nguyên vật liệu "%(name)s" đã được tạo': 'Nguyên vật liệu "%(name)s" đã được tạo',
+    'NVL "%(name)s" đã bị vô hiệu hóa': 'NVL "%(name)s" đã bị vô hiệu hóa',
+    'Mã công ty "%(code)s" đã tồn tại.': 'Mã công ty "%(code)s" đã tồn tại.',
+    'Công ty "%(name)s" (%(code)s) đã được tạo thành công.': 'Công ty "%(name)s" (%(code)s) đã được tạo thành công.',
+    'Công ty "%(name)s" đã được %(state)s.': 'Công ty "%(name)s" đã được %(state)s.',
+    'Tên đăng nhập "%(username)s" đã tồn tại.': 'Tên đăng nhập "%(username)s" đã tồn tại.',
+    'Master admin "%(username)s" đã được tạo.': 'Master admin "%(username)s" đã được tạo.',
+    'Không thực hiện được. Vui lòng thử lại.': 'Không thực hiện được. Vui lòng thử lại.',
+})
