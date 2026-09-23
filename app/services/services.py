@@ -1583,9 +1583,11 @@ class MaterialService:
 
     # ── Materials ──────────────────────────────────────────────
 
-    def list_materials(self, company_id, category_id=None, search=None, active_only=True):
+    def list_materials(self, company_id, category_id=None, search=None,
+                       active_only=True, page=None, per_page=30):
         return self.repo.get_for_company(
-            company_id, category_id=category_id, search=search, active_only=active_only
+            company_id, category_id=category_id, search=search,
+            active_only=active_only, page=page, per_page=per_page
         )
 
     def get_material(self, material_id, company_id=None):

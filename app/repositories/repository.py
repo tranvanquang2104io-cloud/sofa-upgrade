@@ -545,8 +545,14 @@ class MaterialRepository(BaseRepository):
     def __init__(self):
         super().__init__(Material)
 
-    def get_for_company(self, company_id, category_id=None, active_only=True, search=None):
-        """All materials for a company with optional filters."""
+    def get_for_company(self, company_id, category_id=None, active_only=True,
+                        search=None, page=None, per_page=30):
+        """Materials for a company with optional filters.
+
+        Returns a Flask-SQLAlchemy Pagination when ``page`` is given, else the
+        full list — the same contract the procurement lists use, so a caller
+        that wants everything (an export, a dropdown) still gets everything.
+        """
         q = self.model.query.filter_by(company_id=company_id)
         if active_only:
             q = q.filter_by(is_active=True)
@@ -559,7 +565,10 @@ class MaterialRepository(BaseRepository):
                 (self.model.material_code.ilike(pattern)) |
                 (Supplier.name.ilike(pattern))
             )
-        return q.order_by(self.model.material_code).all()
+        q = q.order_by(self.model.material_code)
+        if page:
+            return q.paginate(page=page, per_page=per_page, error_out=False)
+        return q.all()
 
     def get_by_code(self, company_id, material_code):
         """Get material by code within company."""

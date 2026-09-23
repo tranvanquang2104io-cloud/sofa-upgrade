@@ -3199,10 +3199,13 @@ def list_materials():
     svc = _get_material_svc()
     search = request.args.get('search', '').strip()
     category_id = request.args.get('category_id', '').strip() or None
-    materials = svc.list_materials(company_id, category_id=category_id, search=search)
+    page = request.args.get('page', 1, type=int)
+    pagination = svc.list_materials(company_id, category_id=category_id,
+                                    search=search, page=page)
     categories = svc.list_categories(company_id)
     return render_template('materials/list.html',
-                           materials=materials,
+                           materials=pagination.items,
+                           pagination=pagination,
                            categories=categories,
                            selected_category_id=category_id,
                            search=search)

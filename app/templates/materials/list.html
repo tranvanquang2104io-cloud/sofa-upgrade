@@ -117,4 +117,11 @@
         {% endif %}
     </div>
 </div>
+
+{# Paging must carry the search and the category with it, or page 2 quietly
+   drops the filter the user is looking through. #}
+{% set extra_query = {} %}
+{% if search %}{% set _ = extra_query.update({'search': search}) %}{% endif %}
+{% if selected_category_id %}{% set _ = extra_query.update({'category_id': selected_category_id}) %}{% endif %}
+{% include '_pagination.html' %}
 {% endblock %}
