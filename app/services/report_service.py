@@ -52,6 +52,13 @@ class ReportService:
             Order.is_canceled == False,
             Contract.is_signed == True,
             Contract.is_canceled == False,
+            # A renegotiated order keeps its old contract: still signed, still
+            # not cancelled, only `is_active = False`. Without this the order
+            # books twice — at the old price AND the new one. Every other part
+            # of the product resolves "the contract" as the active one; the
+            # reports were the only place that did not, which is why the
+            # screens agreed with each other while the totals were wrong.
+            Contract.is_active == True,
         ).group_by(Customer.id, Customer.name).all()
         rows.extend(contracts)
 
@@ -225,7 +232,19 @@ class ReportService:
             PurchaseOrder.status != 'canceled').all()
         po_count = len(pos)
         po_value = sum((Decimal(str(p.total_amount or 0)) for p in pos), Decimal('0'))
-        open_pos = sum(1 for p in pos if p.status in ('draft', 'submitted', 'partial'))
+        # Ex-VAT, so it can be compared with `received` below, which is
+        # quantity x unit_price and carries no VAT. Subtracting one from the
+        # other used to leave the VAT on everything ordered — including on
+        # goods already standing in the warehouse — inside "outstanding".
+        po_value_net = sum((Decimal(str(p.subtotal or 0)) for p in pos),
+                           Decimal('0'))
+        # 'submitted' is a purchase REQUISITION status. A purchase ORDER that
+        # has gone to the supplier is 'ordered', so the orders most obviously
+        # open were the ones this dropped, while unsent drafts were counted.
+        open_pos = sum(1 for p in pos
+                       if p.status in (PurchaseOrder.STATUS_DRAFT,
+                                       PurchaseOrder.STATUS_ORDERED,
+                                       PurchaseOrder.STATUS_PARTIAL))
 
         # Value actually received (line qty_received × unit_price) across company POs
         received = db.session.query(
@@ -250,7 +269,8 @@ class ReportService:
             'po_value': float(po_value),
             'received_value': _f(received),
             'open_pos': open_pos,
-            'outstanding': float(po_value) - _f(received),
+            # Both sides ex-VAT: what has been ordered and is not yet here.
+            'outstanding': float(po_value_net) - _f(received),
             'top_suppliers': top_suppliers,
         }
 
