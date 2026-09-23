@@ -842,18 +842,61 @@ def list_orders():
         query = query.filter(_Order.store_id.in_(accessible_ids))
 
     if search:
-        # The three things a user has in hand when they go looking: the code on
-        # the paperwork, what the job was called, and whose it was. The customer
-        # name needs the join, which is why this is an outerjoin - an order with
-        # no customer must not vanish from an unrelated search.
+        # What a user has in hand when they go looking: the code on the
+        # paperwork, what the job was called, whose it was — and, very often,
+        # the number printed on a document rather than on the order itself. A
+        # customer rings about "hợp đồng HĐ-2026-014"; that number lives on the
+        # contract, and the search used to ignore it.
+        #
+        # The document numbers go in as subqueries rather than four more joins:
+        # an order with two quotations would otherwise appear twice.
+        from app.models.models import (
+            Contract as _Contract, HandoverRecord as _Handover,
+            PaymentReport as _Payment, Quotation as _Quotation,
+        )
         like = f'%{search}%'
+        document_matches = [
+            db.session.query(model.order_id).filter(column.ilike(like))
+            for model, column in (
+                (_Quotation, _Quotation.quotation_number),
+                (_Contract, _Contract.contract_number),
+                (_Handover, _Handover.report_number),
+                (_Payment, _Payment.report_number),
+            )
+        ]
+        # The customer name needs the join, which is why this is an outerjoin -
+        # an order with no customer must not vanish from an unrelated search.
         query = query.outerjoin(_Customer, _Order.customer_id == _Customer.id).filter(
             db.or_(
                 _Order.order_code.ilike(like),
                 _Order.title.ilike(like),
                 _Customer.name.ilike(like),
+                *[_Order.id.in_(sub) for sub in document_matches],
             )
         )
+
+    # Where the order has got to. "Which are not paid yet" and "what is still
+    # waiting to be handed over" are the daily questions, and the only way to
+    # answer them was to page through reading badges.
+    status = (request.args.get('status') or '').strip()
+    if status:
+        from app.models.models import LifecycleStatus as _Lifecycle
+        query = query.outerjoin(_Lifecycle, _Lifecycle.order_id == _Order.id)
+        conditions = {
+            # Signed, so the money is owed, and not yet settled. A cancelled
+            # order owes nothing, so it is not "unpaid".
+            'unpaid': db.and_(_Lifecycle.contract_signed == True,
+                              _Lifecycle.fully_paid != True,
+                              _Order.is_canceled != True),
+            'awaiting_handover': db.and_(_Lifecycle.handover_confirmed != True,
+                                         _Order.is_canceled != True),
+            'in_progress': db.and_(_Lifecycle.completed != True,
+                                   _Order.is_canceled != True),
+            'completed': _Lifecycle.completed == True,
+            'canceled': _Order.is_canceled == True,
+        }
+        if status in conditions:
+            query = query.filter(conditions[status])
 
     query = query.options(
         joinedload(_Order.customer),
@@ -863,7 +906,8 @@ def list_orders():
     # error_out=False → an out-of-range page renders empty instead of 404.
     pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
     return render_template('orders/list.html', orders=pagination.items,
-                           pagination=pagination, page=page, search=search)
+                           pagination=pagination, page=page, search=search,
+                           selected_status=status)
 
 
 @dashboard_bp.route('/orders/create', methods=['GET', 'POST'])

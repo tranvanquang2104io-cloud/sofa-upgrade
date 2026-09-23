@@ -1097,3 +1097,14 @@ TRANSLATIONS['vi'].update({
     'Master admin "%(username)s" đã được tạo.': 'Master admin "%(username)s" đã được tạo.',
     'Không thực hiện được. Vui lòng thử lại.': 'Không thực hiện được. Vui lòng thử lại.',
 })
+
+TRANSLATIONS['vi'].update({
+    'Status': 'Trạng thái',
+    'Chưa bàn giao': 'Chưa bàn giao',
+    'Chưa thanh toán đủ': 'Chưa thanh toán đủ',
+    'Đang thực hiện': 'Đang thực hiện',
+    'Đã hoàn thành': 'Đã hoàn thành',
+    'Đã hủy': 'Đã hủy',
+    'Tìm theo mã đơn, tên công việc, khách hàng hoặc số chứng từ...':
+        'Tìm theo mã đơn, tên công việc, khách hàng hoặc số chứng từ...',
+})

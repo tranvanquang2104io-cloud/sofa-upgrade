@@ -8,9 +8,19 @@
                crumbs=[(t('Dashboard'), url_for('dashboard.index')), (t('Orders'), None)],
                action_url=url_for('dashboard.create_order'), action_label=t('Create Order')) }}
 
+{# The stages people actually ask about, in the order the work happens. #}
+{% set status_filter = [{'name': 'status', 'label': 'Status',
+                         'options': [('awaiting_handover', 'Chưa bàn giao'),
+                                     ('unpaid', 'Chưa thanh toán đủ'),
+                                     ('in_progress', 'Đang thực hiện'),
+                                     ('completed', 'Đã hoàn thành'),
+                                     ('canceled', 'Đã hủy')],
+                         'selected': selected_status}] %}
+
 {{ search_bar(url_for('dashboard.list_orders'), search_value=search,
-              placeholder='Search by order code, job or customer...',
-              reset_url=url_for('dashboard.list_orders') if search else None) }}
+              placeholder='Tìm theo mã đơn, tên công việc, khách hàng hoặc số chứng từ...',
+              filters=status_filter,
+              reset_url=url_for('dashboard.list_orders') if (search or selected_status) else None) }}
 
 <div class="card">
     <div class="card-body">
@@ -52,7 +62,12 @@
                     {% endfor %}
                 </tbody>
             {{ table_close() }}
-            {% with extra_query = ({'search': search} if search else {}) %}
+            {# Paging must carry BOTH narrowings, or page 2 quietly widens
+               the list back out again. #}
+            {% set extra_query = {} %}
+            {% if search %}{% set _ = extra_query.update({'search': search}) %}{% endif %}
+            {% if selected_status %}{% set _ = extra_query.update({'status': selected_status}) %}{% endif %}
+            {% with extra_query = extra_query %}
             {% include '_pagination.html' %}
             {% endwith %}
         {% elif search %}
