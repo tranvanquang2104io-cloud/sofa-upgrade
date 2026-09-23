@@ -488,3 +488,88 @@ next to the thing they act on, and pinning those would be wrong.
 
 Still open on these screens: grouping the fields into labelled sections. The
 save button was the part that actually blocked people; sectioning is polish.
+
+
+## 7. Pass of 23–24/09 — measured in a real browser, then in the route table
+
+Two audits, each of which found things the other structurally could not.
+
+### 7a. Layout, measured through Chrome
+
+**609 findings across 41 screens → 0 across 47.** The audit drives a real
+Chrome over CDP, forces every dialog open, reveals every inactive tab and
+scrolls each page before measuring, because a screen nobody renders is a screen
+nobody checks.
+
+| Class | Before | After | What it was |
+|---|---|---|---|
+| `control-unlabelled` | 374 | 0 | 244 `<label>`s with no `for`: the words were on screen, attached to nothing. Clicking a label did not focus its field |
+| `target-too-small` | 215 | 0 | Bootstrap's 16px tick boxes, below WCAG 2.2's 24px floor, in a product used with a finger on a showroom tablet |
+| `icon-no-name` | 92 | 0 | 68 icon-only controls + 37 close buttons with no name at all |
+| `text-too-small` | 41 | 0 | a 9.6px role badge |
+
+**The audit could not see six screens.** Its list was written from the
+navigation menu, so screens reached only by pressing a button on another page —
+`/materials/create`, `/agreements/create`, `/purchase-orders/create`,
+`/requisitions/create` and the documents screen — were never opened. Adding them
+produced 8 findings immediately, including every column of the material-line
+editor shared by both procurement create forms. *A check that cannot reach a
+screen reports it as clean.*
+
+Three checks were narrowed rather than satisfied, each after looking at what the
+screen actually does: a revealed dialog is `position:fixed` against the window,
+so it "overlapped" everything beneath it and reported `left:0`; a Bootstrap
+`.row` takes 12px with a negative margin and gives it straight back as column
+padding, so two checks were measuring the gutter; and comparing the first card
+of two *stacked* columns compares things with no reason to match.
+
+### 7b. Correctness, measured from the route table
+
+* **Framework agreements were behind no permission at all.** The
+  endpoint→feature map matches on substrings of the endpoint name and
+  `list_agreements` matched nothing, so any staff user with every tick box
+  cleared could list, open, create and edit them.
+* **Supplier invoices were behind the wrong one.** `list_supplier_invoices` hit
+  the `supplier` rule — which exists for the supplier *master* — and resolved to
+  `inventory`. Granting stock access granted the ability to record and confirm
+  money owed.
+* Neither is visible from the user form: the tick boxes look complete either
+  way. `tests/test_feature_gating.py` now enumerates every dashboard GET route.
+* **The dashboard's recent-orders panel emptied as the company got busier** — it
+  took the company's ten newest orders and *then* dropped other stores'.
+* **31 translation keys were built with an f-string**, so `t()` never matched
+  and returned the key. Nine wrapped an English "Error:" around an
+  already-Vietnamese sentence; four told a Vietnamese user in English that a
+  document number was taken. Four flashed a raw exception to the screen.
+* **The workflow settings screen was in English** — its headers are
+  `{{ t(label) }}`, a *variable*, which no scan for `t('...')` literals can see.
+
+### 7c. Questions the business asks daily that the system could not answer
+
+| Gap | What it was |
+|---|---|
+| Production had no list and no menu entry | the only working area reachable solely through an order |
+| The plan showed Required and Issued but not stock | the only way to learn the fabric was short was to press Cấp phát and be refused |
+| "Không đủ tồn kho cho 3 vật tư" | true and useless; the manager then found the three by hand |
+| Orders could not be found by document number | a customer names a contract number; the search looked at everything but |
+| No status filter on orders | "chưa thanh toán đủ" meant paging through reading badges |
+| Unconfirmed payments were invisible | counted nowhere and listed nowhere, so a customer stayed a debtor until someone opened that order |
+| A debt named a customer with no link | the customer screen already lists their orders |
+| The materials list rendered every row | `.all()` on a table that grows with every quote |
+
+### 7d. On method
+
+Four defects in this pass came from the same trap in different directions:
+
+1. `get(f'` ends with `t(`, so the first sweep for dynamic keys reported 31 hits,
+   half of them false.
+2. `list_supplier_invoices` contains `supplier`, so it matched the rule meant for
+   the supplier master.
+3. A test of the new stock column **passed before the column existed**, because
+   "Tồn kho" is also the inventory menu label.
+4. An orders-filter test **failed while the filter worked**, because the search
+   box echoes the query back as `value="DH-A"`.
+
+Substring matching is how three of this product's live defects were built, and
+how two of the tests meant to catch them lied. Every lint added here now uses
+lookarounds, and every assertion about a list reads only that list's `<tbody>`.

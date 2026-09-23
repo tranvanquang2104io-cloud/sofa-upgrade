@@ -46,7 +46,13 @@
     {% for r in rows %}
     <tr class="{% if r.settled %}text-muted{% endif %}">
       <td>
-        <strong>{{ r.customer_name }}</strong>
+        {# Chasing a debt starts with "which jobs is this?", and the customer
+           screen already lists every order with its value and stage. The
+           report was a thing to read rather than a thing to work from purely
+           for want of this link. #}
+        <a href="{{ url_for('dashboard.view_customer', customer_id=r.customer_id) }}">
+          <strong>{{ r.customer_name }}</strong>
+        </a>
         {% if r.settled %}
         <span class="badge bg-success ms-1">{{ t('Paid in full') }}</span>
         {% endif %}
