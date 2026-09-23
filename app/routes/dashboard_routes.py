@@ -2072,28 +2072,15 @@ def create_payment(order_id):
             payment_service = PaymentReportService()
             payment_type = request.form.get('payment_type')
             
-            # Validate payment sequencing
-            if payment_type == 'advance' and not order.lifecycle.contract_signed:
-                flash(t('Advance payment can only be recorded after contract is signed'), 'error')
-                from app.models.models import PaymentReport as _PR2
-                _adv2 = db.session.query(_PR2).filter(_PR2.order_id==order_id, _PR2.payment_type=='advance', _PR2.is_confirmed==True, _PR2.is_canceled==False).all()
-                return render_template('payments/create.html', order=order, default_type=default_type,
-                                       commitment=order_commitment(order),
-                                       active_contract=active_contract, company=company,
-                                       confirmed_advance_payments=_adv2,
-                                       confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv2)),
-                                       advance_skipped=bool(order.lifecycle and order.lifecycle.advance_skipped))
-
-            if payment_type == 'final' and not order.lifecycle.handover_confirmed:
-                flash(t('Final payment can only be recorded after handover is confirmed'), 'error')
-                from app.models.models import PaymentReport as _PR3
-                _adv3 = db.session.query(_PR3).filter(_PR3.order_id==order_id, _PR3.payment_type=='advance', _PR3.is_confirmed==True, _PR3.is_canceled==False).all()
-                return render_template('payments/create.html', order=order, default_type=default_type,
-                                       commitment=order_commitment(order),
-                                       active_contract=active_contract, company=company,
-                                       confirmed_advance_payments=_adv3,
-                                       confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv3)),
-                                       advance_skipped=bool(order.lifecycle and order.lifecycle.advance_skipped))
+            # Payment sequencing is NOT decided here. This screen used to
+            # carry its own copy of the rules — advance after signing, final
+            # after handover — which meant switching a rule off at
+            # /settings/workflow changed nothing on the busiest money screen.
+            # A setting that does nothing teaches people the settings do not
+            # work. `PaymentReportService.create_payment_report` asks
+            # `WorkflowService.require()`, which is the configurable gate, and
+            # raises WorkflowBlocked (a ValueError) that the handler below
+            # already turns into a message.
             
             # Parse work items
             items, subtotal = parse_line_items(request.form)
@@ -3606,9 +3593,16 @@ def workflow_settings():
                         rule = WorkflowRule(company_id=company_id,
                                             action=action,
                                             prerequisite=prerequisite)
+                        rule.is_active = True     # a brand-new rule applies
                         db.session.add(rule)
+                    # The grid owns the MODE and nothing else. It used to write
+                    # is_active=True on every cell it touched, so saving it
+                    # silently switched back on any rule the administrator had
+                    # turned off in the list below — and the next person to hit
+                    # that step was blocked by a rule its owner believed was
+                    # off. Blanking a cell still deletes the rule: that is what
+                    # "no rule here" means, and it is the grid's to say.
                     rule.mode = mode
-                    rule.is_active = True
             db.session.commit()
             flash(t('Workflow rules saved'), 'success')
             return redirect(url_for('dashboard.workflow_settings'))

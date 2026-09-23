@@ -35,6 +35,10 @@
 <input type="hidden" name="action" value="save_matrix">
 
 <div class="card mb-3">
+  <div class="card-header">
+    <strong>1. {{ t('Bước nào cần điều kiện gì') }}</strong>
+    <div class="small text-muted">{{ t('Mỗi ô là một cặp (bước, điều kiện). Chọn mức ràng buộc, để trống nghĩa là bước đó không phụ thuộc điều kiện này.') }}</div>
+  </div>
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
@@ -92,8 +96,18 @@
 </div>
 </form>
 
+{# The second section is NOT a repeat of the grid. It owns the two things a
+   grid cell cannot carry: whether a rule applies at all right now, and the
+   wording a blocked user reads. Saying so on screen, because an owner who
+   cannot tell the two apart is being failed by the page, not by themselves. #}
 <form method="POST" action="{{ url_for('dashboard.workflow_settings') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card mb-2">
+    <div class="card-header">
+      <strong>2. {{ t('Bật/tắt và lời nhắc khi bị chặn') }}</strong>
+      <div class="small text-muted">{{ t('Các quy tắc đang có ở trên, liệt kê từng dòng. Tại đây bạn tạm tắt một quy tắc mà không xóa nó, và sửa câu thông báo người dùng nhìn thấy khi bị chặn. Mức ràng buộc thì sửa ở bảng trên.') }}</div>
+    </div>
+  </div>
   <div class="table-responsive">
     <table class="table table-sm align-middle">
       <thead class="table-light">

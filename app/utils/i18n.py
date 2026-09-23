@@ -1390,3 +1390,12 @@ TRANSLATIONS['vi'].update({
     'Kế hoạch đã qua giai đoạn sản xuất nên danh mục vật tư đã khóa.':
         'Kế hoạch đã qua giai đoạn sản xuất nên danh mục vật tư đã khóa.',
 })
+
+TRANSLATIONS['vi'].update({
+    'Bước nào cần điều kiện gì': 'Bước nào cần điều kiện gì',
+    'Mỗi ô là một cặp (bước, điều kiện). Chọn mức ràng buộc, để trống nghĩa là bước đó không phụ thuộc điều kiện này.':
+        'Mỗi ô là một cặp (bước, điều kiện). Chọn mức ràng buộc, để trống nghĩa là bước đó không phụ thuộc điều kiện này.',
+    'Bật/tắt và lời nhắc khi bị chặn': 'Bật/tắt và lời nhắc khi bị chặn',
+    'Các quy tắc đang có ở trên, liệt kê từng dòng. Tại đây bạn tạm tắt một quy tắc mà không xóa nó, và sửa câu thông báo người dùng nhìn thấy khi bị chặn. Mức ràng buộc thì sửa ở bảng trên.':
+        'Các quy tắc đang có ở trên, liệt kê từng dòng. Tại đây bạn tạm tắt một quy tắc mà không xóa nó, và sửa câu thông báo người dùng nhìn thấy khi bị chặn. Mức ràng buộc thì sửa ở bảng trên.',
+})
