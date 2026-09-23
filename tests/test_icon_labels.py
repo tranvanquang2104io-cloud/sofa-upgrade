@@ -55,3 +55,31 @@ def test_every_modal_close_button_is_named():
     offenders = _offenders(CLOSE_BUTTON, 'aria-label')
     assert offenders == [], (
         f'these close buttons have no accessible name: {offenders}')
+
+
+def test_no_label_points_at_a_control_that_does_not_exist():
+    """A dangling `for` is worse than no label: it looks done.
+
+    The order screen had six print dialogs whose label said `for="format"`
+    while no control on the page carried that id — so clicking the label did
+    nothing, and had one control carried it, all six labels would have pointed
+    at the same one.
+
+    Ids referenced across an include would read as dangling here. None are
+    today; if that changes, name the control in the template that owns it.
+    """
+    dangling = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        text = io.open(path, encoding='utf-8').read()
+        # Skip ids built from Jinja expressions — they are only knowable at
+        # render time, and the browser audit checks those.
+        ids = set(re.findall(r'\bid="([^"{}]+)"', text))
+        for match in re.finditer(r'<label[^>]*\bfor="([^"{}]+)"', text):
+            if match.group(1) not in ids:
+                line = text[:match.start()].count('\n') + 1
+                dangling.append(
+                    f"{'/'.join(path.relative_to(TEMPLATES).parts)}:{line} "
+                    f"-> {match.group(1)}")
+
+    assert dangling == [], (
+        f'these labels name a control that is not there: {dangling}')

@@ -6,7 +6,8 @@
 {% macro line_row(materials, with_price, ln) %}
 <tr class="line-row">
   <td>
-    <select name="line_material_id[]" class="form-select form-select-sm line-mat" onchange="lineMatChanged(this)">
+    <select name="line_material_id[]" class="form-select form-select-sm line-mat"
+            aria-label="{{ t('Material') }}" onchange="lineMatChanged(this)">
       <option value="">{{ t('-- select material --') }}</option>
       {% for m in materials %}
         <option value="{{ m.id }}" data-unit="{{ m.unit.name if m.unit else '' }}" data-price="{{ m.unit_price|float }}"
@@ -15,11 +16,14 @@
     </select>
   </td>
   <td><input type="number" step="0.01" min="0" name="line_quantity[]" class="form-control form-control-sm"
+             aria-label="{{ t('Quantity') }}"
              style="width:100px" value="{{ ln.quantity if ln else '' }}"></td>
   <td><input type="text" name="line_unit[]" class="form-control form-control-sm line-unit"
+             aria-label="{{ t('Unit') }}"
              style="width:90px" value="{{ ln.unit if ln else '' }}"></td>
   {% if with_price %}
   <td><input type="number" step="1" min="0" name="line_price[]" class="form-control form-control-sm line-price"
+             aria-label="{{ t('Unit price') }}"
              style="width:130px" placeholder="giá NVL" value="{{ (ln.unit_price if ln and ln.unit_price is defined else '') }}"></td>
   {% endif %}
   <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-x-lg"></i></button></td>

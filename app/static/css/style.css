@@ -372,3 +372,14 @@ footer p {
     margin-top: 0;
     vertical-align: middle;
 }
+
+/* --- A card body that is also a grid row ---
+   `.row` pulls itself 12px left and right with negative margins. On a plain
+   wrapper the column padding gives that back; applied to `.card-body` it eats
+   the CARD's padding instead, so the outer columns sit flush against the card
+   border — 7px past it, which the layout audit picked up. Cancelling the pull
+   here keeps the one-element form markup and restores the padding. */
+.card-body.sofa-card-row {
+    margin-left: 0;
+    margin-right: 0;
+}

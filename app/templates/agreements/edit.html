@@ -20,7 +20,7 @@
 
   <div class="card mb-3">
     <div class="card-header">{{ t('Parties and validity') }}</div>
-    <div class="card-body row g-3">
+    <div class="card-body sofa-card-row row g-3">
       <div class="col-md-4">
         <label class="form-label" for="f_agreement_number">{{ t('Agreement Number') }} <span class="text-danger">*</span></label>
         <input type="text" name="agreement_number" class="form-control" required
@@ -67,7 +67,7 @@
 
   <div class="card mb-3">
     <div class="card-header">{{ t('Commercial terms') }}</div>
-    <div class="card-body row g-3">
+    <div class="card-body sofa-card-row row g-3">
       <div class="col-12">
         <label class="form-label" for="f_scope_description">{{ t('Scope of cooperation') }} (phạm vi hợp tác)</label>
         <textarea name="scope_description" rows="3" class="form-control" id="f_scope_description">{{ agreement.scope_description or '' }}</textarea>
@@ -101,7 +101,7 @@
 
   <div class="card mb-3">
     <div class="card-header">{{ t('Signatories') }}</div>
-    <div class="card-body row g-3">
+    <div class="card-body sofa-card-row row g-3">
       <div class="col-md-6">
         <label class="form-label" for="f_seller_representative">{{ t('Our representative') }}</label>
         <input type="text" name="seller_representative" class="form-control" value="{{ agreement.seller_representative or '' }}" id="f_seller_representative">

@@ -60,9 +60,9 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">{{ t('Unit Price') }}</label>
+                            <label class="form-label" for="f_unit_price">{{ t('Unit Price') }}</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" name="unit_price" step="0.01" min="0" value="0">
+                                <input type="number" class="form-control" name="unit_price" id="f_unit_price" step="0.01" min="0" value="0">
                                 <span class="input-group-text">đ</span>
                             </div>
                         </div>
@@ -215,7 +215,8 @@
             <div class="card mb-3">
                 <div class="card-header fw-semibold"><i class="bi bi-chat-left-text"></i> {{ t('Notes') }}</div>
                 <div class="card-body">
-                    <textarea class="form-control" name="notes" rows="2"></textarea>
+                    <textarea class="form-control" name="notes" rows="2"
+                              aria-label="{{ t('Notes') }}"></textarea>
                 </div>
             </div>
         </div>

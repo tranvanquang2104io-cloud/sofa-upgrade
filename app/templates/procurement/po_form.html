@@ -10,7 +10,7 @@
 
 <form method="POST" action="{{ url_for('dashboard.edit_purchase_order', po_id=po.id) if po else url_for('dashboard.create_purchase_order') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div class="card mb-3"><div class="card-body row g-3">
+  <div class="card mb-3"><div class="card-body sofa-card-row row g-3">
     <div class="col-md-4">
       <label class="form-label" for="f_supplier_id">{{ t('Supplier') }}</label>
       <select class="form-select" name="supplier_id" id="f_supplier_id">

@@ -17,14 +17,16 @@
 <form method="POST" action="{{ url_for('dashboard.edit_order', order_id=order.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="card mb-3">
-    <div class="card-body row g-3">
+    <div class="card-body sofa-card-row row g-3">
       <div class="col-md-6">
-        <label class="form-label">{{ t('Customer') }}</label>
-        <input type="text" class="form-control" value="{{ order.customer.name if order.customer else '' }}" disabled>
+        <label class="form-label" for="f_customer">{{ t('Customer') }}</label>
+        <input type="text" class="form-control" id="f_customer"
+               value="{{ order.customer.name if order.customer else '' }}" disabled>
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ t('Order Code') }}</label>
-        <input type="text" class="form-control" value="{{ order.order_code }}" disabled>
+        <label class="form-label" for="f_order_code">{{ t('Order Code') }}</label>
+        <input type="text" class="form-control" id="f_order_code"
+               value="{{ order.order_code }}" disabled>
       </div>
       <div class="col-12">
         <label class="form-label" for="f_title">{{ t('Title') }} <span class="text-danger">*</span></label>

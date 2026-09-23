@@ -10,7 +10,7 @@
 
 <form method="POST" action="{{ url_for('dashboard.edit_requisition', pr_id=pr.id) if pr else url_for('dashboard.create_requisition') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div class="card mb-3"><div class="card-body row g-3">
+  <div class="card mb-3"><div class="card-body sofa-card-row row g-3">
     <div class="col-md-5">
       <label class="form-label" for="f_title">{{ t('Title / Reason') }}</label>
       <input type="text" class="form-control" name="title" value="{{ pr.title if pr else '' }}" placeholder="VD: Bổ sung vật tư dự phòng Q3" id="f_title">

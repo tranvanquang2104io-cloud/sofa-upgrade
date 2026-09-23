@@ -269,16 +269,28 @@ AUDIT_JS = r"""
   //     ends in a ragged edge.
   document.querySelectorAll('.row').forEach(row => {
     if (!visible(row)) return;
+    // Only a column holding ONE card is a deliberate side-by-side panel. Where
+    // a column holds a STACK, its first card's height is set by that card's
+    // own content and has no reason to match the column beside it — comparing
+    // them reported a 19px difference between two unrelated panels as a
+    // misalignment.
     const cards = [...row.children].filter(visible)
-      .map(col => col.querySelector(':scope > .card')).filter(Boolean)
-      .filter(visible);
+      .map(col => {
+        const own = [...col.children].filter(el => el.classList.contains('card'));
+        return own.length === 1 ? own[0] : null;
+      }).filter(Boolean).filter(visible);
     if (cards.length < 2) return;
     const tops = cards.map(c => Math.round(rect(c).top));
     if (Math.max(...tops) - Math.min(...tops) > 1) return;   // not one row
+    // Two cards holding genuinely different amounts of content are SUPPOSED
+    // to be different heights; stretching a short one to match a long one
+    // just buys a panel full of white space. What looks like a mistake is a
+    // small difference — near enough to level that the eye expects level.
     const heights = cards.map(c => Math.round(rect(c).height));
     const spread = Math.max(...heights) - Math.min(...heights);
-    if (spread > 2) add('cards-ragged',
-      'cards in one row differ by ' + spread + 'px in height', row);
+    if (spread > 2 && spread <= 24) add('cards-ragged',
+      'cards in one row differ by ' + spread + 'px in height — close enough '
+      + 'to level that the gap reads as a misalignment', row);
   });
 
   // 13. Repeated items must be evenly spaced. An odd gap in a list reads as a
@@ -315,8 +327,13 @@ AUDIT_JS = r"""
     const m = parseFloat(getComputedStyle(el).marginLeft) || 0;
     return Math.round(m < 0 ? r.left - m : r.left);
   };
+  // A dialog is position:fixed at the left of the WINDOW, not of the content
+  // column, so once revealed it reports left:0 and drags every screen that has
+  // a dialog into this finding. It is not part of the page's vertical rhythm.
   const blocks = main
-    ? [...main.children].filter(visible).filter(el => rect(el).width > 200)
+    ? [...main.children].filter(visible)
+        .filter(el => !el.classList.contains('modal') && !el.closest('.modal'))
+        .filter(el => rect(el).width > 200)
     : [];
   if (blocks.length > 1) {
     const lefts = blocks.map(contentLeft);
@@ -425,11 +442,18 @@ def screens():
              '/settings/standardization', '/settings/workflow',
              '/settings/templates', '/settings/extension-fields',
              '/stores', '/users', '/customers/create', '/orders/create',
-             '/stores/create', '/users/create']
+             '/stores/create', '/users/create',
+             # Create screens reached only from a button on another page. The
+             # first version of this list was written from the navigation menu,
+             # so these were never opened — and a create form is where a user
+             # spends the most time on any screen.
+             '/materials/create', '/agreements/create',
+             '/purchase-orders/create', '/requisitions/create']
 
     order = one("select id from orders where company_id=? order by order_code")
     if order:
-        paths += [f'/orders/{order}', f'/orders/{order}/edit']
+        paths += [f'/orders/{order}', f'/orders/{order}/edit',
+                  f'/documents/{order}']
     for sql, template in [
         ("select q.id from quotations q join orders o on o.id=q.order_id "
          "where o.company_id=?", '/quotations/{}/view'),

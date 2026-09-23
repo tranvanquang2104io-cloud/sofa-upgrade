@@ -167,8 +167,11 @@
     </div>
     {% for f in (filters or []) %}
       <div class="col-6 col-md-auto">
-        <label class="form-label small text-muted mb-1">{{ t(f.label) }}</label>
-        <select name="{{ f.name }}" class="form-select">
+        {# The filter's own name is unique within this form, so it is a safe
+           id even though the block repeats. #}
+        <label class="form-label small text-muted mb-1"
+               for="filter_{{ f.name }}">{{ t(f.label) }}</label>
+        <select name="{{ f.name }}" id="filter_{{ f.name }}" class="form-select">
           <option value="">{{ t('All') }}</option>
           {% for value, label in f.options %}
             <option value="{{ value }}" {% if f.selected == value %}selected{% endif %}>{{ t(label) }}</option>
