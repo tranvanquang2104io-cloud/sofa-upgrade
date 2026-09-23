@@ -398,10 +398,12 @@ class OrderService:
         offset = (page - 1) * per_page
         return self.repo.get_orders_for_store(store_id, limit=per_page, offset=offset)
     
-    def list_orders_for_company(self, company_id, page=1, per_page=20):
-        """List orders for company"""
+    def list_orders_for_company(self, company_id, page=1, per_page=20,
+                                store_ids=None):
+        """List orders for company, optionally narrowed to certain stores."""
         offset = (page - 1) * per_page
-        return self.repo.get_orders_for_company(company_id, limit=per_page, offset=offset)
+        return self.repo.get_orders_for_company(
+            company_id, limit=per_page, offset=offset, store_ids=store_ids)
     
     def get_order_with_details(self, order_id, company_id):
         """Get order with all related data"""

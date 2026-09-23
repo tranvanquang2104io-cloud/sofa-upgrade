@@ -298,11 +298,10 @@ def index():
         total_customers = db.session.query(_Customer).filter_by(
             company_id=company_id, is_active=True).count()
     else:
-        all_orders = []
-        for sid in accessible_store_ids:
-            all_orders += _Order.query.filter_by(
-                company_id=company_id, store_id=sid, is_active=True
-            ).all()
+        # One query rather than one per store, and the same method the
+        # company-wide branch uses — so the two paths cannot drift apart.
+        all_orders = order_repo.get_orders_for_company(
+            company_id, store_ids=accessible_store_ids)
         total_customers = db.session.query(_Customer).filter(
             _Customer.store_id.in_(accessible_store_ids),
             _Customer.is_active == True,
@@ -315,9 +314,9 @@ def index():
 
     # Recent orders (last 10)
     order_service = OrderService()
-    recent_orders = order_service.list_orders_for_company(company_id, page=1, per_page=10)
-    if not is_company_admin():
-        recent_orders = [o for o in recent_orders if o.store_id in accessible_store_ids][:10]
+    recent_orders = order_service.list_orders_for_company(
+        company_id, page=1, per_page=10,
+        store_ids=None if is_company_admin() else accessible_store_ids)
 
     return render_template('dashboard/index.html',
                            orders=recent_orders,

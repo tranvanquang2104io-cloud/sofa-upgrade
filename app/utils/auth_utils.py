@@ -53,8 +53,18 @@ def feature_for_endpoint(endpoint):
     # 'order' (else 'purchase_orders' matches 'order').
     rules = (
         ('customer', 'customers'),
+        # 'supplier_invoice' MUST precede the bare 'supplier' rule. The bare
+        # rule exists for the supplier MASTER in the materials area; supplier
+        # invoices are money owed, and matching them to `inventory` meant that
+        # granting someone access to stock also let them record and confirm
+        # what the company owes.
+        ('supplier_invoice', 'purchasing'), ('supplier_payment', 'purchasing'),
         ('purchase', 'purchasing'), ('requisition', 'purchasing'), ('goods_receipt', 'purchasing'),
         ('material', 'inventory'), ('supplier', 'inventory'), ('low_stock', 'inventory'),
+        # A framework agreement (HĐNT) is the contract an order is placed
+        # under, so it belongs with orders. It matched nothing at all, which
+        # left it reachable by any staff user whatever their grants.
+        ('agreement', 'orders'),
         ('quotation', 'orders'), ('contract', 'orders'), ('handover', 'orders'),
         ('payment', 'orders'), ('production', 'orders'), ('document', 'orders'), ('order', 'orders'),
         ('report', 'reports'),

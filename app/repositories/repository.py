@@ -269,13 +269,24 @@ class OrderRepository(BaseRepository):
             query = query.offset(offset)
         return query.all()
     
-    def get_orders_for_company(self, company_id, limit=None, offset=None):
-        """Get all orders for a company (eager-loads customer + lifecycle to avoid
-        N+1 in the list view — AUDIT W17/PF1)."""
+    def get_orders_for_company(self, company_id, limit=None, offset=None,
+                               store_ids=None):
+        """Get orders for a company (eager-loads customer + lifecycle to avoid
+        N+1 in the list view — AUDIT W17/PF1).
+
+        ``store_ids`` narrows to those stores IN THE QUERY. Callers used to take
+        the company's newest N and filter afterwards, which silently returns
+        fewer than N — or none at all when the other branches have been busier.
+        The limit has to apply to the rows you want, not to the rows you are
+        about to discard.
+        """
         query = self.model.query.filter_by(company_id=company_id, is_active=True).options(
             joinedload(self.model.customer),
             joinedload(self.model.lifecycle),
-        ).order_by(desc(self.model.created_at))
+        )
+        if store_ids is not None:
+            query = query.filter(self.model.store_id.in_(list(store_ids)))
+        query = query.order_by(desc(self.model.created_at))
         if limit:
             query = query.limit(limit)
         if offset:
