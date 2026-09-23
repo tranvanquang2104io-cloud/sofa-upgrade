@@ -633,6 +633,28 @@ def seed():
             quantity_issued=issued,
             unit=materials[code].unit.abbreviation if materials[code].unit else ''))
 
+    # CASE: a plan still a DRAFT — the only state whose material list can be
+    # edited, and the only one that can be approved. Without it the owner
+    # never meets the draft → approve → in-production sequence at all, and
+    # every plan they open is locked: "chưa duyệt nhưng cũng không sửa được".
+    plan_draft = ProductionPlan(
+        company_id=company.id, order_id=order6.id,
+        plan_number='KHSX-00004', status=ProductionPlan.STATUS_DRAFT,
+        notes='Chưa chốt — còn chờ khách xác nhận màu vải.')
+    db.session.add(plan_draft)
+    db.session.flush()
+    draft_item = ProductionPlanItem(plan_id=plan_draft.id,
+                                    source_name=REUPHOLSTER['name'],
+                                    quantity=1, unit='bộ')
+    db.session.add(draft_item)
+    db.session.flush()
+    for code, required in [('VAI-NHUNG', 12), ('MUT-D40', 3)]:
+        db.session.add(ProductionMaterialLine(
+            plan_id=plan_draft.id, plan_item_id=draft_item.id,
+            material_id=materials[code].id, quantity_required=required,
+            quantity_issued=0,
+            unit=materials[code].unit.abbreviation if materials[code].unit else ''))
+
     # CASE: a plan running LATE — the behind-schedule flag
     plan_late = ProductionPlan(
         company_id=company.id, order_id=order5.id,
