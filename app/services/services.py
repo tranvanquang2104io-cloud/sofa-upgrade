@@ -383,11 +383,19 @@ class OrderService:
         return order
     
     def get_order(self, order_id, company_id):
-        """Get order - verify company access"""
+        """Get order - verify company AND store access.
+
+        The list screens narrowed to `get_accessible_store_ids()`; this did
+        not, so a store user holding an id from another branch could open that
+        order and act on it. Checking here rather than at the ten call sites
+        closes the class: a detail route added tomorrow is covered too.
+        """
         order = self.repo.get_by_id(order_id)
-        if order and str(order.company_id) == str(company_id):
-            return order
-        return None
+        if not order or str(order.company_id) != str(company_id):
+            return None
+        if not user_may_access_store(order.store_id, company_id):
+            return None
+        return order
     
     def list_orders_for_customer(self, customer_id):
         """List orders for customer"""
@@ -887,6 +895,86 @@ class HandoverRecordService:
             raise
 
 
+def plan_lock_reason(status):
+    """Why this plan's material list is locked, and the way out — if there is one.
+
+    The screen used to print one sentence for every locked state, telling the
+    user to press "Từ chối (làm lại)". That button is not on the screen, and
+    `reject` is only legal from `validating`; from `processing` the only moves
+    are `complete` and `cancel`. So the message sent people looking for a
+    control that does not exist and could not have worked — which is worse than
+    saying nothing, because they spend the time believing the fault is theirs.
+
+    Returns ``(message_key, action)``. ``action`` is the transition that
+    unlocks editing, or None when nothing reopens it from here. Both are None
+    for a draft, which is not locked.
+    """
+    from app.models.models import ProductionPlan as _Plan
+
+    if status == _Plan.STATUS_DRAFT:
+        return None, None
+
+    if status == _Plan.STATUS_VALIDATING:
+        # The one state the old message was actually right about.
+        return ('Kế hoạch đang chờ nghiệm thu nên danh mục vật tư đã khóa. '
+                'Dùng “Từ chối (làm lại)” để mở lại cho chỉnh sửa.'), 'reject'
+
+    if status in (_Plan.STATUS_APPROVED, _Plan.STATUS_PROCESSING):
+        return ('Kế hoạch đã chốt và đang sản xuất nên danh mục vật tư đã '
+                'khóa — để số liệu cấp phát và giá vốn khớp với lệnh đã chốt. '
+                'Từ trạng thái này chỉ có thể “Hoàn thành” hoặc “Hủy”.'), None
+
+    return ('Kế hoạch đã qua giai đoạn sản xuất nên danh mục vật tư đã khóa.'), None
+
+
+def user_may_access_store(store_id, company_id):
+    """Whether the CURRENT user may act on something belonging to this store.
+
+    Returns True outside a request — seeds, migrations and scripts have no
+    session and are not acting on anyone's behalf.
+
+    A company admin reaches every branch; a store user reaches their own.
+    """
+    try:
+        from flask import has_request_context, session
+        if not has_request_context() or 'user_id' not in session:
+            return True
+        from app.utils.auth_utils import get_accessible_store_ids
+        allowed = get_accessible_store_ids(company_id)
+    except Exception:
+        # Never turn an access check into a 500; the company check above has
+        # already run, and the routes still have their own guards.
+        return True
+    return store_id in allowed or str(store_id) in {str(s) for s in allowed}
+
+
+def order_commitment(order):
+    """What this order was agreed ON: a signed contract, or a confirmed ĐĐH.
+
+    The handover and payment screens pre-filled their fees from
+    `active_contract`, which is None for every framework-agreement order — and
+    `getattr(None, 'shipping_fee', 0)` is 0, so the delivery and other fees the
+    customer had agreed to were dropped without a word. The handover is the
+    basis for the hóa đơn GTGT, so that undercharged the customer and took the
+    VAT base from the wrong number.
+
+    Returns None when nothing has been agreed yet.
+    """
+    from app.models.models import Contract as _Contract
+    from app.models.models import OrderConfirmation as _Confirmation
+
+    contract = _Contract.query.filter_by(
+        order_id=order.id, is_signed=True, is_canceled=False, is_active=True,
+    ).order_by(_Contract.contract_date.desc()).first()
+    if contract:
+        return contract
+
+    return _Confirmation.query.filter_by(
+        order_id=order.id, status=_Confirmation.STATUS_CONFIRMED,
+        is_canceled=False,
+    ).order_by(_Confirmation.confirmation_date.desc()).first()
+
+
 def order_agreed_value(order):
     """What this order is worth, as currently agreed.
 
@@ -905,22 +993,13 @@ def order_agreed_value(order):
     from decimal import Decimal
 
     from app.models.models import Contract as _Contract
-    from app.models.models import OrderConfirmation as _Confirmation
 
-    contract = _Contract.query.filter_by(
-        order_id=order.id, is_signed=True, is_canceled=False, is_active=True,
-    ).order_by(_Contract.contract_date.desc()).first()
-    if contract:
-        return Decimal(str(contract.contract_value or 0))
-
-    confirmation = _Confirmation.query.filter_by(
-        order_id=order.id, status=_Confirmation.STATUS_CONFIRMED,
-        is_canceled=False,
-    ).order_by(_Confirmation.confirmation_date.desc()).first()
-    if confirmation:
-        return Decimal(str(confirmation.total_amount or 0))
-
-    return Decimal('0')
+    commitment = order_commitment(order)
+    if commitment is None:
+        return Decimal('0')
+    if isinstance(commitment, _Contract):
+        return Decimal(str(commitment.contract_value or 0))
+    return Decimal(str(commitment.total_amount or 0))
 
 
 def order_amount_collected(order_id):

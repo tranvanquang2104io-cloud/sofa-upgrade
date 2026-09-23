@@ -14,7 +14,7 @@ from app.services.workflow_service import ACTION_HANDOVER_CREATE, WorkflowServic
 from app.services.services import (
     StoreService, UserService, CustomerService, OrderService, QuotationService,
     ContractService, HandoverRecordService, PaymentReportService, DocumentService,
-    MaterialService, SupplierService,
+    MaterialService, SupplierService, order_commitment, plan_lock_reason,
 )
 from app.repositories.repository import (
     StoreRepository, CustomerRepository, OrderRepository, DocumentRepository,
@@ -1725,6 +1725,7 @@ def create_handover(order_id):
                         contract_items = approved_quotations[0].items or []
                 active_contract_obj = next((c for c in order.contracts if c.is_active and not c.is_canceled), None)
                 return render_template('handover/create.html', order=order, contract_items=contract_items,
+                                       commitment=order_commitment(order),
                                        active_contract=active_contract_obj)
 
             # Parse items acceptance from form
@@ -1764,11 +1765,17 @@ def create_handover(order_id):
                     subtotal += item_total
             
             active_contract = next((c for c in order.contracts if c.is_active and not c.is_canceled), None)
+            # A framework-agreement order has no contract; its commitment is
+            # the confirmed Đơn đặt hàng, and that is where its fees live.
+            _commitment = order_commitment(order) or active_contract
             totals = compute_totals(
                 subtotal=subtotal,
                 vat_rate=request.form.get('vat_rate'),
-                shipping_fee=getattr(active_contract, 'shipping_fee', 0) or 0,
-                another_fee=getattr(active_contract, 'another_fee', 0) or 0,
+                # From the COMMITMENT, not from `active_contract`: that is
+                # None on the framework path, and getattr(None, ...) is 0, so
+                # the fees the customer agreed were dropped without a word.
+                shipping_fee=getattr(_commitment, 'shipping_fee', 0) or 0,
+                another_fee=getattr(_commitment, 'another_fee', 0) or 0,
                 company=get_current_company(),
             )
             vat_rate = totals['vat_rate']
@@ -1844,6 +1851,7 @@ def create_handover(order_id):
     
     active_contract = active_contracts[0] if active_contracts else None
     return render_template('handover/create.html', order=order, contract_items=contract_items,
+                                       commitment=order_commitment(order),
                            active_contract=active_contract)
 
 
@@ -2039,6 +2047,7 @@ def create_payment(order_id):
     # Get active contract and company bank accounts for reference
     from app.models.models import Company as _Company
     active_contract = next((c for c in order.contracts if c.is_active and not c.is_canceled), None)
+    _commitment = order_commitment(order) or active_contract
     company = db.session.get(_Company, company_id)
 
     if request.method == 'POST':
@@ -2054,6 +2063,7 @@ def create_payment(order_id):
                 from app.models.models import PaymentReport as _PR
                 _adv = db.session.query(_PR).filter(_PR.order_id==order_id, _PR.payment_type=='advance', _PR.is_confirmed==True, _PR.is_canceled==False).all()
                 return render_template('payments/create.html', order=order, default_type=default_type,
+                                       commitment=order_commitment(order),
                                        active_contract=active_contract, company=company,
                                        confirmed_advance_payments=_adv,
                                        confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv)),
@@ -2068,6 +2078,7 @@ def create_payment(order_id):
                 from app.models.models import PaymentReport as _PR2
                 _adv2 = db.session.query(_PR2).filter(_PR2.order_id==order_id, _PR2.payment_type=='advance', _PR2.is_confirmed==True, _PR2.is_canceled==False).all()
                 return render_template('payments/create.html', order=order, default_type=default_type,
+                                       commitment=order_commitment(order),
                                        active_contract=active_contract, company=company,
                                        confirmed_advance_payments=_adv2,
                                        confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv2)),
@@ -2078,6 +2089,7 @@ def create_payment(order_id):
                 from app.models.models import PaymentReport as _PR3
                 _adv3 = db.session.query(_PR3).filter(_PR3.order_id==order_id, _PR3.payment_type=='advance', _PR3.is_confirmed==True, _PR3.is_canceled==False).all()
                 return render_template('payments/create.html', order=order, default_type=default_type,
+                                       commitment=order_commitment(order),
                                        active_contract=active_contract, company=company,
                                        confirmed_advance_payments=_adv3,
                                        confirmed_advance_total=float(sum(p.advance_amount or 0 for p in _adv3)),
@@ -2089,8 +2101,11 @@ def create_payment(order_id):
             totals = compute_totals(
                 subtotal=subtotal,
                 vat_rate=request.form.get('vat_rate'),
-                shipping_fee=getattr(active_contract, 'shipping_fee', 0) or 0,
-                another_fee=getattr(active_contract, 'another_fee', 0) or 0,
+                # From the COMMITMENT, not from `active_contract`: that is
+                # None on the framework path, and getattr(None, ...) is 0, so
+                # the fees the customer agreed were dropped without a word.
+                shipping_fee=getattr(_commitment, 'shipping_fee', 0) or 0,
+                another_fee=getattr(_commitment, 'another_fee', 0) or 0,
                 company=get_current_company(),
             )
             vat_rate = totals['vat_rate']
@@ -2169,6 +2184,7 @@ def create_payment(order_id):
     advance_skipped = bool(order.lifecycle and order.lifecycle.advance_skipped)
 
     return render_template('payments/create.html', order=order, default_type=default_type,
+                                       commitment=order_commitment(order),
                            active_contract=active_contract, company=company,
                            confirmed_advance_payments=confirmed_advance_payments,
                            confirmed_advance_total=confirmed_advance_total,
@@ -4312,9 +4328,19 @@ def cancel_order_confirmation(confirmation_id):
 # ===== PRODUCTION PLANNING (Feature 2) =====
 
 def _owned_plan(plan_id, company_id):
+    """The plan, if this user may act on it.
+
+    Company alone was not enough: issuing materials deducts from the ORDER's
+    store, so a user at one branch could take fabric off another branch's
+    shelves — and nothing in the record would say who did.
+    """
     from app.models.models import ProductionPlan
+    from app.services.services import user_may_access_store
     plan = ProductionPlan.query.get(plan_id)
     if not plan or str(plan.company_id) != str(company_id):
+        return None
+    if plan.order is not None and not user_may_access_store(
+            plan.order.store_id, company_id):
         return None
     return plan
 
@@ -4384,7 +4410,10 @@ def view_production_plan(order_id):
     # is still reading the plan rather than only when Cấp phát refuses.
     stock = ProductionPlanService().stock_levels(plan) if plan else {}
 
+    lock_message, _unlock_action = (
+        plan_lock_reason(plan.status) if plan else (None, None))
     return render_template('production/plan.html', order=order, plan=plan,
+                           lock_message=lock_message,
                            materials=materials, units=units,
                            margin=margin, cost=cost, stock=stock)
 
@@ -4636,21 +4665,16 @@ def create_purchase_order():
     return render_template('procurement/po_form.html', po=None, existing_lines=[], **_po_lists(company_id))
 
 
-@dashboard_bp.route('/purchase-orders/from-suggestions', methods=['POST'])
-@login_required
-def create_pos_from_suggestions():
-    company_id = get_current_company_id()
-    from app.services.procurement_service import ProcurementService
-    try:
-        pos = ProcurementService().create_pos_from_suggestions(company_id)
-        if pos:
-            flash(t('Đã tạo %(n)s đơn mua từ đề xuất.') % {'n': len(pos)}, 'success')
-        else:
-            flash(t('Không có vật tư cần mua để tạo đơn.'), 'info')
-    except Exception as e:
-        logger.error(f'create_pos_from_suggestions error: {e}')
-        db.session.rollback(); flash(t('Lỗi khi tạo đơn mua.'), 'error')
-    return redirect(url_for('dashboard.list_purchase_orders'))
+# There is deliberately NO route creating purchase orders straight from the
+# suggestion list. Such a route existed, reachable from no screen, and it made
+# POs with no requisition behind them and nobody's approval — while the
+# supported path refuses exactly that ("Chỉ tạo PO từ PR đã được duyệt"). An
+# action nothing offers is not safe for being hidden: the permission and the
+# URL are enough. Suggestions lead to a requisition, and the requisition, once
+# approved, leads to the orders.
+#
+# `ProcurementService.create_pos_from_suggestions` stays: it is a building
+# block, and the tests use it to set a scene.
 
 
 def _owned_po(po_id, company_id):
