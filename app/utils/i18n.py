@@ -1399,3 +1399,9 @@ TRANSLATIONS['vi'].update({
     'Các quy tắc đang có ở trên, liệt kê từng dòng. Tại đây bạn tạm tắt một quy tắc mà không xóa nó, và sửa câu thông báo người dùng nhìn thấy khi bị chặn. Mức ràng buộc thì sửa ở bảng trên.':
         'Các quy tắc đang có ở trên, liệt kê từng dòng. Tại đây bạn tạm tắt một quy tắc mà không xóa nó, và sửa câu thông báo người dùng nhìn thấy khi bị chặn. Mức ràng buộc thì sửa ở bảng trên.',
 })
+
+TRANSLATIONS['vi'].update({
+    'Trường nào được chuẩn hóa thế nào': 'Trường nào được chuẩn hóa thế nào',
+    'Mỗi trường văn bản đã là một dòng sẵn ở đây, nên không có nút “Tạo mới”: tick vào ô là áp dụng, bỏ tick hết cả dòng là thôi không chuẩn hóa trường đó nữa.':
+        'Mỗi trường văn bản đã là một dòng sẵn ở đây, nên không có nút “Tạo mới”: tick vào ô là áp dụng, bỏ tick hết cả dòng là thôi không chuẩn hóa trường đó nữa.',
+})

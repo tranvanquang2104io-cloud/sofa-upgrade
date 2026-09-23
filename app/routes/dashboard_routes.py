@@ -3696,11 +3696,17 @@ def standardization_settings():
                 chosen = [p for p in request.form.getlist(f'primitives_{entity}_{name}')
                           if p in PRIMITIVES]
                 if not chosen:
-                    # Clearing every cell on a row IS the delete. There is no
-                    # separate delete button because there is nothing else a
-                    # row with no rules could mean.
+                    # Clearing every cell on a row means "do not normalize this
+                    # field". It used to DELETE the row — and the screen seeds
+                    # the defaults whenever a company has no rows at all, so a
+                    # company that deliberately cleared everything had it all
+                    # switched back on the next time anyone opened the page.
+                    # Keeping an empty, inactive row says "configured, and the
+                    # answer is none", which is a different thing from "never
+                    # configured" and is what stops the defaults returning.
                     if rule is not None:
-                        db.session.delete(rule)
+                        rule.primitives = []
+                        rule.is_active = False
                     continue
 
                 mode = request.form.get(f'mode_{entity}_{name}')
@@ -3711,10 +3717,15 @@ def standardization_settings():
                     rule = NormalizationRule(company_id=company_id,
                                              entity_type=entity,
                                              field_name=name)
+                    rule.is_active = True     # a brand-new rule applies
                     db.session.add(rule)
+                # The grid owns which transforms and how strictly, and nothing
+                # else. Writing is_active=True here meant saving the grid for
+                # one field silently resumed rewriting text on another that
+                # the administrator had switched off — and rewriting happens
+                # at the moment a record is saved, where nobody is watching.
                 rule.primitives = chosen
                 rule.mode = mode
-                rule.is_active = True
 
             db.session.commit()
             flash(t('Standardization rules saved'), 'success')

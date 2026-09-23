@@ -14,7 +14,9 @@ seed list, and every primitive is a COLUMN. Ticking a cell applies that rule to
 that field. There is no create form because there is nothing to create: the
 field is already there, waiting.
 
-Unticking every cell on a row removes the rule, which is the delete.
+Unticking every cell on a row stops that field being normalized. The row is
+kept, empty and inactive — "configured, and the answer is none" — because
+deleting it made the screen reseed the defaults and quietly undo the decision.
 
 Fields that must never be rewritten - tax codes, document numbers, emails,
 phone numbers - are listed but locked, so a user can see the system knows about
@@ -141,8 +143,21 @@ def test_ticking_a_cell_creates_the_rule(app, client, login, seed):
         assert set(rule.primitives) == {'trim', 'title_case'}
 
 
-def test_unticking_everything_removes_the_rule(app, client, login, seed):
-    """Clearing a row is the delete; there is no separate delete button."""
+def test_unticking_everything_stops_the_field_being_normalized(app, client,
+                                                                login, seed):
+    """Clearing a row is the delete; there is no separate delete button.
+
+    This used to assert the ROW was gone. Deleting it was the implementation,
+    and it was the implementation that caused a trap: the screen seeds the
+    defaults whenever a company has no rows at all, so a company that cleared
+    everything had it all switched back on the next time anyone opened the
+    page — silently, and text began being rewritten again on save.
+
+    A cleared row is now kept, empty and inactive, which says "configured, and
+    the answer is none". So the assertion is the guarantee a user relies on —
+    this field is not normalized — and it now also checks the half that was
+    broken: that reopening the screen does not undo it.
+    """
     from app.config import db
     from app.models.models import NormalizationRule
 
@@ -159,10 +174,17 @@ def test_unticking_everything_removes_the_rule(app, client, login, seed):
         'entity': 'customer',
     }, follow_redirects=True)
 
-    with app.app_context():
-        assert NormalizationRule.query.filter_by(
-            company_id=seed['company_id'], entity_type='customer',
-            field_name='notes').first() is None
+    def normalized():
+        with app.app_context():
+            rule = NormalizationRule.query.filter_by(
+                company_id=seed['company_id'], entity_type='customer',
+                field_name='notes').first()
+            return bool(rule and rule.is_active and rule.primitives)
+
+    assert not normalized(), 'the field is still normalized after clearing'
+    client.get('/settings/standardization')
+    assert not normalized(), (
+        'reopening the screen restored the rule the company had cleared')
 
 
 def test_a_protected_field_cannot_be_given_a_rule(app, client, login, seed):

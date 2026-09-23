@@ -63,6 +63,16 @@
 <input type="hidden" name="entity" value="{{ entity }}">
 
 <div class="card mb-3">
+  <div class="card-header">
+    <strong>1. {{ t('Trường nào được chuẩn hóa thế nào') }}</strong>
+    {# Saying out loud why there is no "create new" button. The rows are
+       discovered from the data model, so every field is already here — a
+       sound design, but an invisible one, which is why its absence reads as
+       a missing feature. #}
+    <div class="small text-muted">
+      {{ t('Mỗi trường văn bản đã là một dòng sẵn ở đây, nên không có nút “Tạo mới”: tick vào ô là áp dụng, bỏ tick hết cả dòng là thôi không chuẩn hóa trường đó nữa.') }}
+    </div>
+  </div>
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0 sofa-matrix">
