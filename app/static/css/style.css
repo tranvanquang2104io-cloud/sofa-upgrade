@@ -419,3 +419,22 @@ footer p {
 footer .app-version {
     color: #adb5bd;
 }
+
+
+/* --- Skip link ---
+   Off-screen until focused, then the first thing on the page. Hiding it with
+   `display:none` would take it out of the tab order and defeat the purpose. */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 1100;
+    padding: .5rem 1rem;
+    background: #fff;
+    color: #212529;
+    border: 2px solid #0d6efd;
+    border-radius: 0 0 .25rem 0;
+}
+.skip-link:focus {
+    left: 0;
+}

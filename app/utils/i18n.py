@@ -1428,3 +1428,5 @@ TRANSLATIONS['vi'].update({
     'màn hình này áp dụng MỘT thuế suất cho cả hóa đơn và chưa có dòng chiết khấu hay cước vận chuyển. Nếu hóa đơn của bên bán có những khoản đó, đừng sửa đơn giá cho khớp tổng — hãy ghi vào ô Ghi chú và báo kế toán.':
         'màn hình này áp dụng MỘT thuế suất cho cả hóa đơn và chưa có dòng chiết khấu hay cước vận chuyển. Nếu hóa đơn của bên bán có những khoản đó, đừng sửa đơn giá cho khớp tổng — hãy ghi vào ô Ghi chú và báo kế toán.',
 })
+
+TRANSLATIONS['vi'].update({'Bỏ qua thanh điều hướng': 'Bỏ qua thanh điều hướng'})

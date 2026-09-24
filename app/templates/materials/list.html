@@ -34,7 +34,10 @@
         <form method="GET" action="{{ url_for('dashboard.list_materials') }}" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small mb-1" for="f_category_id">{{ t('Category') }}</label>
-                <select class="form-select form-select-sm" name="category_id" onchange="this.form.submit()" id="f_category_id">
+                {# No auto-submit: this reloaded the page on every arrow key, so the
+                   list could not be filtered without a mouse. The Search button
+                   beside it applies both fields. #}
+                <select class="form-select form-select-sm" name="category_id" id="f_category_id">
                     <option value="">{{ t('All Categories') }}</option>
                     {% for cat in categories %}
                     <option value="{{ cat.id }}" {% if selected_category_id == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>

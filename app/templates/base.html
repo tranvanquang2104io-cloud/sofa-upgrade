@@ -27,6 +27,11 @@
 </head>
 <body>
     {% if current_user %}
+        {# First focusable thing on the page, on purpose. The navigation is
+           five items plus three dropdowns — about twenty tab stops — and a
+           keyboard user paid it on every one of the 47 screens, with the flash
+           message confirming their save sitting after all of it. #}
+        <a class="skip-link" href="#main-content">{{ t('Bỏ qua thanh điều hướng') }}</a>
         <!-- Navigation -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container-fluid">
@@ -175,7 +180,10 @@
     {% endif %}
 
     <!-- Main Content -->
-    <div class="{% if current_user %}main-content{% endif %}">
+    {# The id and the class are both conditional: the skip link above only
+       exists for a logged-in user, so its target should not appear on the
+       bare pages a logged-out visitor sees. #}
+    <div {% if current_user %}id="main-content" tabindex="-1"{% endif %} class="{% if current_user %}main-content{% endif %}">
         {% if current_user %}
             <div class="container-fluid">
         {% endif %}
