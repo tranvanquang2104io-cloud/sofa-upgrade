@@ -28,14 +28,14 @@
     <div class="card-body">
         {% if customers %}
             {{ table_open() }}
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>{{ t('Customer Code') }}</th>
                         <th>{{ t('Name') }}</th>
                         <th>{{ t('Phone') }}</th>
                         <th>{{ t('Email') }}</th>
                         <th>{{ t('City') }}</th>
-                        <th class="text-end">{{ t('Action') }}</th>
+                        <th class="text-end">{{ t('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>

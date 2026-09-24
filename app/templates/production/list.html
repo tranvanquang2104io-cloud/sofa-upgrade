@@ -25,14 +25,14 @@
   <div class="card-body">
     {% if plans %}
       {{ table_open() }}
-        <thead>
+        <thead class="table-light">
           <tr>
             <th>{{ t('Number') }}</th>
             <th>{{ t('Order') }}</th>
             <th>{{ t('Customer') }}</th>
             <th>{{ t('Status') }}</th>
             <th>{{ t('Reason') }}</th>
-            <th></th>
+            <th class="text-end">{{ t('Actions') }}</th>
           </tr>
         </thead>
         <tbody>

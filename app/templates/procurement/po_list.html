@@ -35,7 +35,7 @@
 {% if pos %}
 {{ table_open('table table-bordered table-sm align-middle mb-0') }}
   <thead class="table-light"><tr>
-    <th>{{ t('PO No.') }}</th><th>{{ t('Supplier') }}</th><th>{{ t('Order Date') }}</th><th class="text-end">{{ t('Total Amount') }}</th><th>{{ t('Status') }}</th><th></th>
+    <th>{{ t('PO No.') }}</th><th>{{ t('Supplier') }}</th><th>{{ t('Order Date') }}</th><th class="text-end">{{ t('Total Amount') }}</th><th>{{ t('Status') }}</th><th class="text-end">{{ t('Actions') }}</th>
   </tr></thead>
   <tbody>
   {% for po in pos %}

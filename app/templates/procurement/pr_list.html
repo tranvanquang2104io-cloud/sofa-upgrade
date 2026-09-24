@@ -34,7 +34,7 @@
 
 {% if prs %}
 {{ table_open('table table-bordered table-sm align-middle mb-0') }}
-  <thead class="table-light"><tr><th>{{ t('PR No.') }}</th><th>{{ t('Title') }}</th><th>{{ t('Date') }}</th><th class="text-center">{{ t('Lines') }}</th><th>{{ t('Status') }}</th><th></th></tr></thead>
+  <thead class="table-light"><tr><th>{{ t('PR No.') }}</th><th>{{ t('Title') }}</th><th>{{ t('Date') }}</th><th class="text-center">{{ t('Lines') }}</th><th>{{ t('Status') }}</th><th class="text-end">{{ t('Actions') }}</th></tr></thead>
   <tbody>
   {% for pr in prs %}
     <tr>

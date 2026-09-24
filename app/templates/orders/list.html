@@ -26,7 +26,7 @@
     <div class="card-body">
         {% if orders %}
             {{ table_open() }}
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>{{ t('Order Code') }}</th>
                         <th>{{ t('Customer') }}</th>
@@ -34,7 +34,7 @@
                         <th>{{ t('Value') }}</th>
                         <th>{{ t('Status') }}</th>
                         <th>{{ t('Date Created') }}</th>
-                        <th>{{ t('Actions') }}</th>
+                        <th class="text-end">{{ t('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
