@@ -32,6 +32,22 @@ import pytest
 TEMPLATES = pathlib.Path(__file__).resolve().parents[1] / 'app' / 'templates'
 CREATE = TEMPLATES / 'quotations' / 'create.html'
 
+# All four document create screens carry the same duplicate-number checker,
+# copied between them. Fixing one and leaving three is how the copies drifted
+# apart in the first place.
+CODE_SCREENS = [
+    'quotations/create.html',
+    'contracts/create.html',
+    'handover/create.html',
+    'payments/create.html',
+]
+CODE_FIELDS = {
+    'quotations/create.html': 'quotation_number',
+    'contracts/create.html': 'contract_number',
+    'handover/create.html': 'report_number',
+    'payments/create.html': 'report_number',
+}
+
 
 @pytest.fixture()
 def order_with_a_used_number(app, seed):
@@ -55,33 +71,38 @@ def order_with_a_used_number(app, seed):
         return {**seed, 'order_id': str(order.id)}
 
 
-def test_the_duplicate_warning_is_announced():
+@pytest.mark.parametrize('screen', CODE_SCREENS)
+def test_the_duplicate_warning_is_announced(screen):
     """A warning shown only by toggling display reaches nobody using a reader."""
-    text = io.open(CREATE, encoding='utf-8').read()
+    text = io.open(TEMPLATES / screen, encoding='utf-8').read()
     warning = re.search(r'<div id="code-warning"[^>]*>', text)
     assert warning, 'the duplicate-code warning is gone'
     assert 'aria-live' in warning.group(0), (
         'the warning appears silently for a screen-reader user')
 
 
-def test_the_field_points_at_its_warning():
-    text = io.open(CREATE, encoding='utf-8').read()
-    field = re.search(r'<input[^>]*id="quotation_number"[^>]*>', text)
-    assert field, 'the quotation number field is gone'
+@pytest.mark.parametrize('screen', CODE_SCREENS)
+def test_the_field_points_at_its_warning(screen):
+    text = io.open(TEMPLATES / screen, encoding='utf-8').read()
+    name = CODE_FIELDS[screen]
+    field = re.search(r'<input[^>]*id="%s"[^>]*>' % name, text)
+    assert field, f'the {name} field is gone from {screen}'
     assert 'aria-describedby="code-warning"' in field.group(0), (
-        'nothing connects the field to the warning about it')
+        f'nothing connects the field to the warning about it in {screen}')
 
 
-def test_the_warning_is_in_vietnamese():
-    text = io.open(CREATE, encoding='utf-8').read()
+@pytest.mark.parametrize('screen', CODE_SCREENS)
+def test_the_warning_is_in_vietnamese(screen):
+    text = io.open(TEMPLATES / screen, encoding='utf-8').read()
     assert 'This code is already in use!' not in text, (
         'a Vietnamese user is warned in English'
     )
 
 
-def test_the_save_button_is_not_silently_disabled():
+@pytest.mark.parametrize('screen', CODE_SCREENS)
+def test_the_save_button_is_not_silently_disabled(screen):
     """Refusing with a reason beats refusing with nothing."""
-    text = io.open(CREATE, encoding='utf-8').read()
+    text = io.open(TEMPLATES / screen, encoding='utf-8').read()
     assert 'submitBtn.disabled = !!d.exists' not in text, (
         'the button still disables itself, so pressing Save does nothing and '
         'says nothing')

@@ -21,9 +21,11 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="report_number" class="form-label">{{ t('Report Number *') }}</label>
-                                <input type="text" class="form-control" id="report_number" name="report_number" required placeholder="{{ t('Loading...') }}">
-                                <div id="code-warning" class="text-danger small mt-1" style="display:none;">
-                                    <i class="bi bi-exclamation-triangle"></i> {{ t('This code is already in use!') }}
+                                <input type="text" class="form-control" id="report_number" name="report_number" required
+                                       aria-describedby="code-warning"
+                                       value="{{ request.form.get('report_number', '') }}" placeholder="{{ t('Loading...') }}">
+                                <div id="code-warning" class="text-danger small mt-1" role="alert" aria-live="polite" style="display:none;">
+                                    <i class="bi bi-exclamation-triangle"></i> {{ t('Số này đã được dùng rồi.') }}
                                 </div>
                             </div>
                         </div>
@@ -262,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const code = this.value.trim();
         const warning = document.getElementById('code-warning');
         const submitBtn = document.querySelector('button[type="submit"]');
-        if (!code) { warning.style.display = 'none'; submitBtn.disabled = false; return; }
+        if (!code) { warning.style.display = 'none'; return; }
         checkTimeout = setTimeout(async () => {
             try {
                 const res = await fetch('{{ url_for("dashboard.check_code", doc_type="handover") }}', {
@@ -271,7 +273,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 });
                 const d = await res.json();
                 warning.style.display = d.exists ? 'block' : 'none';
-                submitBtn.disabled = !!d.exists;
+                // Stays enabled on purpose: a disabled button leaves the tab
+            // order, so pressing Save did nothing and said nothing. The
+            // server checks the same thing and refuses with a message.
             } catch {}
         }, 500);
     });
