@@ -4,8 +4,10 @@
 {% block title %}Edit Quotation - SofaFlow{% endblock %}
 
 {% from '_unit_select.html' import unit_select, unit_template_select with context %}
+{% from '_item_row.html' import item_row, item_row_head, item_row_template with context %}
 {% block content %}
 {{ unit_template_select() }}
+{{ item_row_template(with_image=True) }}
 {{ page_header(t('Edit Quotation') ~ ' — ' ~ quotation.quotation_number, icon='bi-pencil-square',
                crumbs=[(t('Dashboard'), url_for('dashboard.index')), (t('Orders'), url_for('dashboard.list_orders')), (order.order_code, url_for('dashboard.view_order', order_id=order.id)), (quotation.quotation_number, url_for('dashboard.view_quotation', quotation_id=quotation.id)), (t('Edit'), None)]) }}
 
@@ -37,38 +39,20 @@
                     <div class="mb-3">
                         <h5><i class="bi bi-table"></i> {{ t('Items / Work Table') }}</h5>
                         <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
+                            <table class="table table-sm table-bordered item-table vat-per-line-off">
                                 <thead class="table-light">
-                                    <tr>
-                                        <th style="width:5%">No.</th>
-                                        <th style="width:28%">{{ t('Item Name / Work') }}</th>
-                                        <th style="width:8%">{{ t('Unit') }}</th>
-                                        <th style="width:8%">{{ t('Qty') }}</th>
-                                        <th style="width:12%">{{ t('Unit Price') }}</th>
-                                        <th style="width:12%">{{ t('Amount') }}</th>
-                                        <th style="width:17%">{{ t('Image') }}</th>
-                                        <th style="width:10%"></th>
-                                    </tr>
+                                    {{ item_row_head(with_image=True) }}
                                 </thead>
                                 <tbody id="items-tbody">
                                     {% for item in quotation.items %}
-                                    <tr class="item-row">
-                                        <td class="stt-cell text-center align-middle">{{ loop.index }}</td>
-                                        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="{{ item.name }}" placeholder="Item name"></td>
-                                        <td>{{ unit_select(item.get('unit', '')) }}</td>
-                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="{{ item.quantity }}" step="0.01" min="0"></td>
-                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="{{ item.unit_price }}" step="1" min="0"></td>
-                                        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly value="{{ item.get('total', 0)|int }}"></td>
-                                        <td>
-                                            {% if item.get('image_path') %}
-                                            <img src="{{ url_for('dashboard.serve_item_image', filename=item.image_path[6:]) }}" class="img-thumbnail mb-1" style="max-height:50px;" alt="">
-                                            {% endif %}
-                                            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
-                                            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
-                                            <input type="hidden" name="item_existing_image[]" value="{{ item.get('image_path', '') }}">
-                                        </td>
-                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-trash"></i></button></td>
-                                    </tr>
+                                    {{ item_row(index=loop.index,
+                                                name=item.name,
+                                                unit=item.get('unit', ''),
+                                                quantity=item.quantity,
+                                                price=item.unit_price,
+                                                vat_rate=item.get('vat_rate', ''),
+                                                with_image=True,
+                                                existing_image=item.get('image_path', '')) }}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -238,25 +222,11 @@ function updateRowNumbers() {
 
 function addRow() {
     const tbody = document.getElementById('items-tbody');
-    const row = document.createElement('tr');
-    row.className = 'item-row';
-    row.innerHTML = `
-        <td class="stt-cell text-center align-middle"></td>
-        <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / work"></td>
-        <td><select class="form-select form-select-sm" name="item_unit[]">${document.getElementById('unitTemplate').innerHTML}</select></td>
-        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1" min="0"></td>
-        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1" min="0"></td>
-        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
-        <td>
-            <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
-            <img class="img-preview img-thumbnail mt-1" style="max-height:50px; display:none;" alt="">
-            <input type="hidden" name="item_existing_image[]" value="">
-        </td>
-        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-trash"></i></button></td>
-    `;
+    const row = cloneItemRow();
     tbody.appendChild(row);
     row.querySelector('.qty-input').addEventListener('input', recalcAll);
     row.querySelector('.price-input').addEventListener('input', recalcAll);
+    row.querySelector('.vat-input').addEventListener('input', recalcAll);
     attachImagePreview(row);
     updateRowNumbers();
 }

@@ -57,10 +57,19 @@
   <td>
     <input type="file" class="form-control form-control-sm img-file-input"
            name="item_image[]" accept="image/*">
+    {# A stored image is served by a route, not from /static: the files live
+       under the upload folder and `serve_item_image` strips the leading
+       "items/" itself. The first version of this macro used
+       url_for('static', ...) — which never showed on a create screen, because
+       a new document has no stored image, and would have rendered a broken
+       one the moment the macro reached an edit screen. #}
+    {% if existing_image %}
+    <img src="{{ url_for('dashboard.serve_item_image', filename=existing_image[6:]) }}"
+         class="img-thumbnail mb-1" style="max-height:50px;" alt="">
+    {% endif %}
     <input type="hidden" name="item_existing_image[]" value="{{ existing_image }}">
     <img class="img-preview img-thumbnail mt-1"
-         src="{{ url_for('static', filename=existing_image) if existing_image else '' }}"
-         style="max-height:50px;{% if not existing_image %} display:none;{% endif %}" alt="">
+         style="max-height:50px; display:none;" alt="">
   </td>
   {% endif %}
   <td class="text-center">

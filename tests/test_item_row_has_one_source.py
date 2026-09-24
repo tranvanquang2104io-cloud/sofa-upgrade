@@ -36,10 +36,24 @@ import pytest
 TEMPLATES = pathlib.Path(__file__).resolve().parents[1] / 'app' / 'templates'
 
 # Screens converted so far. Adding a screen to the macro means adding it here.
-CONVERGED = ['quotations/create.html', 'payments/create.html']
+#
+# REBUILDS_A_REFUSED_FORM is a DIFFERENT property and a separate list on
+# purpose. Converging the markup does not make a screen keep what the user
+# typed when the server refuses it — that needs the route's whole form read
+# back, field by field. Conflating the two made this file demand the second
+# wherever the first was true, which would have pushed me into rebuilding three
+# screens blind. §8.12 records the two that still throw the work away.
+CONVERGED = [
+    'quotations/create.html', 'quotations/edit.html',
+    'contracts/create.html', 'contracts/edit.html',
+    'payments/create.html',
+]
 
 # Not converged and not wrong: a different row schema, with its own parser.
 DIFFERENT_BY_DESIGN = ['handover/create.html', 'handover/edit.html']
+
+
+REBUILDS_A_REFUSED_FORM = ['quotations/create.html', 'payments/create.html']
 
 
 def _text(name):
@@ -57,10 +71,14 @@ def test_the_screen_does_not_write_its_own_row(screen):
 @pytest.mark.parametrize('screen', CONVERGED)
 def test_the_screen_uses_the_macro(screen):
     text = _text(screen)
-    assert 'item_row(' in text, f'{screen} does not render the shared row'
     assert 'item_row_head(' in text, (
         f'{screen} writes its own header, which would lose the VAT column when '
         'the body gains it')
+    # `item_row(` OR `item_row_template(`: contracts/create.html renders no row
+    # server-side at all — every row is added by JavaScript — so requiring the
+    # first alone reported a converged screen as unconverged.
+    assert 'item_row(' in text or 'item_row_template(' in text, (
+        f'{screen} does not render the shared row')
 
 
 @pytest.mark.parametrize('screen', CONVERGED)
@@ -120,7 +138,7 @@ def test_the_vat_column_is_hidden_but_still_submitted():
         'the VAT input is type=hidden, so the user could never type in it')
 
 
-@pytest.mark.parametrize('screen', CONVERGED)
+@pytest.mark.parametrize('screen', REBUILDS_A_REFUSED_FORM)
 def test_a_rejected_form_brings_the_line_items_back(screen):
     """What the user typed survives a refusal — rates included.
 
