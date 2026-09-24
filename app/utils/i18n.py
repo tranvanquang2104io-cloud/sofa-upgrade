@@ -1413,3 +1413,8 @@ TRANSLATIONS['vi'].update({
     'Ai đang nợ, nợ bao nhiêu, và khoản nào đang chờ xác nhận.':
         'Ai đang nợ, nợ bao nhiêu, và khoản nào đang chờ xác nhận.',
 })
+
+TRANSLATIONS['vi'].update({
+    'In hợp đồng nguyên tắc': 'In hợp đồng nguyên tắc',
+    'In đơn đặt hàng': 'In đơn đặt hàng',
+})

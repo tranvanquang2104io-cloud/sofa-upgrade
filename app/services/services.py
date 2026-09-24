@@ -1572,6 +1572,76 @@ class DocumentService:
             context           = context,
         )
 
+    def generate_agreement_document(self, agreement_id, company_id,
+                                    format='docx'):
+        """Print a HỢP ĐỒNG NGUYÊN TẮC.
+
+        `collect_master_agreement_variables` was written when the feature was
+        built and then reached by nothing: the generator had no branch for this
+        type, so the work was three quarters finished and produced no document.
+        """
+        from app.models.models import MasterAgreement
+        from app.repositories.repository import CustomerRepository
+
+        agreement = MasterAgreement.query.filter_by(
+            id=agreement_id, company_id=company_id).first()
+        if not agreement:
+            raise ValueError("Framework agreement not found")
+
+        customer = CustomerRepository().get_by_id(agreement.customer_id)
+        template = self.template_repo.get_default_for_type(company_id,
+                                                           'agreement')
+        if not template:
+            raise ValueError("No agreement template found for company")
+
+        context = DocumentVariableCollector.collect_master_agreement_variables(
+            agreement, customer, company=self._get_company(company_id))
+
+        return self._save_document(
+            company_id=company_id,
+            # A framework agreement belongs to a customer, not to one order.
+            order_id=None,
+            template=template,
+            document_type='agreement',
+            document_format=format,
+            context=context,
+        )
+
+    def generate_order_confirmation_document(self, confirmation_id, company_id,
+                                             format='docx'):
+        """Print an ĐƠN ĐẶT HÀNG issued under a framework agreement.
+
+        This is the document a VAT invoice is raised against, so it is the one
+        on this path that most needed printing.
+        """
+        from app.models.models import OrderConfirmation
+        from app.repositories.repository import CustomerRepository, OrderRepository
+
+        confirmation = OrderConfirmation.query.filter_by(
+            id=confirmation_id, company_id=company_id).first()
+        if not confirmation:
+            raise ValueError("Order confirmation not found")
+
+        order = OrderRepository().get_by_id(confirmation.order_id)
+        customer = CustomerRepository().get_by_id(order.customer_id) if order else None
+        template = self.template_repo.get_default_for_type(
+            company_id, 'order_confirmation')
+        if not template:
+            raise ValueError("No order confirmation template found for company")
+
+        context = DocumentVariableCollector.collect_order_confirmation_variables(
+            confirmation, customer, order,
+            company=self._get_company(company_id))
+
+        return self._save_document(
+            company_id=company_id,
+            order_id=confirmation.order_id,
+            template=template,
+            document_type='order_confirmation',
+            document_format=format,
+            context=context,
+        )
+
     def generate_payment_request_document(self, order_id, company_id, format='docx'):
         """Generate a payment request document (Đề nghị thanh toán) for an order"""
         from app.repositories.repository import OrderRepository, CustomerRepository, PaymentReportRepository

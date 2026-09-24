@@ -647,7 +647,12 @@ class Document(db.Model):
     
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
-    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, index=True)
+    # Nullable since the framework agreement (HĐNT) became printable: that
+    # document belongs to a CUSTOMER and to no single order, so requiring an
+    # order here made it impossible to record one at all. Every document that
+    # does belong to an order still carries it, and the per-order file list is
+    # unchanged.
+    order_id = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=True, index=True)
     template_id = db.Column(GUID(), db.ForeignKey('document_templates.id'))
     quotation_id = db.Column(GUID(), db.ForeignKey('quotations.id'))
     contract_id = db.Column(GUID(), db.ForeignKey('contracts.id'))

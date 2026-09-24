@@ -21,7 +21,12 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'app', 'uploads', 'templates')
+# The app reads from <repo>/app/uploads/templates. This used to be built
+# from `os.path.dirname(__file__)`, which is scripts/ — so every template
+# this script produced landed in scripts/app/uploads/templates, where
+# nothing ever looks for one.
+OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          'app', 'uploads', 'templates')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 LIGHT_BLUE  = '2E74B5'
@@ -547,6 +552,185 @@ def create_payment_template():
 # Main
 # ===========================================================================
 
+
+
+# ===========================================================================
+# Template 5: HOP DONG NGUYEN TAC (Framework agreement / HĐNT)
+# ===========================================================================
+# Written with full Vietnamese diacritics. The four templates above use
+# unaccented text, which is not something a Vietnamese company can send to a
+# customer — a contract headed "HOP DONG MUA BAN" reads as a draft nobody
+# proofread. .docx stores UTF-8, so there was never a technical reason for it.
+
+def create_agreement_template():
+    doc = Document()
+    for section in doc.sections:
+        section.top_margin    = Cm(1.8)
+        section.bottom_margin = Cm(1.8)
+        section.left_margin   = Cm(2.5)
+        section.right_margin  = Cm(2.0)
+
+    _para(doc, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', bold=True, size=11,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    _para(doc, 'Độc lập – Tự do – Hạnh phúc', bold=True, size=11,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+    _para(doc, '---------------o0o---------------', size=10,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8)
+
+    _para(doc, 'HỢP ĐỒNG NGUYÊN TẮC', bold=True, size=18,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+    _para(doc, 'Số: {{ agreement_number }}', size=11,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+    _para(doc, 'V/v cung cấp sản phẩm nội thất sofa', italic=True, size=10,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8)
+
+    _para(doc, 'Hôm nay, ngày {{ agreement_day }} tháng {{ agreement_month }} '
+               'năm {{ agreement_year }}, chúng tôi gồm:', size=11,
+          space_after=6)
+
+    _para(doc, 'BÊN A (BÊN MUA):', bold=True, size=10, space_after=2)
+    _info_table(doc, [
+        ('Tên đơn vị:', '{{ customer_name }}', 'MST:', '{{ customer_tax_code }}'),
+        ('Địa chỉ:', '{{ customer_address }}', 'Điện thoại:', '{{ customer_phone }}'),
+        ('Đại diện:', '{{ customer_representative }}', 'Chức vụ:', '{{ customer_representative_title }}'),
+    ])
+
+    _para(doc, 'BÊN B (BÊN BÁN):', bold=True, size=10, space_after=2)
+    _info_table(doc, [
+        ('Tên đơn vị:', '{{ company_name }}', 'MST:', '{{ company_tax_code }}'),
+        ('Địa chỉ:', '{{ company_address }}', 'Điện thoại:', '{{ company_phone }}'),
+        ('Đại diện:', '{{ seller_representative }}', 'Chức vụ:', '{{ seller_representative_title }}'),
+    ])
+
+    _para(doc, 'Hai bên thống nhất ký kết hợp đồng nguyên tắc với các điều '
+               'khoản sau:', size=11, space_before=6, space_after=6)
+
+    _para(doc, 'ĐIỀU 1: PHẠM VI HỢP TÁC', bold=True, size=11, space_after=2)
+    _para(doc, '{{ scope_description }}', size=11, space_after=2)
+    _para(doc, 'Hợp đồng này quy định các điều khoản chung. Số lượng, đơn giá '
+               'và thời hạn giao hàng của từng lần mua được xác định tại Đơn '
+               'đặt hàng do hai bên xác nhận, và Đơn đặt hàng là căn cứ để '
+               'xuất hóa đơn giá trị gia tăng.', italic=True, size=10,
+          space_after=6)
+
+    _para(doc, 'ĐIỀU 2: THỜI HẠN HIỆU LỰC', bold=True, size=11, space_after=2)
+    _para(doc, 'Hiệu lực từ ngày {{ effective_from }} đến ngày '
+               '{{ effective_to }}. {{ auto_renew_text }}', size=11,
+          space_after=6)
+
+    _para(doc, 'ĐIỀU 3: GIÁ VÀ BẢNG GIÁ THỎA THUẬN', bold=True, size=11,
+          space_after=2)
+    _add_items_table(
+        doc,
+        ['STT', 'Tên sản phẩm', 'ĐVT', 'Đơn giá thỏa thuận', 'Chiết khấu (%)'],
+        ['{%tr for line in price_lines %}{{ loop.index }}',
+         '{{ line.product_name }}', '{{ line.unit }}',
+         '{{ line.agreed_unit_price }}',
+         '{{ line.discount_pct }}{%tr endfor %}'],
+        [1.2, 7.0, 2.0, 3.6, 2.4])
+    _para(doc, 'Giá chưa bao gồm thuế GTGT. Mức giá áp dụng cho một đơn hàng '
+               'là mức đang có hiệu lực tại thời điểm Đơn đặt hàng được xác '
+               'nhận; việc điều chỉnh giá không làm thay đổi các đơn hàng đã '
+               'phát sinh.', italic=True, size=10, space_after=6)
+
+    _para(doc, 'ĐIỀU 4: THANH TOÁN', bold=True, size=11, space_after=2)
+    _para(doc, '{{ payment_terms }}', size=11, space_after=6)
+
+    _para(doc, 'ĐIỀU 5: CHẤT LƯỢNG VÀ BẢO HÀNH', bold=True, size=11,
+          space_after=2)
+    _para(doc, '{{ quality_terms }}', size=11, space_after=6)
+
+    _para(doc, 'ĐIỀU 6: GIAO NHẬN', bold=True, size=11, space_after=2)
+    _para(doc, '{{ delivery_terms }}', size=11, space_after=6)
+
+    _para(doc, 'ĐIỀU 7: PHẠT VI PHẠM', bold=True, size=11, space_after=2)
+    _para(doc, 'Mức phạt vi phạm: {{ penalty_pct }}%. {{ penalty_basis_note }}',
+          size=11, space_after=6)
+
+    _para(doc, 'ĐIỀU 8: GIẢI QUYẾT TRANH CHẤP', bold=True, size=11,
+          space_after=2)
+    _para(doc, '{{ dispute_resolution }}', size=11, space_after=6)
+
+    _para(doc, 'Hợp đồng được lập thành 02 bản có giá trị pháp lý như nhau, '
+               'mỗi bên giữ 01 bản.', size=11, space_after=4)
+
+    _signature_block(doc, 'ĐẠI DIỆN BÊN A\n(Ký, ghi rõ họ tên, đóng dấu)',
+                     '{{ customer_representative }}',
+                     'ĐẠI DIỆN BÊN B\n(Ký, ghi rõ họ tên, đóng dấu)',
+                     '{{ seller_representative }}')
+
+    path = os.path.join(OUTPUT_DIR, 'agreement_template.docx')
+    doc.save(path)
+    print(f'  Created: {path}')
+    return path
+
+
+# ===========================================================================
+# Template 6: DON DAT HANG (Order confirmation / ĐĐH)
+# ===========================================================================
+
+def create_order_confirmation_template():
+    doc = Document()
+    for section in doc.sections:
+        section.top_margin    = Cm(1.8)
+        section.bottom_margin = Cm(1.8)
+        section.left_margin   = Cm(2.5)
+        section.right_margin  = Cm(2.0)
+
+    _company_header(doc)
+    _para(doc, 'ĐƠN ĐẶT HÀNG', bold=True, size=18,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+    _para(doc, 'Số: {{ confirmation_number }}', size=11,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+    # The citation comes from the snapshot stored on the confirmation, so a
+    # reprint years later still shows what it actually cited when issued.
+    _para(doc, '{{ agreement_reference_text }}', italic=True, size=10,
+          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+    _para(doc, '{{ city }}, ngày {{ confirmation_day }} tháng '
+               '{{ confirmation_month }} năm {{ confirmation_year }}',
+          italic=True, size=10, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=8)
+
+    _para(doc, 'BÊN ĐẶT HÀNG:', bold=True, size=10, space_after=2)
+    _info_table(doc, [
+        ('Tên đơn vị:', '{{ customer_name }}', 'MST:', '{{ customer_tax_code }}'),
+        ('Địa chỉ:', '{{ customer_address }}', 'Điện thoại:', '{{ customer_phone }}'),
+        ('Đại diện:', '{{ customer_representative }}', 'Mã đơn hàng:', '{{ order_code }}'),
+    ])
+
+    _para(doc, 'NỘI DUNG ĐẶT HÀNG:', bold=True, size=10, space_before=6,
+          space_after=2)
+    _add_items_table(
+        doc,
+        ['STT', 'Tên sản phẩm / quy cách', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'],
+        ['{%tr for item in items %}{{ loop.index }}', '{{ item.name }}',
+         '{{ item.unit }}', '{{ item.quantity }}', '{{ item.unit_price }}',
+         '{{ item.total }}{%tr endfor %}'],
+        [1.2, 6.4, 1.6, 1.4, 2.6, 3.0])
+    _add_vat_subtotals(doc, 6, 4, [1.2, 6.4, 1.6, 1.4, 2.6, 3.0])
+
+    _para(doc, 'Số tiền bằng chữ: {{ amount_in_words }}', italic=True,
+          size=10, space_before=4, space_after=6)
+
+    _para(doc, 'GIAO HÀNG VÀ THANH TOÁN:', bold=True, size=10, space_after=2)
+    _info_table(doc, [
+        ('Ngày giao dự kiến:', '{{ delivery_date }}', 'Địa điểm giao:', '{{ delivery_address }}'),
+        ('Điều khoản thanh toán:', '{{ payment_terms }}', 'Ghi chú:', '{{ notes }}'),
+    ])
+
+    _para(doc, 'Đơn đặt hàng này là căn cứ để xuất hóa đơn giá trị gia tăng '
+               'cho lần giao hàng tương ứng.', italic=True, size=10,
+          space_before=4, space_after=4)
+
+    _signature_block(doc, 'BÊN ĐẶT HÀNG\n(Ký, ghi rõ họ tên)',
+                     '{{ customer_representative }}',
+                     'BÊN NHẬN ĐẶT HÀNG\n(Ký, ghi rõ họ tên)', '')
+
+    path = os.path.join(OUTPUT_DIR, 'order_confirmation_template.docx')
+    doc.save(path)
+    print(f'  Created: {path}')
+    return path
+
+
 if __name__ == '__main__':
     print('Generating DOCX templates ...')
     print(f'Output: {OUTPUT_DIR}\n')
@@ -554,5 +738,7 @@ if __name__ == '__main__':
     create_contract_template()
     create_handover_template()
     create_payment_template()
+    create_agreement_template()
+    create_order_confirmation_template()
     print('\nDone. To seed into DB, run:')
     print('  python seed_docx_templates.py')

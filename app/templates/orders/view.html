@@ -677,9 +677,20 @@
                         </div>
                       </form>
                       {% endif %}
+                      {# An ĐĐH is what a VAT invoice is raised against, so it
+                         is the one document on this path that most needed a
+                         way to be printed. #}
+                      <form method="POST" class="mt-2"
+                            action="{{ url_for('dashboard.generate_document', doc_type='order_confirmation', ref_id=order_confirmation.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="format" value="docx">
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                          <i class="bi bi-printer"></i> {{ t('In đơn đặt hàng') }}
+                        </button>
+                      </form>
                     </div>
                     {% endif %}
-                    
+
                     {% if can_record_advance and not lifecycle.advance_paid %}
                     <a href="{{ url_for('dashboard.create_payment', order_id=order.id) }}" class="btn btn-primary">
                         <i class="bi bi-plus"></i> {{ t('Record Advance Payment') }}

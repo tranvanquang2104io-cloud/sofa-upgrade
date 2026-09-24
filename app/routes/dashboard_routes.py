@@ -2430,6 +2430,17 @@ def generate_document(doc_type, ref_id):
                 
             document = document_service.generate_payment_request_document(ref_id, company_id, doc_format)
         
+        elif doc_type == 'agreement':
+            # Both of these had a variable collector and no branch, so nothing
+            # could reach them. A HĐNT is what the customer signs; an ĐĐH is
+            # what a VAT invoice is raised against.
+            document = document_service.generate_agreement_document(
+                ref_id, company_id, doc_format)
+
+        elif doc_type == 'order_confirmation':
+            document = document_service.generate_order_confirmation_document(
+                ref_id, company_id, doc_format)
+
         else:
             flash(t('Unknown document type'), 'error')
             return redirect(_safe_back_url(url_for('dashboard.list_orders')))
