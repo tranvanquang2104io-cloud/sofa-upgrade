@@ -79,6 +79,20 @@ EXEMPT = {
     'admin/create_admin.html': 'master-admin console: own layout, sidebar nav, no i18n',
     'admin/create_company.html': 'master-admin console: own layout, sidebar nav, no i18n',
     'admin/edit_company.html': 'master-admin console: own layout, sidebar nav, no i18n',
+    'admin/admins.html': 'master-admin console: own layout, sidebar nav, no i18n',
+    'admin/base.html': 'master-admin console: own layout, sidebar nav, no i18n',
+    'admin/companies.html': 'master-admin console: own layout, sidebar nav, no i18n',
+
+    # Before login there is no navigation to be consistent with, and a
+    # breadcrumb would point at pages the visitor cannot open.
+    'auth/login.html': 'pre-login: no navbar, no breadcrumb to show',
+    'auth/register.html': 'pre-login: no navbar, no breadcrumb to show',
+
+    # An error page is deliberately bare: one message and one way back. Giving
+    # it a page header would dress a dead end as a working screen.
+    'errors/403.html': 'error page: one message and one way out, on purpose',
+    'errors/404.html': 'error page: one message and one way out, on purpose',
+    'errors/500.html': 'error page: one message and one way out, on purpose',
 }
 
 
@@ -88,10 +102,16 @@ def _requirements(kind):
         'create': ('page_header(', 'form_actions('),
         'edit': ('page_header(', 'form_actions('),
         'view': ('page_header(',),
+        # Everything else is still a screen. `other` used to require nothing,
+        # so 22 templates — the materials sub-pages, the settings screens, the
+        # reports hub, the production plan — were never checked at all, and
+        # the 44/44 above was 44 of the screens this file could classify.
+        # Three title sizes were live at once as a result.
+        'other': ('page_header(',),
     }.get(kind, ())
 
 
-@pytest.mark.parametrize('kind', ['list', 'create', 'edit', 'view'])
+@pytest.mark.parametrize('kind', ['list', 'create', 'edit', 'view', 'other'])
 def test_converged_screens_follow_the_contract(kind):
     """Everything not on NOT_YET must use the shared building blocks."""
     offenders = []

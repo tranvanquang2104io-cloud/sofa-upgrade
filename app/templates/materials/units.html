@@ -1,24 +1,15 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header with context %}
 {% block title %}{{ t('Units of Measure') }} - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-3 align-items-center">
-    <div class="col">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.list_materials') }}">{{ t('Materials') }}</a></li>
-                <li class="breadcrumb-item active">{{ t('Units') }}</li>
-            </ol>
-        </nav>
-        <h2><i class="bi bi-rulers"></i> {{ t('Units of Measure') }}</h2>
-        <p class="text-muted">{{ t('Define measurement units used across all materials (e.g. m², kg, cái, cuộn...)') }}</p>
-    </div>
-    <div class="col-auto">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-            <i class="bi bi-plus-circle"></i> {{ t('Add Unit') }}
-        </button>
-    </div>
-</div>
+{{ page_header(t('Units of Measure'), icon='bi-rulers',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Materials'), url_for('dashboard.list_materials')),
+                       (t('Units'), None)],
+               action_modal='createModal', action_label=t('Add Unit'),
+               action_icon='bi-plus-circle',
+               subtitle=t('Define measurement units used across all materials (e.g. m², kg, cái, cuộn...)')) }}
 
 <div class="card">
     <div class="card-body p-0">

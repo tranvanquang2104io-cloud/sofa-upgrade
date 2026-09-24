@@ -1,8 +1,12 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header with context %}
 {% block title %}{{ t('Low Stock') }} - SofaFlow{% endblock %}
 
 {% block content %}
-<h1 class="mb-3"><i class="bi bi-exclamation-triangle text-warning"></i> {{ t('Low Stock Materials') }}</h1>
+{{ page_header(t('Low Stock Materials'), icon='bi-exclamation-triangle',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Materials'), url_for('dashboard.list_materials')),
+                       (t('Low Stock'), None)]) }}
 
 {% if materials %}
 <div class="table-responsive"><table class="table table-bordered table-sm">

@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header with context %}
 {% block title %}{{ t('Extension Fields') }} - SofaFlow{% endblock %}
 
 {% block content %}
 <div class="row mb-3">
   <div class="col-md-12">
-    <h1><i class="bi bi-input-cursor-text"></i> {{ t('Extension Fields') }}</h1>
+    {{ page_header(t('Extension Fields'), icon='bi-input-cursor-text',
+                   crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                           (t('Extension Fields'), None)]) }}
     <p class="text-muted">{{ t('Configure up to 10 custom fields per document type. Enabled fields appear on the create form.') }}</p>
   </div>
 </div>

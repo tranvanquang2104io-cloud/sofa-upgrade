@@ -1,24 +1,15 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header with context %}
 {% block title %}{{ t('Suppliers') }} - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-3 align-items-center">
-    <div class="col">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.list_materials') }}">{{ t('Materials') }}</a></li>
-                <li class="breadcrumb-item active">{{ t('Suppliers') }}</li>
-            </ol>
-        </nav>
-        <h2><i class="bi bi-building"></i> {{ t('Suppliers') }}</h2>
-        <p class="text-muted">{{ t('Manage supplier records. Assign suppliers when creating materials.') }}</p>
-    </div>
-    <div class="col-auto">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-            <i class="bi bi-plus-circle"></i> {{ t('Add Supplier') }}
-        </button>
-    </div>
-</div>
+{{ page_header(t('Suppliers'), icon='bi-building',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Materials'), url_for('dashboard.list_materials')),
+                       (t('Suppliers'), None)],
+               action_modal='createModal', action_label=t('Add Supplier'),
+               action_icon='bi-plus-circle',
+               subtitle=t('Manage supplier records. Assign suppliers when creating materials.')) }}
 
 <div class="card">
     <div class="card-body p-0">

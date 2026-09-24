@@ -1,11 +1,14 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header with context %}
 
 {% block title %}Document Templates - SofaFlow{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
-        <h1><i class="bi bi-file-earmark-text"></i> {{ t('Document Templates') }}</h1>
+        {{ page_header(t('Document Templates'), icon='bi-file-earmark-text',
+                       crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                               (t('Document Templates'), None)]) }}
         <p class="text-muted">{{ t('Manage document templates (.docx) for each document type') }}</p>
     </div>
     <div class="col-md-4 text-end">

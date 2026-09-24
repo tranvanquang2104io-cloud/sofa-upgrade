@@ -1,16 +1,13 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import order_badge with context %}
+{% from "macros/ui.html" import order_badge, page_header with context %}
 
 {% block title %}Dashboard - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h1 class="mb-4">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </h1>
-    </div>
-</div>
+{# The landing page has no breadcrumb — it IS the first crumb everywhere
+   else — but its title should be the same size as every other title, which
+   is what a browser-default <h1> was not. #}
+{{ page_header(t('Dashboard'), icon='bi-speedometer2') }}
 
 <div class="row mb-4">
     <div class="col-md-3">

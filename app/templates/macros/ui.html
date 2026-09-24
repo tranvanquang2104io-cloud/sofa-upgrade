@@ -37,7 +37,8 @@
 
 {# -------------------------------------------------------------- page header #}
 {% macro page_header(title, icon=None, count=None, crumbs=None,
-                     action_url=None, action_label=None, action_icon='bi-plus-lg') %}
+                     action_url=None, action_label=None, action_icon='bi-plus-lg',
+                     action_modal=None, subtitle=None) %}
   {#
     The canonical top of every list/detail page: breadcrumb, title (+ record
     count), and ONE primary action on the right. Keeping the primary action
@@ -57,8 +58,18 @@
       <a href="{{ action_url }}" class="btn btn-primary">
         <i class="bi {{ action_icon }}"></i> {{ action_label }}
       </a>
+    {% elif action_modal and action_label %}
+      {# Some primary actions open a dialog rather than a page — adding a
+         category, a unit, a supplier. They used to sit in a hand-rolled header
+         beside a hand-rolled title, which is how three screens ended up with a
+         different heading size from everything they are reached from. #}
+      <button type="button" class="btn btn-primary"
+              data-bs-toggle="modal" data-bs-target="#{{ action_modal }}">
+        <i class="bi {{ action_icon }}"></i> {{ action_label }}
+      </button>
     {% endif %}
   </div>
+  {% if subtitle %}<p class="text-muted mt-n2 mb-3">{{ subtitle }}</p>{% endif %}
 {% endmacro %}
 
 
