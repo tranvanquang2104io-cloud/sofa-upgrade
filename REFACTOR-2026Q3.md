@@ -299,7 +299,7 @@ engine, so turning a rule off at `/settings/workflow` does not change what the
 money screen does. Configuration that the action ignores is worse than no
 configuration.
 
-### 8.6 GR and invoices cannot be created; references look wrong
+### 8.6 GR and invoices cannot be created; references look wrong — DONE
 > "Phiếu nhập kho (GR), Hóa đơn … thì lại không được tạo, và data bên trong rất
 > nhiều chứng từ chưa thực sự tham chiếu hoặc hiển thị chính xác (hoặc do data
 > seed chưa nhất quán)."
@@ -312,6 +312,25 @@ Two claims, both to be reproduced in the browser before any change:
 * **Documents referencing or displaying the wrong thing.** Could be the demo
   seed being inconsistent, or could be real. I will check the seed against the
   screens and say which, rather than assuming the seed is at fault.
+
+**Reproduced. The first claim was already fixed** in an earlier pass of this
+programme: the PO screen has a *Ghi nhận hóa đơn* link (it had none before —
+the route was reachable only by typing its URL) and *Nhận hàng* where
+`can_receive()` allows it; `gr_view.html` and `payables/view.html` both render
+their parent document and link to it.
+
+**The second claim was real, and it was the seed.** Three defects, fixed in
+`b7558d9` and pinned by `tests/test_seed_documents_reference_each_other.py`:
+
+| | |
+|---|---|
+| `CHI-2609-0001` says "Trả một phần hóa đơn 0001234" and has no `SupplierPaymentAllocation` | invoice 0001234 shows its full 39.139.200 outstanding while 20.000.000 has left the company |
+| consequence of the above | the cash-VAT warning on `payables/view.html` reaches the payment only through `alloc.payment`, so it could never render on the demo |
+| `method='Chuyển khoản'`, free text | the model defines `METHOD_TRANSFER = 'bank_transfer'` and hangs `is_cash` on the constant — right by accident for a transfer, silently wrong for a cash payment |
+
+And one introduced while fixing it: `SupplierPaymentAllocation` has no
+`company_id`, so the company-scoped delete in `wipe()` could not see it and
+`--reset` would have left rows pointing at deleted invoices.
 
 
 ### 8.7 Three production actions behind the stock permission — your call
