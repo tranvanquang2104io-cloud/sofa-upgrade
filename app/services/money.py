@@ -174,4 +174,10 @@ def totals_from_form(form, company=None, subtotal=None, items=None):
         shipping_fee=form.get('shipping_fee'),
         another_fee=form.get('another_fee'),
         company=company,
+        # `items` was accepted here and used only to re-derive a missing
+        # subtotal. Without passing it on, a line's own VAT rate could be
+        # parsed from the form, stored on the item, and then ignored by the
+        # arithmetic — the feature would have been unreachable through every
+        # screen while its unit tests passed.
+        items=items,
     )

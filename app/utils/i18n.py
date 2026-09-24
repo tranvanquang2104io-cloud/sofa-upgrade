@@ -1293,6 +1293,7 @@ TRANSLATIONS['vi'].update({
     'Product name is required': 'Vui lòng nhập tên sản phẩm',
     'Purchase order not found or access denied': 'Không tìm thấy đơn mua hoặc không có quyền truy cập',
     'Quantity and unit price cannot be negative': 'Số lượng và đơn giá không được âm',
+    'VAT rate cannot be negative': 'Thuế suất không được âm',
     'Quotation approved successfully': 'Đã duyệt báo giá',
     'Quotation canceled successfully': 'Đã hủy báo giá',
     'Quotation cannot be edited after approval': 'Không sửa được báo giá sau khi đã duyệt',

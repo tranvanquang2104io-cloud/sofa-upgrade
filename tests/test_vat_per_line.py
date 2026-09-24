@@ -146,3 +146,77 @@ def test_a_negative_line_rate_is_refused_like_any_other():
     items = _items((1, 1_000_000, -5))
     with pytest.raises(ValueError):
         compute_totals(subtotal=1_000_000, vat_rate=8, items=items)
+
+
+# --------------------------------------------------------------------------
+# The wire. Unit tests on compute_totals prove the arithmetic; only this
+# proves a rate typed on a screen reaches it.
+# --------------------------------------------------------------------------
+
+@pytest.fixture()
+def order(app, seed):
+    from app.config import db
+    from app.models import Order
+
+    with app.app_context():
+        record = Order(company_id=seed['company_id'], store_id=seed['store_id'],
+                       customer_id=seed['customer_id'], order_code='DH-VAT',
+                       title='Sofa góc L')
+        db.session.add(record)
+        db.session.commit()
+        return {**seed, 'order_id': str(record.id)}
+
+
+def test_a_rate_typed_on_a_line_reaches_the_stored_total(client, login, app,
+                                                         order):
+    """Sofa 40tr at 8% beside a steel frame 12tr at 10% = 4.400.000 VAT."""
+    login('admin')
+    response = client.post(
+        f"/quotations/{order['order_id']}/create",
+        data={
+            'quotation_number': 'BG-VAT-01',
+            'quotation_date': '2026-09-25',
+            'vat_rate': '8',
+            'item_name[]': ['Sofa góc L', 'Khung giường sắt'],
+            'item_quantity[]': ['1', '1'],
+            'item_price[]': ['40000000', '12000000'],
+            'item_vat_rate[]': ['8', '10'],
+        }, follow_redirects=True)
+    assert response.status_code == 200
+
+    from app.models.models import Quotation
+    with app.app_context():
+        quotation = Quotation.query.filter_by(
+            quotation_number='BG-VAT-01').one()
+        assert float(quotation.vat_amount) == 4_400_000, (
+            'the 10% line was taxed at the document rate, so the rate typed '
+            'on the line never reached the arithmetic')
+        assert float(quotation.total_amount) == 56_400_000
+        assert quotation.items[1]['vat_rate'] == 10, (
+            'the rate was not stored on the line, so re-opening the quotation '
+            'would lose it')
+
+
+def test_a_form_that_sends_no_line_rates_is_unchanged(client, login, app,
+                                                      order):
+    """Every screen in the product sends exactly this shape today."""
+    login('admin')
+    client.post(
+        f"/quotations/{order['order_id']}/create",
+        data={
+            'quotation_number': 'BG-VAT-02',
+            'quotation_date': '2026-09-25',
+            'vat_rate': '8',
+            'item_name[]': ['Sofa góc L'],
+            'item_quantity[]': ['1'],
+            'item_price[]': ['40000000'],
+        }, follow_redirects=True)
+
+    from app.models.models import Quotation
+    with app.app_context():
+        quotation = Quotation.query.filter_by(
+            quotation_number='BG-VAT-02').one()
+        assert float(quotation.vat_amount) == 3_200_000
+        assert 'vat_rate' not in quotation.items[0], (
+            'a line nobody gave a rate now carries one, which would make '
+            'every old document look like it uses the feature')

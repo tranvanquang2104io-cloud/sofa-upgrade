@@ -220,6 +220,10 @@ def parse_line_items(form, files=None, with_images=False):
     units = form.getlist('item_unit[]')
     quantities = form.getlist('item_quantity[]')
     prices = form.getlist('item_price[]')
+    # Optional: a line may state its own VAT rate. Absent or blank means "use
+    # the document's rate", which is what every existing form sends, so
+    # nothing changes for a screen that does not offer the field.
+    line_vat = form.getlist('item_vat_rate[]')
     images = files.getlist('item_image[]') if (with_images and files is not None) else []
     existing_images = form.getlist('item_existing_image[]') if with_images else []
 
@@ -241,6 +245,12 @@ def parse_line_items(form, files=None, with_images=False):
             'unit_price': price,
             'total': float(line_total),
         }
+        stated_vat = line_vat[i] if i < len(line_vat) else ''
+        if stated_vat not in (None, ''):
+            rate = float(stated_vat)
+            if rate < 0:
+                raise ValueError(t('VAT rate cannot be negative'))
+            item['vat_rate'] = rate
         if with_images:
             existing = existing_images[i] if i < len(existing_images) else None
             item['image_path'] = _save_item_image(
@@ -1135,7 +1145,7 @@ def create_quotation(order_id):
             items, subtotal = parse_line_items(request.form, request.files, with_images=True)
 
             totals = totals_from_form(request.form, company=get_current_company(),
-                                      subtotal=subtotal)
+                                      subtotal=subtotal, items=items)
             vat_rate = totals['vat_rate']
             vat_amount = totals['vat_amount']
             shipping_fee = totals['shipping_fee']
@@ -1220,7 +1230,7 @@ def edit_quotation(quotation_id):
             items, subtotal = parse_line_items(request.form, request.files, with_images=True)
 
             totals = totals_from_form(request.form, company=get_current_company(),
-                                      subtotal=subtotal)
+                                      subtotal=subtotal, items=items)
             vat_rate = totals['vat_rate']
             vat_amount = totals['vat_amount']
             shipping_fee = totals['shipping_fee']
@@ -1344,7 +1354,7 @@ def create_contract(order_id):
 
             # Shipping/other fees come from quotation when referenced
             totals = totals_from_form(request.form, company=get_current_company(),
-                                      subtotal=subtotal)
+                                      subtotal=subtotal, items=items)
             vat_rate = totals['vat_rate']
             vat_amount = totals['vat_amount']
             shipping_fee = totals['shipping_fee']
@@ -1385,6 +1395,10 @@ def create_contract(order_id):
                         shipping_fee=shipping_fee,
                         another_fee=another_fee,
                         company=get_current_company(),
+                        # A contract copying a quotation's lines must copy the
+                        # rates on them; otherwise signing re-taxes a mixed
+                        # quotation at one rate and the two documents disagree.
+                        items=items,
                     )
                     subtotal = totals['subtotal']
                     vat_rate = totals['vat_rate']
@@ -1518,7 +1532,7 @@ def edit_contract(contract_id):
             items, subtotal = parse_line_items(request.form)
 
             totals = totals_from_form(request.form, company=get_current_company(),
-                                      subtotal=subtotal)
+                                      subtotal=subtotal, items=items)
             vat_rate = totals['vat_rate']
             vat_amount = totals['vat_amount']
             shipping_fee = totals['shipping_fee']
@@ -1793,6 +1807,7 @@ def create_handover(order_id):
                 shipping_fee=getattr(_commitment, 'shipping_fee', 0) or 0,
                 another_fee=getattr(_commitment, 'another_fee', 0) or 0,
                 company=get_current_company(),
+                items=items,
             )
             vat_rate = totals['vat_rate']
             vat_amount = totals['vat_amount']
@@ -1997,6 +2012,7 @@ def edit_handover(handover_id):
                     shipping_fee=handover.shipping_fee or 0,
                     another_fee=handover.another_fee or 0,
                     company=get_current_company(),
+                    items=items,
                 )
                 handover.subtotal = totals['subtotal']
                 handover.vat_rate = totals['vat_rate']
@@ -2110,6 +2126,7 @@ def create_payment(order_id):
                 shipping_fee=getattr(_commitment, 'shipping_fee', 0) or 0,
                 another_fee=getattr(_commitment, 'another_fee', 0) or 0,
                 company=get_current_company(),
+                items=items,
             )
             vat_rate = totals['vat_rate']
             vat_amount = totals['vat_amount']
