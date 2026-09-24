@@ -3,11 +3,15 @@
 {% block title %}Đề xuất mua hàng - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-2">
-  {{ page_header(t('Purchase Suggestions'), icon='bi-lightbulb',
-                 crumbs=[(t('Dashboard'), url_for('dashboard.index')),
-                         (t('Materials'), url_for('dashboard.list_materials')),
-                         (t('Purchase Suggestions'), None)]) }}
+{# The header stands on its own. It emits TWO block siblings — the breadcrumb
+   and its title row — so nesting it in a flex row put them side by side. The
+   toolbar goes underneath, which is what the other screens do. #}
+{{ page_header(t('Purchase Suggestions'), icon='bi-lightbulb',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Materials'), url_for('dashboard.list_materials')),
+                       (t('Purchase Suggestions'), None)],
+               subtitle=t('Danh sách do hệ thống tự động tổng hợp.')) }}
+<div class="d-flex justify-content-end mb-3">
   <div class="d-flex gap-2">
     <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-clipboard-check"></i> Đề nghị mua (PR)

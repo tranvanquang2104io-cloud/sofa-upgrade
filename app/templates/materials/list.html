@@ -101,7 +101,7 @@
                             <span class="badge bg-secondary">{{ t('Inactive') }}</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="text-end">
                             <a href="{{ url_for('dashboard.view_material', material_id=mat.id) }}"
                                class="btn btn-sm btn-outline-secondary" title="{{ t('View') }}" aria-label="{{ t('View') }}"><i class="bi bi-eye"></i></a>
                             {% if session.role in ('company_admin', 'store_admin') %}

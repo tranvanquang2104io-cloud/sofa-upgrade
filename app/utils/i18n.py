@@ -1446,3 +1446,14 @@ TRANSLATIONS['vi'].update({
     'Số tiền, thuế và phí được tính từ hợp đồng và các dòng hàng lúc lập phiếu nên không sửa ở đây. Màn hình này chỉ sửa ngày, ngân hàng, tham chiếu và ghi chú. Nếu số tiền sai, hãy hủy phiếu này và lập phiếu mới.':
         'Số tiền, thuế và phí được tính từ hợp đồng và các dòng hàng lúc lập phiếu nên không sửa ở đây. Màn hình này chỉ sửa ngày, ngân hàng, tham chiếu và ghi chú. Nếu số tiền sai, hãy hủy phiếu này và lập phiếu mới.',
 })
+
+TRANSLATIONS['vi'].update({
+    'Không tìm thấy kết quả nào khớp với điều kiện lọc.':
+        'Không tìm thấy kết quả nào khớp với điều kiện lọc.',
+    'Xóa bộ lọc': 'Xóa bộ lọc',
+})
+
+TRANSLATIONS['vi'].update({
+    'Danh sách do hệ thống tự động tổng hợp.': 'Danh sách do hệ thống tự động tổng hợp.',
+    'Back to Order': 'Quay lại đơn hàng',
+})

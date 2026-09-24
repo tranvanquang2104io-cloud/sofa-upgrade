@@ -59,7 +59,7 @@
                         <td class="text-muted small">
                             {{ u.last_login.strftime('%d/%m/%Y') if u.last_login else t('Never') }}
                         </td>
-                        <td class="text-center">
+                        <td class="text-end">
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('dashboard.edit_user', user_id=u.id) }}"
                                    class="btn btn-outline-primary" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">

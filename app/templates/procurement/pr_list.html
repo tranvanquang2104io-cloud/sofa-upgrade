@@ -53,6 +53,8 @@
 {{ empty_state('Chưa có đề nghị mua nào. Lập một đề nghị mới, hoặc điền sẵn từ đề xuất mua hàng.',
                  icon='bi-clipboard-check',
                  action_url=url_for('dashboard.create_requisition'),
-                 action_label=t('Create Requisition')) }}
+                 action_label=t('Create Requisition'),
+                 filtered=(search or status) is not none and (search or status) != '',
+                 reset_url=url_for('dashboard.list_requisitions')) }}
 {% endif %}
 {% endblock %}

@@ -48,7 +48,7 @@
                             {{ order_badge(order) }}
                         </td>
                         <td>{{ order.created_at.strftime('%Y-%m-%d') if order.created_at else '—' }}</td>
-                        <td>
+                        <td class="text-end">
                             <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-eye"></i> {{ t('View') }}
                             </a>

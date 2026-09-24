@@ -203,16 +203,34 @@
 
 
 {# ------------------------------------------------------------ empty state #}
-{% macro empty_state(message, icon='bi-inbox', action_url=None, action_label=None) %}
+{% macro empty_state(message, icon='bi-inbox', action_url=None, action_label=None,
+                     filtered=False, reset_url=None) %}
   {# A blank table tells the user nothing. Always say why it's empty and what
-     they can do about it. #}
+     they can do about it.
+
+     `filtered` is the difference between "you have none" and "none matched".
+     A list guarded only by `{% if rows %}` cannot tell them apart, so a
+     mistyped search used to report an empty list AND offer a Create button —
+     inviting a duplicate of the record that was there all along, one search
+     term away. Telling someone their data is missing when it is merely
+     filtered is bad; handing them a button that copies it is worse. #}
   <div class="text-center text-muted py-5">
-    <i class="bi {{ icon }} fs-1 d-block mb-2"></i>
-    <p class="mb-3">{{ t(message) }}</p>
-    {% if action_url and action_label %}
-      <a href="{{ action_url }}" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg"></i> {{ t(action_label) }}
-      </a>
+    {% if filtered %}
+      <i class="bi bi-search fs-1 d-block mb-2"></i>
+      <p class="mb-3">{{ t('Không tìm thấy kết quả nào khớp với điều kiện lọc.') }}</p>
+      {% if reset_url %}
+        <a href="{{ reset_url }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle"></i> {{ t('Xóa bộ lọc') }}
+        </a>
+      {% endif %}
+    {% else %}
+      <i class="bi {{ icon }} fs-1 d-block mb-2"></i>
+      <p class="mb-3">{{ t(message) }}</p>
+      {% if action_url and action_label %}
+        <a href="{{ action_url }}" class="btn btn-primary btn-sm">
+          <i class="bi bi-plus-lg"></i> {{ t(action_label) }}
+        </a>
+      {% endif %}
     {% endif %}
   </div>
 {% endmacro %}
