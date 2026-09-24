@@ -312,3 +312,26 @@ Two claims, both to be reproduced in the browser before any change:
 * **Documents referencing or displaying the wrong thing.** Could be the demo
   seed being inconsistent, or could be real. I will check the seed against the
   screens and say which, rather than assuming the seed is at fault.
+
+
+### 8.7 Three production actions behind the stock permission — your call
+
+Found while pinning the permission map. `feature_for_endpoint` matches
+substrings, so these three land under **Kho & Vật tư** because their names
+contain "material":
+
+| Action | What it does | Today | Question |
+|---|---|---|---|
+| `add_plan_material` | adds a material line to a production plan | Kho | editing a job's material list is production work |
+| `delete_plan_material` | removes one | Kho | same |
+| `issue_plan_materials` | issues material to the job, **deducting stock** | Kho | this one genuinely moves stock, so Kho is defensible |
+
+The question is whether a workshop supervisor should need full stock
+administration to add a fabric line to their own job. I have pinned the current
+answer rather than changing it, because who may do what is a business decision.
+
+Three real defects of exactly this shape were fixed in the same pass — supplier
+invoices under Kho, customer debt under Khách hàng, framework agreements behind
+nothing at all — so the map is now written out in full in
+`tests/test_permission_map.py`. A new endpoint fails that test until somebody
+says where it belongs; the failure IS the question being asked.
