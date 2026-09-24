@@ -1418,3 +1418,5 @@ TRANSLATIONS['vi'].update({
     'In hợp đồng nguyên tắc': 'In hợp đồng nguyên tắc',
     'In đơn đặt hàng': 'In đơn đặt hàng',
 })
+
+TRANSLATIONS['vi'].update({'Số này đã được dùng rồi.': 'Số này đã được dùng rồi.'})

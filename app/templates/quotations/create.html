@@ -21,9 +21,14 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="quotation_number" class="form-label">{{ t('Quotation Number *') }}</label>
-                                <input type="text" class="form-control" id="quotation_number" name="quotation_number" required placeholder="Loading...">
-                                <div id="code-warning" class="text-danger small mt-1" style="display:none;">
-                                    <i class="bi bi-exclamation-triangle"></i> This code is already in use!
+                                {# `aria-describedby` ties the field to its warning, and
+                                   `aria-live` makes the warning audible: it used to appear by
+                                   toggling display, which reaches nobody using a reader. #}
+                                <input type="text" class="form-control" id="quotation_number" name="quotation_number" required
+                                       aria-describedby="code-warning"
+                                       value="{{ request.form.get('quotation_number', '') }}" placeholder="Loading...">
+                                <div id="code-warning" class="text-danger small mt-1" role="alert" aria-live="polite" style="display:none;">
+                                    <i class="bi bi-exclamation-triangle"></i> {{ t('Số này đã được dùng rồi.') }}
                                 </div>
                             </div>
                         </div>
@@ -67,13 +72,23 @@
                                         <th style="width:10%"></th>
                                     </tr>
                                 </thead>
+                                {# When the server refuses the form, it re-renders this
+                                   page. It used to come back EMPTY — every line the user had
+                                   typed was gone, and the only thing they were told was a
+                                   flash at the top. The rows are rebuilt from what was sent,
+                                   or one blank row on a first visit. #}
+                                {% set sent_names = request.form.getlist('item_name[]') %}
+                                {% set sent_units = request.form.getlist('item_unit[]') %}
+                                {% set sent_qtys = request.form.getlist('item_quantity[]') %}
+                                {% set sent_prices = request.form.getlist('item_price[]') %}
                                 <tbody id="items-tbody">
+                                    {% for i in range(sent_names|length if sent_names else 1) %}
                                     <tr class="item-row">
-                                        <td class="stt-cell text-center align-middle">1</td>
-                                        <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / work"></td>
-                                        <td>{{ unit_select() }}</td>
-                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="1" min="0"></td>
-                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1" min="0"></td>
+                                        <td class="stt-cell text-center align-middle">{{ loop.index }}</td>
+                                        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="{{ sent_names[i] if sent_names else '' }}" placeholder="Item name / work"></td>
+                                        <td>{{ unit_select(sent_units[i] if sent_units and i < sent_units|length else '') }}</td>
+                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" placeholder="0" step="0.01" value="{{ sent_qtys[i] if sent_qtys and i < sent_qtys|length else '1' }}" min="0"></td>
+                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" placeholder="0" step="1" min="0" value="{{ sent_prices[i] if sent_prices and i < sent_prices|length else '' }}"></td>
                                         <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly placeholder="0"></td>
                                         <td>
                                             <input type="file" class="form-control form-control-sm img-file-input" name="item_image[]" accept="image/*">
@@ -81,6 +96,7 @@
                                         </td>
                                         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-trash"></i></button></td>
                                     </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
@@ -116,7 +132,7 @@
                                     <th class="bg-light">{{ t('Shipping Fee') }}</th>
                                     <td class="text-end">
                                         <input type="text" inputmode="numeric" id="shipping_fee_display" class="form-control form-control-sm text-end" value="0" placeholder="0">
-                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="0">
+                                        <input type="hidden" id="shipping_fee" name="shipping_fee" value="{{ request.form.get('shipping_fee', '0') }}">
                                     </td>
                                 </tr>
                                 <tr>
@@ -151,7 +167,7 @@
 
                     <div class="mb-3">
                         <label for="notes" class="form-label">{{ t('Additional Notes') }}</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        <textarea class="form-control" id="notes" name="notes" rows="2">{{ request.form.get('notes', '') }}</textarea>
                     </div>
 
                     {% set entity_type = 'quotation' %}
@@ -192,7 +208,7 @@ document.getElementById('quotation_number').addEventListener('input', function()
     const code = this.value.trim();
     const warning = document.getElementById('code-warning');
     const submitBtn = document.querySelector('button[type="submit"]');
-    if (!code) { warning.style.display = 'none'; submitBtn.disabled = false; return; }
+    if (!code) { warning.style.display = 'none'; return; }
     checkTimeout = setTimeout(async () => {
         try {
             const res = await fetch('{{ url_for("dashboard.check_code", doc_type="quotation") }}', {
@@ -201,7 +217,11 @@ document.getElementById('quotation_number').addEventListener('input', function()
             });
             const d = await res.json();
             warning.style.display = d.exists ? 'block' : 'none';
-            submitBtn.disabled = !!d.exists;
+            // The button stays enabled ON PURPOSE. It used to disable itself,
+            // which removes it from the tab order: a keyboard user pressed
+            // Save, nothing happened, and nothing said why. The server checks
+            // the same thing and refuses with a message, which is a refusal a
+            // person can act on.
         } catch {}
     }, 500);
 });
