@@ -4,8 +4,10 @@
 {% block title %}Create Payment Record - SofaFlow{% endblock %}
 
 {% from '_unit_select.html' import unit_select, unit_template_select with context %}
+{% from '_item_row.html' import item_row, item_row_head, item_row_template with context %}
 {% block content %}
 {{ unit_template_select() }}
+{{ item_row_template(remove_fn='removeItemRow') }}
 {{ page_header(t('Create Payment Record'), icon='bi-plus-circle',
                crumbs=[(t('Dashboard'), url_for('dashboard.index')), (t('Orders'), url_for('dashboard.list_orders')), (order.order_code, url_for('dashboard.view_order', order_id=order.id)), (t('Create Payment Record'), None)]) }}
 
@@ -121,34 +123,38 @@
                             {% endif %}
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
+                            <table class="table table-sm table-bordered item-table vat-per-line-off">
                                 <thead class="table-light">
-                                    <tr>
-                                        <th style="width:5%">No.</th>
-                                        <th style="width:35%">Item Name</th>
-                                        <th style="width:10%">Unit</th>
-                                        <th style="width:10%">Qty</th>
-                                        <th style="width:15%">Unit Price</th>
-                                        <th style="width:15%">Amount</th>
-                                        <th style="width:10%"></th>
-                                    </tr>
+                                    {{ item_row_head() }}
                                 </thead>
+                                {# When the server refuses the form it re-renders this page.
+                                   It used to come back with only the report number — every
+                                   line of work the user had typed was gone, and a payment
+                                   screen is the one with the most at stake. The rows are
+                                   rebuilt from what was sent, or one blank row on a first
+                                   visit. #}
+                                {% set sent_names = request.form.getlist('item_name[]') %}
+                                {% set sent_units = request.form.getlist('item_unit[]') %}
+                                {% set sent_qtys = request.form.getlist('item_quantity[]') %}
+                                {% set sent_prices = request.form.getlist('item_price[]') %}
+                                {% set sent_vats = request.form.getlist('item_vat_rate[]') %}
                                 <tbody id="items-body">
-                                    <tr class="item-row">
-                                        <td class="stt-cell text-center align-middle">1</td>
-                                        <td><input type="text" class="form-control form-control-sm" name="item_name[]" placeholder="Item name / goods"></td>
-                                        <td>{{ unit_select() }}</td>
-                                        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="1" step="0.01" min="0"></td>
-                                        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" step="1" placeholder="0" min="0"></td>
-                                        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
-                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-trash"></i></button></td>
-                                    </tr>
+                                    {% for i in range(sent_names|length if sent_names else 1) %}
+                                    {{ item_row(index=loop.index,
+                                                name=sent_names[i] if sent_names else '',
+                                                unit=sent_units[i] if sent_units and i < sent_units|length else '',
+                                                quantity=sent_qtys[i] if sent_qtys and i < sent_qtys|length else '1',
+                                                price=sent_prices[i] if sent_prices and i < sent_prices|length else '',
+                                                vat_rate=sent_vats[i] if sent_vats and i < sent_vats|length else '',
+                                                remove_fn='removeItemRow') }}
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addItemRow()">
-                            <i class="bi bi-plus"></i> {{ t('Add Row') }}
-                        </button>
+                            <i class="bi bi-plus"></i> {{ t('Add Row') }}</button>
+                        <a href="#" id="vatPerLineLink" class="small ms-2"
+                           onclick="showVatColumn(); return false;">{{ t('Có dòng thuế suất khác?') }}</a>
                     </div>
 
                     <!-- VAT & Totals -->
@@ -520,22 +526,17 @@ function updateRowNumbers() {
     });
 }
 
-function addItemRow(name='', unit='pcs', quantity='1', price='') {
+function addItemRow(name='', unit='pcs', quantity='1', price='', vat_rate='') {
+    // The markup used to be a string literal here — the second of the two
+    // copies this screen carried. It is cloned from the shared macro now, so
+    // the added row and the loaded row cannot say different things.
     const tbody = document.getElementById('items-body');
-    const row = document.createElement('tr');
-    row.className = 'item-row';
-    row.innerHTML = `
-        <td class="stt-cell text-center align-middle"></td>
-        <td><input type="text" class="form-control form-control-sm" name="item_name[]" value="${name}" placeholder="Item name / goods"></td>
-        <td><select class="form-select form-select-sm" name="item_unit[]">${unitOptions(unit)}</select></td>
-        <td><input type="number" class="form-control form-control-sm qty-input" name="item_quantity[]" value="${quantity}" step="0.01" min="0"></td>
-        <td><input type="number" class="form-control form-control-sm price-input" name="item_price[]" value="${price}" step="1" placeholder="0" min="0"></td>
-        <td><input type="text" class="form-control form-control-sm row-total bg-light" readonly></td>
-        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)" title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}"><i class="bi bi-trash"></i></button></td>
-    `;
+    const row = cloneItemRow({name: name, unit: unit, quantity: quantity,
+                              price: price, vat_rate: vat_rate});
     tbody.appendChild(row);
     row.querySelector('.qty-input').addEventListener('input', recalcAll);
     row.querySelector('.price-input').addEventListener('input', recalcAll);
+    row.querySelector('.vat-input').addEventListener('input', recalcAll);
     updateRowNumbers();
     recalcAll();
 }

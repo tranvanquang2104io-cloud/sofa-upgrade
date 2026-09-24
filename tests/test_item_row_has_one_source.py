@@ -36,7 +36,7 @@ import pytest
 TEMPLATES = pathlib.Path(__file__).resolve().parents[1] / 'app' / 'templates'
 
 # Screens converted so far. Adding a screen to the macro means adding it here.
-CONVERGED = ['quotations/create.html']
+CONVERGED = ['quotations/create.html', 'payments/create.html']
 
 # Not converged and not wrong: a different row schema, with its own parser.
 DIFFERENT_BY_DESIGN = ['handover/create.html', 'handover/edit.html']
@@ -71,8 +71,13 @@ def test_the_added_row_comes_from_the_rendered_template(screen):
         f'{screen} has no row template for the add-row path to clone')
     assert 'cloneItemRow(' in text, (
         f'{screen} builds the added row some other way')
-    assert 'innerHTML = `' not in text, (
-        f'{screen} still assembles a row from a string literal')
+    # Scoped to a row, not to the file: the payment screen builds an unrelated
+    # bank-account block from a template literal, and the first version of this
+    # assertion failed on that — reporting a converged screen as unconverged.
+    row_literals = re.findall(r'innerHTML = `[^`]*`', text, re.S)
+    offenders = [b for b in row_literals if 'item_price[]' in b]
+    assert offenders == [], (
+        f'{screen} still assembles a line-item row from a string literal')
 
 
 @pytest.mark.parametrize('screen', DIFFERENT_BY_DESIGN)
@@ -116,16 +121,26 @@ def test_the_vat_column_is_hidden_but_still_submitted():
 
 
 @pytest.mark.parametrize('screen', CONVERGED)
-def test_a_rejected_form_brings_the_line_rates_back(screen):
-    """The screen already rebuilt names, units, quantities and prices.
+def test_a_rejected_form_brings_the_line_items_back(screen):
+    """What the user typed survives a refusal — rates included.
+
+    Adding the payment screen to CONVERGED made this fail, and the failure was
+    right: that screen kept ONLY the document number on a rejection and threw
+    away every line item, date, note and fee. The defect was fixed for the
+    quotation alone; contract and handover still have it, recorded in
+    REFACTOR-2026Q3.md.
 
     A rate typed on a line and lost on a rejection is the same defect as the
-    line items that used to vanish, one field later.
+    line items that used to vanish, one field later — so the two are asserted
+    together rather than letting the rates be rebuilt into rows that are
+    themselves gone.
     """
     text = _text(screen)
+    assert "getlist('item_name[]')" in text, (
+        f'{screen} throws away the line items the user typed when the server '
+        'refuses the form')
     assert "getlist('item_vat_rate[]')" in text, (
-        f'{screen} rebuilds a rejected form without the line VAT rates, so '
-        'they are silently dropped')
+        f'{screen} rebuilds the lines but drops the rates typed on them')
 
 
 def test_the_create_page_renders_the_column_off(client, login, app, seed):

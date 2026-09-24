@@ -130,3 +130,54 @@ def test_a_rejected_quotation_keeps_what_was_typed(client, login,
     assert 'Sofa góc L' in body, 'the line items were thrown away'
     assert '700000' in body.replace(',', '').replace('.', ''), (
         'the delivery fee was thrown away')
+
+
+def test_a_rejected_payment_keeps_the_work_items(client, login, app, seed):
+    """The same defect, on the screen where it costs the most.
+
+    Fixing this for the quotation left contract, payment and handover as they
+    were — each keeps only its document number on a refusal and throws away
+    every line the user typed. Found while converging the line-item row: adding
+    the payment screen to that test's list failed, and the failure was right.
+
+    Contract and handover still have it; recorded in REFACTOR-2026Q3.md rather
+    than fixed here, because each rebuilds a different set of fields and doing
+    them blind is how a rebuild drops one.
+    """
+    import datetime as dt
+
+    from app.config import db
+    from app.models import Order
+    from app.models.models import PaymentReport
+
+    with app.app_context():
+        order = Order(company_id=seed['company_id'], store_id=seed['store_id'],
+                      customer_id=seed['customer_id'], order_code='DH-PAYDUP',
+                      title='Sofa góc L')
+        db.session.add(order)
+        db.session.flush()
+        db.session.add(PaymentReport(
+            company_id=seed['company_id'], order_id=order.id,
+            report_number='TT-TAKEN', report_date=dt.date(2026, 9, 1),
+            payment_date=dt.date(2026, 9, 1),
+            payment_type='advance', amount=1_000_000))
+        db.session.commit()
+        order_id = str(order.id)
+
+    login('admin')
+    response = client.post(
+        f'/payment/{order_id}/create',
+        data={
+            'report_number': 'TT-TAKEN',          # already used
+            'report_date': '2026-09-25',
+            'payment_type': 'advance',
+            'item_name[]': ['Thi công khung ghế', 'Bọc da'],
+            'item_quantity[]': ['1', '2'],
+            'item_price[]': ['12000000', '3500000'],
+        }, follow_redirects=True)
+
+    body = response.get_data(as_text=True)
+    assert 'Thi công khung ghế' in body, (
+        'the work items the user typed were thrown away')
+    assert '12000000' in body.replace(',', '').replace('.', ''), (
+        'the amounts were thrown away')

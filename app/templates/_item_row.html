@@ -33,7 +33,7 @@
 
 {% macro item_row(index=1, name='', unit='', quantity='1', price='',
                   vat_rate='', with_image=False, existing_image='',
-                  placeholder='') %}
+                  placeholder='', remove_fn='removeRow') %}
 <tr class="item-row">
   <td class="stt-cell text-center align-middle">{{ index }}</td>
   <td><input type="text" class="form-control form-control-sm" name="item_name[]"
@@ -64,7 +64,10 @@
   </td>
   {% endif %}
   <td class="text-center">
-    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"
+    {# The screens name their remove handler differently — removeRow on the
+       quotation, removeItemRow on the payment. Converging those names is a
+       separate change with its own risk; the markup is what was duplicated. #}
+    <button type="button" class="btn btn-sm btn-outline-danger" onclick="{{ remove_fn }}(this)"
             title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}">
       <i class="bi bi-trash"></i>
     </button>
@@ -90,12 +93,13 @@
 {% endmacro %}
 
 
-{% macro item_row_template(with_image=False, placeholder='') %}
+{% macro item_row_template(with_image=False, placeholder='', remove_fn='removeRow') %}
 {# The row "Thêm dòng" clones. Rendering the macro into a <template> is what
    removes the second copy: the added row is the same markup as the loaded
    one by construction, not by two people remembering to edit both. #}
 <template id="itemRowTemplate">{{ item_row(index='', with_image=with_image,
-                                           quantity='1', placeholder=placeholder) }}</template>
+                                           quantity='1', placeholder=placeholder,
+                                           remove_fn=remove_fn) }}</template>
 <script>
 // Returns a fresh row element cloned from the template above. Each screen
 // keeps its own addRow(): they attach different listeners (image previews on
@@ -132,8 +136,11 @@ function showVatColumn(){
   if (link) link.style.display = 'none';
 }
 document.addEventListener('DOMContentLoaded', function(){
+  // Queried from the table, not from a tbody id: the screens use two
+  // different ones (#items-tbody and #items-body), and an id-based query
+  // would have silently found nothing on half of them.
   var used = Array.prototype.some.call(
-    document.querySelectorAll('#items-tbody .vat-input'),
+    document.querySelectorAll('.item-table tbody .vat-input'),
     function(i){ return i.value !== ''; });
   if (used) showVatColumn();
 });

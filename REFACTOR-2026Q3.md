@@ -333,6 +333,30 @@ And one introduced while fixing it: `SupplierPaymentAllocation` has no
 `--reset` would have left rows pointing at deleted invoices.
 
 
+### 8.12 A refused form throws the work away — on two screens still
+
+Found while converging the line-item row, not by looking for it: adding the
+payment screen to `tests/test_item_row_has_one_source.py`'s converged list
+failed, and the failure was right.
+
+`quotations/create.html` rebuilds names, units, quantities, prices and notes
+from `request.form` when the server refuses the form. It is the only one that
+does. `contracts/create.html` and `handover/create.html` read `request.form`
+exactly **once** each — for the document number — and throw away every line
+item, date, fee and note the user typed. The user is told only by a flash at
+the top of the page.
+
+`payments/create.html` had the same defect and is fixed, because the shared
+row macro made rebuilding the lines nearly free and a payment screen is where
+the typing costs most. Pinned by `test_a_rejected_payment_keeps_the_work_items`.
+
+The other two are **not** fixed here. Each rebuilds a different set of fields —
+a contract carries an advance percentage and payment terms, a handover carries
+delivered and accepted quantities per line and a rejection reason — and doing
+them from a template without reading each route's full form is how a rebuild
+silently drops one field. That is the same failure shape as the handover time
+input that accepted text no column held.
+
 ### 8.7 Three production actions behind the stock permission — your call
 
 Found while pinning the permission map. `feature_for_endpoint` matches
