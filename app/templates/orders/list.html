@@ -49,11 +49,11 @@
                         </td>
                         <td>{{ order.created_at.strftime('%Y-%m-%d') if order.created_at else '—' }}</td>
                         <td>
-                            <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-info">
+                            <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-eye"></i> {{ t('View') }}
                             </a>
                             {% if order.can_cancel() %}
-                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ order.id }}">
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ order.id }}">
                                 <i class="bi bi-x-circle"></i> {{ t('Cancel') }}
                             </button>
                             {% endif %}
