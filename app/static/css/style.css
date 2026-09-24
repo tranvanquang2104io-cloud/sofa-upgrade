@@ -383,3 +383,39 @@ footer p {
     margin-left: 0;
     margin-right: 0;
 }
+
+/* --- Readable text on coloured ground ---
+   Measured, not judged by eye. Bootstrap's amber and cyan are LIGHT colours:
+   white on `bg-warning` is 1.63:1 and on `bg-info` 1.96:1, both below even the
+   3:1 allowance for large text. The dashboard KPI cards carried their counts
+   that way, on a screen meant to be read across a workshop. Dark text on the
+   same grounds measures 9.46:1 and 7.88:1.
+   tests/test_contrast.py computes these rather than pinning a hex, so the
+   colours may change and may not become unreadable. */
+.stats-card.bg-warning,
+.stats-card.bg-warning .text-white-50,
+.stats-card.bg-info,
+.stats-card.bg-info .text-white-50 {
+    color: #212529 !important;
+}
+
+/* An amount that must read as "needs attention" without becoming invisible.
+   `text-warning` (#ffc107) on white is 1.63:1; this is 5.17:1. Used for the
+   headline debt figure on the receivables report — the one number that screen
+   exists to show. */
+.sofa-amount-warning {
+    color: #8a6800;
+    font-weight: 600;
+}
+
+/* Bootstrap's muted grey is 4.30:1 on our #f5f5f5 body, just under AA. The
+   explanatory lines under every table are written in it. */
+.text-muted {
+    color: #5c636a !important;
+}
+
+/* The version string is what a user is asked to read out when they ring for
+   support; `text-secondary` on the dark footer measures 3.29:1. */
+footer .app-version {
+    color: #adb5bd;
+}
