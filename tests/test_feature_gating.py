@@ -78,7 +78,10 @@ def test_every_business_screen_resolves_to_a_feature(app):
     ('edit_agreement', 'orders'),
     # The rules that were already right, pinned so the fix cannot break them.
     ('list_materials', 'inventory'),
-    ('list_suppliers', 'inventory'),
+    # `material_suppliers`, not `list_suppliers`: the latter is not a route at
+    # all. Under substring matching it resolved to 'inventory' anyway — the
+    # word "supplier" was enough — so this line passed while asserting nothing.
+    ('material_suppliers', 'inventory'),
     ('view_purchase_order', 'purchasing'),
     ('list_orders', 'orders'),
     ('list_customers', 'customers'),

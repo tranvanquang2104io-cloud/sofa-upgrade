@@ -16,13 +16,18 @@ whatever the map does. So the map is pinned here in full. Adding an endpoint
 fails this test until somebody writes down where it belongs, which is the point
 — the failure is the question being asked.
 
-OPEN, for the owner rather than for me (recorded in REFACTOR-2026Q3.md §8.7):
-three production actions are behind Kho because their names contain "material"
-— `add_plan_material`, `delete_plan_material` and `issue_plan_materials`.
-Editing a job's material list is production work; issuing genuinely moves stock.
-Whether a workshop supervisor should need full stock administration to add a
-fabric line to their own job is a business decision, so the current answer is
-pinned rather than changed.
+SETTLED (§8.7). Three production actions used to sit behind Kho because their
+names contain "material". Editing a job's material list is production work, so
+`add_plan_material` and `delete_plan_material` now sit with **orders**;
+`issue_plan_materials` genuinely deducts stock and stays with **inventory**.
+
+`save_plan_norm` is the fourth of that shape and nobody had seen it: its name
+contains no area's word, so it matched nothing and was gated by nothing. It is
+on the same screen as the three above and now sits with them.
+
+The map is no longer inferred from names at all — see
+`app/utils/permission_map.py`. An endpoint absent from it raises rather than
+passing, so the next route of this shape cannot be quietly ungated.
 """
 import pytest
 
@@ -31,7 +36,7 @@ from app.utils.auth_utils import feature_for_endpoint
 EXPECTED = {
     'activate_template': None,
     'add_agreement_price': 'orders',
-    'add_plan_material': 'inventory',
+    'add_plan_material': 'orders',
     'approve_quotation': 'orders',
     'cancel_contract': 'orders',
     'cancel_handover': 'orders',
@@ -66,7 +71,7 @@ EXPECTED = {
     'deactivate_template': None,
     'deactivate_user': None,
     'delete_document': 'orders',
-    'delete_plan_material': 'inventory',
+    'delete_plan_material': 'orders',
     'delete_template': None,
     'download_document': 'orders',
     'edit_agreement': 'orders',
@@ -116,7 +121,7 @@ EXPECTED = {
     'receive_purchase_order': 'purchasing',
     'reports': 'reports',
     'requisition_status': 'purchasing',
-    'save_plan_norm': None,
+    'save_plan_norm': 'orders',
     'serve_item_image': None,
     'set_language': None,
     'sign_contract': 'orders',

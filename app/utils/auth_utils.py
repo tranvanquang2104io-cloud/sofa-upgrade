@@ -42,45 +42,13 @@ def set_user_context(user: User):
 # Feature-level access control (RBAC) — see User.can_feature / FEATURE_KEYS
 # ---------------------------------------------------------------------------
 
-# Map a route endpoint (dashboard.<name>) to the feature that gates it. Endpoints
-# not listed here are ungated (dashboard home, language, profile) OR gated by their
-# own role decorators (stores/users/settings/templates).
-def feature_for_endpoint(endpoint):
-    if not endpoint or not endpoint.startswith('dashboard.'):
-        return None
-    name = endpoint.split('.', 1)[1]
-    # Order matters: 'purchase'/'requisition'/'goods_receipt' MUST be tested before
-    # 'order' (else 'purchase_orders' matches 'order').
-    rules = (
-        # A REPORT is behind the reports permission, whatever it reports on.
-        # `customer_receivables` used to hit the `customer` rule below and so
-        # was readable by anyone granted Khách hàng — and not by someone
-        # granted Báo cáo. Same trap as supplier invoices under inventory:
-        # a name correct in one area borrowed by another.
-        ('receivable', 'reports'), ('report', 'reports'),
-        ('customer', 'customers'),
-        # 'supplier_invoice' MUST precede the bare 'supplier' rule. The bare
-        # rule exists for the supplier MASTER in the materials area; supplier
-        # invoices are money owed, and matching them to `inventory` meant that
-        # granting someone access to stock also let them record and confirm
-        # what the company owes.
-        ('supplier_invoice', 'purchasing'), ('supplier_payment', 'purchasing'),
-        ('purchase', 'purchasing'), ('requisition', 'purchasing'), ('goods_receipt', 'purchasing'),
-        ('material', 'inventory'), ('supplier', 'inventory'), ('low_stock', 'inventory'),
-        # A framework agreement (HĐNT) is the contract an order is placed
-        # under, so it belongs with orders. It matched nothing at all, which
-        # left it reachable by any staff user whatever their grants.
-        ('agreement', 'orders'),
-        ('quotation', 'orders'), ('contract', 'orders'), ('handover', 'orders'),
-        ('payment', 'orders'), ('production', 'orders'), ('document', 'orders'), ('order', 'orders'),
-    )
-    # admin areas are handled by role decorators, never feature-gated here
-    if any(k in name for k in ('store', 'user', 'setting', 'template', 'extension')):
-        return None
-    for key, feature in rules:
-        if key in name:
-            return feature
-    return None
+# The map used to live here and inferred an endpoint's area by matching
+# substrings of its name. It is now written out by hand, one line per endpoint,
+# in app/utils/permission_map.py — see that module for why. Re-exported here so
+# the callers and tests that know this name keep working.
+from app.utils.permission_map import (  # noqa: E402,F401
+    UnmappedEndpoint, feature_for_endpoint,
+)
 
 
 def current_user_can(feature):
@@ -212,6 +180,10 @@ def company_admin_required(f):
         if user.role != User.ROLE_COMPANY_ADMIN:
             abort(403)
         return f(*args, **kwargs)
+    # Marks the view as role-gated so a test can check that a screen which is
+    # in NO permission area really does carry a decorator. Without the mark,
+    # "ungated here because gated there" is an unverifiable claim.
+    decorated._role_required = User.ROLE_COMPANY_ADMIN
     return decorated
 
 
@@ -227,6 +199,7 @@ def store_admin_required(f):
         if user.role not in (User.ROLE_COMPANY_ADMIN, User.ROLE_STORE_ADMIN):
             abort(403)
         return f(*args, **kwargs)
+    decorated._role_required = User.ROLE_STORE_ADMIN
     return decorated
 
 

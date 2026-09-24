@@ -90,12 +90,28 @@ def _is_safe_redirect_url(target):
 @dashboard_bp.before_request
 def _enforce_feature_permissions():
     """RBAC: block a logged-in regular user from feature areas they weren't granted.
-    Admins and unmapped endpoints pass through; unauthenticated requests are handled
-    by each view's login_required."""
-    from app.utils.auth_utils import feature_for_endpoint, current_user_can
+
+    Admins pass; unauthenticated requests are handled by each view's
+    login_required.
+
+    An endpoint nobody has assigned to an area does NOT pass. It used to —
+    `feature_for_endpoint` inferred the area from the endpoint's name and
+    returned None when no word matched, so a route named unlike its area was
+    silently open to every logged-in user. `save_plan_norm` was exactly that.
+    Now the map is written out by hand and an absent endpoint raises, which is
+    refused and logged loudly enough to be fixed rather than lived with.
+    """
+    from app.utils.auth_utils import current_user_can
+    from app.utils.permission_map import UnmappedEndpoint, feature_for_endpoint
     if 'user_id' not in session:
         return
-    feature = feature_for_endpoint(request.endpoint)
+    try:
+        feature = feature_for_endpoint(request.endpoint)
+    except UnmappedEndpoint as missing:
+        logger.error(
+            'Endpoint %s is in no permission area; refusing. Add it to '
+            'app/utils/permission_map.py.', missing)
+        abort(403)
     if feature and not current_user_can(feature):
         abort(403)
 
