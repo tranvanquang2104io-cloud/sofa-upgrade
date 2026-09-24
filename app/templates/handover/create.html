@@ -51,10 +51,23 @@
                                 <input type="text" class="form-control" id="handover_location" name="handover_location" placeholder="{{ t('Address or location') }}">
                             </div>
                         </div>
+                        {# Was a single "Handover Time" that no column held and no
+                           code read: typed, saved, gone, with a success message.
+                           A biên bản records a window — the team arrived at 08:00
+                           and finished at 10:00 — which is what the model has and
+                           what the edit screen already showed. #}
                         <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="handover_time" class="form-label">{{ t('Handover Time') }}</label>
-                                <input type="time" class="form-control" id="handover_time" name="handover_time">
+                                <label for="start_time" class="form-label">{{ t('Start Time') }}</label>
+                                <input type="time" class="form-control" id="start_time" name="start_time"
+                                       value="{{ request.form.get('start_time', '08:00') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="end_time" class="form-label">{{ t('End Time') }}</label>
+                                <input type="time" class="form-control" id="end_time" name="end_time"
+                                       value="{{ request.form.get('end_time', '') }}">
                             </div>
                         </div>
                     </div>

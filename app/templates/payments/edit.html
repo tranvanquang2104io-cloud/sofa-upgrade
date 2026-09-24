@@ -7,6 +7,17 @@
 {{ page_header(t('Edit Payment Record') ~ ' — ' ~ payment.report_number, icon='bi-pencil',
                crumbs=[(t('Dashboard'), url_for('dashboard.index')), (payment.report_number, url_for('dashboard.view_payment', payment_id=payment.id)), (t('Edit'), None)]) }}
 
+{# The money is not on this screen, and saying nothing about that leaves a
+   user hunting for a field that is not there. Amounts are derived from the
+   contract and the line items at creation; this screen edits the
+   descriptive fields only. Whether a DRAFT payment's lines should be
+   correctable is recorded as an open question in the ledger — it is the same
+   question as §3.2, and not one to answer by quietly adding inputs. #}
+<div class="alert alert-light border small">
+  <i class="bi bi-info-circle"></i>
+  {{ t('Số tiền, thuế và phí được tính từ hợp đồng và các dòng hàng lúc lập phiếu nên không sửa ở đây. Màn hình này chỉ sửa ngày, ngân hàng, tham chiếu và ghi chú. Nếu số tiền sai, hãy hủy phiếu này và lập phiếu mới.') }}
+</div>
+
 <div class="row">
     <div class="col-md-10">
         <div class="card">

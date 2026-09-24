@@ -1441,3 +1441,8 @@ TRANSLATIONS['vi'].update({
     'Chưa có đề nghị mua nào. Lập một đề nghị mới, hoặc điền sẵn từ đề xuất mua hàng.': 'Chưa có đề nghị mua nào. Lập một đề nghị mới, hoặc điền sẵn từ đề xuất mua hàng.',
     'Chưa có phiếu nhập kho nào. Phiếu được lập khi nhận hàng: mở một đơn mua đã gửi nhà cung cấp và bấm Nhận hàng.': 'Chưa có phiếu nhập kho nào. Phiếu được lập khi nhận hàng: mở một đơn mua đã gửi nhà cung cấp và bấm Nhận hàng.',
 })
+
+TRANSLATIONS['vi'].update({
+    'Số tiền, thuế và phí được tính từ hợp đồng và các dòng hàng lúc lập phiếu nên không sửa ở đây. Màn hình này chỉ sửa ngày, ngân hàng, tham chiếu và ghi chú. Nếu số tiền sai, hãy hủy phiếu này và lập phiếu mới.':
+        'Số tiền, thuế và phí được tính từ hợp đồng và các dòng hàng lúc lập phiếu nên không sửa ở đây. Màn hình này chỉ sửa ngày, ngân hàng, tham chiếu và ghi chú. Nếu số tiền sai, hãy hủy phiếu này và lập phiếu mới.',
+})

@@ -409,3 +409,25 @@ accountant. A false promise is worse than a stated limit.
 
 Worth knowing which of these your suppliers' invoices actually look like before
 building any of them.
+
+
+### 8.11 Correcting a DRAFT payment's line items — your call
+
+`edit_payment` says "items/financials are locked to contract values", and the
+edit screen shows no money fields at all. That is deliberate, and for a
+CONFIRMED payment it is clearly right — an accounting record that can be
+silently edited is worth less than one that shows it was corrected.
+
+The open half is the draft. `can_edit()` already allows editing an unconfirmed,
+uncancelled payment, and nothing has been relied on yet. A clerk who typed the
+wrong quantity on a line has no way to fix it and no way to tell why; today the
+answer is to cancel the slip and raise another.
+
+**Done now:** the screen says so. It was silent, which left people hunting for
+a field that is not there — the same shape as the production plan naming a
+button that does not exist.
+
+**Not done:** deciding whether a draft's lines should be editable. It is the
+same question as §3.2 (correcting a confirmed payment) and §3.4 (the supplier
+side), and answering one of the three alone would leave the product correcting
+money in three different ways. Worth settling all three together.
