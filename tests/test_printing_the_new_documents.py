@@ -19,8 +19,23 @@ because only one of the two can carry the versioning the owner asked for.
 """
 import datetime as dt
 import io
+import os
 
 import pytest
+
+# Files the fixtures write into the app's own template folder, removed after
+# the run so they cannot be committed by accident again.
+_ARTEFACTS = []
+
+
+@pytest.fixture(autouse=True)
+def _clean_up_written_templates():
+    yield
+    while _ARTEFACTS:
+        try:
+            os.remove(_ARTEFACTS.pop())
+        except OSError:
+            pass
 
 
 @pytest.fixture()
@@ -75,7 +90,11 @@ def confirmation(app, seed):
 
 
 def _install_template(app, company_id, doc_type, name):
-    """A minimal .docx the engine can fill, so the test needs no fixture file."""
+    """A minimal .docx the engine can fill, so the test needs no fixture file.
+
+    Written with a name the cleanup below removes: the first version left
+    `agreement_test.docx` behind in the repository, and it was committed.
+    """
     from docx import Document as Docx
 
     from app.config import db
@@ -85,6 +104,7 @@ def _install_template(app, company_id, doc_type, name):
     import os
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, f'{doc_type}_test.docx')
+    _ARTEFACTS.append(path)
     document = Docx()
     document.add_paragraph('{{ company_name }}')
     document.add_paragraph('{{ customer_name }}')
