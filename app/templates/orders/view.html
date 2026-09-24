@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import page_header, process_stepper, process_list, order_badge, doc_badge with context %}
+{% from "macros/ui.html" import page_header, process_stepper, process_list, order_badge, doc_badge, generate_document_modal with context %}
 
 {% block title %}Order - SofaFlow{% endblock %}
 
@@ -192,32 +192,7 @@
                                     </div>
                                 </div>
                                 <!-- Generate Document Modal for this quotation -->
-                                <div class="modal fade" id="generateModal{{ quotation.id }}" tabindex="-1">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
-                                            </div>
-                                            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='quotation', ref_id=quotation.id) }}">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label for="format_1" class="form-label">{{ t('Format') }}</label>
-                                                        <select class="form-select" name="format" required id="format_1">
-                                                            <option value="pdf">PDF</option>
-                                                            <option value="docx">DOCX</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
-                                                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
+                                {{ generate_document_modal('generateModal' ~ quotation.id, 'quotation', quotation.id) }}
                                 {% endif %}
                                 {% endfor %}
                             {% else %}
@@ -274,32 +249,7 @@
                                     </div>
                                 </div>
                                 <!-- Generate Document Modal for this contract -->
-                                <div class="modal fade" id="generateModal{{ contract.id }}" tabindex="-1">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
-                                            </div>
-                                            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label for="format_2" class="form-label">{{ t('Format') }}</label>
-                                                        <select class="form-select" name="format" required id="format_2">
-                                                            <option value="pdf">PDF</option>
-                                                            <option value="docx">DOCX</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
-                                                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
+                                {{ generate_document_modal('generateModal' ~ contract.id, 'contract', contract.id) }}
                                 {% endfor %}
                             {% else %}
                                 <p class="text-muted">{{ t('Pending') }}</p>
@@ -385,32 +335,7 @@
                                         </div>
                                     </div>
                                     <!-- Generate Document Modal (moved outside alert) -->
-                                    <div class="modal fade" id="generateModalAdv{{ payment.id }}" tabindex="-1">
-                                        <div class="modal-dialog modal-sm">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
-                                                </div>
-                                                <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <div class="modal-body">
-                                                        <div class="mb-3">
-                                                            <label for="format_3" class="form-label">{{ t('Format') }}</label>
-                                                            <select class="form-select" name="format" required id="format_3">
-                                                                <option value="pdf">PDF</option>
-                                                                <option value="docx">DOCX</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
-                                                        <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {{ generate_document_modal('generateModalAdv' ~ payment.id, 'payment', payment.id) }}
                                 {% endfor %}
                             {% else %}
                                 <p class="text-muted">{{ t('Pending') }}</p>
@@ -469,32 +394,7 @@
                                     </div>
                                 </div>
                                 <!-- Generate Document Modal (moved outside alert) -->
-                                <div class="modal fade" id="generateModalHO{{ handover.id }}" tabindex="-1">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
-                                            </div>
-                                            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='handover', ref_id=handover.id) }}">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label for="format_4" class="form-label">{{ t('Format') }}</label>
-                                                        <select class="form-select" name="format" required id="format_4">
-                                                            <option value="pdf">PDF</option>
-                                                            <option value="docx">DOCX</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
-                                                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
+                                {{ generate_document_modal('generateModalHO' ~ handover.id, 'handover', handover.id) }}
                                 {% endfor %}
                             {% else %}
                                 <p class="text-muted">{{ t('Pending') }}</p>
@@ -575,32 +475,7 @@
                                         </div>
                                     </div>
                                     <!-- Generate Document Modal (moved outside alert) -->
-                                    <div class="modal fade" id="generateModalFinal{{ payment.id }}" tabindex="-1">
-                                        <div class="modal-dialog modal-sm">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">{{ t('Generate Document') }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
-                                                </div>
-                                                <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment', ref_id=payment.id) }}">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <div class="modal-body">
-                                                        <div class="mb-3">
-                                                            <label for="format_5" class="form-label">{{ t('Format') }}</label>
-                                                            <select class="form-select" name="format" required id="format_5">
-                                                                <option value="pdf">PDF</option>
-                                                                <option value="docx">DOCX</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
-                                                        <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {{ generate_document_modal('generateModalFinal' ~ payment.id, 'payment', payment.id) }}
                                 {% endfor %}
                             {% else %}
                                 <p class="text-muted">{{ t('Pending') }}</p>
@@ -836,32 +711,7 @@
 
 <!-- Generate Payment Request Modal -->
 {% if lifecycle.advance_paid and not lifecycle.fully_paid %}
-<div class="modal fade" id="generatePaymentRequestModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ t('Payment Request') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
-            </div>
-            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='payment_request', ref_id=order.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="format_6" class="form-label">{{ t('Format') }}</label>
-                        <select class="form-select" name="format" required id="format_6">
-                            <option value="pdf">PDF</option>
-                            <option value="docx">DOCX</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
-                    <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{{ generate_document_modal('generatePaymentRequestModal', 'payment_request', order.id) }}
 {% endif %}
 
 {% endblock %}

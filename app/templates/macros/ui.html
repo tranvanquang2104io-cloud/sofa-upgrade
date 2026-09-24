@@ -318,3 +318,42 @@
     {{ extra if extra }}
   </div>
 {% endmacro %}
+
+{# ------------------------------------------------- generate-document dialog #}
+{% macro generate_document_modal(modal_id, doc_type, ref_id) %}
+  {#
+    The print dialog, once. It was written out nine times across five screens
+    and the copies drifted: four listed DOCX first and the order screen listed
+    PDF, so printing the same quotation from two places gave two different
+    files and neither screen said so.
+
+    DOCX is the default because it is what the templates are and what a
+    Vietnamese business commonly edits before printing.
+  #}
+  <div class="modal fade" id="{{ modal_id }}" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ t('Generate Document') }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
+        </div>
+        <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type=doc_type, ref_id=ref_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="format_{{ modal_id }}" class="form-label">{{ t('Format') }}</label>
+              <select class="form-select" name="format" required id="format_{{ modal_id }}">
+                <option value="docx">DOCX (Word)</option>
+                <option value="pdf">PDF</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ t('Close') }}</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ t('Generate') }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endmacro %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import page_header, doc_badge, detail_open, detail_row, detail_close with context %}
+{% from "macros/ui.html" import page_header, doc_badge, detail_open, detail_row, detail_close, generate_document_modal with context %}
 
 {% block title %}View Contract - SofaFlow{% endblock %}
 
@@ -220,34 +220,7 @@
 </div>
 
 <!-- Generate Document Modal -->
-<div class="modal fade" id="generateModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-file-earmark-arrow-down"></i> {{ t('Generate Document') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('Close') }}"></button>
-            </div>
-            <form method="POST" action="{{ url_for('dashboard.generate_document', doc_type='contract', ref_id=contract.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label" for="f_format">{{ t('Document Format') }}</label>
-                        <select class="form-select" name="format" required id="f_format">
-                            <option value="docx">DOCX (Word)</option>
-                            <option value="pdf">PDF</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-file-earmark-arrow-down"></i> {{ t('Generate') }}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{{ generate_document_modal('generateModal', 'contract', contract.id) }}
 
 <!-- Cancel Contract Modal -->
 <div class="modal fade" id="cancelModal" tabindex="-1">
