@@ -74,6 +74,7 @@ def wipe(company_id):
         ProductionMaterialLine, ProductionPlan, ProductionPlanItem,
         PurchaseOrder, PurchaseOrderLine, PurchaseRequisition,
         PurchaseRequisitionLine, Supplier, SupplierInvoice, SupplierPayment,
+        SupplierPaymentAllocation,
         WorkflowRule, WorkflowWaiver,
     )
 
@@ -96,6 +97,12 @@ def wipe(company_id):
     drop(ProductionPlan, company_id=company_id)
     drop_in(GoodsReceiptLine, GoodsReceiptLine.gr_id, gr_ids)
     drop(GoodsReceipt, company_id=company_id)
+    # Allocations carry no company_id — only the two foreign keys — so they
+    # have to be collected from their parents before those parents go, or a
+    # second seed run leaves rows pointing at deleted invoices.
+    pay_ids = [p.id for p in SupplierPayment.query.filter_by(company_id=company_id)]
+    drop_in(SupplierPaymentAllocation, SupplierPaymentAllocation.payment_id,
+            pay_ids)
     drop(SupplierInvoice, company_id=company_id)
     drop(SupplierPayment, company_id=company_id)
     drop_in(PurchaseOrderLine, PurchaseOrderLine.po_id, po_ids)
@@ -142,6 +149,7 @@ def seed():
         ProductionMaterialLine, ProductionPlan, ProductionPlanItem,
         PurchaseOrder, PurchaseOrderLine, PurchaseRequisition,
         PurchaseRequisitionLine, Supplier, SupplierInvoice, SupplierPayment,
+        SupplierPaymentAllocation,
         WorkflowRule,
     )
     from app.services.agreement_service import product_key
@@ -817,13 +825,25 @@ def seed():
     db.session.add(inv_price)
     db.session.flush()
 
-    # CASE: a supplier payment, confirmed — leaves the invoice part-paid
-    db.session.add(SupplierPayment(
+    # CASE: a supplier payment, confirmed — leaves the invoice part-paid.
+    # The allocation is the point of the case, not a detail: without it the
+    # note says the payment settles 0001234 while the payable stays whole, and
+    # payables/view.html can never reach the payment (it looks through
+    # `alloc.payment`), so the cash-VAT warning cannot appear on the demo at
+    # all. `method` uses the model's constant for the same reason — free text
+    # leaves `is_cash` False whatever was meant.
+    payment = SupplierPayment(
         company_id=company.id, supplier_id=suppliers['NCC-004'].id,
         payment_number='CHI-2609-0001', payment_date=d(20), amount=20_000_000,
-        method='Chuyển khoản', reference_number='VCB.2609.1188',
+        method=SupplierPayment.METHOD_TRANSFER,
+        reference_number='VCB.2609.1188',
         status=SupplierPayment.STATUS_CONFIRMED,
-        notes='Trả một phần hóa đơn 0001234.'))
+        notes='Trả một phần hóa đơn 0001234.')
+    db.session.add(payment)
+    db.session.flush()
+    db.session.add(SupplierPaymentAllocation(
+        payment_id=payment.id, invoice_id=inv_ok.id,
+        allocated_amount=20_000_000))
 
     # ----------------------------------------------------------------------
     # CONFIGURATION
