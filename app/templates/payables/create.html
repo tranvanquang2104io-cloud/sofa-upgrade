@@ -11,7 +11,17 @@
 
 <div class="alert alert-light border small">
   <i class="bi bi-info-circle"></i>
-  {{ t('Enter the invoice exactly as the supplier issued it. The quantities are checked against what was ordered and what was actually received — a mismatch is flagged for review, not blocked.') }}
+  {# This used to promise "enter the invoice exactly as the supplier issued
+     it". The model holds one VAT rate for the whole invoice and has no line
+     for a discount or for freight, so an invoice carrying any of those cannot
+     be entered exactly — and a clerk who makes the total match by adjusting a
+     unit price silently breaks the price-variance check the 3-way match runs
+     on. Saying what it actually accepts is the smaller of the two fixes; the
+     other is recorded in the ledger. #}
+  {{ t('Nhập số hóa đơn, ngày và các dòng hàng theo hóa đơn nhà cung cấp. Số lượng sẽ được đối chiếu với số đã đặt và số thực nhận — lệch thì cảnh báo để rà soát chứ không chặn.') }}
+  <br>
+  <strong>{{ t('Lưu ý:') }}</strong>
+  {{ t('màn hình này áp dụng MỘT thuế suất cho cả hóa đơn và chưa có dòng chiết khấu hay cước vận chuyển. Nếu hóa đơn của bên bán có những khoản đó, đừng sửa đơn giá cho khớp tổng — hãy ghi vào ô Ghi chú và báo kế toán.') }}
 </div>
 
 <form method="POST" action="{{ url_for('dashboard.create_supplier_invoice', po_id=po.id) }}">

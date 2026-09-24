@@ -18,6 +18,9 @@
 <p class="text-muted">
   Tổng hợp nhu cầu vật tư từ các kế hoạch sản xuất đang hoạt động (bung định mức),
   trừ tồn kho hiện có và bù lên mức tối thiểu. Gộp theo nhà cung cấp.
+  <br><strong>Lưu ý:</strong> cột Tồn tính trên <strong>toàn công ty</strong>,
+  còn việc cấp phát lấy từ kho của cửa hàng thực hiện đơn — một chi nhánh có
+  thể thấy “đủ tồn” trong khi vật tư đang nằm ở chi nhánh khác.
 </p>
 
 {% if data.count == 0 %}
@@ -44,7 +47,11 @@
         <table class="table table-sm table-bordered mb-0 align-middle">
           <thead class="table-light"><tr>
             <th>Mã NVL</th><th>Tên vật tư</th><th>ĐVT</th>
-            <th class="text-end">Cần</th><th class="text-end">Tồn</th><th class="text-end">Tối thiểu</th>
+            {# "Tồn" alone reads as "what I have". It is every location the
+               company holds, while issuing draws from the branch doing the
+               work — so an unlabelled column sends a supervisor to a shelf
+               that is empty in their own building. #}
+            <th class="text-end">Cần</th><th class="text-end">Tồn (toàn công ty)</th><th class="text-end">Tối thiểu</th>
             <th class="text-end">Đề xuất mua</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th>
           </tr></thead>
           <tbody>

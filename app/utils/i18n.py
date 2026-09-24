@@ -1420,3 +1420,11 @@ TRANSLATIONS['vi'].update({
 })
 
 TRANSLATIONS['vi'].update({'Số này đã được dùng rồi.': 'Số này đã được dùng rồi.'})
+
+TRANSLATIONS['vi'].update({
+    'Nhập số hóa đơn, ngày và các dòng hàng theo hóa đơn nhà cung cấp. Số lượng sẽ được đối chiếu với số đã đặt và số thực nhận — lệch thì cảnh báo để rà soát chứ không chặn.':
+        'Nhập số hóa đơn, ngày và các dòng hàng theo hóa đơn nhà cung cấp. Số lượng sẽ được đối chiếu với số đã đặt và số thực nhận — lệch thì cảnh báo để rà soát chứ không chặn.',
+    'Lưu ý:': 'Lưu ý:',
+    'màn hình này áp dụng MỘT thuế suất cho cả hóa đơn và chưa có dòng chiết khấu hay cước vận chuyển. Nếu hóa đơn của bên bán có những khoản đó, đừng sửa đơn giá cho khớp tổng — hãy ghi vào ô Ghi chú và báo kế toán.':
+        'màn hình này áp dụng MỘT thuế suất cho cả hóa đơn và chưa có dòng chiết khấu hay cước vận chuyển. Nếu hóa đơn của bên bán có những khoản đó, đừng sửa đơn giá cho khớp tổng — hãy ghi vào ô Ghi chú và báo kế toán.',
+})

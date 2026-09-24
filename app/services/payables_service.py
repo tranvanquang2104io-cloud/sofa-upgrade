@@ -44,6 +44,22 @@ from app.models.models import (
 logger = logging.getLogger(__name__)
 
 
+def _round_dong(value):
+    """Round to whole đồng the way the rest of the product rounds.
+
+    This used to be a bare `.quantize(Decimal('1'))`, which takes Decimal's
+    DEFAULT rounding — ROUND_HALF_EVEN. `money.py` rounds ROUND_HALF_UP, so on
+    an exact half a payable rounded down to even while the matching receivable
+    rounded up, and which way depended on whether the preceding digit happened
+    to be odd. One đồng, unpredictably, in one product.
+
+    Going through the shared rule rather than copying its constant means the
+    next money calculation inherits it instead of choosing again.
+    """
+    from app.services.money import ROUND_HALF_UP_RULE
+    return value.quantize(Decimal('1'), rounding=ROUND_HALF_UP_RULE)
+
+
 def _dec(value):
     return Decimal(str(value or 0))
 
@@ -67,7 +83,20 @@ class PayablesService:
         if po.status == PurchaseOrder.STATUS_DRAFT:
             raise ValueError('Cannot invoice a purchase order that is still a draft')
         if po.status == PurchaseOrder.STATUS_CANCELED:
-            raise ValueError('Cannot invoice a canceled purchase order')
+            # Cancelling means "nothing more is coming", not "what came does
+            # not count". A part-received order can be cancelled — twelve of
+            # twenty metres turn up and the supplier cannot fill the rest — and
+            # refusing the invoice outright left the fabric on the shelf with
+            # the supplier's hóa đơn GTGT nowhere to go: no payable, no input
+            # VAT, and the stock figure describing events the money figure did
+            # not. What stays refused is an order that received NOTHING, where
+            # there is no delivery to bill for.
+            received = sum(Decimal(str(line.quantity_received or 0))
+                           for line in po.lines)
+            if received <= 0:
+                raise ValueError(
+                    'Cannot invoice a canceled purchase order that never '
+                    'received anything')
         if not lines:
             raise ValueError('An invoice must have at least one line')
 
@@ -121,7 +150,7 @@ class PayablesService:
             po_line.quantity_invoiced = _dec(po_line.quantity_invoiced) + qty
 
         invoice.subtotal = subtotal
-        invoice.vat_amount = (subtotal * rate / Decimal('100')).quantize(Decimal('1'))
+        invoice.vat_amount = _round_dong(subtotal * rate / Decimal('100'))
         invoice.total_amount = subtotal + invoice.vat_amount
 
         PayablesService.evaluate_match(invoice)

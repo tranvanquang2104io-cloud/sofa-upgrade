@@ -573,3 +573,76 @@ Four defects in this pass came from the same trap in different directions:
 Substring matching is how three of this product's live defects were built, and
 how two of the tests meant to catch them lied. Every lint added here now uses
 lookarounds, and every assertion about a list reads only that list's `<tbody>`.
+
+
+## 8. Rejected findings from the 24/09 review — checked and found wrong
+
+Two claims from the functional review that do not survive contact with the code.
+Recorded so nobody spends the afternoon re-investigating them.
+
+### 8a. "The payment screen's grand total is not the total that gets stored"
+
+The claim: the page computes `grandTotal` from fee inputs the user typed, while
+the server throws those away and re-reads the fees from the contract — so
+typing a 500,000 delivery fee shows in the total and is not stored.
+
+**It does not, because the user cannot type one.** Both fee inputs on that
+screen are `readonly` with `bg-light`, and have been since before this pass; the
+only posted fields are hidden inputs populated from the order's commitment, and
+the server reads from the same commitment. Screen and stored value agree.
+
+The review itself supplied the escape clause — *"a read-only fee would have
+been a legitimate design"* — and that is the design. What the finding actually
+caught is that a `readonly` input styled like an editable one invites the
+question; making it visibly a derived figure would be an improvement, but there
+is no discrepancy to fix.
+
+### 8b. "Moving-average cost is wrong when one material appears on two lines"
+
+The claim: `_update_average_cost` runs per line and derives `qty_before` as
+(total) − (this line), so on the second line the first line's quantity sits in
+`qty_before` and is valued at the OLD average rather than the price just paid.
+
+**Sequential blending is correct here.** After line 1 the average has already
+been rewritten to include line 1 at its own price, so (S + q1) × avg₁ =
+S × old + q1 × p1 exactly. Substituting into line 2 gives
+
+    (S × old + q1 × p1 + q2 × p2) / (S + q1 + q2)
+
+which is the single-pass answer.
+
+Proved rather than argued: `tests/test_average_cost_blending.py` receives 10 at
+100,000 and 10 at 200,000 on one receipt and asserts 150,000, carries existing
+stock at a third price into the average, and pins that an unpriced line is
+treated as unknown rather than free. All three passed on the first run — the
+arithmetic was already right, and is now held in place.
+
+
+### 3.4 Correcting a supplier payment — the mirror of §3.2, and still open
+
+`/supplier-invoices/<id>/pay` creates the payment, allocates it and confirms it
+in one request. Nothing anywhere sets `SupplierPayment.STATUS_CANCELED`, though
+the model defines it — a capability written down and never wired up, the same
+shape as the production plan naming a button that does not exist.
+`PayablesService.cancel_invoice` additionally refuses while any allocation
+exists, and allocations can never be removed, so a paid invoice is frozen for
+good.
+
+So: pay the wrong supplier, or the wrong amount, and the record stays wrong
+permanently.
+
+**I have not fixed this, deliberately.** §3.2 asks you the same question about
+CUSTOMER payments — void with a reason, a reversing entry, or unconfirm — and
+is still open. The supplier side was built after §3.2 was written, so it
+inherited the gap rather than a decision. Answering it here on my own would
+pre-empt your answer and, worse, risk the two sides of the ledger correcting
+themselves in different ways.
+
+One answer covers both. My recommendation is unchanged from §3.2: **void with a
+recorded reason**, leaving the original visible. An accounting record that can
+be silently edited is worth less than one that shows it was corrected.
+
+What is NOT missing: payments against an invoice are visible on that invoice's
+own screen, with their allocations. A cross-supplier payment list ("what have
+we paid Thiên Hà this month") does not exist, but that is a report to ask for
+rather than a defect — say if you want it.

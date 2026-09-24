@@ -42,6 +42,12 @@ def to_decimal(value, default='0'):
     return Decimal(str(value))
 
 
+# The product's rounding rule, named so other modules can follow it rather
+# than re-deciding. A bare `quantize` takes Decimal's default, which is
+# ROUND_HALF_EVEN and rounds the other way on exact halves.
+ROUND_HALF_UP_RULE = ROUND_HALF_UP
+
+
 def _round(value):
     return value.quantize(_CENTS, rounding=ROUND_HALF_UP)
 

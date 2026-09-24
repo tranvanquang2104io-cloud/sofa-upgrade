@@ -31,7 +31,11 @@
      such button, so the form was reachable only by typing its URL. An invoice
      cannot be recorded against a draft or a cancelled order, which is the same
      rule the service enforces. #}
-  {% if po.status not in ('draft', 'canceled') %}
+  {# A cancelled order can still be invoiced for what actually arrived before
+     it was cancelled — the goods are on the shelf and the supplier has issued
+     a hóa đơn for them. Only a draft, or a cancelled order that received
+     nothing, has no delivery to bill for. #}
+  {% if po.status != 'draft' and (po.status != 'canceled' or po.lines|sum(attribute='quantity_received') > 0) %}
   <a href="{{ url_for('dashboard.create_supplier_invoice', po_id=po.id) }}"
      class="btn btn-sm btn-primary">
     <i class="bi bi-receipt"></i> {{ t('Record Supplier Invoice') }}

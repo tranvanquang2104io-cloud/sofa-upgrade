@@ -350,3 +350,62 @@ A requisition now converts once. Building the remainder properly needs a
 `quantity_converted` per requisition line and a screen to choose what to
 convert, which is a feature rather than a fix, so it is written here instead of
 half-built. Say if a workshop really does order a requisition in instalments.
+
+
+### 8.9 Purchasing counts company stock; issuing draws from a branch — your call
+
+`purchase_suggestions` subtracts `Material.total_stock`, every location the
+company holds. `issue_materials` and `stock_levels` draw from `order.store_id`,
+the branch doing the work. Each is defensible alone: you buy for the company,
+you issue from a shelf. Together they let a supervisor at one branch read "đủ
+tồn" for fabric sitting in another, buy nothing, and be refused at issue time.
+The demo company has two branches and two stock locations, so this is reachable
+today, and there is no transfer function to move material between them.
+
+I have NOT changed the calculation. Whether purchasing should be per-branch
+depends on whether your branches share stock in practice and whether you want a
+transfer document — neither is something to infer from a column header. What I
+did was make the screen say which figure it shows: the column is now "Tồn (toàn
+công ty)" with a note that issuing draws from the executing branch.
+
+Three ways to settle it, if you want to:
+1. **Leave as is.** Correct if branches genuinely share a pool and someone
+   moves material informally.
+2. **Suggest per branch.** Each branch buys what it needs; simplest to reason
+   about, more purchase orders.
+3. **Add a stock transfer.** Keeps one pool and makes the movement a record.
+   The most work, and the only one that makes the two figures agree.
+
+
+### 8.10 A supplier invoice cannot be entered exactly — promise vs. model
+
+The record-invoice screen said *"Nhập hóa đơn đúng như nhà cung cấp đã phát
+hành"*. The model cannot do that: `SupplierInvoice` carries ONE `vat_rate` for
+the whole invoice, and has no line for a discount or for freight. Its totals are
+always recomputed from the lines, so the seller's own rounding cannot be kept
+either.
+
+The dangerous part is not the missing field, it is what a clerk does with a
+paper invoice that has a freight line and a screen that insists it matches:
+they adjust a unit price until the total agrees. That silently corrupts the
+price history the 3-way match runs its variance check on — the check stops
+comparing what was quoted against what was billed, and nothing reports it.
+
+**Done now:** the screen no longer promises exact entry. It says it takes one
+VAT rate and has no discount or freight line, and asks explicitly that a unit
+price is NOT adjusted to make a total agree — put it in Ghi chú and tell the
+accountant. A false promise is worse than a stated limit.
+
+**For you to decide** — the model change itself:
+
+1. **A stated-total field.** Smallest. The clerk types what the paper says; the
+   system shows the difference against its own total and flags it like any
+   other match discrepancy. Handles rounding and reveals the rest without
+   modelling them.
+2. **Discount and freight lines.** Covers the common Vietnamese invoice shapes.
+   A migration plus form and match changes.
+3. **Per-line VAT rate.** Needed only if suppliers really do mix 5%, 8% and 10%
+   on one invoice for this business.
+
+Worth knowing which of these your suppliers' invoices actually look like before
+building any of them.
