@@ -335,3 +335,18 @@ invoices under Kho, customer debt under Khách hàng, framework agreements behin
 nothing at all — so the map is now written out in full in
 `tests/test_permission_map.py`. A new endpoint fails that test until somebody
 says where it belongs; the failure IS the question being asked.
+
+
+### 8.8 Partial conversion of a requisition — not built, deliberately
+
+`PurchaseRequisition.can_convert()` used to allow a requisition that had
+already been converted, with a docstring promising it would create "phần còn
+lại". Nothing implemented that: `convert_to_pos` walks every line each time and
+no field records what has already gone out, so a second press produced a full
+duplicate set of purchase orders — and if both were sent, the fabric was bought
+twice and owed for twice.
+
+A requisition now converts once. Building the remainder properly needs a
+`quantity_converted` per requisition line and a screen to choose what to
+convert, which is a feature rather than a fix, so it is written here instead of
+half-built. Say if a workshop really does order a requisition in instalments.

@@ -41,7 +41,15 @@ def _screens():
         text = io.open(path, encoding='utf-8').read()
         if '{% block content %}' not in text and '{%block content%}' not in text:
             continue                       # print layouts and partials
-        if 'create' in name:
+        # A `_form` template serves BOTH create and edit — one screen that
+        # switches on whether a record was passed. Classifying by filename
+        # alone meant `po_form.html` and `pr_form.html` were never in the
+        # contract at all, so the 44/44 below was 44 of the screens this
+        # function could see. Both were missing the pinned save bar, on the
+        # two forms that grow a row per material line.
+        if 'form' in name:
+            kind = 'create'
+        elif 'create' in name:
             kind = 'create'
         elif 'edit' in name:
             kind = 'edit'

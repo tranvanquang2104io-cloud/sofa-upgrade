@@ -1,12 +1,17 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_actions with context %}
 {% block title %}{{ 'Sửa' if pr else 'Tạo' }} đề nghị mua - SofaFlow{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="mb-0"><i class="bi bi-clipboard-plus text-primary"></i>
-    {{ 'Sửa đề nghị mua ' + pr.pr_number if pr else 'Tạo đề nghị mua hàng (PR)' }}</h1>
-  <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ t('Back') }}</a>
-</div>
+{# Was a hand-rolled title with a Back button where every other screen
+   puts its primary action. These two templates serve both create and
+   edit, so their filenames hold neither word and the screen contract
+   never classified them — they were the only forms outside it. #}
+{{ page_header(('Sửa đề nghị mua ' + pr.pr_number) if pr else 'Tạo đề nghị mua hàng (PR)',
+               icon='bi-clipboard-plus',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Purchase Requisitions'), url_for('dashboard.list_requisitions')),
+                       (pr.pr_number if pr else t('New'), None)]) }}
 
 <form method="POST" action="{{ url_for('dashboard.edit_requisition', pr_id=pr.id) if pr else url_for('dashboard.create_requisition') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -55,9 +60,8 @@
     {% set entity_type = 'purchase_requisition' %}{% set ext_obj = pr %}{% include '_extension_fields_form.html' %}
   {% endif %}
 
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ t('Save') }}</button>
-    <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary">{{ t('Cancel') }}</a>
-  </div>
+  {# Pinned: a purchase order grows a row per material line, and Save
+     used to scroll out of reach on a long one. #}
+  {{ form_actions(t('Save'), url_for('dashboard.list_requisitions'), submit_icon='bi-check-circle') }}
 </form>
 {% endblock %}

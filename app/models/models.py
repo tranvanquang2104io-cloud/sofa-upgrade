@@ -1123,8 +1123,19 @@ class PurchaseRequisition(ExtendFieldsMixin, db.Model):
         return self.status == self.STATUS_DRAFT
 
     def can_convert(self):
-        """Tạo PO khi đã duyệt (chưa hoặc đã convert vẫn cho tạo tiếp phần còn lại)."""
-        return self.status in (self.STATUS_APPROVED, self.STATUS_CONVERTED)
+        """Tạo PO khi đề nghị đã được duyệt — và chỉ một lần.
+
+        This used to allow a requisition that had already been converted,
+        promising it would create "phần còn lại". Nothing implements that:
+        `convert_to_pos` walks EVERY line each time, and no field records what
+        was converted before, so a second press produced a full second set of
+        purchase orders for the same requirement — and if both were sent, the
+        company bought the fabric twice and owed for it twice.
+
+        Converting only part of a requisition needs somewhere to record how
+        much of each line has gone out. That is a feature, not a bug fix.
+        """
+        return self.status == self.STATUS_APPROVED
 
     def can(self, action):
         tr = self.TRANSITIONS.get(action)
