@@ -1114,6 +1114,17 @@ TRANSLATIONS['vi'].update({
     'Production Plans': 'Kế hoạch sản xuất',
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
+    # Per-line VAT: the column, the hint in its empty cell, and the link that
+    # reveals it. 'theo đơn' is the placeholder — an empty cell means the line
+    # is taxed at the document's rate, and saying so is the difference between
+    # a blank that reads as "not set" and one that reads as "inherited".
+    'STT': 'STT',
+    'Item': 'Hạng mục',
+    'Thuế suất': 'Thuế suất',
+    'theo đơn': 'theo đơn',
+    'Thuế suất riêng của dòng này': 'Thuế suất riêng của dòng này',
+    'Có dòng thuế suất khác?': 'Có dòng thuế suất khác?',
+    'Tên hàng / hạng mục': 'Tên hàng / hạng mục',
     'Nháp': 'Nháp',
     'Đã xong': 'Đã xong',
     'Đã nghiệm thu': 'Đã nghiệm thu',

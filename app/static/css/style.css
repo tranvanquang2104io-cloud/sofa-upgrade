@@ -438,3 +438,13 @@ footer .app-version {
 .skip-link:focus {
     left: 0;
 }
+
+/* Per-line VAT column.
+   Hidden by default: a document where every line is taxed the same — nearly
+   every document — must look exactly as it did before the column existed.
+   The cells stay in the DOM so the inputs are still submitted (empty, which
+   means "use the document's rate"), and so revealing the column is a class
+   change rather than a re-render. */
+.item-table.vat-per-line-off .vat-cell {
+  display: none;
+}

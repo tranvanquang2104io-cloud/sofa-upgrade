@@ -1,0 +1,141 @@
+{# One line-item row, for the documents that share a line-item schema.
+
+   Quotation, contract and payment rows were nine near-identical copies across
+   five screens, and each screen carried TWO of them: one built by Jinja when
+   the page loads, and one built by a JavaScript template literal when the user
+   presses "Thêm dòng". They had already drifted — the name box said "Item name
+   / work" on five and "goods" on two, the remove button was `bi-x` in some
+   copies and `bi-trash` in others — which is what copies do. Adding the VAT
+   column by hand would have made nine copies into nine more complicated
+   copies, and the next change to a line item would again be a change in nine
+   places.
+
+   The JavaScript copy of the MARKUP is gone: `item_row_template()` renders this
+   same macro once into a <template> element, and each screen's addRow() clones
+   it instead of building a string. One source for both paths, so they cannot
+   drift. The screens keep their own addRow(), because they attach different
+   listeners — image previews on the quotation, none on the payment — and that
+   is a different convergence with its own regression risk.
+
+   HANDOVER IS NOT HERE, deliberately. Its rows carry a different schema
+   entirely — delivered quantity, accepted quantity, status and a rejection
+   reason, and no `item_quantity[]` at all — and it has its own parser for
+   exactly that reason. Forcing it through this macro would mean a macro with
+   two shapes, which is a copy again with extra steps.
+
+   THE VAT CELL is always present in the markup and the column is hidden by
+   `vat-per-line-off` on the table. A document where every line is taxed the
+   same shows nothing new — which is nearly every document. The column appears
+   when the user asks for it, or when the document already has a line that
+   states its own rate. #}
+
+{% from '_unit_select.html' import unit_select with context %}
+
+{% macro item_row(index=1, name='', unit='', quantity='1', price='',
+                  vat_rate='', with_image=False, existing_image='',
+                  placeholder='') %}
+<tr class="item-row">
+  <td class="stt-cell text-center align-middle">{{ index }}</td>
+  <td><input type="text" class="form-control form-control-sm" name="item_name[]"
+             value="{{ name }}" placeholder="{{ placeholder or t('Tên hàng / hạng mục') }}"></td>
+  <td>{{ unit_select(unit) }}</td>
+  <td><input type="number" class="form-control form-control-sm qty-input"
+             name="item_quantity[]" value="{{ quantity }}" step="0.01" min="0"
+             placeholder="0"></td>
+  <td><input type="number" class="form-control form-control-sm price-input"
+             name="item_price[]" value="{{ price }}" step="1" min="0"
+             placeholder="0"></td>
+  <td class="vat-cell">
+    <input type="number" class="form-control form-control-sm vat-input"
+           name="item_vat_rate[]" value="{{ vat_rate }}" step="0.01" min="0"
+           placeholder="{{ t('theo đơn') }}"
+           aria-label="{{ t('Thuế suất riêng của dòng này') }}">
+  </td>
+  <td><input type="text" class="form-control form-control-sm row-total bg-light"
+             readonly placeholder="0"></td>
+  {% if with_image %}
+  <td>
+    <input type="file" class="form-control form-control-sm img-file-input"
+           name="item_image[]" accept="image/*">
+    <input type="hidden" name="item_existing_image[]" value="{{ existing_image }}">
+    <img class="img-preview img-thumbnail mt-1"
+         src="{{ url_for('static', filename=existing_image) if existing_image else '' }}"
+         style="max-height:50px;{% if not existing_image %} display:none;{% endif %}" alt="">
+  </td>
+  {% endif %}
+  <td class="text-center">
+    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"
+            title="{{ t('Remove this row') }}" aria-label="{{ t('Remove this row') }}">
+      <i class="bi bi-trash"></i>
+    </button>
+  </td>
+</tr>
+{% endmacro %}
+
+
+{% macro item_row_head(with_image=False) %}
+{# The header must gain and lose the VAT column with the body, so it is here
+   rather than written out beside each table. #}
+<tr>
+  <th style="width:4%">{{ t('STT') }}</th>
+  <th>{{ t('Item') }}</th>
+  <th style="width:10%">{{ t('Unit') }}</th>
+  <th style="width:10%">{{ t('Quantity') }}</th>
+  <th style="width:14%">{{ t('Unit Price') }}</th>
+  <th style="width:9%" class="vat-cell">{{ t('Thuế suất') }}</th>
+  <th style="width:14%">{{ t('Amount') }}</th>
+  {% if with_image %}<th style="width:15%">{{ t('Image') }}</th>{% endif %}
+  <th style="width:6%"></th>
+</tr>
+{% endmacro %}
+
+
+{% macro item_row_template(with_image=False, placeholder='') %}
+{# The row "Thêm dòng" clones. Rendering the macro into a <template> is what
+   removes the second copy: the added row is the same markup as the loaded
+   one by construction, not by two people remembering to edit both. #}
+<template id="itemRowTemplate">{{ item_row(index='', with_image=with_image,
+                                           quantity='1', placeholder=placeholder) }}</template>
+<script>
+// Returns a fresh row element cloned from the template above. Each screen
+// keeps its own addRow(): they attach different listeners (image previews on
+// the quotation, none on the payment) and call differently-named recalculation
+// functions. Taking that over would have been a second convergence with real
+// regression risk; the markup is the part that was duplicated, and this is the
+// part that removes the duplicate.
+function cloneItemRow(values){
+  var row = document.getElementById('itemRowTemplate').content
+              .firstElementChild.cloneNode(true);
+  if (values){
+    var set = function(sel, v){
+      var el = row.querySelector(sel);
+      if (el && v !== undefined && v !== null) el.value = v;
+    };
+    set('input[name="item_name[]"]', values.name);
+    set('select[name="item_unit[]"]', values.unit);
+    set('input[name="item_quantity[]"]', values.quantity);
+    set('input[name="item_price[]"]', values.price);
+    set('input[name="item_vat_rate[]"]', values.vat_rate);
+  }
+  return row;
+}
+
+// The VAT column is hidden until it is wanted. A document that arrives with a
+// line rate already set shows it from the start — otherwise the number would
+// be applied to the total and invisible on the screen, which is the worst of
+// the three possible states.
+function showVatColumn(){
+  document.querySelectorAll('.item-table').forEach(function(t){
+    t.classList.remove('vat-per-line-off');
+  });
+  var link = document.getElementById('vatPerLineLink');
+  if (link) link.style.display = 'none';
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var used = Array.prototype.some.call(
+    document.querySelectorAll('#items-tbody .vat-input'),
+    function(i){ return i.value !== ''; });
+  if (used) showVatColumn();
+});
+</script>
+{% endmacro %}
