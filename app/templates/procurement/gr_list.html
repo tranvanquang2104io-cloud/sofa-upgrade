@@ -35,6 +35,9 @@
 {% include '_pagination.html' %}
 </div>
 {% else %}
-<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có phiếu nhập kho nào. Vào một <strong>đơn mua đã gửi NCC</strong> và bấm <strong>{{ t('Receive Goods') }}</strong>.</div>
+{{ empty_state('Chưa có phiếu nhập kho nào. Phiếu được lập khi nhận hàng: mở một đơn mua đã gửi nhà cung cấp và bấm Nhận hàng.',
+                 icon='bi-box-seam',
+                 action_url=url_for('dashboard.list_purchase_orders'),
+                 action_label=t('Purchase Orders')) }}
 {% endif %}
 {% endblock %}

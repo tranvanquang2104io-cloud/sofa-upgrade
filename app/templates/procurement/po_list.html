@@ -52,6 +52,9 @@
 {{ table_close() }}
 {% include '_pagination.html' %}
 {% else %}
-<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đơn mua nào. Tạo từ <strong>{{ t('Purchase suggestions') }}</strong> hoặc bấm <strong>{{ t('Create Purchase Order') }}</strong>.</div>
+{{ empty_state('Chưa có đơn mua nào. Tạo từ đề xuất mua hàng, hoặc lập một đơn mới.',
+                 icon='bi-bag-check',
+                 action_url=url_for('dashboard.create_purchase_order'),
+                 action_label=t('Create Purchase Order')) }}
 {% endif %}
 {% endblock %}

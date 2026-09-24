@@ -50,6 +50,9 @@
 {{ table_close() }}
 {% include '_pagination.html' %}
 {% else %}
-<div class="alert alert-info"><i class="bi bi-info-circle"></i> Chưa có đề nghị mua nào. Bấm <strong>{{ t('Create Requisition') }}</strong> hoặc điền từ <strong>{{ t('Auto suggestions') }}</strong>.</div>
+{{ empty_state('Chưa có đề nghị mua nào. Lập một đề nghị mới, hoặc điền sẵn từ đề xuất mua hàng.',
+                 icon='bi-clipboard-check',
+                 action_url=url_for('dashboard.create_requisition'),
+                 action_label=t('Create Requisition')) }}
 {% endif %}
 {% endblock %}

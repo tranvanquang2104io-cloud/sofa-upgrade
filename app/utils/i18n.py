@@ -1435,3 +1435,9 @@ TRANSLATIONS['vi'].update({
     'Thông tin báo giá': 'Thông tin báo giá',
     'Điều khoản và ghi chú': 'Điều khoản và ghi chú',
 })
+
+TRANSLATIONS['vi'].update({
+    'Chưa có đơn mua nào. Tạo từ đề xuất mua hàng, hoặc lập một đơn mới.': 'Chưa có đơn mua nào. Tạo từ đề xuất mua hàng, hoặc lập một đơn mới.',
+    'Chưa có đề nghị mua nào. Lập một đề nghị mới, hoặc điền sẵn từ đề xuất mua hàng.': 'Chưa có đề nghị mua nào. Lập một đề nghị mới, hoặc điền sẵn từ đề xuất mua hàng.',
+    'Chưa có phiếu nhập kho nào. Phiếu được lập khi nhận hàng: mở một đơn mua đã gửi nhà cung cấp và bấm Nhận hàng.': 'Chưa có phiếu nhập kho nào. Phiếu được lập khi nhận hàng: mở một đơn mua đã gửi nhà cung cấp và bấm Nhận hàng.',
+})
