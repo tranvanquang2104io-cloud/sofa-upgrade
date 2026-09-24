@@ -1430,3 +1430,8 @@ TRANSLATIONS['vi'].update({
 })
 
 TRANSLATIONS['vi'].update({'Bỏ qua thanh điều hướng': 'Bỏ qua thanh điều hướng'})
+
+TRANSLATIONS['vi'].update({
+    'Thông tin báo giá': 'Thông tin báo giá',
+    'Điều khoản và ghi chú': 'Điều khoản và ghi chú',
+})

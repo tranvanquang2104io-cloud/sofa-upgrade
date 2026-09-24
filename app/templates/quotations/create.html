@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import page_header, form_actions with context %}
+{% from "macros/ui.html" import page_header, form_actions, form_section, form_section_end with context %}
 
 {% block title %}Create Quotation - SofaFlow{% endblock %}
 
@@ -16,7 +16,12 @@
                 <form method="POST" action="{{ url_for('dashboard.create_quotation', order_id=order.id) }}" id="quotation-form" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <!-- Header row -->
+                    {# Three labelled groups instead of one wall of fields.
+                       `form_section` was written for exactly this and used by
+                       nothing; a 327-line form with a single heading gives a
+                       user no landmark to scan to and no sense of how much is
+                       left. #}
+                    {{ form_section(t('Thông tin báo giá'), icon='bi-file-text') }}
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -55,9 +60,10 @@
                         </div>
                     </div>
 
-                    <!-- Items Table -->
+                    {{ form_section_end() }}
+
+                    {{ form_section(t('Items / Work Table'), icon='bi-table') }}
                     <div class="mb-3">
-                        <h5><i class="bi bi-table"></i> {{ t('Items / Work Table') }}</h5>
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered" id="items-table">
                                 <thead class="table-light">
@@ -153,7 +159,9 @@
                         </div>
                     </div>
 
-                    <!-- Amount in Words -->
+                    {{ form_section_end() }}
+
+                    {{ form_section(t('Điều khoản và ghi chú'), icon='bi-card-text') }}
                     <div class="mb-3">
                         <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
                         <input type="text" class="form-control" id="amount_in_words" name="amount_in_words" placeholder="E.g. One hundred twenty-five million, seven hundred thirty thousand dong">
@@ -173,7 +181,8 @@
                     {% set entity_type = 'quotation' %}
                     {% include '_extension_fields_form.html' %}
 
-                    {{ form_actions(t('Create Quotation'),
+                    {{ form_section_end() }}
+  {{ form_actions(t('Create Quotation'),
                                     url_for('dashboard.view_order', order_id=order.id)) }}
                 </form>
             </div>
