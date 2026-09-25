@@ -948,6 +948,22 @@ def user_may_access_store(store_id, company_id):
     return store_id in allowed or str(store_id) in {str(s) for s in allowed}
 
 
+def production_site_of(plan):
+    """The branch a plan is built at.
+
+    Its own `production_store_id` when set, otherwise the branch on the order.
+    The fallback is not laziness: until somebody separates the two, they ARE
+    the same place, and defaulting to the order's branch reproduces exactly
+    what the code did before the column existed. What changes is that the
+    assumption now has a name and somewhere to be overridden.
+    """
+    site = getattr(plan, 'production_store_id', None)
+    if site is not None:
+        return site
+    order = getattr(plan, 'order', None)
+    return getattr(order, 'store_id', None)
+
+
 def order_commitment(order):
     """What this order was agreed ON: a signed contract, or a confirmed ĐĐH.
 
@@ -2057,7 +2073,7 @@ class ProductionPlanService:
         for line in plan.material_lines:
             still = (Decimal(str(line.quantity_required or 0))
                      - Decimal(str(line.quantity_issued or 0)))
-            entry = self._stock_for(line.material_id, plan.order.store_id
+            entry = self._stock_for(line.material_id, production_site_of(plan)
                                     if plan.order else None)
             # No stock row at all is the ordinary state of a material nobody
             # has bought yet — zero, not an error and not unknown.
@@ -2084,7 +2100,7 @@ class ProductionPlanService:
                 needs.append((line, need))
         shortages = []
         for line, need in needs:
-            st = self._stock_for(line.material_id, order.store_id)
+            st = self._stock_for(line.material_id, production_site_of(plan))
             avail = Decimal(str(st.current_quantity)) if st else Decimal('0')
             if avail < need:
                 # Name the material and do the subtraction here. The caller
@@ -2105,7 +2121,7 @@ class ProductionPlanService:
         if shortages:
             return shortages
         for line, need in needs:
-            st = self._stock_for(line.material_id, order.store_id)
+            st = self._stock_for(line.material_id, production_site_of(plan))
             st.current_quantity = Decimal(str(st.current_quantity)) - need
             line.quantity_issued = Decimal(str(line.quantity_required or 0))
         plan.status = plan.STATUS_IN_PROGRESS

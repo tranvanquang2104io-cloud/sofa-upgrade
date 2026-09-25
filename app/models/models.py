@@ -1050,6 +1050,13 @@ class ProductionPlan(db.Model):
     id          = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_id  = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     order_id    = db.Column(GUID(), db.ForeignKey('orders.id'), nullable=False, unique=True, index=True)
+    #: Where the work happens. NOT the branch on the order: a customer
+    #: buying at the Nguyễn Trãi showroom does not mean the sofa is built
+    #: there. NULL means "the same place it was sold", which is what the
+    #: code assumed before this column existed, so nothing moves until
+    #: somebody says otherwise. Read it through `production_site_of()`.
+    production_store_id = db.Column(GUID(), db.ForeignKey('stores.id'),
+                                    index=True)
     contract_id = db.Column(GUID(), db.ForeignKey('contracts.id'), nullable=True)
     plan_number = db.Column(db.String(50), nullable=False)
     status      = db.Column(db.String(20), default='draft', nullable=False, index=True)
