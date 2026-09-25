@@ -954,6 +954,34 @@ def user_may_access_store(store_id, company_id):
     return store_id in allowed or str(store_id) in {str(s) for s in allowed}
 
 
+def line_source_store(line, plan):
+    """The branch whose stock a material line is drawn from.
+
+    A line may name a warehouse of its own — the fabric store, when the frames
+    come from the timber yard. Without one it falls back to the plan's
+    production site, which is what every line did before the column existed.
+
+    Returns a STORE id, not a warehouse id, because `MaterialStock` is keyed by
+    (material, store). Two warehouses inside one branch therefore share a stock
+    row and cannot be told apart; drawing from another BRANCH's warehouse —
+    the case the owner described — works. Re-keying stock by warehouse is a
+    data migration of its own, recorded in REFACTOR-2026Q3.md rather than
+    smuggled in here.
+    """
+    warehouse_id = getattr(line, 'warehouse_id', None)
+    if warehouse_id is None:
+        return production_site_of(plan)
+
+    from app.models.models import Warehouse
+    warehouse = Warehouse.query.get(warehouse_id)
+    if warehouse is None or str(warehouse.company_id) != str(plan.company_id):
+        # Refuse rather than substitute, exactly as receiving does: quietly
+        # falling back to the production site would take material from a place
+        # nobody named.
+        raise ValueError('Kho không thuộc công ty này')
+    return warehouse.store_id
+
+
 def production_site_of(plan):
     """The branch a plan is built at.
 
@@ -2109,8 +2137,8 @@ class ProductionPlanService:
         for line in plan.material_lines:
             still = (Decimal(str(line.quantity_required or 0))
                      - Decimal(str(line.quantity_issued or 0)))
-            entry = self._stock_for(line.material_id, production_site_of(plan)
-                                    if plan.order else None)
+            entry = self._stock_for(line.material_id,
+                                    line_source_store(line, plan))
             # No stock row at all is the ordinary state of a material nobody
             # has bought yet — zero, not an error and not unknown.
             available = Decimal(str(entry.current_quantity)) if entry else Decimal('0')
@@ -2136,7 +2164,7 @@ class ProductionPlanService:
                 needs.append((line, need))
         shortages = []
         for line, need in needs:
-            st = self._stock_for(line.material_id, production_site_of(plan))
+            st = self._stock_for(line.material_id, line_source_store(line, plan))
             avail = Decimal(str(st.current_quantity)) if st else Decimal('0')
             if avail < need:
                 # Name the material and do the subtraction here. The caller
@@ -2157,7 +2185,7 @@ class ProductionPlanService:
         if shortages:
             return shortages
         for line, need in needs:
-            st = self._stock_for(line.material_id, production_site_of(plan))
+            st = self._stock_for(line.material_id, line_source_store(line, plan))
             st.current_quantity = Decimal(str(st.current_quantity)) - need
             line.quantity_issued = Decimal(str(line.quantity_required or 0))
         plan.status = plan.STATUS_IN_PROGRESS

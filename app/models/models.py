@@ -1120,6 +1120,12 @@ class ProductionMaterialLine(db.Model):
     plan_id      = db.Column(GUID(), db.ForeignKey('production_plans.id'), nullable=False, index=True)
     plan_item_id = db.Column(GUID(), db.ForeignKey('production_plan_items.id'), nullable=True, index=True)
     material_id  = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
+    #: Which warehouse this line is drawn from. NULL means the plan's
+    #: production site, which is what every line did before this existed —
+    #: so a workshop that keeps everything in one place sets nothing and
+    #: sees no change. Read it through `line_source_store()`.
+    warehouse_id = db.Column(GUID(), db.ForeignKey('warehouses.id'),
+                             index=True)
     quantity_required = db.Column(db.Numeric(15, 2), default=0, nullable=False)
     quantity_issued   = db.Column(db.Numeric(15, 2), default=0, nullable=False)
     unit         = db.Column(db.String(50))
