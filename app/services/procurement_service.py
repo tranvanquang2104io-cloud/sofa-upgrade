@@ -160,7 +160,8 @@ class ProcurementService:
         return po
 
     # ---- GR: nhận hàng, tăng tồn -----------------------------------------
-    def receive(self, po, quantities, store_id=None, receipt_date=None, notes=None):
+    def receive(self, po, quantities, store_id=None, receipt_date=None, notes=None,
+                warehouse_id=None):
         """Nhận hàng theo PO. ``quantities`` = {po_line_id(str): qty}. Tạo phiếu
         nhập kho, **tăng MaterialStock**, cập nhật đã-nhận + trạng thái PO.
         Trả về (GoodsReceipt, warnings)."""
@@ -169,7 +170,17 @@ class ProcurementService:
             raise ValueError("Chỉ nhập kho khi đơn mua đã gửi NCC và chưa nhập đủ.")
         target_store = store_id if store_id is not None else po.store_id
 
+        # Which warehouse the goods physically go into. `warehouse_id` given by
+        # the caller wins; otherwise the branch's own, then the company's. A
+        # company that has not been migrated yet has none at all, and gets
+        # None — deployments upgrade code and database separately, so receiving
+        # has to keep working before the warehouses exist rather than refuse.
+        from app.services.warehouses import resolve as _resolve_warehouse
+        target_warehouse = _resolve_warehouse(
+            po.company_id, chosen_id=warehouse_id, store_id=target_store)
+
         gr = GoodsReceipt(company_id=po.company_id, po_id=po.id, store_id=target_store,
+                          warehouse_id=target_warehouse.id if target_warehouse else None,
                           gr_number=self._gen_gr_number(po.company_id),
                           receipt_date=receipt_date or date.today(), notes=notes, is_posted=True)
         db.session.add(gr)
@@ -199,6 +210,11 @@ class ProcurementService:
                 st = MaterialStock(company_id=po.company_id, material_id=line.material_id,
                                    store_id=target_store, current_quantity=Decimal('0'))
                 db.session.add(st)
+            # Recorded on the stock row too, so the receipt and the stock cannot
+            # disagree about where the material is. Only set when a warehouse
+            # was resolved: writing None over an existing one would lose it.
+            if target_warehouse is not None:
+                st.warehouse_id = target_warehouse.id
             st.current_quantity = Decimal(str(st.current_quantity or 0)) + qty
             line.quantity_received = Decimal(str(line.quantity_received or 0)) + qty
             self._update_average_cost(line.material, qty, line.unit_price)

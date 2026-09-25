@@ -1252,7 +1252,11 @@ class PurchaseOrder(ExtendFieldsMixin, db.Model):
 
     id           = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_id   = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
-    store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # kho sẽ nhập về
+    store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # chi nhánh nhận
+    #: Where the goods are expected. A suggestion for the goods receipt, not a
+    #: rule: the van can be sent elsewhere on the day, and the receipt is what
+    #: records where they actually went.
+    warehouse_id = db.Column(GUID(), db.ForeignKey('warehouses.id'), index=True)
     supplier_id  = db.Column(GUID(), db.ForeignKey('suppliers.id'), nullable=True, index=True)
     pr_id        = db.Column(GUID(), db.ForeignKey('purchase_requisitions.id'), nullable=True, index=True)  # nguồn PR (nếu có)
     po_number    = db.Column(db.String(50), nullable=False)
@@ -1346,7 +1350,13 @@ class GoodsReceipt(ExtendFieldsMixin, db.Model):
     id           = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_id   = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     po_id        = db.Column(GUID(), db.ForeignKey('purchase_orders.id'), nullable=True, index=True)
-    store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # kho nhập vào
+    store_id     = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)  # chi nhánh nhận
+    #: Which warehouse the goods physically went into. `store_id` above says
+    #: which BRANCH took delivery, which was the whole answer while a branch and
+    #: a warehouse were the same thing. Nullable: a receipt raised before any
+    #: warehouse existed has no honest answer, and reading the branch — what the
+    #: old code does — beats inventing one.
+    warehouse_id = db.Column(GUID(), db.ForeignKey('warehouses.id'), index=True)
     gr_number    = db.Column(db.String(50), nullable=False)
     receipt_date = db.Column(db.Date)
     notes        = db.Column(db.Text)
