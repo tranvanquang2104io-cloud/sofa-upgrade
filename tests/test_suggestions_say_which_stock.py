@@ -1,49 +1,55 @@
-"""The suggestion screen must say whose stock it is counting.
+"""The screen must say which stock the figures are about — and it changed.
 
-Purchase suggestions subtract `Material.total_stock` — every location the
-company holds. Issuing subtracts from `order.store_id` — the branch doing the
-work. Both are defensible on their own: you buy for the company, you issue from
-a shelf. Together, and unlabelled, they mislead.
+This file used to pin the OPPOSITE of what it pins now, and the change is the
+point.
 
-With two branches the column headed simply "Tồn" reads as "what I have". A
-supervisor at Quận 7 sees 50 metres, buys nothing, and is refused at issue time
-because the 50 metres are in Thủ Đức. The system knew both numbers and showed
-the one that was not theirs.
+Purchase suggestions compared requirement against `Material.total_stock`, the
+sum over every branch, while issuing drew from one branch. A workshop needing
+20m and holding none was told to buy nothing because 50m sat at the showroom,
+and the shortage surfaced on the day of cutting. The screen carried a warning
+saying so — "một chi nhánh có thể thấy 'đủ tồn' trong khi vật tư đang nằm ở
+chi nhánh khác" — which was honest about a defect rather than a fix for it.
 
-The calculation is NOT changed here. Whether purchasing should be per-branch
-depends on whether branches share stock and whether a transfer exists — neither
-is something to infer from a column header. What changes is that the screen
-says which figure it is showing, so the number can be trusted for what it is.
-The question itself is recorded in the ledger.
+The arithmetic now aggregates per production site. The warning is therefore
+obsolete: leaving it would teach the user something that is no longer true,
+which is worse than never having said it.
+
+What is still true, and still worth saying on the screen: the Tồn column shows
+the company-wide total. A buyer wants to know the fabric exists somewhere in
+the business even when this workshop cannot reach it — but the number to buy
+no longer comes from it.
 """
-import pytest
+import io
+import pathlib
+
+SCREEN = (pathlib.Path(__file__).resolve().parents[1] / 'app' / 'templates'
+          / 'materials' / 'purchase_suggestions.html')
 
 
-def test_the_screen_says_the_stock_figure_is_company_wide(client, login, seed):
-    login('admin')
-    body = client.get('/materials/purchase-suggestions').get_data(as_text=True)
-    assert 'toàn công ty' in body, (
-        'the stock column does not say which stock it counts, so a branch '
-        'reads it as their own')
-
-
-def test_the_two_figures_still_come_from_different_places(app, seed):
-    """Pinning the thing that makes the label necessary.
-
-    If these ever converge, the label becomes wrong rather than merely
-    unnecessary — so the difference is asserted, not assumed.
-    """
+def test_the_suggestion_is_computed_per_production_site():
     import inspect
 
     from app.services import services
 
-    suggestions = inspect.getsource(
+    source = inspect.getsource(
         services.ProductionPlanService.purchase_suggestions)
-    issuing = inspect.getsource(services.ProductionPlanService._stock_for)
+    assert 'production_site_of' in source, (
+        'suggestions are back to counting company-wide stock, so a branch can '
+        'again be told it has fabric that is somewhere else')
 
-    assert 'total_stock' in suggestions, (
-        'suggestions no longer use company-wide stock; the label needs revising'
-    )
-    assert 'store_id' in issuing, (
-        'issuing no longer resolves stock per store; the label needs revising'
-    )
+
+def test_the_screen_no_longer_warns_about_a_defect_that_is_fixed():
+    text = io.open(SCREEN, encoding='utf-8').read()
+    assert 'có thể thấy “đủ tồn”' not in text, (
+        'the screen still warns that a branch may look stocked when the '
+        'material is elsewhere; that was true of the old arithmetic')
+
+
+def test_the_screen_still_says_what_the_stock_column_means():
+    """The column is company-wide and the suggestion is not — say both."""
+    text = io.open(SCREEN, encoding='utf-8').read()
+    assert 'từng nơi sản\n  xuất' in text or 'từng nơi sản xuất' in text, (
+        'nothing tells the user the suggestion is per production site')
+    assert 'toàn công ty' in text, (
+        'the Tồn column is a company-wide total and the screen no longer says '
+        'so')

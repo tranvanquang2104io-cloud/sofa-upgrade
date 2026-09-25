@@ -2064,18 +2064,29 @@ class ProductionPlanService:
 
     def _stock_for(self, material_id, store_id):
         from app.models.models import MaterialStock
-        # No fallback to the company-level row. It used to mean: if this
-        # branch has no row for this material, draw from the company warehouse
-        # instead — which let a workshop issue fabric that no document says was
-        # ever moved there. A branch that holds none of something holds zero of
-        # it, and the shortage is the useful answer.
-        #
-        # Safe to remove because opening a branch now creates its rows (see
-        # StoreService.create_store). Measured before removing: with the
-        # fallback taken out, exactly one test failed — the one written to pin
-        # the fallback itself.
-        return MaterialStock.query.filter_by(material_id=material_id,
-                                             store_id=store_id).first()
+        st = MaterialStock.query.filter_by(material_id=material_id,
+                                           store_id=store_id).first()
+        if st is None:
+            # The company-level row (store_id NULL) is not "another branch's
+            # stock". For a company that has never split its inventory by
+            # location it is the ONLY place stock is recorded — `create_material`
+            # makes exactly that row, and `MaterialService.update_stock` writes
+            # to it. Reading it when the branch has no row of its own is reading
+            # where the data is, not moving anything.
+            #
+            # I removed this and was wrong. The undocumented-transfer problem is
+            # drawing from the company warehouse when the branch HAS a row and
+            # is short — and this never did that: it fires only when the row is
+            # absent. Removing it made company-level stock invisible to both
+            # issuing and purchase suggestions, which showed up as a branch with
+            # 10 units being told to buy 35 instead of 25.
+            #
+            # What made a NEW branch dangerous was having no rows at all, so the
+            # fallback fired for it. `StoreService.create_store` now creates
+            # them at zero, which closes that case without hiding this one.
+            st = MaterialStock.query.filter_by(material_id=material_id,
+                                               store_id=None).first()
+        return st
 
     def stock_levels(self, plan):
         """What the store holds for each material this plan needs.
@@ -2268,17 +2279,45 @@ class ProductionPlanService:
             ProductionPlan.company_id == company_id,
             ProductionPlan.status.in_(active)).all()
 
-        # 1) Aggregate un-issued material requirement across active plans.
-        required = {}
+        # 1) Un-issued requirement, aggregated PER PRODUCTION SITE.
+        #
+        # It used to be aggregated per material across the whole company and
+        # compared against `m.total_stock`, the sum over every branch — while
+        # issuing draws from one branch only. A workshop needing 20m and
+        # holding none was told to buy nothing because 50m sat at the showroom,
+        # and the shortage then surfaced on the day of cutting.
+        #
+        # The showroom's fabric is not unavailable in principle — somebody can
+        # drive it over — but it is not available to this plan without a
+        # transfer that has to be decided and documented. Counting it as if it
+        # were already at the workshop treats an undocumented move as a fact,
+        # the same error as the issuing fallback that silently drew from the
+        # company warehouse.
+        per_site = {}
         for plan in plans:
+            site = production_site_of(plan)
             for line in plan.material_lines:
                 need = Decimal(str(line.quantity_required or 0)) - Decimal(str(line.quantity_issued or 0))
                 if need > 0:
-                    required[line.material_id] = required.get(line.material_id, Decimal('0')) + need
+                    key = (site, line.material_id)
+                    per_site[key] = per_site.get(key, Decimal('0')) + need
+
+        # What to buy, summed over the sites that are short. A company with one
+        # location has one site, so this is the same arithmetic it always did.
+        required = {}
+        shortfall = {}
+        for (site, material_id), need in per_site.items():
+            required[material_id] = required.get(material_id, Decimal('0')) + need
+            entry = self._stock_for(material_id, site)
+            here = Decimal(str(entry.current_quantity)) if entry else Decimal('0')
+            missing = need - here
+            if missing > 0:
+                shortfall[material_id] = shortfall.get(material_id, Decimal('0')) + missing
 
         mats = {m.id: m for m in Material.query.filter_by(company_id=company_id, is_active=True).all()}
         # Candidate materials: needed by a plan OR below their min stock level.
-        candidates = set(required) | {mid for mid, m in mats.items() if m.is_low_stock}
+        per_site_materials = set(required)
+        candidates = per_site_materials | {mid for mid, m in mats.items() if m.is_low_stock}
 
         by_supplier = {}
         total = Decimal('0')
@@ -2287,10 +2326,21 @@ class ProductionPlanService:
             m = mats.get(mid)
             if not m:
                 continue
-            avail = Decimal(str(m.total_stock or 0))
             need = required.get(mid, Decimal('0'))
             min_level = Decimal(str(m.min_stock_level or 0))
-            suggest = need - avail + min_level
+            if mid in per_site_materials:
+                # Needed by a plan: buy what the sites that are short are
+                # short by. `avail` is still reported so the screen can show
+                # what the company holds in total — it is the figure a buyer
+                # wants to see, and it is no longer the figure the suggestion
+                # is derived from.
+                avail = Decimal(str(m.total_stock or 0))
+                suggest = shortfall.get(mid, Decimal('0')) + min_level
+            else:
+                # Below its minimum and needed by nobody: a company-wide
+                # question, answered with the company-wide figure.
+                avail = Decimal(str(m.total_stock or 0))
+                suggest = need - avail + min_level
             if suggest <= 0:
                 continue
             unit_price = Decimal(str(m.unit_price or 0))

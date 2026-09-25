@@ -162,29 +162,40 @@ def test_a_second_delivery_adds_to_the_row_it_made(app, two_branches):
         assert float(rows[0].current_quantity) == 35
 
 
-def test_the_issuing_fallback_is_gone_too(app):
-    """Both halves of the same defect are fixed now.
+def test_the_issuing_fallback_reads_shared_stock_and_does_not_move_it(app):
+    """The two halves of this are NOT the same defect, and I got that wrong twice.
 
-    This test used to pin the issuing fallback as deliberate, on the grounds
-    that `MaterialService` puts all stock at company level so removing it would
-    stop production on day one. That was wrong, and measuring said so: with the
-    fallback taken out, exactly one test in the suite failed — this one.
+    Receiving had a fallback that added a delivery to the company-level row
+    when the receiving branch had none. That is a real defect: the goods
+    physically arrived somewhere, and the record said somewhere else. It is
+    fixed.
 
-    `create_material` in the service does create only the company-level row,
-    but the ROUTE then calls `ensure_stock_entries_for_stores`, which creates
-    one per branch. I read one layer and concluded about the system, which is
-    the same mistake as every "checked by name" defect in this programme —
-    except this one reached a commit message (e2042b2).
+    Issuing has a fallback that READS the company-level row when the branch has
+    no row of its own. I called it the same defect and removed it. It is not.
+    For a company that has never split its inventory by location, the
+    company-level row is the ONLY place stock is recorded — `create_material`
+    makes exactly that row and `update_stock` writes to it — so reading it is
+    reading where the data is, not moving anything. The undocumented-transfer
+    problem is drawing from the company warehouse while the branch HAS a row
+    and is short, and this never did that: it fires only when the row is
+    absent.
 
-    The real gap was a branch opened AFTER the materials exist, which had no
-    rows at all. `StoreService.create_store` now makes them, at zero, and
-    `tests/test_a_new_branch_can_hold_stock.py` pins that.
+    Removing it made company-level stock invisible to issuing and to purchase
+    suggestions, and the suite said so — a material with 10 units was suggested
+    at 35 instead of 25, and a purchase order came back `partial` instead of
+    `received`. Restored.
+
+    What made a NEW branch dangerous was having no rows at all, so the fallback
+    fired for it and it issued material that had never been delivered there.
+    `StoreService.create_store` now creates its rows at zero, which closes that
+    case without hiding this one — see
+    tests/test_a_new_branch_can_hold_stock.py.
     """
     import inspect
 
     from app.services import services
 
     source = inspect.getsource(services.ProductionPlanService._stock_for)
-    assert 'store_id=None' not in source, (
-        'issuing can draw from the company warehouse again, so a branch can '
-        'take material no document says was moved there')
+    assert 'store_id=None' in source, (
+        'the company-level row is unreachable again, so a company that records '
+        'stock without splitting it by branch reads zero everywhere')

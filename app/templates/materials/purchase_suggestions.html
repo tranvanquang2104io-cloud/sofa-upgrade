@@ -26,9 +26,10 @@
 <p class="text-muted">
   Tổng hợp nhu cầu vật tư từ các kế hoạch sản xuất đang hoạt động (bung định mức),
   trừ tồn kho hiện có và bù lên mức tối thiểu. Gộp theo nhà cung cấp.
-  <br><strong>Lưu ý:</strong> cột Tồn tính trên <strong>toàn công ty</strong>,
-  còn việc cấp phát lấy từ kho của cửa hàng thực hiện đơn — một chi nhánh có
-  thể thấy “đủ tồn” trong khi vật tư đang nằm ở chi nhánh khác.
+  <br><strong>Lưu ý:</strong> số đề xuất mua tính theo <strong>từng nơi sản
+  xuất</strong> — vật tư đang nằm ở chi nhánh khác không được coi là đã có,
+  vì chuyển về cần một phiếu điều chuyển. Cột Tồn bên dưới là tổng
+  <strong>toàn công ty</strong>, để bạn biết hàng đang ở đâu đó trong nhà.
 </p>
 
 {% if data.count == 0 %}
