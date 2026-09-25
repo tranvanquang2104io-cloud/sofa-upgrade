@@ -122,6 +122,10 @@ ENDPOINT_FEATURE = {
     'view_supplier_invoice':           'purchasing',
 
     # --- not feature-gated (see the module docstring) ----------------
+    'create_warehouse':                None,
+    'deactivate_warehouse':            None,
+    'edit_warehouse':                  None,
+    'list_warehouses':                 None,
     'activate_template':               None,
     'check_code':                      None,
     'company_settings':                None,
@@ -149,6 +153,10 @@ ENDPOINT_FEATURE = {
 #: The subset of the `None` rows that are admin screens. They are ungated
 #: HERE because a role decorator gates them THERE; the test checks it exists.
 ADMIN_SCREENS = frozenset({
+    'create_warehouse',
+    'deactivate_warehouse',
+    'edit_warehouse',
+    'list_warehouses',
     'activate_template',
     'company_settings',
     'create_store',

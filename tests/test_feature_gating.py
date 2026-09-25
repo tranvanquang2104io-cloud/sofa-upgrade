@@ -39,7 +39,20 @@ EXEMPT = {
 
 # Areas guarded by a role decorator instead (company_admin / store_admin), so a
 # feature grant would be the wrong mechanism: these are administration, not work.
-ROLE_GUARDED = ('store', 'user', 'setting', 'template', 'extension')
+# Screens gated by a role decorator rather than by a permission area. This
+# used to be a tuple of SUBSTRINGS — ('store', 'user', 'setting', …) — matched
+# against the endpoint name, which is the same mechanism that put supplier
+# invoices under the stock permission and left framework agreements behind
+# nothing at all. It also silently exempted anything whose name happened to
+# contain one of those words, so a future `restore_order` would have lost its
+# gate without a word.
+#
+# `ADMIN_SCREENS` is the written-down list, and a test in
+# test_permission_map_is_closed.py checks each of its members really carries a
+# decorator — so this is a claim somebody made, not a coincidence of spelling.
+from app.utils.permission_map import ADMIN_SCREENS  # noqa: E402
+
+ROLE_GUARDED = ADMIN_SCREENS
 
 
 def _business_endpoints(app):
@@ -49,7 +62,7 @@ def _business_endpoints(app):
         if 'GET' not in rule.methods:
             continue
         name = rule.endpoint.split('.', 1)[1]
-        if name in EXEMPT or any(k in name for k in ROLE_GUARDED):
+        if name in EXEMPT or name in ROLE_GUARDED:
             continue
         yield name, rule.endpoint
 

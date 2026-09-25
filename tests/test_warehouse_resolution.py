@@ -295,3 +295,46 @@ def test_a_company_with_no_warehouses_receives_exactly_as_before(app, seed):
         row = MaterialStock.query.filter_by(material_id=material_id).one()
         assert float(row.current_quantity) == 20, (
             'the delivery was refused or lost because no warehouse existed')
+
+
+def test_the_receive_screen_offers_no_warehouse_field_with_one_warehouse(
+        app, client, login, one_warehouse):
+    """A field with a single option asks the user to confirm what they cannot change."""
+    po_id, _line_id, _ = _po_at(app, one_warehouse, one_warehouse['store_id'])
+    login('admin')
+    body = client.get(f'/purchase-orders/{po_id}').get_data(as_text=True)
+    assert 'name="warehouse_id"' not in body, (
+        'a workshop at one address is being asked which warehouse to use')
+
+
+def test_the_receive_screen_offers_the_choice_with_two(app, client, login,
+                                                       two_warehouses):
+    po_id, _line_id, _ = _po_at(app, two_warehouses,
+                                two_warehouses['workshop_id'])
+    login('admin')
+    body = client.get(f'/purchase-orders/{po_id}').get_data(as_text=True)
+    assert 'name="warehouse_id"' in body, (
+        'the company has two warehouses and nothing on the screen says which '
+        'one the goods go into')
+    assert 'Kho Xưởng' in body and 'Kho Showroom' in body
+
+
+def test_the_warehouse_chosen_on_the_screen_is_the_one_credited(
+        app, client, login, two_warehouses):
+    """Through the route, not the service: this is the wire the user pulls."""
+    from app.models.models import GoodsReceipt
+
+    po_id, line_id, _ = _po_at(app, two_warehouses,
+                               two_warehouses['workshop_id'])
+    login('admin')
+    # The workshop's own warehouse would be the default; choose the other one.
+    client.post(f'/purchase-orders/{po_id}/receive', data={
+        f'qty_{line_id}': '20',
+        'warehouse_id': two_warehouses['warehouse_id'],
+    }, follow_redirects=True)
+
+    with app.app_context():
+        gr = GoodsReceipt.query.filter_by(po_id=po_id).one()
+        assert str(gr.warehouse_id) == two_warehouses['warehouse_id'], (
+            'the warehouse picked on the screen was ignored and the branch '
+            'default used instead')

@@ -1115,6 +1115,11 @@ TRANSLATIONS['vi'].update({
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
     # Warehouse management (§8.14).
+    'Nhập vào kho': 'Nhập vào kho',
+    'Tồn kho sẽ tăng ở kho này.': 'Tồn kho sẽ tăng ở kho này.',
+    'Ngừng dùng kho này?': 'Ngừng dùng kho này?',
+    'Hàng nhập về chi nhánh này sẽ vào kho mặc định, trừ khi người dùng chọn kho khác.': 'Hàng nhập về chi nhánh này sẽ vào kho mặc định, trừ khi người dùng chọn kho khác.',
+    'Sửa kho': 'Sửa kho',
     'Mã kho, tên kho và chi nhánh đều bắt buộc': 'Mã kho, tên kho và chi nhánh đều bắt buộc',
     'Mã kho này đã được dùng': 'Mã kho này đã được dùng',
     'Chi nhánh không thuộc công ty này': 'Chi nhánh không thuộc công ty này',

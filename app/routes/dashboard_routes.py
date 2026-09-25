@@ -4910,7 +4910,14 @@ def view_purchase_order(po_id):
     if not po:
         flash(t('Không tìm thấy đơn mua hoặc không có quyền'), 'error')
         return redirect(url_for('dashboard.list_purchase_orders'))
-    return render_template('procurement/po_view.html', po=po, **_po_lists(company_id))
+    # Only offered when there is something to choose between. One warehouse
+    # means an empty question, and a field with a single option is worse than
+    # no field: it asks the user to confirm a fact they cannot change.
+    from app.services.warehouses import must_choose, warehouses_of
+    return render_template(
+        'procurement/po_view.html', po=po,
+        warehouses=warehouses_of(company_id) if must_choose(company_id) else [],
+        **_po_lists(company_id))
 
 
 @dashboard_bp.route('/purchase-orders/<po_id>/edit', methods=['GET', 'POST'])
@@ -4977,7 +4984,8 @@ def receive_purchase_order(po_id):
         gr, warns = ProcurementService().receive(
             po, quantities, store_id=(request.form.get('store_id') or None),
             receipt_date=(_parse_date(request.form.get('receipt_date')) if request.form.get('receipt_date') else None),
-            notes=request.form.get('notes'))
+            notes=request.form.get('notes'),
+            warehouse_id=(request.form.get('warehouse_id') or None))
         flash(t('Đã nhập kho %(gr)s — tồn kho đã tăng.') % {'gr': gr.gr_number}, 'success')
         for w in warns:
             flash(w, 'warning')

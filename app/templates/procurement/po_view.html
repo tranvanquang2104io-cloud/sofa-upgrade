@@ -105,6 +105,22 @@
     <form method="POST" action="{{ url_for('dashboard.receive_purchase_order', po_id=po.id) }}" onsubmit="return confirm('{{ t('Confirm goods receipt? Stock will increase.') }}');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p class="text-muted">Nhập số lượng thực nhận đợt này — có thể nhận <strong>một phần</strong> và nhận thành <strong>nhiều đợt</strong>.</p>
+      {# Shown only when the company has more than one warehouse. A workshop at
+         one address never sees this field, and does not have to: the goods go
+         to the only warehouse there is. #}
+      {% if warehouses %}
+      <div class="row mb-3">
+        <div class="col-md-5">
+          <label class="form-label" for="warehouse_id">{{ t('Nhập vào kho') }}</label>
+          <select class="form-select" id="warehouse_id" name="warehouse_id">
+            {% for w in warehouses %}
+            <option value="{{ w.id }}"{% if po.warehouse_id == w.id %} selected{% endif %}>{{ w.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">{{ t('Tồn kho sẽ tăng ở kho này.') }}</div>
+        </div>
+      </div>
+      {% endif %}
       <table class="table table-sm align-middle">
         <thead class="table-light"><tr><th>{{ t('Material') }}</th><th class="text-end">{{ t('Outstanding') }}</th><th style="width:160px">{{ t('Qty Received Now') }}</th></tr></thead>
         <tbody>
