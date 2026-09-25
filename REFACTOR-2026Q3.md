@@ -378,6 +378,44 @@ location. It comes BEFORE any warehouse field on the receiving or issuing
 screens, because a field offering a choice between one option is worse than no
 field at all.
 
+### 8.15 Warehouses — what is done, and the two fallbacks that are not the same
+
+Done: `Warehouse` belongs to a branch and is the only place stock is counted;
+a migration makes one per existing branch and moves every stock row onto it
+with the per-material totals asserted unchanged; goods receipts and purchase
+orders record a warehouse; the receive screen offers the choice **only when the
+company has more than one**, so a workshop at one address sees no new field;
+`ProductionPlan.production_store_id` separates where a sofa is BUILT from where
+it was SOLD; purchase suggestions are computed per production site (§8.9);
+warehouses have screens and a menu entry (§8.14).
+
+**The two fallbacks are different defects, and I treated them as one — twice.**
+
+*Receiving* fell through to the company-level row when the branch had none, so
+the first delivery of anything to a new branch was recorded somewhere the goods
+had not gone. That is a lie about physical fact. Removed.
+
+*Issuing* READS the company-level row when the branch has no row of its own.
+For a company that has never split its inventory by location that row is the
+only place stock is recorded — `create_material` makes it, `update_stock`
+writes to it. Reading it is reading where the data is. I removed it anyway, and
+the suite caught it: a material with 10 units suggested at 35 instead of 25, a
+purchase order back to `partial`. Restored, with the reasoning written down so
+the next person does not repeat the removal.
+
+What made a NEW branch genuinely dangerous was having no rows at all, so the
+fallback fired for it and it issued material never delivered there.
+`StoreService.create_store` now creates its rows at zero.
+
+**Still to do**, in order: issuing per material line from a named warehouse
+(the line-level choice the owner asked for); partial issuing instead of
+all-or-nothing; a one-step stock transfer, which becomes necessary the moment a
+second warehouse exists — without it people will correct misplaced stock with
+two manual adjustments, and two manual adjustments are two chances to disagree;
+and a stock movement ledger, because `current_quantity` is a bare number with
+no history and "why does this warehouse say 3m?" becomes a weekly question once
+there is more than one.
+
 ### 8.12 A refused form throws the work away — on two screens still
 
 Found while converging the line-item row, not by looking for it: adding the
