@@ -135,6 +135,13 @@ class Store(ExtendFieldsMixin, db.Model):
     phone = db.Column(db.String(20))
     address = db.Column(db.Text)
     city = db.Column(db.String(100))
+    # A Store is a LOCATION — a branch. Today most companies have one or two
+    # that sell and manufacture at the same address, so both flags default to
+    # true and nothing changes for them. They exist so the company that opens a
+    # workshop away from its showroom can say which is which, without anybody
+    # having to declare a "mode" the data already answers.
+    is_sales_site = db.Column(db.Boolean, default=True, nullable=False)
+    is_production_site = db.Column(db.Boolean, default=True, nullable=False)
     is_active = db.Column(db.Boolean, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -861,6 +868,58 @@ class Material(ExtendFieldsMixin, db.Model):
         return False
 
 
+class Warehouse(db.Model):
+    """A physical store of materials. The only place stock is counted.
+
+    Until now a `Store` played three parts at once — the shop, the workshop and
+    the warehouse — and `MaterialStock` hung off it, with a NULL row standing
+    for "the company's main warehouse". That worked while a company had one
+    address and stopped describing anything the moment it had two: a plan
+    issued material from the store on the CUSTOMER'S ORDER, and when no row
+    existed for that store the code quietly fell through to the company-level
+    row. Moving stock between locations with no document is exactly what makes
+    an inventory stop being trustworthy.
+
+    A warehouse belongs to exactly one location, and `store_id` is NOT NULL:
+    the nullable "company level" row is what the fallback was reaching for, and
+    removing the null removes the whole class of bug with it. A location may
+    hold more than one — a fabric store and a timber store at the same
+    workshop — which is why this is a table and not a flag on `Store`.
+
+    What is deliberately NOT here: bins and shelves (nobody in a workshop
+    numbers a shelf), virtual locations and double entry (elegant, and it turns
+    every goods receipt into two entries a user cannot read), per-warehouse
+    average cost (the same roll of fabric costs the same in both rooms, and
+    costing a transfer would be the price of pretending otherwise).
+    """
+
+    __tablename__ = 'warehouses'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    store_id = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=False,
+                         index=True)
+    warehouse_code = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    #: The one a document reaches for when nobody chose. Exactly one per store.
+    is_default = db.Column(db.Boolean, default=False, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    store = db.relationship('Store', backref='warehouses', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'warehouse_code',
+                            name='uq_company_warehouse_code'),
+    )
+
+    def __repr__(self):
+        return f'<Warehouse {self.warehouse_code}>'
+
+
 class MaterialStock(db.Model):
     """Per-location stock entry for a material.
     
@@ -873,6 +932,10 @@ class MaterialStock(db.Model):
     material_id = db.Column(GUID(), db.ForeignKey('materials.id'), nullable=False, index=True)
     company_id  = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False, index=True)
     store_id    = db.Column(GUID(), db.ForeignKey('stores.id'), nullable=True, index=True)
+    #: Where the stock physically is. `store_id` above is kept for one release
+    #: so the migration is reversible and nothing reads a column that vanished
+    #: mid-deploy; `warehouse_id` is the one to use.
+    warehouse_id = db.Column(GUID(), db.ForeignKey('warehouses.id'), index=True)
 
     current_quantity = db.Column(db.Numeric(10, 2), default=0, nullable=False)
     notes            = db.Column(db.Text)

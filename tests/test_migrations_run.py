@@ -85,3 +85,81 @@ def test_the_migrated_schema_has_the_tables_the_models_declare(empty_database):
     assert missing == [], (
         'these tables exist in the models but no migration creates them, so a '
         f'real deployment would not have them: {missing}')
+
+
+# --------------------------------------------------------------------------
+# A migration that moves DATA is not tested by running it on an empty database.
+# --------------------------------------------------------------------------
+
+def test_the_warehouse_migration_moves_stock_without_changing_any_total(
+        empty_database):
+    """Seed stock at the revision before, upgrade, and count it again.
+
+    The two tests above run the chain on an empty database. That proves the SQL
+    is valid and proves nothing at all about a backfill, because there is
+    nothing to back-fill — which is the state every data migration would pass
+    in. This one puts rows in first.
+
+    What it pins is the thing a company would actually lose: the quantities.
+    Rows move from a location to a warehouse; the numbers on them do not
+    change, and neither does their sum per material.
+    """
+    pytest.importorskip('alembic')
+    import sqlalchemy as sa
+
+    before_revision = 'b3c4d5e6f7a8'
+    result = _alembic(empty_database, 'upgrade', before_revision)
+    assert result.returncode == 0, result.stderr
+
+    engine = sa.create_engine(empty_database)
+    with engine.begin() as connection:
+        connection.execute(sa.text(
+            "INSERT INTO companies (id, company_code, name, email, is_active) "
+            "VALUES ('c1', 'DEMO', 'Nội Thất An Phát', 'a@b.test', 1)"))
+        connection.execute(sa.text(
+            "INSERT INTO stores (id, company_id, store_code, name, is_active, "
+            "created_at) VALUES "
+            "('s1', 'c1', 'SR-HN', 'Showroom', 1, '2026-01-01'),"
+            "('s2', 'c1', 'XUONG', 'Xưởng', 1, '2026-01-02')"))
+        connection.execute(sa.text(
+            "INSERT INTO materials (id, company_id, material_code, name, "
+            "is_active) VALUES ('m1', 'c1', 'VAI-BO', 'Vải bố', 1)"))
+        # One row per store, and one company-level row — the three shapes the
+        # old model allowed.
+        connection.execute(sa.text(
+            "INSERT INTO material_stock (id, material_id, company_id, "
+            "store_id, current_quantity) VALUES "
+            "('k1', 'm1', 'c1', 's1', 12.5),"
+            "('k2', 'm1', 'c1', 's2', 30),"
+            "('k3', 'm1', 'c1', NULL, 7.25)"))
+
+    result = _alembic(empty_database, 'upgrade', 'head')
+    assert result.returncode == 0, (
+        f'the warehouse migration failed:\n{result.stdout}\n{result.stderr}')
+
+    with engine.begin() as connection:
+        total = connection.execute(sa.text(
+            'SELECT SUM(current_quantity) FROM material_stock '
+            "WHERE material_id = 'm1'")).scalar()
+        assert float(total) == 49.75, (
+            f'stock changed during the migration: {total} instead of 49.75')
+
+        unplaced = connection.execute(sa.text(
+            'SELECT COUNT(*) FROM material_stock WHERE warehouse_id IS NULL')
+        ).scalar()
+        assert unplaced == 0, (
+            f'{unplaced} stock rows are in no warehouse, so nothing can reach '
+            'them')
+
+        # Each location got its own warehouse, and the company-level rows got
+        # one of their own rather than being folded into somebody's branch.
+        names = sorted(r[0] for r in connection.execute(sa.text(
+            'SELECT name FROM warehouses ORDER BY name')).all())
+        assert names == ['Kho Showroom', 'Kho Xưởng', 'Kho công ty'], names
+
+        # The company-level stock did not land in a branch warehouse.
+        company_row = connection.execute(sa.text(
+            "SELECT w.name FROM material_stock s JOIN warehouses w "
+            "ON w.id = s.warehouse_id WHERE s.id = 'k3'")).scalar()
+        assert company_row == 'Kho công ty', (
+            f"the company-level row was folded into {company_row!r}")
