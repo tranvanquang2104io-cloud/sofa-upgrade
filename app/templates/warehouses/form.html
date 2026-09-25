@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_section, form_section_end, form_actions with context %}
+{% block title %}{{ (t('Sửa kho') if warehouse else t('Thêm kho')) }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Sửa kho') if warehouse else t('Thêm kho'), icon='bi-box-seam',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Kho hàng'), url_for('dashboard.list_warehouses')),
+                       ((warehouse.name if warehouse else t('Thêm kho')), None)]) }}
+
+<form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {{ form_section(t('Kho'), icon='bi-box-seam') }}
+  <div class="row">
+    <div class="col-md-3 mb-3">
+      <label class="form-label" for="warehouse_code">{{ t('Mã kho') }} *</label>
+      {# The code cannot change once documents refer to it, so an existing
+         warehouse shows it read-only rather than offering an edit that would
+         have to be refused. #}
+      <input type="text" class="form-control" id="warehouse_code"
+             name="warehouse_code" required
+             value="{{ warehouse.warehouse_code if warehouse else request.form.get('warehouse_code', '') }}"
+             {% if warehouse %}readonly{% endif %}>
+    </div>
+    <div class="col-md-5 mb-3">
+      <label class="form-label" for="name">{{ t('Tên kho') }} *</label>
+      <input type="text" class="form-control" id="name" name="name" required
+             value="{{ warehouse.name if warehouse else request.form.get('name', '') }}">
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label" for="store_id">{{ t('Chi nhánh') }} *</label>
+      <select class="form-select" id="store_id" name="store_id" required>
+        <option value="">--</option>
+        {% for s in stores %}
+        <option value="{{ s.id }}"
+          {% if warehouse and warehouse.store_id == s.id %}selected
+          {% elif request.form.get('store_id') == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="is_default"
+           name="is_default" value="1"
+           {% if warehouse and warehouse.is_default %}checked{% endif %}>
+    <label class="form-check-label" for="is_default">
+      {{ t('Kho mặc định của chi nhánh') }}
+    </label>
+    <div class="form-text">{{ t('Hàng nhập về chi nhánh này sẽ vào kho mặc định, trừ khi người dùng chọn kho khác.') }}</div>
+  </div>
+  {{ form_section_end() }}
+
+  {{ form_actions(cancel_url=url_for('dashboard.list_warehouses')) }}
+</form>
+{% endblock %}

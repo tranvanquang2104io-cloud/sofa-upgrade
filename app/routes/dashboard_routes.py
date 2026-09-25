@@ -2875,6 +2875,165 @@ def check_code(doc_type):
 
 
 # =====================================================================
+# =====================================================================
+# WAREHOUSE MANAGEMENT
+#
+# Stock is counted per warehouse; a warehouse belongs to one branch. Until
+# these screens existed, the model, the migration and the receiving path were
+# all real and all unreachable — nobody could create a second warehouse, so the
+# choice never appeared and every receipt resolved to the one the migration
+# made. Recorded as §8.14; the third time that shape has turned up here.
+# =====================================================================
+
+@dashboard_bp.route('/warehouses', methods=['GET'])
+@store_admin_required
+def list_warehouses():
+    """Warehouses, with the branch each one belongs to."""
+    from app.models.models import Warehouse
+
+    company_id = get_current_company_id()
+    warehouses = (Warehouse.query
+                  .filter_by(company_id=company_id)
+                  .order_by(Warehouse.is_active.desc(),
+                            Warehouse.warehouse_code)
+                  .all())
+    return render_template('warehouses/list.html', warehouses=warehouses)
+
+
+@dashboard_bp.route('/warehouses/create', methods=['GET', 'POST'])
+@company_admin_required
+def create_warehouse():
+    from app.models import Store
+    from app.models.models import Warehouse
+
+    company_id = get_current_company_id()
+    stores = Store.query.filter_by(company_id=company_id,
+                                   is_active=True).order_by(Store.name).all()
+    if request.method == 'POST':
+        try:
+            code = (request.form.get('warehouse_code') or '').strip()
+            name = (request.form.get('name') or '').strip()
+            store_id = request.form.get('store_id') or None
+            if not code or not name or not store_id:
+                raise ValueError(t('Mã kho, tên kho và chi nhánh đều bắt buộc'))
+            if Warehouse.query.filter_by(company_id=company_id,
+                                         warehouse_code=code).first():
+                raise ValueError(t('Mã kho này đã được dùng'))
+            if not Store.query.filter_by(id=store_id,
+                                         company_id=company_id).first():
+                raise ValueError(t('Chi nhánh không thuộc công ty này'))
+
+            warehouse = Warehouse(company_id=company_id, store_id=store_id,
+                                  warehouse_code=code, name=name,
+                                  is_active=True)
+            db.session.add(warehouse)
+            db.session.flush()
+            _set_default_warehouse(warehouse,
+                                   bool(request.form.get('is_default')))
+            db.session.commit()
+            flash(t('Đã tạo kho'), 'success')
+            return redirect(url_for('dashboard.list_warehouses'))
+        except ValueError as e:
+            db.session.rollback()
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error('Error creating warehouse: %s', e, exc_info=True)
+            db.session.rollback()
+            flash(t('Lỗi khi tạo kho'), 'error')
+    return render_template('warehouses/form.html', warehouse=None,
+                           stores=stores)
+
+
+@dashboard_bp.route('/warehouses/<warehouse_id>/edit', methods=['GET', 'POST'])
+@company_admin_required
+def edit_warehouse(warehouse_id):
+    from app.models import Store
+    from app.models.models import Warehouse
+
+    company_id = get_current_company_id()
+    warehouse = Warehouse.query.filter_by(id=warehouse_id,
+                                          company_id=company_id).first()
+    if not warehouse:
+        flash(t('Không tìm thấy kho hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_warehouses'))
+
+    stores = Store.query.filter_by(company_id=company_id,
+                                   is_active=True).order_by(Store.name).all()
+    if request.method == 'POST':
+        try:
+            name = (request.form.get('name') or '').strip()
+            if not name:
+                raise ValueError(t('Tên kho là bắt buộc'))
+            warehouse.name = name
+            store_id = request.form.get('store_id')
+            if store_id and Store.query.filter_by(
+                    id=store_id, company_id=company_id).first():
+                warehouse.store_id = store_id
+            _set_default_warehouse(warehouse,
+                                   bool(request.form.get('is_default')))
+            db.session.commit()
+            flash(t('Đã lưu kho'), 'success')
+            return redirect(url_for('dashboard.list_warehouses'))
+        except ValueError as e:
+            db.session.rollback()
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error('Error editing warehouse: %s', e, exc_info=True)
+            db.session.rollback()
+            flash(t('Lỗi khi lưu kho'), 'error')
+    return render_template('warehouses/form.html', warehouse=warehouse,
+                           stores=stores)
+
+
+@dashboard_bp.route('/warehouses/<warehouse_id>/deactivate', methods=['POST'])
+@company_admin_required
+def deactivate_warehouse(warehouse_id):
+    """Close a warehouse — refused while it still holds stock.
+
+    Hiding a warehouse that holds material does not move the material: the
+    quantity stays in the database, disappears from every screen, and the
+    company's stock silently drops by that much. Refusing, and saying how many
+    materials are in there, leaves the user something they can act on.
+    """
+    from app.models.models import MaterialStock, Warehouse
+
+    company_id = get_current_company_id()
+    warehouse = Warehouse.query.filter_by(id=warehouse_id,
+                                          company_id=company_id).first()
+    if not warehouse:
+        flash(t('Không tìm thấy kho hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_warehouses'))
+
+    holding = (MaterialStock.query
+               .filter(MaterialStock.warehouse_id == warehouse.id,
+                       MaterialStock.current_quantity > 0)
+               .count())
+    if holding:
+        flash(t('Kho này còn tồn vật tư. Hãy chuyển hết đi trước khi ngừng dùng kho.'),
+              'error')
+        return redirect(url_for('dashboard.list_warehouses'))
+
+    warehouse.is_active = False
+    warehouse.is_default = False
+    db.session.commit()
+    flash(t('Đã ngừng dùng kho'), 'success')
+    return redirect(url_for('dashboard.list_warehouses'))
+
+
+def _set_default_warehouse(warehouse, wanted):
+    """At most one default per branch, and never a default that is closed."""
+    from app.models.models import Warehouse
+
+    if not wanted:
+        warehouse.is_default = False
+        return
+    (Warehouse.query
+     .filter(Warehouse.store_id == warehouse.store_id,
+             Warehouse.id != warehouse.id)
+     .update({'is_default': False}, synchronize_session=False))
+    warehouse.is_default = True
+
+
 # STORE MANAGEMENT  (company_admin: all stores; store_admin: own store)
 # =====================================================================
 

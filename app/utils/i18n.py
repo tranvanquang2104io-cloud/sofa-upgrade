@@ -1114,6 +1114,28 @@ TRANSLATIONS['vi'].update({
     'Production Plans': 'Kế hoạch sản xuất',
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
+    # Warehouse management (§8.14).
+    'Mã kho, tên kho và chi nhánh đều bắt buộc': 'Mã kho, tên kho và chi nhánh đều bắt buộc',
+    'Mã kho này đã được dùng': 'Mã kho này đã được dùng',
+    'Chi nhánh không thuộc công ty này': 'Chi nhánh không thuộc công ty này',
+    'Đã tạo kho': 'Đã tạo kho',
+    'Lỗi khi tạo kho': 'Lỗi khi tạo kho',
+    'Không tìm thấy kho hoặc không có quyền': 'Không tìm thấy kho hoặc không có quyền',
+    'Tên kho là bắt buộc': 'Tên kho là bắt buộc',
+    'Đã lưu kho': 'Đã lưu kho',
+    'Lỗi khi lưu kho': 'Lỗi khi lưu kho',
+    'Kho này còn tồn vật tư. Hãy chuyển hết đi trước khi ngừng dùng kho.': 'Kho này còn tồn vật tư. Hãy chuyển hết đi trước khi ngừng dùng kho.',
+    'Đã ngừng dùng kho': 'Đã ngừng dùng kho',
+    'Kho': 'Kho',
+    'Kho hàng': 'Kho hàng',
+    'Mã kho': 'Mã kho',
+    'Tên kho': 'Tên kho',
+    'Chi nhánh': 'Chi nhánh',
+    'Kho mặc định của chi nhánh': 'Kho mặc định của chi nhánh',
+    'Thêm kho': 'Thêm kho',
+    'Ngừng dùng': 'Ngừng dùng',
+    'Chưa có kho nào. Tồn kho được đếm theo từng kho.': 'Chưa có kho nào. Tồn kho được đếm theo từng kho.',
+    'Tồn kho được đếm theo từng kho. Một kho thuộc về một chi nhánh.': 'Tồn kho được đếm theo từng kho. Một kho thuộc về một chi nhánh.',
     # Closing the books (Luật Kế toán 2015 Đ.27). Each t() key is ONE string
     # literal on one line: an implicit concatenation across source lines gives
     # the scanner only the first fragment as the key while t() receives the

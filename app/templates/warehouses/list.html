@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, empty_state, table_open, table_close with context %}
+{% block title %}{{ t('Kho hàng') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Kho hàng'), icon='bi-box-seam',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Kho hàng'), None)],
+               action_url=url_for('dashboard.create_warehouse'),
+               action_label=t('Thêm kho'),
+               subtitle=t('Tồn kho được đếm theo từng kho. Một kho thuộc về một chi nhánh.')) }}
+
+<div class="card">
+  <div class="card-body">
+    {% if warehouses %}
+      {{ table_open() }}
+        <thead class="table-light">
+          <tr>
+            <th>{{ t('Mã kho') }}</th>
+            <th>{{ t('Tên kho') }}</th>
+            <th>{{ t('Chi nhánh') }}</th>
+            <th>{{ t('Status') }}</th>
+            <th class="text-end">{{ t('Actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w in warehouses %}
+          <tr{% if not w.is_active %} class="text-muted"{% endif %}>
+            <td><strong>{{ w.warehouse_code }}</strong></td>
+            <td>
+              {{ w.name }}
+              {# The default is a fact about this warehouse that changes where
+                 goods land, so it is shown on the row rather than only inside
+                 the edit form. #}
+              {% if w.is_default %}
+                <span class="badge bg-secondary">{{ t('Kho mặc định của chi nhánh') }}</span>
+              {% endif %}
+            </td>
+            <td>{{ w.store.name if w.store else '—' }}</td>
+            <td>
+              {% if w.is_active %}
+                <span class="badge bg-success">{{ t('Active') }}</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ t('Inactive') }}</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{{ url_for('dashboard.edit_warehouse', warehouse_id=w.id) }}"
+                 class="btn btn-outline-secondary btn-sm">{{ t('Edit') }}</a>
+              {% if w.is_active %}
+              <form method="POST" class="d-inline"
+                    action="{{ url_for('dashboard.deactivate_warehouse', warehouse_id=w.id) }}"
+                    onsubmit="return confirm('{{ t('Ngừng dùng kho này?') }}');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">{{ t('Ngừng dùng') }}</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      {{ table_close() }}
+    {% else %}
+      {{ empty_state(t('Chưa có kho nào. Tồn kho được đếm theo từng kho.'),
+                     icon='bi-box-seam',
+                     action_url=url_for('dashboard.create_warehouse'),
+                     action_label=t('Thêm kho')) }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
