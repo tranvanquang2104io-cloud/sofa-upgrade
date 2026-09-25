@@ -333,6 +333,33 @@ And one introduced while fixing it: `SupplierPaymentAllocation` has no
 `--reset` would have left rows pointing at deleted invoices.
 
 
+### 8.13 Closing the books — half built, and the half that is missing
+
+`Company.books_closed_through` records how far a company has declared. A
+confirmed document dated on or before it can no longer be edited or cancelled
+in place; a draft is untouched, because it is not in the books. Empty means
+nothing is closed, which is where every existing company starts.
+
+**Where it bites today: the supplier invoice.** A CONFIRMED supplier invoice
+can still be cancelled — only an allocation stops it — so one dated inside a
+filed period is rewritable, which is the case Luật Kế toán 2015 Đ.27 forbids.
+
+**Where it does not yet: the customer payment.** The check is in
+`PaymentReportService.cancel_payment` and never runs, because `can_cancel()`
+refuses every confirmed payment first (§3.2). It is wired so that when
+void-with-a-reason lands, the closed period is already standing behind it, and
+`test_the_customer_payment_path_is_guarded_but_not_yet_reachable` says so out
+loud rather than passing for the wrong reason.
+
+**Still missing: the adjustment document.** The lawful correction is an
+opposite entry dated today, referencing the original. Refusing is the half
+that stops the damage; offering the route is the half that makes the refusal
+usable, and a refusal with no way forward is how a user ends up asking
+somebody to edit the database. Until it exists, the only way past a closed
+period is for whoever files the returns to move the date back — which the
+screen allows, deliberately: a lock that cannot be opened would make a genuine
+mistake unfixable by anyone.
+
 ### 8.12 A refused form throws the work away — on two screens still
 
 Found while converging the line-item row, not by looking for it: adding the

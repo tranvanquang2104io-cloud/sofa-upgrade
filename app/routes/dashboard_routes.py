@@ -384,6 +384,12 @@ def company_settings():
             company.website = request.form.get('website', '').strip() or None
             vat_str = request.form.get('vat_rate', '').strip()
             company.vat_rate = float(vat_str) if vat_str else company.vat_rate
+            # Blank CLEARS the closing date rather than leaving it — the other
+            # fields here read "blank means unchanged", but for this one that
+            # would make reopening a period impossible through the screen that
+            # closed it.
+            closed_str = request.form.get('books_closed_through', '').strip()
+            company.books_closed_through = _parse_date(closed_str) if closed_str else None
             # Bank accounts from JSON textarea
             bank_json = request.form.get('bank_accounts', '').strip()
             bank_error = False
@@ -2341,6 +2347,12 @@ def edit_payment(payment_id):
             # Only allow editing if not confirmed and not canceled
             if not payment.can_edit():
                 flash(t('Payment cannot be edited (already confirmed or canceled)'), 'error')
+                return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
+
+            from app.services.books import may_change
+            allowed, why = may_change(payment)
+            if not allowed:
+                flash(why, 'error')
                 return redirect(url_for('dashboard.view_payment', payment_id=payment_id))
             
             import json as _json

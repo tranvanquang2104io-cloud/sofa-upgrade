@@ -98,6 +98,11 @@ class Company(db.Model):
     # Bank accounts: [{"bank_name": ..., "account_number": ..., "account_holder": ...}]
     bank_accounts = db.Column(db.JSON, default=list)
     timezone = db.Column(db.String(50), default='UTC')
+    # Documents dated on or before this are in a period already declared to the
+    # tax office, and are corrected by a new entry rather than edited in place
+    # (Luật Kế toán 2015 Đ.27). NULL means nobody has closed anything, which is
+    # the state every existing company starts in — see app/services/books.py.
+    books_closed_through = db.Column(db.Date)
     is_active = db.Column(db.Boolean, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

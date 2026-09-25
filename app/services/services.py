@@ -1157,6 +1157,15 @@ class PaymentReportService:
             
             if not payment.can_cancel():
                 raise ValueError("Payment cannot be canceled (already confirmed or canceled)")
+
+            # Checked in the SERVICE, not only in the route: a period that is
+            # closed is closed for every caller — a script, an import, a future
+            # screen — and a control that only the UI enforces is one the next
+            # entry point silently skips.
+            from app.services.books import may_change
+            allowed, why = may_change(payment)
+            if not allowed:
+                raise ValueError(why)
             
             # Update payment report
             payment.is_canceled = True

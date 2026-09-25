@@ -124,6 +124,18 @@
                         <div class="form-text">{{ t('This default is pre-filled in all new documents.') }}</div>
                     </div>
                 </div>
+                <div class="col-md-5">
+                    <div class="mb-3">
+                        <label class="form-label" for="f_books_closed_through">{{ t('Khoá sổ đến ngày') }}</label>
+                        <input type="date" class="form-control" name="books_closed_through"
+                               value="{{ company.books_closed_through.strftime('%Y-%m-%d') if company.books_closed_through else '' }}"
+                               id="f_books_closed_through">
+                        {# Says what it does in the words of the job, not the words
+                           of the schema: the person setting this is whoever files
+                           the returns, and they think in "đã nộp tờ khai quý I". #}
+                        <div class="form-text">{{ t('Sau khi nộp tờ khai, đặt ngày cuối của kỳ đã nộp. Chứng từ đã xác nhận có ngày trước hoặc bằng ngày này sẽ không sửa hay huỷ trực tiếp được nữa — phải lập chứng từ điều chỉnh mang ngày hôm nay. Để trống nếu chưa khoá sổ kỳ nào.') }}</div>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -226,6 +226,15 @@ class PayablesService:
             raise ValueError(
                 'Cannot cancel an invoice that has payments allocated to it')
 
+        # This is where the closing date actually bites today. A CONFIRMED
+        # supplier invoice can still be cancelled — only an allocation stops
+        # it — so one dated inside a filed period is rewritable, and that is
+        # exactly the case Luật Kế toán 2015 Đ.27 forbids.
+        from app.services.books import may_change
+        allowed, why = may_change(invoice)
+        if not allowed:
+            raise ValueError(why)
+
         for line in invoice.lines:
             po_line = line.po_line
             if po_line is not None:

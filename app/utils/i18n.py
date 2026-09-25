@@ -1114,6 +1114,14 @@ TRANSLATIONS['vi'].update({
     'Production Plans': 'Kế hoạch sản xuất',
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
+    # Closing the books (Luật Kế toán 2015 Đ.27). Each t() key is ONE string
+    # literal on one line: an implicit concatenation across source lines gives
+    # the scanner only the first fragment as the key while t() receives the
+    # whole joined string at runtime, so the entry never matches.
+    'Khoá sổ đến ngày': 'Khoá sổ đến ngày',
+    'Sổ sách đã khoá đến ngày {date}.': 'Sổ sách đã khoá đến ngày {date}.',
+    'Kỳ này đã kê khai nên chứng từ không sửa hay huỷ trực tiếp được. Hãy lập chứng từ điều chỉnh mang ngày hôm nay, hoặc nhờ người phụ trách kê khai đổi ngày khoá sổ ở Thiết lập công ty.': 'Kỳ này đã kê khai nên chứng từ không sửa hay huỷ trực tiếp được. Hãy lập chứng từ điều chỉnh mang ngày hôm nay, hoặc nhờ người phụ trách kê khai đổi ngày khoá sổ ở Thiết lập công ty.',
+    'Sau khi nộp tờ khai, đặt ngày cuối của kỳ đã nộp. Chứng từ đã xác nhận có ngày trước hoặc bằng ngày này sẽ không sửa hay huỷ trực tiếp được nữa — phải lập chứng từ điều chỉnh mang ngày hôm nay. Để trống nếu chưa khoá sổ kỳ nào.': 'Sau khi nộp tờ khai, đặt ngày cuối của kỳ đã nộp. Chứng từ đã xác nhận có ngày trước hoặc bằng ngày này sẽ không sửa hay huỷ trực tiếp được nữa — phải lập chứng từ điều chỉnh mang ngày hôm nay. Để trống nếu chưa khoá sổ kỳ nào.',
     # Per-line VAT: the column, the hint in its empty cell, and the link that
     # reveals it. 'theo đơn' is the placeholder — an empty cell means the line
     # is taxed at the document's rate, and saying so is the difference between
