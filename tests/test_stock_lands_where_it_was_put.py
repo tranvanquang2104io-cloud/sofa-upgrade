@@ -162,26 +162,29 @@ def test_a_second_delivery_adds_to_the_row_it_made(app, two_branches):
         assert float(rows[0].current_quantity) == 35
 
 
-def test_the_issuing_fallback_is_still_there_on_purpose(app):
-    """The other half of the same shape — and removing it today would stop work.
+def test_the_issuing_fallback_is_gone_too(app):
+    """Both halves of the same defect are fixed now.
 
-    `ProductionPlanService._stock_for` falls back to the company-level row in
-    the same way, so issuing at a branch also draws from the company warehouse.
-    It is the same defect and it is NOT fixed here, for a measurable reason:
-    `MaterialService` creates every new material's stock row at company level
-    (`store_id=None`), so today that is where ALL stock is. Remove the fallback
-    now and every issue finds zero and blocks production on the first day.
+    This test used to pin the issuing fallback as deliberate, on the grounds
+    that `MaterialService` puts all stock at company level so removing it would
+    stop production on day one. That was wrong, and measuring said so: with the
+    fallback taken out, exactly one test in the suite failed — this one.
 
-    The order is receive-then-issue: stock has to have a way of arriving at the
-    right warehouse before drawing from the right warehouse can be required.
-    Pinned rather than left as a comment, so that when the warehouse resolution
-    lands, this test fails and asks the question.
+    `create_material` in the service does create only the company-level row,
+    but the ROUTE then calls `ensure_stock_entries_for_stores`, which creates
+    one per branch. I read one layer and concluded about the system, which is
+    the same mistake as every "checked by name" defect in this programme —
+    except this one reached a commit message (e2042b2).
+
+    The real gap was a branch opened AFTER the materials exist, which had no
+    rows at all. `StoreService.create_store` now makes them, at zero, and
+    `tests/test_a_new_branch_can_hold_stock.py` pins that.
     """
     import inspect
 
     from app.services import services
 
     source = inspect.getsource(services.ProductionPlanService._stock_for)
-    assert 'store_id=None' in source, (
-        'the issuing fallback is gone — check that materials now get stock '
-        'rows per warehouse, or every production plan will read zero')
+    assert 'store_id=None' not in source, (
+        'issuing can draw from the company warehouse again, so a branch can '
+        'take material no document says was moved there')

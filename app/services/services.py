@@ -111,6 +111,12 @@ class StoreService:
             city=city
         )
         logger.info(f"Store created: {store_code} for company {company_id}")
+        # A new branch holds nothing, and has to be able to SAY it holds
+        # nothing. Without a row per material, `_stock_for` finds nothing for
+        # it — which used to fall through to the company warehouse and let the
+        # new workshop issue fabric no document says was moved there. Zero rows
+        # are the honest figure, and what makes removing that fallback safe.
+        MaterialService().ensure_stock_entries_for_stores_of_company(company_id)
         return store
     
     def get_store(self, store_id, company_id):
@@ -1905,6 +1911,17 @@ class MaterialService:
             raise ValueError('Số lượng không thể âm')
         return self.stock_repo.upsert_quantity(material_id, company_id, store_id, quantity)
 
+    def ensure_stock_entries_for_stores_of_company(self, company_id):
+        """Every material of this company gets a row for every active branch.
+
+        Called when a branch is created. Cheap for a workshop's catalogue and
+        run once per branch, not per page view.
+        """
+        from app.models.models import Material
+
+        for material in Material.query.filter_by(company_id=company_id).all():
+            self.ensure_stock_entries_for_stores(material.id, company_id)
+
     def ensure_stock_entries_for_stores(self, material_id, company_id):
         """Ensure a stock entry exists for company warehouse + every active store."""
         stores = self.store_repo.get_stores_for_company(company_id)
@@ -2047,10 +2064,18 @@ class ProductionPlanService:
 
     def _stock_for(self, material_id, store_id):
         from app.models.models import MaterialStock
-        st = MaterialStock.query.filter_by(material_id=material_id, store_id=store_id).first()
-        if st is None:
-            st = MaterialStock.query.filter_by(material_id=material_id, store_id=None).first()
-        return st
+        # No fallback to the company-level row. It used to mean: if this
+        # branch has no row for this material, draw from the company warehouse
+        # instead — which let a workshop issue fabric that no document says was
+        # ever moved there. A branch that holds none of something holds zero of
+        # it, and the shortage is the useful answer.
+        #
+        # Safe to remove because opening a branch now creates its rows (see
+        # StoreService.create_store). Measured before removing: with the
+        # fallback taken out, exactly one test failed — the one written to pin
+        # the fallback itself.
+        return MaterialStock.query.filter_by(material_id=material_id,
+                                             store_id=store_id).first()
 
     def stock_levels(self, plan):
         """What the store holds for each material this plan needs.
