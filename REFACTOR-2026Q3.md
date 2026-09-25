@@ -360,6 +360,24 @@ period is for whoever files the returns to move the date back — which the
 screen allows, deliberately: a lock that cannot be opened would make a genuine
 mistake unfixable by anyone.
 
+### 8.14 Warehouses have no screen, so nothing built for them can be used
+
+Measured, not suspected: `grep -rn "Warehouse" app/routes/ app/templates/`
+returns nothing. There is no route and no template. Nobody can create a second
+warehouse, so `must_choose()` is always False, no warehouse field ever appears,
+and every receipt keeps resolving to the one warehouse the migration made.
+
+The model, the migration, the resolution cascade and the receiving path are all
+real and all unreachable. This is the third time this exact shape has turned up
+in this programme — the supplier-invoice button that existed only as a URL you
+could type, and the framework-agreement print that had a variable collector and
+no branch in the generator ("three quarters finished and produced nothing").
+
+What is needed is small: list, create, edit, deactivate, and one default per
+location. It comes BEFORE any warehouse field on the receiving or issuing
+screens, because a field offering a choice between one option is worse than no
+field at all.
+
 ### 8.12 A refused form throws the work away — on two screens still
 
 Found while converging the line-item row, not by looking for it: adding the
