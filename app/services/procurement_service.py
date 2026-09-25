@@ -188,8 +188,13 @@ class ProcurementService:
                 gr_id=gr.id, po_line_id=line.id, material_id=line.material_id,
                 quantity_received=qty, unit=line.unit))
             st = MaterialStock.query.filter_by(material_id=line.material_id, store_id=target_store).first()
-            if st is None and target_store is not None:
-                st = MaterialStock.query.filter_by(material_id=line.material_id, store_id=None).first()
+            # No fallback to the company-level row. It used to say: if this
+            # material has never been at this branch, add the delivery to the
+            # company warehouse instead. So the FIRST delivery of anything to a
+            # new branch never appeared there — it appeared somewhere else,
+            # silently, and every screen agreed with every other screen and
+            # with nothing on the shelf. A material that has never been here has
+            # zero here, and the first receipt is what creates the row.
             if st is None:
                 st = MaterialStock(company_id=po.company_id, material_id=line.material_id,
                                    store_id=target_store, current_quantity=Decimal('0'))
