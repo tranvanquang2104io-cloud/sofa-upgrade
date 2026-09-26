@@ -181,3 +181,100 @@ def test_a_rejected_payment_keeps_the_work_items(client, login, app, seed):
         'the work items the user typed were thrown away')
     assert '12000000' in body.replace(',', '').replace('.', ''), (
         'the amounts were thrown away')
+
+
+def test_a_rejected_contract_keeps_what_was_typed(client, login, app, seed):
+    """§8.12 was WRONG about this screen, and this test records what is true.
+
+    I grepped `request.form` in `contracts/create.html`, found one occurrence —
+    the contract number — and concluded the screen throws the work away. It
+    does not. The product has a GLOBAL restore: `base.html` writes every
+    submitted field into a JSON block on any POST that re-renders, and
+    `static/js/sofa-restore-form.js` puts them back, creating line-item rows
+    first by calling the page's own `addItemRow`. One mechanism, no route
+    changes, every form in the app.
+
+    Reading one layer and concluding about the system — the same mistake as
+    the stock fallback, and it had already reached the ledger.
+
+    So this asserts the guarantee that actually exists: everything the user
+    typed comes back in the restore block. Asserting the values appear as
+    `value="..."` attributes would be asserting a SECOND mechanism, which is
+    what I nearly built before checking.
+    """
+    import datetime as dt
+    import json
+    import re
+
+    from app.config import db
+    from app.models import Order
+    from app.models.models import Contract
+
+    with app.app_context():
+        order = Order(company_id=seed['company_id'], store_id=seed['store_id'],
+                      customer_id=seed['customer_id'], order_code='DH-CTDUP',
+                      title='Sofa góc L')
+        db.session.add(order)
+        db.session.flush()
+        db.session.add(Contract(
+            company_id=seed['company_id'], order_id=order.id,
+            contract_number='HD-TAKEN', contract_date=dt.date(2026, 9, 1),
+            contract_value=1_000_000))
+        db.session.commit()
+        order_id = str(order.id)
+
+    login('admin')
+    body = client.post(f'/contracts/{order_id}/create', data={
+        'contract_number': 'HD-TAKEN',          # already used
+        'city': 'Hà Nội',
+        'contract_days_complete': '45',
+        'advance_percentage': '40',
+        'amount_in_words': 'Bốn mươi ba triệu hai trăm nghìn đồng',
+        'item_name[]': ['Sofa góc L', 'Đôn vuông'],
+        'item_quantity[]': ['1', '2'],
+        'item_price[]': ['40000000', '2500000'],
+    }, follow_redirects=True).get_data(as_text=True)
+
+    block = re.search(
+        r'<script id="submitted-form-data"[^>]*>(.*?)</script>', body, re.S)
+    assert block, (
+        'the refused contract re-rendered with no restore block, so nothing '
+        'gives the user back what they typed')
+    restored = json.loads(block.group(1))
+    assert restored['item_name[]'] == ['Sofa góc L', 'Đôn vuông'], (
+        'the line items are not in the restore block')
+    assert restored['city'] == ['Hà Nội']
+    assert restored['amount_in_words'] == [
+        'Bốn mươi ba triệu hai trăm nghìn đồng']
+    assert restored['advance_percentage'] == ['40']
+
+
+def test_the_restore_block_appears_on_every_refused_create_screen(
+        client, login, app, seed):
+    """One mechanism, so check it is not accidentally per-screen.
+
+    The quotation and payment screens ALSO rebuild server-side, which is a
+    second mechanism doing the same job — recorded in §8.12 rather than torn
+    out here, because removing it is a separate change with its own risk.
+    """
+    import datetime as dt
+
+    from app.config import db
+    from app.models import Order
+
+    with app.app_context():
+        order = Order(company_id=seed['company_id'], store_id=seed['store_id'],
+                      customer_id=seed['customer_id'], order_code='DH-BLOCK',
+                      title='Sofa góc L')
+        db.session.add(order)
+        db.session.commit()
+        order_id = str(order.id)
+
+    login('admin')
+    for path in (f'/quotations/{order_id}/create',
+                 f'/contracts/{order_id}/create',
+                 f'/payment/{order_id}/create'):
+        body = client.post(path, data={'item_name[]': ['Sofa góc L']},
+                           follow_redirects=True).get_data(as_text=True)
+        assert 'submitted-form-data' in body, (
+            f'{path} re-rendered a refused form with no restore block')

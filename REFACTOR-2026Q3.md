@@ -435,29 +435,38 @@ for a reason that was false, then removed it on a measurement whose scope I
 over-read. The suite corrected the second one. Both are written up above so the
 next person inherits the reasoning rather than the conclusion.
 
-### 8.12 A refused form throws the work away — on two screens still
+### 8.12 CORRECTED — the refused form was never thrown away
 
-Found while converging the line-item row, not by looking for it: adding the
-payment screen to `tests/test_item_row_has_one_source.py`'s converged list
-failed, and the failure was right.
+**What I claimed, and it was wrong.** I grepped `request.form` in
+`contracts/create.html`, found one occurrence (the contract number), and
+recorded that the screen discards every line item, date, fee and note on a
+refusal. Same for `handover/create.html`. It reached this ledger and a commit
+message.
 
-`quotations/create.html` rebuilds names, units, quantities, prices and notes
-from `request.form` when the server refuses the form. It is the only one that
-does. `contracts/create.html` and `handover/create.html` read `request.form`
-exactly **once** each — for the document number — and throw away every line
-item, date, fee and note the user typed. The user is told only by a flash at
-the top of the page.
+**What is actually true.** The product has a GLOBAL restore, and it is good:
+`base.html` writes every submitted field into a JSON block on any POST that
+re-renders, and `static/js/sofa-restore-form.js` puts them back — creating the
+line-item rows first by calling the page's own `addItemRow`, and telling the
+user plainly about the one thing it cannot restore (file inputs, which no
+browser will let a page re-select). One mechanism, no route changes, every form
+in the app. Proved rather than assumed: a refused contract's restore block
+carries `['Sofa góc L', 'Đôn vuông']`, and
+`test_a_rejected_contract_keeps_what_was_typed` now asserts that.
 
-`payments/create.html` had the same defect and is fixed, because the shared
-row macro made rebuilding the lines nearly free and a payment screen is where
-the typing costs most. Pinned by `test_a_rejected_payment_keeps_the_work_items`.
+Reading one layer and concluding about the system — the same mistake as the
+stock fallback in §8.15, twice in one programme.
 
-The other two are **not** fixed here. Each rebuilds a different set of fields —
-a contract carries an advance percentage and payment terms, a handover carries
-delivered and accepted quantities per line and a rejection reason — and doing
-them from a template without reading each route's full form is how a rebuild
-silently drops one field. That is the same failure shape as the handover time
-input that accepted text no column held.
+**The real finding underneath it.** There are TWO mechanisms. `quotations/
+create.html` and `payments/create.html` also rebuild server-side from
+`request.form.getlist(...)`, which the global restore already does. The
+server-side copies work without JavaScript, which is a genuine difference — but
+two descriptions of one behaviour is the shape that drifts, and this programme
+has spent a day removing exactly that.
+
+Not torn out here. Choosing which survives is a design decision with a real
+trade-off (works-without-JS versus one place to maintain), and doing it while
+correcting a mistaken entry would bury the correction. Recorded so the choice
+is made deliberately.
 
 ### 8.7 Three production actions behind the stock permission — your call
 
