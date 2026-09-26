@@ -234,6 +234,40 @@ lifecycle flag keeps its gating role untouched.
 Six items, in the owner's words, with what I understand each to mean and what I
 need to check before touching it. Nothing here is started yet.
 
+### 8.16 §3.0 ANSWERED and built — the clerk asks, the manager decides
+
+The owner: *"Chỉ có người đứng cao nhất của 1 cửa hàng, chi nhánh mới có quyền
+Approve, còn những người khác chỉ được raise cái lệnh xác nhận/hủy đó lên
+thôi."*
+
+Built as a REQUEST, not a permission, and the difference is the whole point. A
+permission refuses and stops the work: a clerk holding cash with a manager who
+is out has nothing they can record, so they borrow the manager's password — at
+which point the control is theatre and the audit trail is a lie. A request lets
+the work continue in the clerk's own name and moves only the decision.
+
+Four rules, each chosen against a failure it prevents:
+
+* **Approving performs the action**, once, there. Unlocking a button instead
+  would make two steps of one and leave a gap in which the amount can change
+  between the decision and the act.
+* **A manager is not made to ask themselves.** A ceremony with no second pair
+  of eyes in it is one people route around, and it buries the real requests.
+* **An unknown action is refused, not queued.** A request nothing can perform
+  would be approved, do nothing, and teach people that approving means nothing.
+* **A decided request cannot be decided again** — otherwise approving twice
+  confirms twice, or reverses a refusal somebody already recorded.
+
+Wired to `payment.confirm` and `payment.cancel`, which are the two most
+consequential of the sixteen actions §3.0 counted. The rest still carry only
+`@login_required`; extending the list is one line each in `PERFORMERS` plus the
+route, and is worth doing once this one has been used in anger.
+
+**Still open, and now the only money question left:** §3.2 — correcting a
+CONFIRMED payment. This makes who decides explicit; it does not yet give anyone
+a way to undo a confirmation that was wrong. The accounting review recommends
+void-with-a-reason, recorded in REVIEW-2026Q3.md §3.2.
+
 ### 8.1 Gom mọi báo cáo về một chức năng
 > "Dashboard, Báo cáo, Công nợ khách hàng … bản chất đang là những Báo cáo, vậy
 > nên hãy gom về thành 1 chức năng thôi, sau đó chia thành các đầu mục báo cáo
