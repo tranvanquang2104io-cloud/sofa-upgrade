@@ -2152,7 +2152,7 @@ class ProductionPlanService:
             }
         return levels
 
-    def issue_materials(self, plan):
+    def issue_materials(self, plan, allow_partial=False):
         """Cấp phát: kiểm tồn trước; nếu thiếu → trả danh sách shortage, KHÔNG trừ.
         Nếu đủ → trừ MaterialStock, set quantity_issued, status=in_progress."""
         from decimal import Decimal
@@ -2182,15 +2182,34 @@ class ProductionPlanService:
                     'available': float(avail),
                     'missing': float(need - avail),
                 })
-        if shortages:
+        if shortages and not allow_partial:
             return shortages
+
+        # Hand over what is actually there, line by line. Per line, not "take
+        # whatever is on the shelf everywhere": a line with nothing available
+        # is left alone rather than issued a token amount.
+        issued_anything = False
         for line, need in needs:
             st = self._stock_for(line.material_id, line_source_store(line, plan))
-            st.current_quantity = Decimal(str(st.current_quantity)) - need
-            line.quantity_issued = Decimal(str(line.quantity_required or 0))
-        plan.status = plan.STATUS_IN_PROGRESS
+            avail = Decimal(str(st.current_quantity)) if st else Decimal('0')
+            take = need if avail >= need else avail
+            if take <= 0:
+                continue
+            st.current_quantity = avail - take
+            # ACCUMULATE. This used to assign `quantity_required`, and under
+            # all-or-nothing the two were the same number so nothing showed.
+            # Issue 12 of 20 and the assignment would say 20, leaving the plan
+            # looking complete with 8m still on the shelf.
+            line.quantity_issued = Decimal(str(line.quantity_issued or 0)) + take
+            issued_anything = True
+
+        if issued_anything:
+            plan.status = plan.STATUS_IN_PROGRESS
         db.session.commit()
-        return []
+        # A partial issue still reports what is missing. A success message on
+        # its own would leave the foreman to discover the gap himself, which is
+        # the thing refusing was protecting him from.
+        return shortages
 
     def material_cost(self, plan):
         """What the materials ISSUED to this plan cost.
