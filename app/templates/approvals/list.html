@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, empty_state, table_open, table_close with context %}
+{% block title %}{{ t('Đề nghị chờ duyệt') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Đề nghị chờ duyệt'), icon='bi-check2-square',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Đề nghị chờ duyệt'), None)],
+               subtitle=t('Nhân viên đã ghi nhận việc này và đang chờ bạn quyết. Duyệt là thực hiện luôn.')) }}
+
+<div class="card">
+  <div class="card-body">
+    {% if pending %}
+      {{ table_open() }}
+        <thead class="table-light">
+          <tr>
+            <th>{{ t('Date') }}</th>
+            <th>{{ t('Việc') }}</th>
+            <th>{{ t('Người đề nghị') }}</th>
+            <th>{{ t('Lý do') }}</th>
+            <th class="text-end">{{ t('Actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in pending %}
+          <tr>
+            <td class="small">{{ r.requested_at.strftime('%d/%m/%Y %H:%M') if r.requested_at else '—' }}</td>
+            <td>
+              {% if r.action == 'payment.confirm' %}{{ t('Xác nhận đã thu tiền') }}
+              {% elif r.action == 'payment.cancel' %}{{ t('Huỷ phiếu thanh toán') }}
+              {% else %}{{ r.action }}{% endif %}
+            </td>
+            <td class="small">{{ r.requested_by.full_name if r.requested_by else '—' }}</td>
+            <td class="small text-muted">{{ r.reason or '—' }}</td>
+            <td class="text-end">
+              {# Two forms, not one with a hidden field: approving and refusing
+                 are different acts and should not share a button. #}
+              <form method="POST" class="d-inline"
+                    action="{{ url_for('dashboard.decide_approval', request_id=r.id, decision='approve') }}"
+                    onsubmit="return confirm('{{ t('Duyệt và thực hiện ngay?') }}');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-primary">{{ t('Duyệt') }}</button>
+              </form>
+              <form method="POST" class="d-inline"
+                    action="{{ url_for('dashboard.decide_approval', request_id=r.id, decision='reject') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-danger">{{ t('Từ chối') }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      {{ table_close() }}
+    {% else %}
+      {{ empty_state(t('Không có đề nghị nào đang chờ.'), icon='bi-check2-square') }}
+    {% endif %}
+  </div>
+</div>
+
+{% if decided %}
+<div class="card mt-3">
+  <div class="card-header"><strong>{{ t('Đã quyết gần đây') }}</strong></div>
+  <div class="card-body">
+    <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>{{ t('Date') }}</th><th>{{ t('Việc') }}</th><th>{{ t('Status') }}</th><th>{{ t('Ghi chú') }}</th></tr>
+      </thead>
+      <tbody>
+        {% for r in decided %}
+        <tr>
+          <td class="small">{{ r.decided_at.strftime('%d/%m/%Y %H:%M') if r.decided_at else '—' }}</td>
+          <td class="small">{{ r.action }}</td>
+          <td>
+            {% if r.status == 'approved' %}
+              <span class="badge bg-success">{{ t('Đã duyệt') }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ t('Đã từ chối') }}</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted">{{ r.decision_note or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

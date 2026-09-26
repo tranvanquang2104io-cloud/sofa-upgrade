@@ -71,6 +71,7 @@ LISTED_IN_THE_MENU = {
     'dashboard.list_stores',
     'dashboard.list_warehouses',
     'dashboard.list_stock_transfers',
+    'dashboard.list_approvals',
     'dashboard.list_purchase_orders',
 }
 

@@ -2293,13 +2293,27 @@ def confirm_payment(payment_id):
         proof = request.files.get('proof_file')
         proof_path = _save_item_image(proof) if (proof and proof.filename) else None
 
-        payment_service = PaymentReportService()
-        payment_service.mark_confirmed(payment_id, payment.order_id)
+        # A branch manager confirms; anybody else raises a request. NOT a
+        # refusal: somebody holding cash with nothing they can record borrows
+        # the manager's password, and then the control is theatre.
+        from app.services.approvals import request_or_do
+        outcome = request_or_do(
+            company_id=company_id, action='payment.confirm',
+            target_type='payment_report', target_id=payment.id,
+            user_role=session.get('role'), user_id=session.get('user_id'),
+            reason=(request.form.get('reason') or '').strip() or None)
+
         if proof_path:
+            # Attached either way. The proof is evidence of what the clerk saw,
+            # and it is most useful to the person deciding.
             payment.proof_path = proof_path
             db.session.add(payment)
             db.session.commit()
-        flash(t('Payment marked as confirmed'), 'success')
+
+        if outcome.performed:
+            flash(t('Payment marked as confirmed'), 'success')
+        else:
+            flash(outcome.message, 'info')
     except ValueError as e:
         # A business rule refusing the action carries the sentence that explains it
         # (WorkflowBlocked subclasses ValueError). Flattening that to "Error"
@@ -2431,10 +2445,17 @@ def cancel_payment(payment_id):
         return redirect(url_for('dashboard.list_orders'))
     
     try:
-        payment_service = PaymentReportService()
+        from app.services.approvals import request_or_do
         reason = request.form.get('reason', '').strip()
-        payment_service.cancel_payment(payment_id, payment.order_id, reason)
-        flash(t('Payment report canceled successfully'), 'success')
+        outcome = request_or_do(
+            company_id=company_id, action='payment.cancel',
+            target_type='payment_report', target_id=payment.id,
+            user_role=session.get('role'), user_id=session.get('user_id'),
+            reason=reason or None)
+        if outcome.performed:
+            flash(t('Payment report canceled successfully'), 'success')
+        else:
+            flash(outcome.message, 'info')
     except Exception as e:
         logger.error("Error canceling payment: %s", e, exc_info=True)
         flash(t('Không hủy được phiếu thanh toán. Vui lòng thử lại.'), 'error')
@@ -2919,6 +2940,59 @@ def list_warehouses():
                             Warehouse.warehouse_code)
                   .all())
     return render_template('warehouses/list.html', warehouses=warehouses)
+
+
+@dashboard_bp.route('/approvals', methods=['GET'])
+@store_admin_required
+def list_approvals():
+    """What is waiting on a decision, oldest first.
+
+    Oldest first on purpose: the thing somebody has been waiting on longest is
+    the thing most likely to have been worked around by now.
+    """
+    from app.models.models import ApprovalRequest
+    from app.services.approvals import pending_for
+
+    company_id = get_current_company_id()
+    decided = (ApprovalRequest.query
+               .filter(ApprovalRequest.company_id == company_id,
+                       ApprovalRequest.status != ApprovalRequest.STATUS_PENDING)
+               .order_by(ApprovalRequest.decided_at.desc())
+               .limit(30).all())
+    return render_template('approvals/list.html',
+                           pending=pending_for(company_id), decided=decided)
+
+
+@dashboard_bp.route('/approvals/<request_id>/<decision>', methods=['POST'])
+@store_admin_required
+def decide_approval(request_id, decision):
+    from app.models.models import ApprovalRequest
+    from app.services.approvals import approve, reject
+
+    company_id = get_current_company_id()
+    row = ApprovalRequest.query.filter_by(id=request_id,
+                                          company_id=company_id).first()
+    if not row:
+        flash(t('Không tìm thấy đề nghị hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_approvals'))
+
+    note = (request.form.get('note') or '').strip() or None
+    try:
+        if decision == 'approve':
+            approve(row, user_id=session.get('user_id'), note=note)
+            flash(t('Đã duyệt và thực hiện'), 'success')
+        elif decision == 'reject':
+            reject(row, user_id=session.get('user_id'), note=note)
+            flash(t('Đã từ chối đề nghị'), 'success')
+        else:
+            flash(t('Quyết định không hợp lệ'), 'error')
+    except ValueError as e:
+        flash(str(e), 'error')
+    except Exception as e:
+        logger.error('Error deciding approval: %s', e, exc_info=True)
+        db.session.rollback()
+        flash(t('Lỗi khi xử lý đề nghị'), 'error')
+    return redirect(url_for('dashboard.list_approvals'))
 
 
 @dashboard_bp.route('/warehouses/transfers', methods=['GET'])

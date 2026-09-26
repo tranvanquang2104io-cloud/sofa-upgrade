@@ -195,3 +195,89 @@ def test_an_unknown_action_is_refused_rather_than_queued(app,
                 action='payment.teleport', target_type='payment_report',
                 target_id=a_payment_to_confirm['payment_id'],
                 user_role='user', user_id=None, reason=None)
+
+
+# --------------------------------------------------------------------------
+# Through the screens, because a queue nobody can reach is a queue that only
+# delays work.
+# --------------------------------------------------------------------------
+
+def test_a_staff_user_confirming_raises_a_request(app, client, login, seed,
+                                                  a_payment_to_confirm):
+    from app.config import db
+    from app.models import User
+    from app.models.models import ApprovalRequest, PaymentReport
+
+    with app.app_context():
+        # The seeded staff user needs the feature grant, or the 403 would come
+        # from the permission area and this test would pass for the wrong
+        # reason — exactly the trap the store-isolation tests fell into.
+        # `allowed_features`, not `features`. Guessing the attribute name
+        # silently does nothing — the user keeps no grants, the route returns
+        # 403, and the test fails for a reason that has nothing to do with
+        # approvals.
+        staff = User.query.filter_by(username='staff').first()
+        staff.allowed_features = ['orders']
+        db.session.commit()
+
+    login('staff')
+    client.post(f"/payment/{a_payment_to_confirm['payment_id']}/confirm",
+                data={'reason': 'Khách chuyển khoản sáng nay'},
+                follow_redirects=True)
+
+    with app.app_context():
+        assert PaymentReport.query.get(
+            a_payment_to_confirm['payment_id']).is_confirmed is False, (
+            'a staff user confirmed money with no decision')
+        assert ApprovalRequest.query.count() == 1
+
+
+def test_the_manager_sees_it_and_approving_confirms_the_money(
+        app, client, login, seed, a_payment_to_confirm):
+    from app.config import db
+    from app.models import User
+    from app.models.models import ApprovalRequest, PaymentReport
+
+    with app.app_context():
+        # `allowed_features`, not `features`. Guessing the attribute name
+        # silently does nothing — the user keeps no grants, the route returns
+        # 403, and the test fails for a reason that has nothing to do with
+        # approvals.
+        staff = User.query.filter_by(username='staff').first()
+        staff.allowed_features = ['orders']
+        db.session.commit()
+
+    login('staff')
+    client.post(f"/payment/{a_payment_to_confirm['payment_id']}/confirm",
+                data={'reason': 'Khách chuyển khoản'}, follow_redirects=True)
+    client.get('/auth/logout', follow_redirects=True)
+
+    login('admin')
+    body = client.get('/approvals').get_data(as_text=True)
+    assert 'Khách chuyển khoản' in body, (
+        'the request is queued and the manager cannot see what it is for')
+
+    with app.app_context():
+        request_id = str(ApprovalRequest.query.one().id)
+
+    client.post(f'/approvals/{request_id}/approve', follow_redirects=True)
+
+    with app.app_context():
+        assert PaymentReport.query.get(
+            a_payment_to_confirm['payment_id']).is_confirmed is True, (
+            'the manager approved and the money was not confirmed')
+
+
+def test_a_manager_confirming_does_not_queue_anything(app, client, login,
+                                                      a_payment_to_confirm):
+    from app.models.models import ApprovalRequest, PaymentReport
+
+    login('admin')
+    client.post(f"/payment/{a_payment_to_confirm['payment_id']}/confirm",
+                follow_redirects=True)
+
+    with app.app_context():
+        assert PaymentReport.query.get(
+            a_payment_to_confirm['payment_id']).is_confirmed is True
+        assert ApprovalRequest.query.count() == 0, (
+            'a manager was made to file a request against themselves')
