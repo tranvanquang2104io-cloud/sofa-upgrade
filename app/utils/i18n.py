@@ -1115,6 +1115,9 @@ TRANSLATIONS['vi'].update({
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
     # Warehouse management (§8.14).
+    'Đã gửi đề nghị cho quản lý chi nhánh duyệt. Việc này chưa có hiệu lực cho tới khi được duyệt.': 'Đã gửi đề nghị cho quản lý chi nhánh duyệt. Việc này chưa có hiệu lực cho tới khi được duyệt.',
+    'Đề nghị này đã được quyết định rồi': 'Đề nghị này đã được quyết định rồi',
+    'Không tìm thấy phiếu thanh toán': 'Không tìm thấy phiếu thanh toán',
     'Tổng tiền trên hóa đơn': 'Tổng tiền trên hóa đơn',
     'Để trống nếu khớp': 'Để trống nếu khớp',
     'Gõ đúng con số nhà cung cấp in ra. Nếu lệch, hệ thống báo chênh lệch — ĐỪNG sửa đơn giá cho khớp.': 'Gõ đúng con số nhà cung cấp in ra. Nếu lệch, hệ thống báo chênh lệch — ĐỪNG sửa đơn giá cho khớp.',

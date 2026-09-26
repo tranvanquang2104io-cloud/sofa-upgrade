@@ -920,6 +920,63 @@ class Warehouse(db.Model):
         return f'<Warehouse {self.warehouse_code}>'
 
 
+class ApprovalRequest(db.Model):
+    """A clerk asked; a branch manager decides.
+
+    The owner's rule: only the person at the top of a branch may approve
+    confirming or cancelling money; everybody else raises the request.
+
+    This is deliberately NOT a permission. A permission refuses and stops the
+    work — the clerk with cash in hand and a manager who is out cannot record
+    anything, so they borrow the manager's password and the control becomes
+    theatre. A request records what they did, in their own name, and waits: the
+    work continues and only the decision moves.
+
+    Approving PERFORMS the action. If it merely unlocked a button, there would
+    be two steps where the business has one, and a gap in which the amount can
+    change between the decision and the act.
+    """
+
+    __tablename__ = 'approval_requests'
+
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    #: e.g. 'payment.confirm'. Only actions the service knows how to perform
+    #: are accepted — a request nothing can carry out would sit in the queue
+    #: teaching people that approving means nothing.
+    action = db.Column(db.String(50), nullable=False, index=True)
+    target_type = db.Column(db.String(50), nullable=False)
+    target_id = db.Column(GUID(), nullable=False, index=True)
+
+    #: Why the asker says it should happen. Free text and worth more than it
+    #: looks: it is what the approver reads, and often all they have.
+    reason = db.Column(db.Text)
+
+    status = db.Column(db.String(20), default=STATUS_PENDING, nullable=False,
+                       index=True)
+    requested_by_id = db.Column(GUID(), db.ForeignKey('users.id'))
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    decided_by_id = db.Column(GUID(), db.ForeignKey('users.id'))
+    decided_at = db.Column(db.DateTime)
+    decision_note = db.Column(db.Text)
+
+    requested_by = db.relationship('User', foreign_keys=[requested_by_id],
+                                   lazy=True)
+    decided_by = db.relationship('User', foreign_keys=[decided_by_id],
+                                 lazy=True)
+
+    def is_pending(self):
+        return self.status == self.STATUS_PENDING
+
+    def __repr__(self):
+        return f'<ApprovalRequest {self.action} {self.status}>'
+
+
 class StockMovement(db.Model):
     """One change to stock, with what caused it.
 
