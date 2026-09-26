@@ -1975,10 +1975,18 @@ class SupplierInvoice(db.Model):
     MATCH_NO_RECEIPT = 'no_receipt'        # invoiced more than was received
     MATCH_PRICE_VARIANCE = 'price_variance'
     MATCH_OVER_INVOICED = 'over_invoiced'  # invoiced more than was ordered
+    #: The seller's own printed total disagrees with ours by more than a
+    #: rounding difference — usually freight or a discount this model has
+    #: no room for. Reported, never blocked: the accountant decides.
+    MATCH_TOTAL_MISMATCH = 'total_mismatch'
 
     # Deliberately hardcoded rather than a configurable tolerance table:
     # one SME does not need SAP's tolerance-key machinery.
     PRICE_TOLERANCE_PCT = 2.0
+    #: Below this, a difference between the seller's total and ours is
+    #: rounding, not a discrepancy. Flagging rounding would train people
+    #: to ignore the flag, and then it stops working for what it is for.
+    TOTAL_TOLERANCE_DONG = 1000
     QTY_TOLERANCE_PCT = 5.0
 
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -2001,6 +2009,11 @@ class SupplierInvoice(db.Model):
 
     status = db.Column(db.String(16), nullable=False, default=STATUS_DRAFT,
                        index=True)
+    #: What the seller's paper says the total is. Optional, and never
+    #: overwrites `total_amount`: taking the seller's figure as the
+    #: payable would mean the lines no longer add up to the amount owed,
+    #: and every downstream figure would read a number nothing explains.
+    stated_total = db.Column(db.Numeric(15, 2))
     match_status = db.Column(db.String(24), default=MATCH_OK)
     match_notes = db.Column(db.Text)
 

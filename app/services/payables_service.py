@@ -72,7 +72,7 @@ class PayablesService:
     @staticmethod
     def create_invoice(po, invoice_number, invoice_date, lines,
                        invoice_series=None, vat_rate=None, supplier_id=None,
-                       seller_tax_code=None, notes=None):
+                       seller_tax_code=None, notes=None, stated_total=None):
         """Record a supplier invoice against ``po``.
 
         ``lines``: list of dicts with ``po_line_id``, ``quantity``,
@@ -122,6 +122,9 @@ class PayablesService:
             invoice_date=invoice_date, vat_rate=rate,
             seller_tax_code=seller_tax_code or getattr(po.supplier, 'tax_code', None),
             notes=notes,
+            # What the paper says, when the clerk typed it. Kept beside our own
+            # total, never in place of it.
+            stated_total=_dec(stated_total) if stated_total else None,
         )
         db.session.add(invoice)
         db.session.flush()
@@ -204,6 +207,20 @@ class PayablesService:
                     problems.append(
                         f'price {inv_price} vs ordered {po_price} '
                         f'({variance.quantize(Decimal("0.01"))}%)')
+
+        # The seller's own printed total, when the clerk typed it. Compared
+        # last so a quantity or price problem keeps the more specific verdict:
+        # "billed for goods not delivered" tells somebody what to do, "the
+        # totals differ" only tells them to look.
+        stated = _dec(getattr(invoice, 'stated_total', None))
+        if stated > 0:
+            gap = stated - _dec(invoice.total_amount)
+            if abs(gap) > Decimal(str(SupplierInvoice.TOTAL_TOLERANCE_DONG)):
+                if status == SupplierInvoice.MATCH_OK:
+                    status = SupplierInvoice.MATCH_TOTAL_MISMATCH
+                problems.append(
+                    f'hóa đơn ghi {stated:,.0f}, hệ thống tính '
+                    f'{_dec(invoice.total_amount):,.0f} — lệch {abs(gap):,.0f}')
 
         invoice.match_status = status
         invoice.match_notes = '; '.join(problems) if problems else None

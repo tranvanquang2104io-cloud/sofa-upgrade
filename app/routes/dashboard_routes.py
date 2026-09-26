@@ -4346,6 +4346,8 @@ def create_supplier_invoice(po_id):
                 vat_rate=request.form.get('vat_rate'),
                 seller_tax_code=(request.form.get('seller_tax_code') or '').strip() or None,
                 notes=request.form.get('notes') or None,
+                stated_total=(request.form.get('stated_total') or '').strip()
+                or None,
             )
             if invoice.match_status != 'ok':
                 flash(t('Invoice recorded with a matching discrepancy: ')

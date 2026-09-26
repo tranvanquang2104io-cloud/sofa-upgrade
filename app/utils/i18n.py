@@ -1115,6 +1115,9 @@ TRANSLATIONS['vi'].update({
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
     # Warehouse management (§8.14).
+    'Tổng tiền trên hóa đơn': 'Tổng tiền trên hóa đơn',
+    'Để trống nếu khớp': 'Để trống nếu khớp',
+    'Gõ đúng con số nhà cung cấp in ra. Nếu lệch, hệ thống báo chênh lệch — ĐỪNG sửa đơn giá cho khớp.': 'Gõ đúng con số nhà cung cấp in ra. Nếu lệch, hệ thống báo chênh lệch — ĐỪNG sửa đơn giá cho khớp.',
     'Lịch sử tồn kho': 'Lịch sử tồn kho',
     'Thay đổi': 'Thay đổi',
     'Loại': 'Loại',
