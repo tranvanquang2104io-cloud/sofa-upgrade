@@ -239,6 +239,58 @@
     </div>
 </div>
 
+{# The history of this material's stock. Put here rather than on a screen of
+   its own because "why does it say this?" is asked while looking at the
+   figure, not by going somewhere to ask it. #}
+<div class="card mt-3">
+  <div class="card-header"><strong>{{ t('Lịch sử tồn kho') }}</strong></div>
+  <div class="card-body">
+    {% if movements %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ t('Date') }}</th>
+              <th>{{ t('Loại') }}</th>
+              <th>{{ t('Store') }}</th>
+              <th class="text-end">{{ t('Thay đổi') }}</th>
+              <th>{{ t('Notes') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mv in movements %}
+            <tr>
+              <td class="small">{{ mv.created_at.strftime('%d/%m/%Y %H:%M') if mv.created_at else '—' }}</td>
+              <td class="small">
+                {% if mv.movement_type == 'receipt' %}{{ t('Nhập kho') }}
+                {% elif mv.movement_type == 'issue' %}{{ t('Cấp phát') }}
+                {% elif mv.movement_type == 'transfer_in' %}{{ t('Chuyển đến') }}
+                {% elif mv.movement_type == 'transfer_out' %}{{ t('Chuyển đi') }}
+                {% else %}{{ t('Điều chỉnh tay') }}{% endif %}
+              </td>
+              <td class="small">{{ mv.store.name if mv.store else t('Main warehouse') }}</td>
+              <td class="text-end">
+                {# The sign is written, not only coloured: a printout and a
+                   reader who does not see red both need to know which way. #}
+                {% if mv.quantity|float > 0 %}
+                  <span class="text-success">+{{ '%g'|format(mv.quantity|float) }}</span>
+                {% else %}
+                  <span class="text-danger">{{ '%g'|format(mv.quantity|float) }}</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">{{ mv.notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted mb-0">{{ t('Chưa có thay đổi tồn kho nào được ghi lại.') }}</p>
+      <p class="small text-muted mb-0">{{ t('Chỉ ghi từ khi tính năng này được bật; những thay đổi trước đó không có trong sổ.') }}</p>
+    {% endif %}
+  </div>
+</div>
+
 <script>
 document.getElementById('stockModal').addEventListener('show.bs.modal', function(e){
     const btn = e.relatedTarget;

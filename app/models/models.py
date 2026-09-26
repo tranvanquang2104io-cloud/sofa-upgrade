@@ -972,6 +972,7 @@ class StockMovement(db.Model):
     created_by_id = db.Column(GUID(), db.ForeignKey('users.id'))
 
     material = db.relationship('Material', lazy=True)
+    store = db.relationship('Store', lazy=True)
 
     def __repr__(self):
         return f'<StockMovement {self.movement_type} {self.quantity}>'

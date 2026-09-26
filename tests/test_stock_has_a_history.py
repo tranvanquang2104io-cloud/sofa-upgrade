@@ -221,3 +221,45 @@ def test_a_hand_adjustment_is_accounted_for_too(app, warehouse_and_material):
             '50 became 44, so the movement is -6 — a movement recording the '
             'NEW TOTAL rather than the change would not add up')
         assert moves[0].movement_type == StockMovement.TYPE_ADJUST
+
+
+def test_the_history_is_readable_on_the_material_screen(app, client, login,
+                                                        warehouse_and_material):
+    """A ledger nobody can read is a ledger that only costs writes.
+
+    Six times in this programme finished work sat unreachable. This one was
+    write-only when it was first committed.
+    """
+    from app.config import db
+    from app.services.services import MaterialService
+
+    with app.app_context():
+        MaterialService().update_stock(
+            warehouse_and_material['material_id'],
+            warehouse_and_material['company_id'],
+            warehouse_and_material['store_id'], 44)
+        db.session.commit()
+
+    login('admin')
+    body = client.get(
+        f"/materials/{warehouse_and_material['material_id']}").get_data(
+        as_text=True)
+    assert 'Lịch sử tồn kho' in body, (
+        'the movements are recorded and no screen shows them')
+    assert '-6' in body, (
+        'the change is not on the screen, so the history explains nothing')
+
+
+def test_a_material_with_no_history_says_why_it_is_empty(app, client, login,
+                                                         warehouse_and_material):
+    """"Nothing here" must not read as "nothing ever happened".
+
+    Movements before this feature existed were not backfilled, deliberately —
+    inventing them would be worse than their absence. The screen has to say so,
+    or an empty panel on an old material looks like a missing record.
+    """
+    login('admin')
+    body = client.get(
+        f"/materials/{warehouse_and_material['material_id']}").get_data(
+        as_text=True)
+    assert 'Chỉ ghi từ khi tính năng này được bật' in body

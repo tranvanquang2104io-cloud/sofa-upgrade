@@ -3648,7 +3648,16 @@ def view_material(material_id):
     # Ensure all stores have a stock entry (so the table is complete)
     svc.ensure_stock_entries_for_stores(mat.id, company_id)
     stock_entries = svc.get_stock_for_material(mat.id)
-    return render_template('materials/view.html', material=mat, stock_entries=stock_entries)
+
+    # The history, on the screen where "why does it say this?" is asked. A
+    # ledger nobody can read is a ledger that only costs writes.
+    from app.models.models import StockMovement
+    movements = (StockMovement.query
+                 .filter_by(company_id=company_id, material_id=mat.id)
+                 .order_by(StockMovement.created_at.desc())
+                 .limit(50).all())
+    return render_template('materials/view.html', material=mat,
+                           stock_entries=stock_entries, movements=movements)
 
 
 # ── Edit Material ───────────────────────────────────────────────────
