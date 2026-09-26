@@ -179,3 +179,83 @@ def test_a_warehouse_from_another_company_is_refused(app, two_sites):
         with pytest.raises(ValueError):
             ProductionPlanService().stock_levels(
                 ProductionPlan.query.get(two_sites['plan_id']))
+
+
+# --------------------------------------------------------------------------
+# The wire. Checked because finished-but-unreachable has happened five times
+# in this programme, twice in the last hour.
+# --------------------------------------------------------------------------
+
+def test_the_plan_screen_offers_a_warehouse_per_line(app, client, login,
+                                                     two_sites):
+    from app.config import db
+    from app.models.models import ProductionPlan, Warehouse
+
+    with app.app_context():
+        # A second warehouse, so there is something to choose between.
+        db.session.add(Warehouse(company_id=two_sites['company_id'],
+                                 store_id=two_sites['workshop_id'],
+                                 warehouse_code='W-XUONG', name='Kho xưởng',
+                                 is_default=True, is_active=True))
+        plan = ProductionPlan.query.get(two_sites['plan_id'])
+        plan.status = ProductionPlan.STATUS_DRAFT
+        db.session.commit()
+        order_id = str(plan.order_id)
+
+    login('admin')
+    body = client.get(f'/orders/{order_id}/production-plan').get_data(
+        as_text=True)
+    assert 'name="warehouse_id"' in body, (
+        'no way to say which warehouse a material line is drawn from, so the '
+        'column exists and nothing can set it')
+    assert 'Kho vải' in body and 'Kho xưởng' in body
+
+
+def test_one_warehouse_means_no_column_on_the_plan_screen(app, client, login,
+                                                          seed):
+    """The common case sees nothing new, as everywhere else."""
+    import datetime as dt
+
+    from app.config import db
+    from app.models import Order
+    from app.models.models import ProductionPlan
+
+    with app.app_context():
+        order = Order(company_id=seed['company_id'], store_id=seed['store_id'],
+                      customer_id=seed['customer_id'], order_code='DH-1W',
+                      title='Sofa góc L')
+        db.session.add(order)
+        db.session.flush()
+        db.session.add(ProductionPlan(company_id=seed['company_id'],
+                                      order_id=order.id, plan_number='KH-1W'))
+        db.session.commit()
+        order_id = str(order.id)
+
+    login('admin')
+    body = client.get(f'/orders/{order_id}/production-plan').get_data(
+        as_text=True)
+    assert 'name="warehouse_id"' not in body, (
+        'a workshop with one warehouse is being asked which one to use')
+
+
+def test_choosing_a_warehouse_on_the_screen_is_saved(app, client, login,
+                                                     two_sites):
+    from app.config import db
+    from app.models.models import ProductionMaterialLine, ProductionPlan
+
+    with app.app_context():
+        plan = ProductionPlan.query.get(two_sites['plan_id'])
+        plan.status = ProductionPlan.STATUS_DRAFT
+        db.session.commit()
+
+    login('admin')
+    client.post(
+        f"/production-plan/{two_sites['plan_id']}/materials/"
+        f"{two_sites['line_id']}/warehouse",
+        data={'warehouse_id': two_sites['depot_warehouse_id']},
+        follow_redirects=True)
+
+    with app.app_context():
+        line = ProductionMaterialLine.query.get(two_sites['line_id'])
+        assert str(line.warehouse_id) == two_sites['depot_warehouse_id'], (
+            'the warehouse chosen on the screen never reached the line')

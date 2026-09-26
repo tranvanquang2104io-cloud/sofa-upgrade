@@ -122,6 +122,7 @@ EXPECTED = {
     'reports': 'reports',
     'requisition_status': 'purchasing',
     'save_plan_norm': 'orders',
+    'set_plan_material_warehouse': 'orders',
     'create_warehouse': None,
     'deactivate_warehouse': None,
     'edit_warehouse': None,

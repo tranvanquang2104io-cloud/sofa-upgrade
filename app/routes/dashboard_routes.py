@@ -4632,9 +4632,15 @@ def view_production_plan(order_id):
 
     lock_message, _unlock_action = (
         plan_lock_reason(plan.status) if plan else (None, None))
+    # Offered only when there is something to choose between — the same rule
+    # as the receiving screen. One warehouse means an empty question.
+    from app.services.warehouses import must_choose, warehouses_of
+    company_id = get_current_company_id()
     return render_template('production/plan.html', order=order, plan=plan,
                            lock_message=lock_message,
                            materials=materials, units=units,
+                           warehouses=(warehouses_of(company_id)
+                                       if must_choose(company_id) else []),
                            margin=margin, cost=cost, stock=stock)
 
 
@@ -4723,6 +4729,50 @@ def delete_plan_material(plan_id, line_id):
         db.session.delete(line); db.session.commit()
         flash(t('Đã xóa vật tư'), 'success')
     return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
+
+
+@dashboard_bp.route('/production-plan/<plan_id>/materials/<line_id>/warehouse',
+                    methods=['POST'])
+@login_required
+def set_plan_material_warehouse(plan_id, line_id):
+    """Say which warehouse one material line is drawn from.
+
+    Its own route rather than a field on the add-material form: the choice is
+    made while looking at the line, often after the plan exists, and folding it
+    into creation would mean deleting and re-adding a line to change it.
+    """
+    from app.models.models import ProductionMaterialLine, Warehouse
+
+    company_id = get_current_company_id()
+    plan = _owned_plan(plan_id, company_id)
+    if not plan:
+        flash(t('Không tìm thấy kế hoạch hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_production_plans'))
+
+    line = ProductionMaterialLine.query.filter_by(id=line_id,
+                                                  plan_id=plan.id).first()
+    if not line:
+        flash(t('Không tìm thấy dòng vật tư'), 'error')
+        return redirect(url_for('dashboard.view_production_plan',
+                                order_id=plan.order_id))
+
+    chosen = (request.form.get('warehouse_id') or '').strip()
+    if not chosen:
+        # Blank means "back to the plan's production site" — the state every
+        # line starts in. Without this the choice would be one-way.
+        line.warehouse_id = None
+    else:
+        warehouse = Warehouse.query.filter_by(id=chosen,
+                                              company_id=company_id).first()
+        if not warehouse:
+            flash(t('Kho không thuộc công ty này'), 'error')
+            return redirect(url_for('dashboard.view_production_plan',
+                                    order_id=plan.order_id))
+        line.warehouse_id = warehouse.id
+    db.session.commit()
+    flash(t('Đã đổi kho lấy vật tư cho dòng này'), 'success')
+    return redirect(url_for('dashboard.view_production_plan',
+                            order_id=plan.order_id))
 
 
 @dashboard_bp.route('/production-plan/<plan_id>/issue', methods=['POST'])

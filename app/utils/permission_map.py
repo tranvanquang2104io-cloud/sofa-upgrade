@@ -104,6 +104,7 @@ ENDPOINT_FEATURE = {
     'reports':                         'reports',
     'requisition_status':              'purchasing',
     'save_plan_norm':                  'orders',
+    'set_plan_material_warehouse':     'orders',
     'sign_contract':                   'orders',
     'skip_advance_payment':            'orders',
     'update_material_stock':           'inventory',

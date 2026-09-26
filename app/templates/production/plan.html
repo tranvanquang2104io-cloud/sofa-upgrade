@@ -149,7 +149,9 @@
   <div class="table-responsive"><table class="table table-sm table-bordered">
     <thead class="table-light"><tr>
       <th>{{ t('Material') }}</th><th>{{ t('For item') }}</th><th>{{ t('Required') }}</th>
-      <th>{{ t('Issued') }}</th><th>{{ t('Tồn kho') }}</th><th>{{ t('Unit') }}</th><th></th>
+      <th>{{ t('Issued') }}</th><th>{{ t('Tồn kho') }}</th>
+      {% if warehouses %}<th>{{ t('Lấy từ kho') }}</th>{% endif %}
+      <th>{{ t('Unit') }}</th><th></th>
     </tr></thead>
     <tbody>
     {% for ln in plan.material_lines %}
@@ -171,6 +173,35 @@
             {% endif %}
           {% else %}—{% endif %}
         </td>
+        {% if warehouses %}
+        <td>
+          {# NOT onchange="this.form.submit()". This product already decided
+             against that (tests/test_keyboard_navigation.py) and the reason is
+             real: a keyboard user arrowing through the options would submit on
+             every one they pass. The save button appears once the value
+             differs, so a mouse user still gets one click and a keyboard user
+             can read the list first.
+
+             "Theo nơi sản xuất" is an option, not an empty value: it is where
+             every line starts, and without it the choice would be one-way. #}
+          <form method="POST" class="d-flex gap-1 warehouse-cell"
+                action="{{ url_for('dashboard.set_plan_material_warehouse', plan_id=plan.id, line_id=ln.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="warehouse_id" class="form-select form-select-sm"
+                    aria-label="{{ t('Lấy từ kho') }}"
+                    data-original="{{ ln.warehouse_id or '' }}">
+              <option value="">{{ t('Theo nơi sản xuất') }}</option>
+              {% for w in warehouses %}
+              <option value="{{ w.id }}"{% if ln.warehouse_id == w.id %} selected{% endif %}>{{ w.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary" hidden
+                    title="{{ t('Lưu') }}" aria-label="{{ t('Lưu') }}">
+              <i class="bi bi-check-lg"></i>
+            </button>
+          </form>
+        </td>
+        {% endif %}
         <td>{{ ln.unit }}</td>
         <td class="text-end">
           {% if plan.can_edit() %}
@@ -235,4 +266,15 @@
   </div>
   {% endif %}
 {% endif %}
+<script>
+// Show a cell's save button only once its value differs from what is stored.
+// Keeps the table quiet until somebody actually changes something, without
+// submitting on every arrow key.
+document.querySelectorAll('.warehouse-cell select').forEach(function (select) {
+  select.addEventListener('change', function () {
+    var button = select.form.querySelector('button[type="submit"]');
+    button.hidden = select.value === (select.dataset.original || '');
+  });
+});
+</script>
 {% endblock %}
