@@ -920,6 +920,63 @@ class Warehouse(db.Model):
         return f'<Warehouse {self.warehouse_code}>'
 
 
+class StockMovement(db.Model):
+    """One change to stock, with what caused it.
+
+    `MaterialStock.current_quantity` is a bare number. When it is wrong — and
+    with more than one warehouse it will be — there is nothing to look at:
+    nobody can say whether 3m is what a job left behind, what arrived short, or
+    what somebody typed by hand on a Tuesday.
+
+    NOT double-entry. A receipt is one line in one place, not a pair between a
+    supplier location and a warehouse; the second half would be an accounting
+    apparatus nobody in a workshop reads.
+
+    NOT the source of the balance. `current_quantity` stays authoritative and
+    nothing derives stock by summing these — that would turn a fast read into a
+    scan, and make a missing movement corrupt the stock figure rather than just
+    the explanation of it.
+    """
+
+    __tablename__ = 'stock_movements'
+
+    TYPE_RECEIPT = 'receipt'
+    TYPE_ISSUE = 'issue'
+    TYPE_TRANSFER_IN = 'transfer_in'
+    TYPE_TRANSFER_OUT = 'transfer_out'
+    TYPE_ADJUST = 'adjust'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    material_id = db.Column(GUID(), db.ForeignKey('materials.id'),
+                            nullable=False, index=True)
+    #: Where it changed. `store_id` rather than `warehouse_id` because
+    #: MaterialStock is still keyed by store — the account has to describe the
+    #: same thing the balance does, or the two cannot be compared.
+    store_id = db.Column(GUID(), db.ForeignKey('stores.id'), index=True)
+    warehouse_id = db.Column(GUID(), db.ForeignKey('warehouses.id'),
+                             index=True)
+
+    #: Signed: positive in, negative out. The CHANGE, never the new total —
+    #: a movement holding the new total cannot be added up.
+    quantity = db.Column(db.Numeric(15, 2), nullable=False)
+    movement_type = db.Column(db.String(20), nullable=False, index=True)
+
+    #: Which document caused it, so the history explains rather than lists.
+    ref_type = db.Column(db.String(30))
+    ref_id = db.Column(GUID(), index=True)
+    notes = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_by_id = db.Column(GUID(), db.ForeignKey('users.id'))
+
+    material = db.relationship('Material', lazy=True)
+
+    def __repr__(self):
+        return f'<StockMovement {self.movement_type} {self.quantity}>'
+
+
 class StockTransfer(db.Model):
     """Phiếu điều chuyển kho — material moved from one warehouse to another.
 

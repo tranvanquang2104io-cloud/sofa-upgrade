@@ -216,6 +216,12 @@ class ProcurementService:
             if target_warehouse is not None:
                 st.warehouse_id = target_warehouse.id
             st.current_quantity = Decimal(str(st.current_quantity or 0)) + qty
+            from app.models.models import StockMovement as _SM
+            from app.services.stock_movements import record as _record
+            _record(po.company_id, line.material_id, target_store, qty,
+                    _SM.TYPE_RECEIPT, ref_type='goods_receipt', ref_id=gr.id,
+                    warehouse_id=target_warehouse.id if target_warehouse
+                    else None)
             line.quantity_received = Decimal(str(line.quantity_received or 0)) + qty
             self._update_average_cost(line.material, qty, line.unit_price)
             any_received = True

@@ -1937,7 +1937,23 @@ class MaterialService:
             raise ValueError('NVL không tìm thấy')
         if quantity < 0:
             raise ValueError('Số lượng không thể âm')
-        return self.stock_repo.upsert_quantity(material_id, company_id, store_id, quantity)
+
+        # Account for the CHANGE, not the new total. Somebody setting a figure
+        # by hand is the event that most needs explaining later, and a movement
+        # holding the new total could not be added up against the others.
+        from decimal import Decimal as _D
+
+        from app.models.models import MaterialStock as _MS, StockMovement as _SM
+        from app.services.stock_movements import record as _record
+
+        before = _MS.query.filter_by(material_id=material_id,
+                                     store_id=store_id).first()
+        was = _D(str(before.current_quantity or 0)) if before else _D('0')
+        entry = self.stock_repo.upsert_quantity(material_id, company_id,
+                                                store_id, quantity)
+        _record(company_id, material_id, store_id, _D(str(quantity)) - was,
+                _SM.TYPE_ADJUST, ref_type='manual_adjustment')
+        return entry
 
     def ensure_stock_entries_for_stores_of_company(self, company_id):
         """Every material of this company gets a row for every active branch.
@@ -2196,6 +2212,12 @@ class ProductionPlanService:
             if take <= 0:
                 continue
             st.current_quantity = avail - take
+            from app.models.models import StockMovement as _SM
+            from app.services.stock_movements import record as _record
+            _record(plan.company_id, line.material_id,
+                    line_source_store(line, plan), -take, _SM.TYPE_ISSUE,
+                    ref_type='production_plan', ref_id=plan.id,
+                    warehouse_id=getattr(line, 'warehouse_id', None))
             # ACCUMULATE. This used to assign `quantity_required`, and under
             # all-or-nothing the two were the same number so nothing showed.
             # Issue 12 of 20 and the assignment would say 20, leaving the plan

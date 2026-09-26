@@ -95,6 +95,9 @@ def transfer_stock(company_id, from_warehouse_id, to_warehouse_id, lines,
     db.session.add(transfer)
     db.session.flush()
 
+    from app.models.models import StockMovement
+    from app.services.stock_movements import record
+
     for line, quantity, row in planned:
         row.current_quantity = _dec(row.current_quantity) - quantity
         arriving = _stock_row(company_id, line['material_id'],
@@ -106,6 +109,16 @@ def transfer_stock(company_id, from_warehouse_id, to_warehouse_id, lines,
         db.session.add(StockTransferLine(
             transfer_id=transfer.id, material_id=line['material_id'],
             quantity=quantity, unit=line.get('unit')))
+
+        # One line on each side. A transfer that accounts for only the
+        # departure would leave the arrival unexplained at the other warehouse,
+        # which is exactly the question somebody will be asking there.
+        record(company_id, line['material_id'], source.store_id, -quantity,
+               StockMovement.TYPE_TRANSFER_OUT, ref_type='stock_transfer',
+               ref_id=transfer.id, warehouse_id=source.id, notes=notes)
+        record(company_id, line['material_id'], destination.store_id, quantity,
+               StockMovement.TYPE_TRANSFER_IN, ref_type='stock_transfer',
+               ref_id=transfer.id, warehouse_id=destination.id, notes=notes)
 
     db.session.commit()
     return transfer
