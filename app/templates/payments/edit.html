@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% from "macros/ui.html" import page_header, form_actions with context %}
+{% from '_unit_select.html' import unit_select, unit_template_select with context %}
+{% from '_item_row.html' import item_row, item_row_head, item_row_template with context %}
 
 {% block title %}Edit Payment Record - SofaFlow{% endblock %}
 
@@ -215,13 +217,63 @@
                         <input type="text" class="form-control" id="transaction_reference" name="transaction_reference" value="{{ payment.transaction_reference or '' }}">
                     </div>
 
-                    <div class="mb-3">
+                    {# A draft's lines are correctable; the route refuses the
+                       same edit on a confirmed payment. The table uses the
+                       shared row macro, so a change to a line item is still
+                       one change rather than one per screen. #}
+                    <h6 class="mt-4">{{ t('Items / Work Table') }}</h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-bordered item-table vat-per-line-off">
+                        <thead class="table-light">
+                          {{ item_row_head() }}
+                        </thead>
+                        <tbody id="items-body">
+                          {% for it in payment.items or [] %}
+                          {{ item_row(index=loop.index,
+                                      name=it.get('name', ''),
+                                      unit=it.get('unit', ''),
+                                      quantity=it.get('quantity', 1),
+                                      price=it.get('unit_price', ''),
+                                      vat_rate=it.get('vat_rate', ''),
+                                      remove_fn='removeItemRow') }}
+                          {% endfor %}
+                          {% if not payment.items %}
+                          {{ item_row(index=1, remove_fn='removeItemRow') }}
+                          {% endif %}
+                        </tbody>
+                      </table>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addItemRow()">
+                      <i class="bi bi-plus"></i> {{ t('Add Row') }}
+                    </button>
+                    <a href="#" id="vatPerLineLink" class="small ms-2"
+                       onclick="showVatColumn(); return false;">{{ t('Có dòng thuế suất khác?') }}</a>
+
+                    <div class="mb-3 mt-3">
                         <label for="notes" class="form-label">{{ t('Notes') }}</label>
                         <textarea class="form-control" id="notes" name="notes" rows="2">{{ payment.notes or '' }}</textarea>
                     </div>
 
                     {{ form_actions(t('Save Changes'),
                                     url_for('dashboard.view_payment', payment_id=payment.id)) }}
+{{ unit_template_select() }}
+{{ item_row_template(remove_fn='removeItemRow') }}
+<script>
+// Cloned from the shared macro, like every other line-item screen.
+function addItemRow() {
+  document.getElementById('items-body').appendChild(cloneItemRow());
+}
+function removeItemRow(button) {
+  var rows = document.querySelectorAll('#items-body .item-row');
+  if (rows.length <= 1) {
+    rows[0].querySelectorAll('input').forEach(function (i) {
+      if (i.type !== 'hidden') i.value = '';
+    });
+    return;
+  }
+  button.closest('tr').remove();
+}
+</script>
                 </form>
                 {% endif %}
             </div>

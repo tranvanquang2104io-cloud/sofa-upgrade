@@ -2366,7 +2366,28 @@ def edit_payment(payment_id):
             quot_ref_str = request.form.get('quotation_reference_date', '').strip()
             quot_ref_date = datetime.strptime(quot_ref_str, '%Y-%m-%d').date() if quot_ref_str else None
 
-            # Update only editable fields; items/financials are locked to contract values
+            # A DRAFT's lines can be corrected; a confirmed payment's cannot.
+            # An accounting record that can be silently edited is worth less
+            # than one that shows it was corrected — but a draft is not an
+            # accounting record yet, and a clerk who typed the wrong quantity
+            # had to cancel the slip and raise another, burning a document
+            # number and leaving a cancellation somebody has to explain.
+            #
+            # No `item_name[]` at all means "I did not touch the lines", not
+            # "delete them": this form is reached from more than one place.
+            if payment.can_edit() and request.form.getlist('item_name[]'):
+                items, subtotal = parse_line_items(request.form)
+                totals = totals_from_form(request.form,
+                                          company=get_current_company(),
+                                          subtotal=subtotal, items=items)
+                payment.items = items
+                payment.subtotal = totals['subtotal']
+                payment.vat_rate = totals['vat_rate']
+                payment.vat_amount = totals['vat_amount']
+                payment.shipping_fee = totals['shipping_fee']
+                payment.another_fee = totals['another_fee']
+                payment.amount = totals['total_amount']
+
             payment.report_number = request.form.get('report_number', '').strip()
             payment.report_date = datetime.strptime(request.form.get('report_date'), '%Y-%m-%d').date()
             payment.payment_date = datetime.strptime(request.form.get('payment_date'), '%Y-%m-%d').date()
