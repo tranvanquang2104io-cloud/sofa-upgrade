@@ -134,6 +134,7 @@
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_stores') }}"><i class="bi bi-shop"></i> {{ t('Stores') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_warehouses') }}"><i class="bi bi-box-seam"></i> {{ t('Kho hàng') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_stock_transfers') }}"><i class="bi bi-arrow-left-right"></i> {{ t('Điều chuyển kho') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_users') }}"><i class="bi bi-person-lines-fill"></i> {{ t('Users') }}</a></li>
                                 {% if session.role == 'company_admin' %}
                                 <li><hr class="dropdown-divider"></li>

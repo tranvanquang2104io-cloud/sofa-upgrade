@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, form_section, form_section_end, form_actions with context %}
+{% block title %}{{ t('Lập phiếu điều chuyển') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Lập phiếu điều chuyển'), icon='bi-arrow-left-right',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Điều chuyển kho'), url_for('dashboard.list_stock_transfers')),
+                       (t('Lập phiếu điều chuyển'), None)]) }}
+
+{% if warehouses|length < 2 %}
+  {# Said plainly rather than rendering a form that cannot be completed. A
+     company with one warehouse has nowhere to move anything to. #}
+  <div class="alert alert-info">
+    {{ t('Cần ít nhất hai kho mới điều chuyển được.') }}
+    <a href="{{ url_for('dashboard.create_warehouse') }}">{{ t('Thêm kho') }}</a>
+  </div>
+{% else %}
+<form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  {{ form_section(t('Điều chuyển kho'), icon='bi-arrow-left-right') }}
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <label class="form-label" for="from_warehouse_id">{{ t('Kho xuất') }} *</label>
+      <select class="form-select" id="from_warehouse_id" name="from_warehouse_id" required>
+        {% for w in warehouses %}
+        <option value="{{ w.id }}">{{ w.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label" for="to_warehouse_id">{{ t('Kho nhận') }} *</label>
+      <select class="form-select" id="to_warehouse_id" name="to_warehouse_id" required>
+        {% for w in warehouses %}
+        <option value="{{ w.id }}"{% if loop.index == 2 %} selected{% endif %}>{{ w.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label" for="transfer_date">{{ t('Date') }}</label>
+      <input type="date" class="form-control" id="transfer_date"
+             name="transfer_date" value="{{ now().strftime('%Y-%m-%d') }}">
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="notes">{{ t('Lý do điều chuyển') }}</label>
+    <input type="text" class="form-control" id="notes" name="notes"
+           placeholder="{{ t('Ví dụ: chuyển sang xưởng để cắt đơn DH-2609-001') }}">
+    <div class="form-text">{{ t('Ghi lý do để sau này còn giải thích được vì sao tồn kho đổi.') }}</div>
+  </div>
+  {{ form_section_end() }}
+
+  {{ form_section(t('Vật tư'), icon='bi-box-seam') }}
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered" id="transfer-table">
+      <thead class="table-light">
+        <tr>
+          <th>{{ t('Material') }}</th>
+          <th style="width:20%">{{ t('Quantity') }}</th>
+          <th style="width:6%"></th>
+        </tr>
+      </thead>
+      <tbody id="transfer-body">
+        <tr class="transfer-row">
+          <td>
+            <select class="form-select form-select-sm" name="material_id[]">
+              <option value="">--</option>
+              {% for m in materials %}
+              <option value="{{ m.id }}">{{ m.material_code }} — {{ m.name }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td><input type="number" class="form-control form-control-sm"
+                     name="quantity[]" step="0.01" min="0" placeholder="0"></td>
+          <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    onclick="removeTransferRow(this)"
+                    title="{{ t('Remove this row') }}"
+                    aria-label="{{ t('Remove this row') }}"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addTransferRow()">
+    <i class="bi bi-plus"></i> {{ t('Add Row') }}
+  </button>
+  {{ form_section_end() }}
+
+  {{ form_actions(cancel_url=url_for('dashboard.list_stock_transfers')) }}
+</form>
+
+<script>
+// Cloned from the first row rather than rebuilt from a string: the same reason
+// the document line-item row was converged — two descriptions of one row drift.
+function addTransferRow() {
+  var body = document.getElementById('transfer-body');
+  var row = body.querySelector('.transfer-row').cloneNode(true);
+  row.querySelectorAll('input, select').forEach(function (field) {
+    field.value = '';
+  });
+  body.appendChild(row);
+}
+
+function removeTransferRow(button) {
+  var rows = document.querySelectorAll('#transfer-body .transfer-row');
+  if (rows.length <= 1) {
+    rows[0].querySelectorAll('input, select').forEach(function (f) { f.value = ''; });
+    return;
+  }
+  button.closest('tr').remove();
+}
+</script>
+{% endif %}
+{% endblock %}

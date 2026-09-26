@@ -920,6 +920,72 @@ class Warehouse(db.Model):
         return f'<Warehouse {self.warehouse_code}>'
 
 
+class StockTransfer(db.Model):
+    """Phiếu điều chuyển kho — material moved from one warehouse to another.
+
+    The moment a company has a second warehouse, material ends up in the wrong
+    one. Without this the only correction is `update_stock` twice — subtract
+    here, add there — two hand-typed numbers with nothing tying them together,
+    no record of why, and `avg_cost` is company-wide so nothing downstream
+    notices a discrepancy.
+
+    One step. No in-transit state and no approval: a motorbike carrying fabric
+    across Hà Nội takes twenty minutes, and modelling that as goods in flight
+    would be an accounting apparatus for a motorbike ride. If a workshop ever
+    needs to know what is on the road, that is a different feature and a real
+    one — it is not this.
+    """
+
+    __tablename__ = 'stock_transfers'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+    from_warehouse_id = db.Column(GUID(), db.ForeignKey('warehouses.id'),
+                                  nullable=False, index=True)
+    to_warehouse_id = db.Column(GUID(), db.ForeignKey('warehouses.id'),
+                                nullable=False, index=True)
+    transfer_number = db.Column(db.String(50), nullable=False)
+    transfer_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    lines = db.relationship('StockTransferLine', backref='transfer', lazy=True,
+                            cascade='all, delete-orphan')
+    from_warehouse = db.relationship('Warehouse',
+                                     foreign_keys=[from_warehouse_id],
+                                     lazy=True)
+    to_warehouse = db.relationship('Warehouse', foreign_keys=[to_warehouse_id],
+                                   lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'transfer_number',
+                            name='uq_company_transfer_number'),
+    )
+
+    def __repr__(self):
+        return f'<StockTransfer {self.transfer_number}>'
+
+
+class StockTransferLine(db.Model):
+    """One material on a transfer."""
+
+    __tablename__ = 'stock_transfer_lines'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    transfer_id = db.Column(GUID(), db.ForeignKey('stock_transfers.id'),
+                            nullable=False, index=True)
+    material_id = db.Column(GUID(), db.ForeignKey('materials.id'),
+                            nullable=False, index=True)
+    quantity = db.Column(db.Numeric(15, 2), default=0, nullable=False)
+    unit = db.Column(db.String(50))
+
+    material = db.relationship('Material', lazy=True)
+
+    def __repr__(self):
+        return f'<StockTransferLine {self.quantity}>'
+
+
 class MaterialStock(db.Model):
     """Per-location stock entry for a material.
     

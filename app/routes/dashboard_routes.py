@@ -2900,6 +2900,76 @@ def list_warehouses():
     return render_template('warehouses/list.html', warehouses=warehouses)
 
 
+@dashboard_bp.route('/warehouses/transfers', methods=['GET'])
+@store_admin_required
+def list_stock_transfers():
+    from app.models.models import StockTransfer
+
+    company_id = get_current_company_id()
+    transfers = (StockTransfer.query
+                 .filter_by(company_id=company_id)
+                 .order_by(StockTransfer.transfer_date.desc(),
+                           StockTransfer.created_at.desc())
+                 .all())
+    return render_template('warehouses/transfers.html', transfers=transfers)
+
+
+@dashboard_bp.route('/warehouses/transfers/create', methods=['GET', 'POST'])
+@store_admin_required
+def create_stock_transfer():
+    """Move material from one warehouse to another, in one step.
+
+    The alternative people fall back on is editing two quantities by hand,
+    which is two chances to mistype and no record of why.
+    """
+    from app.models.models import Material
+    from app.services.transfers import transfer_stock
+    from app.services.warehouses import warehouses_of
+
+    company_id = get_current_company_id()
+    warehouses = warehouses_of(company_id)
+    materials = (Material.query
+                 .filter_by(company_id=company_id, is_active=True)
+                 .order_by(Material.material_code).all())
+
+    if request.method == 'POST':
+        try:
+            lines = []
+            for material_id, quantity in zip(
+                    request.form.getlist('material_id[]'),
+                    request.form.getlist('quantity[]')):
+                if not material_id or not quantity:
+                    continue
+                material = next((m for m in materials
+                                 if str(m.id) == material_id), None)
+                lines.append({
+                    'material_id': material_id,
+                    'quantity': quantity,
+                    'unit': (material.unit.name
+                             if material and material.unit else None),
+                })
+            transfer = transfer_stock(
+                company_id=company_id,
+                from_warehouse_id=request.form.get('from_warehouse_id'),
+                to_warehouse_id=request.form.get('to_warehouse_id'),
+                lines=lines,
+                transfer_date=_parse_date(request.form.get('transfer_date'))
+                or date.today(),
+                notes=(request.form.get('notes') or '').strip() or None)
+            flash(t('Đã điều chuyển kho: %(n)s') % {
+                'n': transfer.transfer_number}, 'success')
+            return redirect(url_for('dashboard.list_stock_transfers'))
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            logger.error('Error transferring stock: %s', e, exc_info=True)
+            db.session.rollback()
+            flash(t('Lỗi khi điều chuyển kho'), 'error')
+
+    return render_template('warehouses/transfer_form.html',
+                           warehouses=warehouses, materials=materials)
+
+
 @dashboard_bp.route('/warehouses/create', methods=['GET', 'POST'])
 @company_admin_required
 def create_warehouse():

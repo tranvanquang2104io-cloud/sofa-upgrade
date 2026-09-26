@@ -41,6 +41,7 @@ CREATED_BY = {
     'Supplier': 'dashboard.material_suppliers',
     'User': 'dashboard.create_user',
     'Warehouse': 'dashboard.create_warehouse',
+    'StockTransfer': 'dashboard.create_stock_transfer',
     'MasterAgreement': 'dashboard.create_agreement',
     'PurchaseRequisition': 'dashboard.create_requisition',
     'PurchaseOrder': 'dashboard.create_purchase_order',
@@ -69,6 +70,7 @@ LISTED_IN_THE_MENU = {
     'dashboard.list_orders',
     'dashboard.list_stores',
     'dashboard.list_warehouses',
+    'dashboard.list_stock_transfers',
     'dashboard.list_purchase_orders',
 }
 

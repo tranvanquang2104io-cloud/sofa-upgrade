@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import page_header, empty_state, table_open, table_close with context %}
+{% block title %}{{ t('Điều chuyển kho') }} - SofaFlow{% endblock %}
+
+{% block content %}
+{{ page_header(t('Điều chuyển kho'), icon='bi-arrow-left-right',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')),
+                       (t('Kho hàng'), url_for('dashboard.list_warehouses')),
+                       (t('Điều chuyển kho'), None)],
+               action_url=url_for('dashboard.create_stock_transfer'),
+               action_label=t('Lập phiếu điều chuyển'),
+               subtitle=t('Chuyển vật tư giữa hai kho, có ghi lý do — thay cho việc sửa tay hai con số.')) }}
+
+<div class="card">
+  <div class="card-body">
+    {% if transfers %}
+      {{ table_open() }}
+        <thead class="table-light">
+          <tr>
+            <th>{{ t('Number') }}</th>
+            <th>{{ t('Date') }}</th>
+            <th>{{ t('Kho xuất') }}</th>
+            <th>{{ t('Kho nhận') }}</th>
+            <th>{{ t('Vật tư') }}</th>
+            <th>{{ t('Notes') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tr in transfers %}
+          <tr>
+            <td><strong>{{ tr.transfer_number }}</strong></td>
+            <td>{{ tr.transfer_date.strftime('%d/%m/%Y') if tr.transfer_date else '—' }}</td>
+            <td>{{ tr.from_warehouse.name if tr.from_warehouse else '—' }}</td>
+            <td>{{ tr.to_warehouse.name if tr.to_warehouse else '—' }}</td>
+            <td class="small">
+              {# The lines are the point of the document, so they are on the
+                 row rather than behind another click: "what moved" is the
+                 question somebody opens this screen to answer. #}
+              {% for ln in tr.lines %}
+                <div>{{ ln.material.name if ln.material else '—' }}:
+                     {{ '%g'|format(ln.quantity|float) }} {{ ln.unit or '' }}</div>
+              {% endfor %}
+            </td>
+            <td class="small text-muted">{{ tr.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      {{ table_close() }}
+    {% else %}
+      {{ empty_state(t('Chưa có phiếu điều chuyển nào.'),
+                     icon='bi-arrow-left-right',
+                     action_url=url_for('dashboard.create_stock_transfer'),
+                     action_label=t('Lập phiếu điều chuyển')) }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
