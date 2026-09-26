@@ -407,14 +407,33 @@ What made a NEW branch genuinely dangerous was having no rows at all, so the
 fallback fired for it and it issued material never delivered there.
 `StoreService.create_store` now creates its rows at zero.
 
-**Still to do**, in order: issuing per material line from a named warehouse
-(the line-level choice the owner asked for); partial issuing instead of
-all-or-nothing; a one-step stock transfer, which becomes necessary the moment a
-second warehouse exists — without it people will correct misplaced stock with
-two manual adjustments, and two manual adjustments are two chances to disagree;
-and a stock movement ledger, because `current_quantity` is a bare number with
-no history and "why does this warehouse say 3m?" becomes a weekly question once
-there is more than one.
+**Since done**: per-line warehouse on a production plan, with a column on the
+plan screen; partial issuing as an explicit second button, never a silent
+default; a one-step stock transfer with a reason, which checks every line
+before touching any so a transfer never leaves stock in neither warehouse; and
+a stock movement ledger written by all four events that change stock, readable
+on the material screen.
+
+**The one limitation left.** `MaterialStock` is still keyed by (material,
+store), not by warehouse. A line's warehouse therefore resolves to the branch
+that warehouse belongs to: drawing from another BRANCH's warehouse works — the
+case the owner described — and two warehouses inside the SAME branch share one
+stock row and cannot be told apart. Re-keying is a data migration with a
+before/after invariant, of the kind `tests/test_migrations_run.py` now makes
+testable. It is the next structural piece and the only thing standing between
+the current model and the one the expert specified.
+
+**What this arc cost, honestly.** Six times finished work sat unreachable —
+warehouses had no screen, the partial handover had no button, the per-line
+warehouse had no column, the movement ledger was write-only. Each was caught,
+three of them by `tests/test_master_data_is_reachable.py` which exists because
+of the first two. The habit that produces them has not changed; there is only
+a net under it now.
+
+And twice I was wrong about the same fallback in opposite directions — kept it
+for a reason that was false, then removed it on a measurement whose scope I
+over-read. The suite corrected the second one. Both are written up above so the
+next person inherits the reasoning rather than the conclusion.
 
 ### 8.12 A refused form throws the work away — on two screens still
 
