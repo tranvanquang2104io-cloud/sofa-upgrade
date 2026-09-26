@@ -168,3 +168,57 @@ def test_issuing_the_rest_later_adds_up(app, plan_with_one_short_material):
         line = ProductionMaterialLine.query.get(
             plan_with_one_short_material['fabric_line_id'])
         assert float(line.quantity_issued) == 20
+
+
+def test_the_plan_screen_offers_the_partial_handover(app, client, login,
+                                                    plan_with_one_short_material):
+    """A button, checked on the rendered page — not on the source.
+
+    The first version of this asserted `'allow_partial' in body or True`,
+    which is true whatever the page contains. A tautology in a test is worse
+    than no test: it reports coverage that does not exist.
+    """
+    from app.config import db
+    from app.models.models import ProductionPlan
+
+    with app.app_context():
+        plan = ProductionPlan.query.get(
+            plan_with_one_short_material['plan_id'])
+        plan.status = ProductionPlan.STATUS_APPROVED
+        db.session.commit()
+        order_id = str(plan.order_id)
+
+    login('admin')
+    body = client.get(f'/orders/{order_id}/production-plan').get_data(
+        as_text=True)
+    assert 'name="allow_partial"' in body, (
+        'the plan screen has no way to ask for a partial handover, so the '
+        'feature exists and nothing can reach it')
+
+
+def test_the_partial_handover_reaches_the_service_from_the_screen(
+        app, client, login, plan_with_one_short_material):
+    """Checked because finished-but-unreachable has happened three times here.
+
+    The route called `issue_materials(plan)` with no `allow_partial`, so the
+    feature existed and the screen could not ask for it.
+    """
+    from app.config import db
+    from app.models.models import MaterialStock, ProductionPlan
+
+    with app.app_context():
+        plan = ProductionPlan.query.get(
+            plan_with_one_short_material['plan_id'])
+        plan.status = ProductionPlan.STATUS_APPROVED
+        db.session.commit()
+        plan_id = str(plan.id)
+
+    login('admin')
+    client.post(f'/production-plan/{plan_id}/issue',
+                data={'allow_partial': '1'}, follow_redirects=True)
+
+    with app.app_context():
+        fabric = MaterialStock.query.filter_by(
+            material_id=plan_with_one_short_material['fabric_id']).one()
+        assert float(fabric.current_quantity) == 10, (
+            'the partial handover did not reach the service from the screen')

@@ -1115,6 +1115,9 @@ TRANSLATIONS['vi'].update({
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
     # Warehouse management (§8.14).
+    'Cấp phát phần có sẵn': 'Cấp phát phần có sẵn',
+    'Cấp phát phần đang có sẵn? Phần còn thiếu vẫn để lại trên kế hoạch.': 'Cấp phát phần đang có sẵn? Phần còn thiếu vẫn để lại trên kế hoạch.',
+    'Đã cấp phát phần có sẵn. Vẫn còn thiếu: %(detail)s': 'Đã cấp phát phần có sẵn. Vẫn còn thiếu: %(detail)s',
     'Nhập vào kho': 'Nhập vào kho',
     'Tồn kho sẽ tăng ở kho này.': 'Tồn kho sẽ tăng ở kho này.',
     'Ngừng dùng kho này?': 'Ngừng dùng kho này?',

@@ -52,6 +52,14 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up"></i> {{ t('Issue materials (deduct stock)') }}</button>
         </form>
+        {# A second button, not a checkbox on the first. The two do different
+           things and a tick that changes what a button means is read past. #}
+        <form method="POST" action="{{ url_for('dashboard.issue_plan_materials', plan_id=plan.id) }}" class="d-inline"
+              onsubmit="return confirm('{{ t('Cấp phát phần đang có sẵn? Phần còn thiếu vẫn để lại trên kế hoạch.') }}');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="allow_partial" value="1">
+          <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-up"></i> {{ t('Cấp phát phần có sẵn') }}</button>
+        </form>
         {% endif %}
         <form method="POST" action="{{ url_for('dashboard.production_plan_delay', plan_id=plan.id) }}" class="d-inline"
               {# Setting the flag puts a visible mark on the job, so it asks first.

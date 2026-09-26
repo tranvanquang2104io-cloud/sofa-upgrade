@@ -4738,8 +4738,28 @@ def issue_plan_materials(plan_id):
         return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
     from app.services.services import ProductionPlanService
     try:
-        shortages = ProductionPlanService().issue_materials(plan)
-        if shortages:
+        # The screen decides whether a partial handover is wanted; the service
+        # never assumes it. Without this the feature had no way in at all —
+        # the third time in this programme that finished work sat unreachable.
+        partial = bool(request.form.get('allow_partial'))
+        shortages = ProductionPlanService().issue_materials(
+            plan, allow_partial=partial)
+        if shortages and partial:
+            detail = '; '.join(
+                '{name} ({code}): {missing}{unit}'.format(
+                    name=item['name'] or item['material_code'],
+                    code=item['material_code'],
+                    missing=f"{item['missing']:g}",
+                    unit=f" {item['unit']}" if item['unit'] else '')
+                for item in shortages[:5])
+            if len(shortages) > 5:
+                detail += t(' … và %(n)d vật tư khác') % {
+                    'n': len(shortages) - 5}
+            # Says BOTH halves: what went out, and what is still missing. A
+            # success message alone would leave the foreman to find the gap.
+            flash(t('Đã cấp phát phần có sẵn. Vẫn còn thiếu: %(detail)s')
+                  % {'detail': detail}, 'warning')
+        elif shortages:
             # Name what is short and by how much. Interpolating the value
             # into the key would build a different key on every call, so the
             # sentence stays constant and the data is passed in.
