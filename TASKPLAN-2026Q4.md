@@ -128,7 +128,26 @@ cuối tài liệu.
 
 ### T-03 · Sửa số sinh phiếu điều chuyển kho (`COUNT(*) + 1`)
 
-**Priority:** P0 · **Type:** Data integrity · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P0 · **Type:** Data integrity · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** Gộp về một chỗ: `app/services/numbering.py`. `transfers.py` và
+> endpoint `next_code` cùng gọi nó. Bản `COUNT(*) + 1` là **do tôi viết trong
+> đợt refactor này**, bị xoá chứ không vá tại chỗ, vì bản đúng đã có sẵn.
+>
+> **Test tự sửa lại lời tôi viết.** Docstring đầu tiên của tôi nói trùng số thì
+> "dòng thứ hai cứ thế lưu, không báo lỗi gì". Sai: `stock_transfers` có
+> `UniqueConstraint(company_id, transfer_number)`, nên nó **ném
+> IntegrityError**. Hậu quả thật không phải là hai chứng từ trùng số âm thầm,
+> mà là **nhân viên không ghi được một lần chuyển kho có thật**, kèm màn hình
+> lỗi không giải thích vì sao hôm qua vẫn làm được. Hai chuyện đó cần hai cách
+> sửa khác nhau nên phải nói đúng cái nào.
+>
+> **Đã chứng minh test bắt được lỗi**, không chỉ xanh: khôi phục tạm bản
+> `COUNT(*) + 1` và chạy lại — đỏ đúng chỗ. Không FAKE PASS.
+>
+> **Chưa làm, nói rõ:** hai người bấm lưu cùng lúc vẫn đọc ra cùng một số; ràng
+> buộc unique giữ cho dữ liệu đúng, nhưng người thua nhận lỗi thay vì được cấp
+> số kế tiếp. Thiếu phần *retry khi đụng*, ghi thành task riêng.
 
 1. **Nội dung.** `transfers.py:32-36` sinh số bằng `COUNT(*) + 1`.
 2. **Mục đích.** Không bao giờ cấp lại một số chứng từ đã dùng.
@@ -500,3 +519,35 @@ chưa rõ ô nào quyết định hàng vào đâu.
 
 **T-07 chặn T-14** — câu giải thích cho một nút bị chặn phải đến từ state
 machine, không phải từ một chuỗi viết tay ở mỗi template.
+
+---
+
+### T-21 · Cấp số chứng từ khi hai người lưu cùng lúc
+
+**Priority:** P2 · **Type:** Bug · **Dependencies:** T-03 · **Status:** `TODO`
+
+1. **Nội dung.** `next_document_number` đọc số lớn nhất rồi +1. Hai người bấm
+   lưu cùng lúc đọc ra cùng một số.
+2. **Mục đích.** Người thứ hai được cấp số kế tiếp, thay vì nhận màn hình lỗi.
+3. **Vấn đề hiện tại.** Các bảng có số đều có `UniqueConstraint(company_id,
+   <số>)` — **dữ liệu vẫn đúng**, đây không phải lỗi trùng số âm thầm. Nhưng
+   `INSERT` thứ hai ném `IntegrityError` và người dùng thấy lỗi 500 không giải
+   thích được. Phát hiện khi làm T-03; ghi lại thay vì vá vội.
+4. **Giải pháp.** Bắt `IntegrityError` ở chỗ lưu, tính lại số, thử lại có giới
+   hạn (3 lần). Không dùng khoá bảng: mỗi công ty mỗi loại chứng từ một dãy số,
+   tranh chấp thật sự rất hiếm, khoá sẽ đắt hơn lỗi nó tránh.
+   *Đánh đổi:* dãy số vẫn có thể thủng khi transaction bị rollback vì lý do
+   khác — chấp nhận được, và đúng như hoá đơn giấy vẫn huỷ số.
+5. **Chức năng ảnh hưởng.** Mọi màn hình tạo chứng từ có số tự sinh.
+6. **Database.** Không đổi — ràng buộc đã có.
+7. **Backend.** `app/services/numbering.py` + các chỗ gọi khi lưu.
+8. **Frontend.** Không đổi.
+9. **API.** Không đổi.
+10. **Permission.** Không liên quan.
+11. **UI/UX.** Người dùng không thấy gì khác, đó là mục tiêu.
+12. **Kiểm thử.** Test mô phỏng đụng độ: chèn sẵn số sắp được cấp rồi lưu, phải
+    ra số kế tiếp chứ không ném lỗi.
+13. **Rủi ro.** Retry lồng trong transaction đang mở — phải kiểm chỗ gọi.
+14. **Ước lượng.** Nhỏ.
+15. **Ghi chú.** Không gộp vào T-03: T-03 là gộp hai bản cài đặt về một, còn
+    đây là hành vi mới. Trộn hai thứ vào một commit thì không rà lại được.

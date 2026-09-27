@@ -2818,30 +2818,15 @@ def get_next_code(doc_type):
         
         # Highest number for this type, WITHIN THE CALLER'S COMPANY ONLY.
         #
-        # Two defects fixed here (2026-09):
-        #  1. the company filter was loaded above but never applied, so the
-        #     suggestion was computed across every tenant in the database;
-        #  2. `regexp_replace` is PostgreSQL-only, so this endpoint raised 500
-        #     on any other backend (and could not be covered by the test
-        #     suite, which runs on SQLite).
-        # The numeric suffix is therefore parsed in Python: portable, and
-        # tolerant of legacy numbers whose suffix is not a plain integer.
-        field_col = getattr(model_class, field_name)
-        rows = db.session.query(field_col).filter(
-            model_class.company_id == company_id,
-            field_col.like(f'{prefix}%'),
-        ).all()
+        # The algorithm — and the two defects fixed out of it in 2026-09 (a
+        # company filter that was loaded but never applied, and a
+        # PostgreSQL-only `regexp_replace`) — now lives in
+        # `app/services/numbering.py`, because a second copy of it had grown
+        # in `transfers.py` and had got it wrong a third way.
+        from app.services.numbering import next_document_number
 
-        highest = 0
-        for (value,) in rows:
-            suffix = (value or '')[len(prefix):]
-            if suffix.isdigit():
-                highest = max(highest, int(suffix))
-
-        next_number = highest + 1
-        next_code = f'{prefix}{next_number:03d}'
-        
-        return {'next_code': next_code}, 200
+        return {'next_code': next_document_number(
+            model_class, field_name, prefix, company_id, width=3)}, 200
         
     except Exception as e:
         logger.error(f"Error getting next code for {doc_type}: {str(e)}", exc_info=True)

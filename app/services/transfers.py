@@ -30,10 +30,13 @@ def _warehouse(company_id, warehouse_id, label):
 
 
 def _next_number(company_id):
+    """Delegates. This used to be `COUNT(*) + 1`, which repeats a number as
+    soon as any transfer is deleted — see `app/services/numbering.py`."""
     from app.models.models import StockTransfer
+    from app.services.numbering import next_document_number
 
-    count = StockTransfer.query.filter_by(company_id=company_id).count()
-    return f'DC-{count + 1:04d}'
+    return next_document_number(StockTransfer, 'transfer_number', 'DC-',
+                                company_id, width=4)
 
 
 def _stock_row(company_id, material_id, store_id, create=False):
