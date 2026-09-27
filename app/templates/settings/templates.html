@@ -41,6 +41,7 @@
                         <th>{{ t('Filename') }}</th>
                         <th>{{ t('Status') }}</th>
                         <th>{{ t('Date Created') }}</th>
+                        <th>{{ t('Phiên bản') }}</th>
                         <th class="text-end">{{ t('Actions') }}</th>
                     </tr>
                 </thead>
@@ -54,17 +55,14 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% set type_labels = {
-                                'quotation': ('primary', 'Quotation'),
-                                'contract': ('success', 'Contract'),
-                                'handover': ('warning', 'Handover'),
-                                'payment': ('info', 'Payment'),
-                                'payment_advance': ('info', 'Advance Payment'),
-                                'payment_final': ('info', 'Final Payment'),
-                                'payment_request': ('primary', 'Payment Request'),
-                            } %}
-                            {% set lbl = type_labels.get(tpl.document_type, ('secondary', tpl.document_type)) %}
-                            <span class="badge bg-{{ lbl[0] }}">{{ lbl[1] }}</span>
+                            {# Nhãn lấy từ `printing.PRINTABLE_TYPES` — cùng một
+                               danh sách với ô chọn loại khi tải mẫu lên. Trước
+                               đây chỗ này tự viết tay 7 loại, nên loại nào
+                               không có trong đó sẽ hiện ra tên kỹ thuật thô. #}
+                            <span class="badge bg-secondary">{{ printable_labels.get(tpl.document_type, tpl.document_type) }}</span>
+                        </td>
+                        <td class="text-nowrap">
+                            <span class="badge bg-light text-dark border">v{{ tpl.version }}</span>
                         </td>
                         <td><code>{{ tpl.template_file }}</code></td>
                         <td>
@@ -95,6 +93,21 @@
                             </form>
                             {% endif %}
 
+                            {# Mở mẫu ra xem. Trước đây không có cách nào
+                               biết một mẫu chứa gì ngoài việc in thử một chứng
+                               từ thật. #}
+                            <a href="{{ url_for('dashboard.download_template', template_id=tpl.id) }}"
+                               class="btn btn-sm btn-outline-secondary"
+                               title="{{ t('Tải mẫu về') }}" aria-label="{{ t('Tải mẫu về') }}">
+                                <i class="bi bi-download"></i>
+                            </a>
+
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    data-bs-toggle="modal" data-bs-target="#editTpl{{ tpl.id }}"
+                                    title="{{ t('Sửa tên / mô tả') }}" aria-label="{{ t('Sửa tên / mô tả') }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+
                             {# Delete only where it breaks nothing. A template
                                that has printed documents keeps the link saying
                                what they came out of, so it is offered
@@ -117,6 +130,44 @@
                             {% endif %}
                         </td>
                     </tr>
+
+                    {# Sửa tên / mô tả. KHÔNG thay được tệp mẫu: tệp là hình
+                       dạng của mọi chứng từ đã in ra từ nó, thay lén đi là
+                       viết lại thứ mình đã gửi cho khách. Muốn đổi nội dung
+                       thì tải lên bản mới — thành phiên bản N+1, bản cũ vẫn
+                       còn nguyên để in lại được đúng tờ giấy khách đang cầm. #}
+                    <div class="modal fade" id="editTpl{{ tpl.id }}" tabindex="-1">
+                      <div class="modal-dialog">
+                        <form method="POST" class="modal-content"
+                              action="{{ url_for('dashboard.edit_template', template_id=tpl.id) }}">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <div class="modal-header">
+                            <h5 class="modal-title">{{ t('Sửa tên / mô tả') }} — v{{ tpl.version }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="{{ t('Close') }}"></button>
+                          </div>
+                          <div class="modal-body">
+                            <div class="mb-3">
+                              <label class="form-label" for="tplname{{ tpl.id }}">{{ t('Template Name') }}</label>
+                              <input type="text" class="form-control" name="name"
+                                     id="tplname{{ tpl.id }}" value="{{ tpl.name }}">
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label" for="tpldesc{{ tpl.id }}">{{ t('Description') }}</label>
+                              <input type="text" class="form-control" name="description"
+                                     id="tpldesc{{ tpl.id }}" value="{{ tpl.description or '' }}">
+                            </div>
+                            <p class="text-muted small mb-0">
+                              {{ t('Muốn đổi nội dung mẫu thì tải lên bản mới — bản cũ vẫn được giữ lại.') }}
+                            </p>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Close') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ t('Update') }}</button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
                     {% endfor %}
                 </tbody>
             </table>

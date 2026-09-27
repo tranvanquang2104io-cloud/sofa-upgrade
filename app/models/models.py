@@ -649,6 +649,18 @@ class DocumentTemplate(db.Model):
     document_type = db.Column(db.String(50), nullable=False)  # quotation, contract, delivery, payment
     description = db.Column(db.Text)
     
+    #: Which version of this document type's template this row is, counted
+    #: per company and per `document_type`.
+    #:
+    #: Replacing a template used to deactivate the old row and insert a new
+    #: one, so the layout that printed the contract posted in March survived
+    #: only as an inactive row with nothing marking it as the one that did.
+    #: A `Document` records `template_id`, so it always pointed AT a row — the
+    #: row just had no identity a person could refer to.
+    #:
+    #: Luật Kế toán 2015 Đ.27: a correction is recorded, never erased. A
+    #: template is the shape of the record, so replacing one is an event.
+    version = db.Column(db.Integer, default=1, nullable=False)
     template_file = db.Column(db.String(255), nullable=False)  # Path to template file
     template_content = db.Column(db.Text)  # RTF content
     

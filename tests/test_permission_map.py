@@ -73,6 +73,8 @@ EXPECTED = {
     'delete_document': 'orders',
     'delete_plan_material': 'orders',
     'delete_template': None,
+    'download_template': None,
+    'edit_template': None,
     'download_document': 'orders',
     'edit_agreement': 'orders',
     'edit_contract': 'orders',

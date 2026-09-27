@@ -440,7 +440,8 @@ def list_templates():
     from app.services.printing import PRINTABLE_TYPES
     return render_template('settings/templates.html', templates=all_templates,
                            printed=printed,
-                           printable_types=PRINTABLE_TYPES)
+                           printable_types=PRINTABLE_TYPES,
+                           printable_labels=dict(PRINTABLE_TYPES))
 
 
 @dashboard_bp.route('/settings/templates/upload', methods=['POST'])
@@ -498,12 +499,20 @@ def upload_template():
         ).update({'is_active': False})
         db.session.flush()
 
+        # Version N+1 within this company and document type. Counted from
+        # the highest number ever used rather than from how many rows exist,
+        # for the same reason document numbers are: deleting version 2 of
+        # three must not make the next upload version 3 again.
+        highest = db.session.query(db.func.max(_DT.version)).filter_by(
+            company_id=company_id, document_type=doc_type).scalar() or 0
+
         new_tpl = _DT(
             company_id=company_id,
             name=name,
             document_type=doc_type,
             description=description,
             template_file=safe_name,
+            version=highest + 1,
             is_active=True,
         )
         db.session.add(new_tpl)
@@ -516,6 +525,73 @@ def upload_template():
               'error')
 
     return redirect(url_for('dashboard.list_templates'))
+
+
+@dashboard_bp.route('/settings/templates/<template_id>/edit', methods=['POST'])
+@company_admin_required
+def edit_template(template_id):
+    """Rename a template, or describe it. NOT replace what it prints.
+
+    The name and description describe the ROW; the file is the shape of every
+    document already produced from it. Swapping the file under a template that
+    has printed something rewrites what we claim we sent, silently, and a
+    `Document` pointing at that row would now point at a layout it never used.
+
+    Uploading a replacement is the supported path: it makes version N+1 and
+    leaves N intact, so the old paper stays reproducible.
+    """
+    from app.models.models import Document as _Doc
+    from app.models.models import DocumentTemplate as _DT
+
+    company_id = get_current_company_id()
+    tpl = _DT.query.filter_by(id=template_id, company_id=company_id).first()
+    if not tpl:
+        flash(t('Không tìm thấy mẫu hoặc không có quyền'), 'error')
+        return redirect(url_for('dashboard.list_templates'))
+
+    name = (request.form.get('name') or '').strip()
+    if name:
+        tpl.name = name
+    description = request.form.get('description')
+    if description is not None:
+        tpl.description = description.strip() or None
+
+    replacement = request.files.get('template_file')
+    if replacement and replacement.filename:
+        flash(t('Muốn đổi nội dung mẫu thì tải lên bản mới — bản cũ vẫn được giữ lại.'),
+              'warning')
+
+    db.session.commit()
+    flash(t('Đã cập nhật mẫu'), 'success')
+    return redirect(url_for('dashboard.list_templates'))
+
+
+@dashboard_bp.route('/settings/templates/<template_id>/download',
+                    methods=['GET'])
+@company_admin_required
+def download_template(template_id):
+    """Open the template itself.
+
+    There was no way to see what a template contained. An admin with four
+    contract templates and four names had to print a real contract to find out
+    which was which.
+    """
+    from app.models.models import DocumentTemplate as _DT
+    from app.services.services import DocumentService
+
+    company_id = get_current_company_id()
+    tpl = _DT.query.filter_by(id=template_id, company_id=company_id).first()
+    if not tpl:
+        abort(404)
+
+    path = DocumentService()._get_template_file_path(tpl)
+    if not path or not os.path.exists(path):
+        flash(t('Tệp mẫu không còn trên máy chủ'), 'error')
+        return redirect(url_for('dashboard.list_templates'))
+
+    return send_file(path, as_attachment=True,
+                     download_name=f'{tpl.name}_v{tpl.version}'
+                                   f'{os.path.splitext(tpl.template_file)[1]}')
 
 
 @dashboard_bp.route('/settings/templates/<template_id>/deactivate', methods=['POST'])

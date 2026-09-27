@@ -1120,6 +1120,15 @@ TRANSLATIONS['vi'].update({
     # Lịch sử chứng từ (T-08). Khoá đã là tiếng Việt nên ánh xạ về chính nó —
     # cùng quy ước với các dòng quanh đây.
     'Loại chứng từ không hợp lệ.': 'Loại chứng từ không hợp lệ.',
+    # Quản lý mẫu in (T-24).
+    'Phiên bản': 'Phiên bản',
+    'Tải mẫu về': 'Tải mẫu về',
+    'Sửa tên / mô tả': 'Sửa tên / mô tả',
+    'Muốn đổi nội dung mẫu thì tải lên bản mới — bản cũ vẫn được giữ lại.':
+        'Muốn đổi nội dung mẫu thì tải lên bản mới — bản cũ vẫn được giữ lại.',
+    'Không tìm thấy mẫu hoặc không có quyền': 'Không tìm thấy mẫu hoặc không có quyền',
+    'Đã cập nhật mẫu': 'Đã cập nhật mẫu',
+    'Tệp mẫu không còn trên máy chủ': 'Tệp mẫu không còn trên máy chủ',
     'Lịch sử chứng từ': 'Lịch sử chứng từ',
     'Thời điểm': 'Thời điểm',
     'Người thực hiện': 'Người thực hiện',
