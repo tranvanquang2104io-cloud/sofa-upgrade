@@ -603,6 +603,29 @@ machine, không phải từ một chuỗi viết tay ở mỗi template.
 
 ---
 
+## THIẾU SÓT CỦA BẢN KẾ HOẠCH NÀY — §8.2 IN ẤN (ghi ngày 2026-09-28)
+
+Bản kế hoạch 20 task ở trên **bỏ sót hoàn toàn** yêu cầu §8.2 mà chủ sản phẩm
+đã trả lời rất cụ thể:
+
+> *"Cách A, và mọi loại form in hay chứng từ được in đều phải dùng loại A, nó
+> là quy chuẩn của app ngay từ đầu rồi, nên mới nói phải làm đồng bộ tất cả các
+> feature xung quanh cái chức năng in này giống nhau ở mọi loại màn hình (nút
+> nhấn in, màn hình lịch sử file đã in, popup, ...), và chức năng quản lý form
+> in cũng cần khoa học và đầy đủ CRUD - vì sau này mở rộng thì sẽ rất nhiều
+> form in của rất nhiều loại chứng từ, phải làm sao để nó quản lý khoa học và
+> gọn gàng."*
+
+Đây là **lỗi của tôi khi lập kế hoạch**, không phải yêu cầu mới phát sinh. Ghi
+lại ở đây thay vì lặng lẽ thêm task, vì bản kế hoạch được duyệt dựa trên giả
+định nó đã phủ hết những gì chủ sản phẩm đã chốt.
+
+Ba nhóm việc sẽ được đánh số T-22 trở đi sau khi khảo sát xong hiện trạng
+(đang chạy): (1) mọi đường in đều đi qua template, (2) đồng bộ nút in / lịch sử
+file / popup ở mọi màn hình, (3) CRUD + phiên bản cho quản lý mẫu in.
+
+---
+
 ### T-21 · Cấp số chứng từ khi hai người lưu cùng lúc
 
 **Priority:** P2 · **Type:** Bug · **Dependencies:** T-03 · **Status:** `TODO`
