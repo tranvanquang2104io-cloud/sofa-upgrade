@@ -1198,6 +1198,47 @@ class PaymentReportService:
             db.session.rollback()
             raise
     
+    def _resync_payment_lifecycle(self, order_id):
+        """Set the money flags from the payments that actually stand.
+
+        Asked of the data, not derived from what just changed: whichever
+        payment was voided, and in whatever order, the answer is the same.
+        """
+        from app.repositories.repository import LifecycleStatusRepository
+        from app.models.models import PaymentReport as _PR
+
+        lifecycle = LifecycleStatusRepository().get_or_create_for_order(
+            str(order_id))
+
+        standing = _PR.query.filter(
+            _PR.order_id == order_id,
+            _PR.is_confirmed == True,        # noqa: E712
+            _PR.is_canceled == False,        # noqa: E712
+        ).all()
+
+        has_advance = any(p.payment_type == 'advance' for p in standing)
+        if not getattr(lifecycle, 'advance_skipped', False):
+            lifecycle.advance_paid = has_advance
+            if not has_advance:
+                lifecycle.advance_paid_at = None
+
+        # Paid in full is an arithmetic fact, not a flag somebody set: what has
+        # been collected against what was agreed.
+        agreed = order_agreed_value(lifecycle.order) if lifecycle.order else 0
+        collected = order_amount_collected(order_id)
+        lifecycle.fully_paid = bool(agreed) and collected >= agreed
+        if not lifecycle.fully_paid:
+            lifecycle.fully_paid_at = None
+
+        # No separate "completed" state to unwind: `Order` has no status
+        # column and `LifecycleStatus` has no `completed` flag — `fully_paid`
+        # IS that state and the screens read it. I wrote code to reset a
+        # field that does not exist; it raised only because Python has no
+        # such attribute. A dict or a JSON blob would have swallowed it.
+
+        db.session.add(lifecycle)
+        return lifecycle
+
     def cancel_payment(self, payment_id, order_id, reason=""):
         """Cancel payment report and update lifecycle atomically"""
         try:
@@ -1206,7 +1247,12 @@ class PaymentReportService:
                 raise ValueError(f"Payment report {payment_id} not found")
             
             if not payment.can_cancel():
-                raise ValueError("Payment cannot be canceled (already confirmed or canceled)")
+                raise ValueError("Phiếu này đã được huỷ rồi")
+            if payment.is_confirmed and not (reason or '').strip():
+                # Money moving back with no explanation is a hole in the
+                # record. A draft can be cancelled quietly; a confirmed slip
+                # cannot.
+                raise ValueError("Phải nhập lý do huỷ phiếu đã xác nhận")
 
             # Checked in the SERVICE, not only in the route: a period that is
             # closed is closed for every caller — a script, an import, a future
@@ -1222,22 +1268,24 @@ class PaymentReportService:
             payment.canceled_at = datetime.utcnow()
             payment.canceled_reason = reason
 
-            # If this was a confirmed advance payment, check if lifecycle should revert
-            if payment.payment_type == 'advance' and payment.is_confirmed:
-                from app.repositories.repository import LifecycleStatusRepository, PaymentReportRepository as _PRRepo
-                from app.models.models import PaymentReport as _PR
-                remaining_confirmed = db.session.query(_PR).filter(
-                    _PR.order_id == payment.order_id,
-                    _PR.payment_type == 'advance',
-                    _PR.is_confirmed == True,
-                    _PR.is_canceled == False,
-                    _PR.id != payment.id
-                ).count()
-                lifecycle = LifecycleStatusRepository().get_or_create_for_order(str(payment.order_id))
-                if remaining_confirmed == 0 and not getattr(lifecycle, 'advance_skipped', False):
-                    lifecycle.advance_paid = False
-                    lifecycle.advance_paid_at = None
-                    db.session.add(lifecycle)
+            # Everything the confirmation touched moves back.
+            #
+            # This used to handle ONLY `payment_type == 'advance'`, and it had
+            # never run at all: `can_cancel()` refused every confirmed payment,
+            # so the branch was dead code. Opening the door woke a path nobody
+            # had executed, and it did half the job — void a FINAL payment and
+            # the order stayed `completed` with `fully_paid` true, the system
+            # saying a customer had paid in full while their money was given
+            # back.
+            #
+            # Recomputed from the payments that remain rather than unpicked
+            # flag by flag. Undoing a flag assumes this payment is the only
+            # reason it was set; asking the data cannot make that mistake, and
+            # gives the same answer whichever payment is voided and in which
+            # order.
+            if payment.is_confirmed:
+                db.session.flush()
+                self._resync_payment_lifecycle(payment.order_id)
             
             # Make update atomic
             db.session.add(payment)

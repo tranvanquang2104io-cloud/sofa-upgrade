@@ -623,8 +623,19 @@ class PaymentReport(DocExtensionMixin, db.Model):
         return not self.is_confirmed and not self.is_canceled
     
     def can_cancel(self):
-        """Check if payment can be canceled"""
-        return not self.is_confirmed and not self.is_canceled
+        """A confirmed payment CAN be voided — with a reason, and via approval.
+
+        It could not before, and that was the single most consequential gap in
+        the product: an advance confirmed against the wrong order left the
+        customer showing as paid, understated the receivable by that amount,
+        and could be put right only by editing the database.
+
+        `can_edit()` is deliberately NOT relaxed alongside this. Void and
+        re-create, never rewrite: an accounting record that can be silently
+        edited is worth less than one that shows it was corrected (Luật Kế
+        toán 2015 Đ.27).
+        """
+        return not self.is_canceled
 
 
 class DocumentTemplate(db.Model):
