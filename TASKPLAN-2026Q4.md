@@ -620,9 +620,54 @@ Bản kế hoạch 20 task ở trên **bỏ sót hoàn toàn** yêu cầu §8.2 
 lại ở đây thay vì lặng lẽ thêm task, vì bản kế hoạch được duyệt dựa trên giả
 định nó đã phủ hết những gì chủ sản phẩm đã chốt.
 
-Ba nhóm việc sẽ được đánh số T-22 trở đi sau khi khảo sát xong hiện trạng
-(đang chạy): (1) mọi đường in đều đi qua template, (2) đồng bộ nút in / lịch sử
-file / popup ở mọi màn hình, (3) CRUD + phiên bản cho quản lý mẫu in.
+### Hiện trạng đã khảo sát (2026-09-28, có trích dẫn dòng)
+
+**9 loại chứng từ in được. 7 loại đi qua template (Cách A), 2 loại KHÔNG.**
+Đơn mua hàng (`procurement_doc.py:22`) và Lệnh sản xuất (`production_doc.py:58`)
+dựng bằng Python cứng, `send_file` thẳng, **không tạo dòng `Document` nào** —
+nên không có lịch sử file in, không sửa được mẫu, không đổi được bố cục nếu
+không sửa code.
+
+**Nút in / lịch sử / popup không đồng bộ.** Macro `generate_document_modal`
+(`macros/ui.html:352`) được 5 file dùng; 4 màn hình in **không** qua macro:
+`agreements/view.html:20`, `orders/view.html:558` (ĐĐH — cùng file đã dùng
+macro 6 lần), `procurement/po_view.html:28`, `production/plan.html:36`.
+Partial lịch sử `_generated_documents.html` chỉ được **4** màn hình include;
+HĐNT, ĐĐH, đơn mua, lệnh sản xuất **không có** lịch sử file in.
+
+**Quản lý mẫu in thiếu CRUD và không có phiên bản.** Có: list
+(`dashboard_routes.py:421`), upload (`:444`), activate (`:575`), deactivate
+(`:511`), delete có điều kiện (`:527`). **Không có**: sửa (đổi tên/mô tả/thay
+file tại chỗ), xem trước, tải mẫu về. **Không có cột `version`**, không có lịch
+sử, không quay lại bản cũ được: upload trùng loại thì tắt bản cũ rồi chèn dòng
+mới (`:486-499`). Chứng từ đã in xong **không giữ lại bản mẫu đã dùng** — chỉ
+giữ `variables_used` (dữ liệu), không giữ bố cục.
+
+**Dropdown upload chỉ có 7 loại** (`settings/templates.html:150-157`), thiếu
+`agreement`, `order_confirmation`, `delivery` — trong khi code lại **bắt buộc**
+phải có mẫu các loại đó (`services.py:1822`, `:1857`). Nên hai nút in đó **không
+thể thành công** trừ khi tạo dòng mẫu ngoài giao diện.
+
+### Ba nhóm việc
+
+- **T-22** (P1): hai đường in cứng chuyển sang Cách A, và mọi bản in đều tạo
+  dòng `Document`.
+- **T-23** (P1): một chuẩn in duy nhất cho mọi màn hình — nút in, popup chọn
+  định dạng, lịch sử file đã in. Repo đã có sẵn test khung
+  `tests/test_printing_is_one_standard.py:46` với danh sách `CONVERGED` /
+  `MIGRATING`; việc là dọn hết `MIGRATING` (và thêm ĐĐH vào danh sách — hiện
+  **đang thiếu**, nên nó không bị test nào soi).
+- **T-24** (P1): quản lý mẫu in — đủ CRUD (thêm sửa xem trước tải về), có
+  **phiên bản**, và mẫu đã dùng để in thì không bị thay đổi âm thầm.
+
+> **Đã sửa ngay trong lúc khảo sát (không chờ):** `Document.source_type` /
+> `source_id` **chưa từng được ghi bởi bất kỳ đường code nào** — cột do tôi
+> thêm, migration do tôi viết có cả backfill, hàm đọc do tôi viết, test do tôi
+> viết và **xanh**, vì mỗi fixture tự tay gán `source_type`. Backfill làm dòng
+> cũ có dữ liệu nên nhìn bảng tưởng lành; mọi chứng từ in ra **sau đó** đều
+> NULL. Đây là lần thứ **bảy** trong repo có phần việc hoàn chỉnh mà không lối
+> nào chạm tới, và là lần duy nhất **test che mất lỗi**. Đã sửa tại
+> `_save_document`, thêm test đi qua đường in thật.
 
 ---
 
