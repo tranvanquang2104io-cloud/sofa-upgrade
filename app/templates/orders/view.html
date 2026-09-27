@@ -714,4 +714,42 @@
 {{ generate_document_modal('generatePaymentRequestModal', 'payment_request', order.id) }}
 {% endif %}
 
+{# ---- Lịch sử chứng từ: ai làm gì, lúc nào, vì sao ----
+   Hiện ngay trên màn hình đơn hàng chứ không nằm riêng một chỗ: người cần
+   biết ai đã ký, ai xác nhận tiền, ai huỷ là người đang xem đơn này. Sổ ghi
+   mà không ai đọc được thì không trả lời câu hỏi nào. #}
+{% if document_history %}
+<div class="card mb-3">
+  <div class="card-header">
+    <i class="bi bi-clock-history"></i> {{ t('Lịch sử chứng từ') }}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>{{ t('Thời điểm') }}</th>
+          <th>{{ t('Việc') }}</th>
+          <th>{{ t('Người thực hiện') }}</th>
+          <th>{{ t('Lý do') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in document_history %}
+        <tr>
+          <td class="text-nowrap">
+            {{ event.occurred_at.strftime('%d/%m/%Y %H:%M') if event.occurred_at else '—' }}
+          </td>
+          <td>{{ action_label(event.action) }}</td>
+          {# `user_name` là bản chép lại lúc xảy ra, nên lịch sử vẫn đọc đúng
+             sau khi người dùng bị khoá hoặc đổi tên. #}
+          <td>{{ event.user_name or t('Hệ thống') }}</td>
+          <td class="text-muted small">{{ event.reason or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

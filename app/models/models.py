@@ -942,6 +942,71 @@ class Warehouse(db.Model):
         return f'<Warehouse {self.warehouse_code}>'
 
 
+class DocumentTransition(db.Model):
+    """Who did what to which document, when, and why.
+
+    The whole schema carried three `*_by_id` columns, two of them on
+    ApprovalRequest. Nothing recorded who signed a contract, who confirmed
+    that money had arrived, or who cancelled any of it. The owner asked for
+    maker-checker; this is the part of it that was missing, because an
+    approval nobody is named in is not a control, it is a habit.
+
+    One table rather than a pair of columns per document, for three reasons:
+
+    - There are five document types and at least eight actions between them.
+      Two columns each is sixteen migrations and sixteen places to forget.
+    - A document has MANY events, not one. `signed_by` holds the last signature
+      and silently loses the fact that it was cancelled and re-signed.
+    - Luật Kế toán 2015 Đ.27: a correction is recorded, never erased. A history
+      is the shape that law describes; a current-value column is not.
+
+    Deliberately append-only. Nothing in the application updates or deletes a
+    row here — a ledger that can be edited answers a different question from
+    the one it appears to answer.
+    """
+
+    __tablename__ = 'document_transitions'
+
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
+                           nullable=False, index=True)
+
+    #: The kind of document, as the printing service already names them
+    #: ('contract', 'payment', 'quotation', 'handover', 'order'). A plain
+    #: string rather than a foreign key because one table points at five.
+    document_type = db.Column(db.String(50), nullable=False, index=True)
+    document_id = db.Column(GUID(), nullable=False, index=True)
+
+    #: What happened, in the vocabulary the workflow rules already use
+    #: ('contract.sign', 'payment.confirm', 'payment.cancel', ...).
+    action = db.Column(db.String(64), nullable=False, index=True)
+
+    #: Where the document stood before and after. Free text, because the
+    #: documents use boolean flags rather than a state column — when T-07
+    #: gives them real states these become those states, and the rows written
+    #: before that keep meaning what they meant.
+    from_state = db.Column(db.String(64))
+    to_state = db.Column(db.String(64))
+
+    #: Nullable: an action taken by a migration or a scheduled job has no user,
+    #: and recording a false one would be worse than recording none.
+    user_id = db.Column(GUID(), db.ForeignKey('users.id'), index=True)
+    #: Kept as text as well, so the history still reads correctly after a user
+    #: is deactivated or renamed. The FK is for joining; this is for reading.
+    user_name = db.Column(db.String(255))
+
+    occurred_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    #: Why. For a cancellation this is the reason the user had to type, and it
+    #: is the single most valuable column here six months later.
+    reason = db.Column(db.Text)
+
+    user = db.relationship('User', lazy=True)
+
+    def __repr__(self):
+        return f'<DocumentTransition {self.document_type} {self.action}>'
+
+
 class ApprovalRequest(db.Model):
     """A clerk asked; a branch manager decides.
 

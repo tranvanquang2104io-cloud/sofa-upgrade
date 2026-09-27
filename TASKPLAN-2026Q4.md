@@ -319,7 +319,36 @@ cuối tài liệu.
 
 ### T-08 · Audit trail: ai làm gì
 
-**Priority:** P1 · **Type:** Architecture · **Dependencies:** T-07 · **Status:** `TODO`
+**Priority:** P1 · **Type:** Architecture · **Dependencies:** không (xem ghi chú) · **Status:** `DONE`
+
+> **Kết quả.** Bảng `document_transitions` + `app/services/transitions.py`,
+> ghi tại 7 chỗ nghẽn service mà chính đợt refactor này đã gom lại.
+>
+> **Đảo phụ thuộc, nói rõ lý do.** Plan ghi T-08 phụ thuộc T-07. Không đúng:
+> ghi *ai làm gì, lúc nào, vì sao* chỉ cần mỗi hành động có một chỗ nghẽn — và
+> bảy chỗ đó đã gom xong trong phiên này. State machine là thay đổi lớn hơn và
+> rủi ro hơn; không có lý do gì bắt nền móng maker–checker chờ nó.
+>
+> **Một bảng, không phải mỗi chứng từ một cặp cột.** (a) 5 loại chứng từ × 8
+> hành động = 16 migration và 16 chỗ để quên; (b) một chứng từ có **nhiều** sự
+> kiện — `signed_by` chỉ giữ chữ ký cuối và **mất** việc nó từng bị huỷ rồi ký
+> lại; (c) Luật Kế toán 2015 Đ.27 mô tả một **lịch sử**, không phải một giá trị
+> hiện tại.
+>
+> **Ba quyết định:**
+> 1. **Sổ không bao giờ chặn việc nó đang ghi.** Lỗi ghi sử → log rồi nuốt.
+>    Từ chối xác nhận tiền khách vì không chèn được một dòng audit là kết cục
+>    tệ hơn một lỗ hổng trong lịch sử: lỗ hổng thấy được về sau, còn phiếu thu
+>    kẹt ở quầy là sự cố ngay lúc đó. Có test bắn lỗi vào nó và khẳng định
+>    phiếu thu vẫn xác nhận được.
+> 2. **Không bịa người.** Ngoài request (migration, seed, job) → `user_id`
+>    NULL. Lịch sử ghi sai tên làm **mọi dòng** đáng ngờ, kể cả dòng đúng.
+> 3. **Không backfill.** Dữ liệu cũ không nói ai làm gì; bịa ra là gán tên
+>    người vào việc họ có thể chưa từng làm. Lịch sử bắt đầu từ rỗng, từ hôm nay.
+>
+> **Đọc được trên màn hình đơn hàng, có test khẳng định.** Repo này đã có sáu
+> lần làm xong mà không lối nào chạm tới — sổ tồn kho ghi-mà-không-đọc là một
+> trong số đó. Một audit trail là thứ dễ thành cái thứ bảy nhất.
 
 1. **Nội dung.** Toàn schema có đúng 3 cột `*_by_id`.
 2. **Mục đích.** Duyệt mà không ghi ai duyệt thì không phải kiểm soát.

@@ -1053,6 +1053,14 @@ def view_order(order_id):
     order_details['can_record_advance'] = _WF.can(_order, _A_ADVANCE)
     order_details['can_record_final'] = _WF.can(_order, _A_FINAL)
 
+    # Read here, on the screen, because a ledger nobody can see answers no
+    # question. This repo has six instances of finished work that nothing
+    # reaches — a write-only stock movement table among them — and an audit
+    # trail is exactly the kind of thing that becomes the seventh.
+    from app.services.transitions import history_for_order, label_for
+    order_details['document_history'] = history_for_order(order_id)
+    order_details['action_label'] = label_for
+
     return render_template('orders/view.html', **order_details)
 
 

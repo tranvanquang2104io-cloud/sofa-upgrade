@@ -451,6 +451,9 @@ class OrderService:
         if not reason:
             raise ValueError('Phải nhập lý do huỷ')
 
+        from app.services.transitions import record as _history
+        _history(order.company_id, 'order', order.id, 'order.cancel',
+                 from_state='active', to_state='canceled', reason=reason)
         order.is_canceled = True
         order.canceled_at = datetime.utcnow()
         order.canceled_reason = reason
@@ -570,6 +573,9 @@ class QuotationService:
         # is indistinguishable from a rule that was satisfied.
         WorkflowService.require(quotation.order, ACTION_QUOTATION_APPROVE)
 
+        from app.services.transitions import record as _history
+        _history(quotation.order.company_id, 'quotation', quotation.id,
+                 'quotation.approve', from_state='draft', to_state='approved')
         quotation.is_approved = True
         db.session.commit()
         
@@ -746,6 +752,9 @@ class ContractService:
                 return contract
             
             # Update contract
+            from app.services.transitions import record as _history
+            _history(contract.order.company_id, 'contract', contract.id,
+                     'contract.sign', from_state='draft', to_state='signed')
             contract.is_signed = True
             contract.signed_date = datetime.utcnow()
             
@@ -799,6 +808,11 @@ class ContractService:
                 raise ValueError('Phải nhập lý do huỷ')
             
             # Update contract
+            from app.services.transitions import record as _history
+            _history(contract.order.company_id, 'contract', contract.id,
+                     'contract.cancel',
+                     from_state='signed' if contract.is_signed else 'draft',
+                     to_state='canceled', reason=reason)
             contract.is_canceled = True
             contract.canceled_at = datetime.utcnow()
             contract.canceled_reason = reason
@@ -917,6 +931,11 @@ class HandoverRecordService:
 
             # Same as `quotation.approve`: configurable and never checked.
             WorkflowService.require(record.order, ACTION_HANDOVER_CONFIRM)
+
+            from app.services.transitions import record as _history
+            _history(record.order.company_id, 'handover', record.id,
+                     'handover.confirm', from_state='draft',
+                     to_state='confirmed')
 
             # Update handover record
             record.is_confirmed = True
@@ -1242,6 +1261,11 @@ class PaymentReportService:
                 logger.warning(f"Payment {report_id} already confirmed at {report.confirmed_date}")
                 return report
             
+            from app.services.transitions import record as _history
+            _history(report.company_id, 'payment', report.id,
+                     'payment.confirm', from_state='draft',
+                     to_state='confirmed')
+
             # Update payment report
             report.is_confirmed = True
             report.confirmed_date = datetime.utcnow()
@@ -1352,6 +1376,13 @@ class PaymentReportService:
             if not allowed:
                 raise ValueError(why)
             
+            from app.services.transitions import record as _history
+            _history(payment.company_id, 'payment', payment.id,
+                     'payment.cancel',
+                     from_state='confirmed' if payment.is_confirmed
+                     else 'draft',
+                     to_state='canceled', reason=reason)
+
             # Update payment report
             payment.is_canceled = True
             payment.canceled_at = datetime.utcnow()
