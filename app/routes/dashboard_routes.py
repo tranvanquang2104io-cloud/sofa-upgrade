@@ -2954,13 +2954,25 @@ def list_approvals():
     from app.services.approvals import pending_for
 
     company_id = get_current_company_id()
-    decided = (ApprovalRequest.query
-               .filter(ApprovalRequest.company_id == company_id,
-                       ApprovalRequest.status != ApprovalRequest.STATUS_PENDING)
+
+    # A company admin oversees every branch; a branch manager sees their own.
+    # `None` means unfiltered, so the two cases stay visibly different here
+    # rather than a company admin being handed a list of all store ids that
+    # happens to match everything.
+    store_ids = None if is_company_admin() else get_accessible_store_ids(company_id)
+
+    decided_query = ApprovalRequest.query.filter(
+        ApprovalRequest.company_id == company_id,
+        ApprovalRequest.status != ApprovalRequest.STATUS_PENDING)
+    if store_ids is not None:
+        decided_query = decided_query.filter(
+            ApprovalRequest.store_id.in_(list(store_ids)))
+    decided = (decided_query
                .order_by(ApprovalRequest.decided_at.desc())
                .limit(30).all())
     return render_template('approvals/list.html',
-                           pending=pending_for(company_id), decided=decided)
+                           pending=pending_for(company_id, store_ids),
+                           decided=decided)
 
 
 @dashboard_bp.route('/approvals/<request_id>/<decision>', methods=['POST'])
@@ -2970,8 +2982,15 @@ def decide_approval(request_id, decision):
     from app.services.approvals import approve, reject
 
     company_id = get_current_company_id()
-    row = ApprovalRequest.query.filter_by(id=request_id,
-                                          company_id=company_id).first()
+    query = ApprovalRequest.query.filter_by(id=request_id,
+                                            company_id=company_id)
+    if not is_company_admin():
+        # Same narrowing as the queue itself. Without it the screen hides the
+        # request and the URL still decides it — which is the whole reason
+        # this repo stopped treating a hidden button as a rule.
+        query = query.filter(ApprovalRequest.store_id.in_(
+            list(get_accessible_store_ids(company_id))))
+    row = query.first()
     if not row:
         flash(t('Không tìm thấy đề nghị hoặc không có quyền'), 'error')
         return redirect(url_for('dashboard.list_approvals'))

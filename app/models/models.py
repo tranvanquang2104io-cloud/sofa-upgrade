@@ -968,6 +968,19 @@ class ApprovalRequest(db.Model):
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     company_id = db.Column(GUID(), db.ForeignKey('companies.id'),
                            nullable=False, index=True)
+    #: The branch the request came FROM, stamped when it is raised.
+    #:
+    #: The owner's rule is that a branch manager decides their own branch's
+    #: work, so the queue has to be filterable on something. It is stamped at
+    #: the moment of asking rather than re-derived from the document later,
+    #: because the document can move between branches and the queue must keep
+    #: showing the branch that actually asked.
+    #:
+    #: Nullable: rows raised before this column existed have it backfilled
+    #: from their document, but a target whose document has since been deleted
+    #: has nowhere to get it from, and an unfilterable old row is better than
+    #: a failed migration.
+    store_id = db.Column(GUID(), db.ForeignKey('stores.id'), index=True)
     #: e.g. 'payment.confirm'. Only actions the service knows how to perform
     #: are accepted — a request nothing can carry out would sit in the queue
     #: teaching people that approving means nothing.

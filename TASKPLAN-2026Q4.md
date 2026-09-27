@@ -67,7 +67,33 @@ cuối tài liệu.
 
 ### T-02 · Người duyệt bị ràng buộc theo chi nhánh, và không tự duyệt
 
-**Priority:** P0 · **Type:** Security · **Dependencies:** T-01 · **Status:** `TODO`
+**Priority:** P0 · **Type:** Security · **Dependencies:** T-01 · **Status:** `DONE`
+
+> **Kết quả.** Thêm `approval_requests.store_id` (migration `f3a4b5c6d7e8`,
+> backfill từ `order.store_id` của phiếu thu), đóng dấu chi nhánh lúc *tạo* đề
+> nghị, lọc hàng đợi + màn quyết định theo phạm vi cửa hàng, chặn tự duyệt, và
+> cho hai performer đi qua repository thay vì `PaymentReport.query.get()`.
+>
+> **Phần nhọn nhất HOÁ RA T-01 đã đóng sẵn — nói rõ để không nhận công.** Test
+> "quản lý chi nhánh A không duyệt được đề nghị của chi nhánh B" **xanh ngay
+> trước khi sửa gì**: `_confirm_payment` nạp lại phiếu qua
+> `PaymentReportService`, mà service này đi qua repository đã bị chặn ở T-01,
+> nên phiếu của chi nhánh kia đọc ra là "không tìm thấy". Tiền vốn đã an toàn.
+> Cái còn thiếu là *khác*: đề nghị vẫn **hiện trong hàng đợi sai người**, và
+> bấm duyệt thì nhận một câu báo lỗi vô nghĩa thay vì đừng bao giờ thấy nó.
+> Và sự an toàn đó đang tựa vào việc một service tình cờ nạp lại qua
+> repository — performer viết thêm ngày mai mà thao tác thẳng trên row được
+> truyền vào thì không có lớp đó.
+>
+> **`store_id` NULL có nghĩa.** Dòng cũ không truy được chi nhánh (phiếu đã bị
+> xoá) không rơi vào hàng đợi chi nhánh nào, mà về company admin — người đứng
+> trên các chi nhánh. Có test riêng cho trường hợp này; backfill đã chạy thử
+> trên dữ liệu thật (1 dòng truy được, 1 dòng mồ côi) chứ không chỉ chạy lệnh.
+>
+> **Tự duyệt: bẫy, không phải lỗ đang hở.** `store_admin` hỏi thì không bao
+> giờ sinh ra dòng nào — `request_or_do` làm luôn. Chỉ hở khi ai đó đổi vai
+> giữa lúc hỏi và lúc quyết, hoặc khi `DECIDING_ROLES` mở rộng. Test ghi đúng
+> như vậy thay vì khoe đã tìm ra lỗ.
 
 1. **Nội dung.** `ApprovalRequest` không có `store_id`; `pending_for()` trả về
    toàn công ty.

@@ -23,21 +23,34 @@ from app.config import db
 Outcome = namedtuple('Outcome', 'performed request message')
 
 
+def _payment_of(request_row):
+    """The payment this request is about, through the REPOSITORY.
+
+    Not `PaymentReport.query.get()`. The repository applies the branch check
+    (`app/utils/scope.py`), and the queue is a second door into exactly the
+    same record — a door that used to bypass it. That it was not exploitable
+    is not a reason to leave it: the protection rested on `mark_confirmed`
+    happening to re-fetch through the repository, and the next performer
+    written might act on the row it was handed.
+    """
+    from app.repositories.repository import PaymentReportRepository
+
+    return PaymentReportRepository().get_by_id(request_row.target_id)
+
+
 def _confirm_payment(request_row):
-    from app.models.models import PaymentReport
     from app.services.services import PaymentReportService
 
-    payment = PaymentReport.query.get(request_row.target_id)
+    payment = _payment_of(request_row)
     if payment is None:
         raise ValueError('Không tìm thấy phiếu thanh toán')
     PaymentReportService().mark_confirmed(payment.id, payment.order_id)
 
 
 def _cancel_payment(request_row):
-    from app.models.models import PaymentReport
     from app.services.services import PaymentReportService
 
-    payment = PaymentReport.query.get(request_row.target_id)
+    payment = _payment_of(request_row)
     if payment is None:
         raise ValueError('Không tìm thấy phiếu thanh toán')
     PaymentReportService().cancel_payment(
@@ -57,6 +70,23 @@ PERFORMERS = {
 DECIDING_ROLES = ('company_admin', 'store_admin')
 
 
+def _branch_of(action, target_id):
+    """Which branch a request is about, read from the document itself.
+
+    From the document rather than from the asker's own store, because those
+    can differ — a company admin raising a request on a branch's behalf would
+    otherwise stamp it with their own (often empty) store and drop it out of
+    the branch queue entirely.
+    """
+    if not action.startswith('payment.'):
+        return None
+    from app.repositories.repository import PaymentReportRepository
+
+    payment = PaymentReportRepository().get_by_id(target_id)
+    order = getattr(payment, 'order', None) if payment else None
+    return getattr(order, 'store_id', None)
+
+
 def request_or_do(company_id, action, target_type, target_id, user_role,
                   user_id, reason=None):
     """Perform `action` if this user may decide; otherwise raise a request."""
@@ -68,7 +98,8 @@ def request_or_do(company_id, action, target_type, target_id, user_role,
 
     row = ApprovalRequest(
         company_id=company_id, action=action, target_type=target_type,
-        target_id=target_id, reason=reason, requested_by_id=user_id)
+        target_id=target_id, reason=reason, requested_by_id=user_id,
+        store_id=_branch_of(action, target_id))
 
     if user_role in DECIDING_ROLES:
         # Done now, and nothing is written to the queue: there is no decision
@@ -96,6 +127,15 @@ def approve(request_row, user_id, note=None):
         # somebody already recorded.
         raise ValueError('Đề nghị này đã được quyết định rồi')
 
+    if (request_row.requested_by_id is not None
+            and str(request_row.requested_by_id) == str(user_id)):
+        # Not reachable today: a deciding role never creates a row, the action
+        # is performed on the spot. It becomes reachable the day somebody is
+        # promoted between asking and deciding, or DECIDING_ROLES is widened.
+        # Two pairs of eyes or none — a request the asker signs themselves
+        # records a review that did not happen.
+        raise ValueError('Không thể tự duyệt đề nghị của chính mình')
+
     PERFORMERS[request_row.action](request_row)
     request_row.status = ApprovalRequest.STATUS_APPROVED
     request_row.decided_by_id = user_id
@@ -122,11 +162,21 @@ def reject(request_row, user_id, note=None):
     return request_row
 
 
-def pending_for(company_id):
+def pending_for(company_id, store_ids=None):
+    """Requests waiting for a decision.
+
+    `store_ids=None` means every branch, which is what a company admin sees —
+    the person above the branches. A branch manager passes their own stores.
+
+    A row with no `store_id` (raised before the column existed, and whose
+    document has since gone) is shown to the company-wide view only. It cannot
+    be attributed to a branch, and putting it in an arbitrary branch queue
+    would be worse than leaving it to the person who oversees all of them.
+    """
     from app.models.models import ApprovalRequest
 
-    return (ApprovalRequest.query
-            .filter_by(company_id=company_id,
-                       status=ApprovalRequest.STATUS_PENDING)
-            .order_by(ApprovalRequest.requested_at)
-            .all())
+    query = ApprovalRequest.query.filter_by(
+        company_id=company_id, status=ApprovalRequest.STATUS_PENDING)
+    if store_ids is not None:
+        query = query.filter(ApprovalRequest.store_id.in_(list(store_ids)))
+    return query.order_by(ApprovalRequest.requested_at).all()
