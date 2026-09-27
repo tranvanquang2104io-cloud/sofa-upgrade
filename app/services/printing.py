@@ -34,6 +34,40 @@ SOURCE_TYPES = {
     'PurchaseRequisition': 'purchase_requisition',
 }
 
+#: Every document type a template can be uploaded for, and its label.
+#:
+#: ONE list, because there were two: the upload form hand-wrote seven options
+#: and the services hand-wrote the types they look up. They disagreed by two —
+#: `agreement` and `order_confirmation` were required by the code and absent
+#: from the form — so pressing "In HĐNT" failed and the screen that would have
+#: fixed it did not offer the type. Each half was individually correct, which
+#: is why nobody found it.
+#:
+#: Order is the order the form shows. Add a new printable document here and it
+#: appears on the upload screen, passes validation, and is covered by the test
+#: that compares this list against what the code actually asks for.
+PRINTABLE_TYPES = (
+    ('quotation', 'Báo giá'),
+    ('contract', 'Hợp đồng'),
+    ('handover', 'Biên bản bàn giao'),
+    # The delivery generator prefers `delivery` and falls back to `handover`
+    # (services.py), so both have to be creatable or the preference is a
+    # setting nobody can exercise.
+    ('delivery', 'Biên bản giao hàng'),
+    ('payment', 'Phiếu thanh toán (chung)'),
+    ('payment_advance', 'Phiếu tạm ứng'),
+    ('payment_final', 'Phiếu thanh toán đợt cuối'),
+    ('payment_request', 'Đề nghị thanh toán'),
+    ('agreement', 'Hợp đồng nguyên tắc'),
+    ('order_confirmation', 'Đơn đặt hàng (ĐĐH)'),
+)
+
+
+def is_printable_type(document_type):
+    """Whether a template may be stored under this type."""
+    return any(key == document_type for key, _ in PRINTABLE_TYPES)
+
+
 #: The per-kind columns that predate `source_type`. Read as well as the new
 #: pair so a document printed before this change still appears.
 LEGACY_COLUMNS = {

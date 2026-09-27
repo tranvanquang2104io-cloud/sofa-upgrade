@@ -149,13 +149,16 @@
                         <label class="form-label fw-bold" for="f_document_type">{{ t('Document Type') }} <span class="text-danger">*</span></label>
                         <select name="document_type" class="form-select" required id="f_document_type">
                             <option value="">-- Select type --</option>
-                            <option value="quotation">Quotation</option>
-                            <option value="contract">Contract</option>
-                            <option value="handover">Handover Record</option>
-                            <option value="payment">Payment (general)</option>
-                            <option value="payment_advance">Advance Payment</option>
-                            <option value="payment_final">Final Payment</option>
-                            <option value="payment_request">Payment Request (Đề nghị thanh toán)</option>
+                            {# Rendered from `printing.PRINTABLE_TYPES`, which the
+                               upload endpoint validates against too. This list
+                               used to be written out by hand here and it drifted:
+                               it was missing `agreement` and `order_confirmation`,
+                               which the code requires before it will print those
+                               documents — so both print buttons failed and this
+                               screen could not fix it. #}
+                            {% for key, label in printable_types %}
+                            <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">

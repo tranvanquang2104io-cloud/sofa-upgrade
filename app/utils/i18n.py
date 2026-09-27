@@ -1119,6 +1119,7 @@ TRANSLATIONS['vi'].update({
     'Đề nghị chờ duyệt': 'Đề nghị chờ duyệt',
     # Lịch sử chứng từ (T-08). Khoá đã là tiếng Việt nên ánh xạ về chính nó —
     # cùng quy ước với các dòng quanh đây.
+    'Loại chứng từ không hợp lệ.': 'Loại chứng từ không hợp lệ.',
     'Lịch sử chứng từ': 'Lịch sử chứng từ',
     'Thời điểm': 'Thời điểm',
     'Người thực hiện': 'Người thực hiện',

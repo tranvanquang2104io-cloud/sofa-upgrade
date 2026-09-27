@@ -437,8 +437,10 @@ def list_templates():
     for tpl in all_templates:
         printed[str(tpl.id)] = _Doc.query.filter_by(template_id=tpl.id).count()
 
+    from app.services.printing import PRINTABLE_TYPES
     return render_template('settings/templates.html', templates=all_templates,
-                           printed=printed)
+                           printed=printed,
+                           printable_types=PRINTABLE_TYPES)
 
 
 @dashboard_bp.route('/settings/templates/upload', methods=['POST'])
@@ -452,6 +454,14 @@ def upload_template():
 
     if not name or not doc_type:
         flash(t('Vui lòng điền đầy đủ tên và loại tài liệu.'), 'error')
+        return redirect(url_for('dashboard.list_templates'))
+
+    # Validated against the same list the form renders from. Without this the
+    # form could be narrowed and the endpoint would still accept anything,
+    # which is how a template ends up under a type no screen can manage.
+    from app.services.printing import is_printable_type
+    if not is_printable_type(doc_type):
+        flash(t('Loại chứng từ không hợp lệ.'), 'error')
         return redirect(url_for('dashboard.list_templates'))
 
     file = request.files.get('template_file')
