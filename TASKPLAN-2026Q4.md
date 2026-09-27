@@ -249,7 +249,22 @@ cuối tài liệu.
 
 ### T-06 · Huỷ hợp đồng và huỷ đơn không đi qua service
 
-**Priority:** P0 · **Type:** Data integrity · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P0 · **Type:** Data integrity · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** Route gọi service. `ContractService.cancel_contract` **đã có
+> sẵn và đúng** — chỉ là route không bao giờ gọi nó, nên đoạn gỡ lifecycle
+> trong đó chỉ chạy trong test. Đây là **lần thứ sáu** trong repo này có phần
+> việc hoàn chỉnh mà không lối nào chạm tới, và là **lần đầu bản không ai chạm
+> tới lại là bản ĐÚNG**, còn bản đang chạy thật mới là bản hỏng.
+>
+> Thêm `OrderService.cancel_order` (trước không có hàm huỷ nào).
+>
+> **Cố ý không làm cascade sang chứng từ con.** Quy tắc của chủ sản phẩm khi
+> sửa sai là *huỷ có lý do rồi tạo lại*, từng chứng từ một, mỗi cái để lại dấu
+> vết riêng — không phải một dây chuyền âm thầm viết lại giấy tờ khách đã cầm.
+> Cũng đúng tinh thần Luật Kế toán 2015 Đ.27. Nếu muốn cascade thì đó là quyết
+> định nghiệp vụ, phải ghi vào plan, không quyết lén trong hàm này. Docstring
+> nói thẳng như vậy.
 
 1. **Nội dung.** `cancel_contract` (`dashboard_routes.py:1629-1663`) sửa model
    thẳng trong route.

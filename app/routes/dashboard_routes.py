@@ -1637,31 +1637,25 @@ def cancel_contract(contract_id):
         flash(t('Contract not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
-    if not contract.can_cancel():
-        flash(t('Contract cannot be canceled'), 'error')
-        return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
-    
+    order_id = contract.order_id
     try:
-        canceled_reason = request.form.get('canceled_reason', '').strip()
-        if not canceled_reason:
-            flash(t('Cancellation reason is required'), 'error')
-            return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
-        
-        # Cancel the contract
-        contract.is_canceled = True
-        contract.canceled_at = datetime.utcnow()
-        contract.canceled_reason = canceled_reason
-        contract.is_active = False
-        db.session.commit()
-        
+        # Through the service. This route used to set the four flags itself
+        # and never called `ContractService.cancel_contract`, so the lifecycle
+        # rollback in there ran only in tests — and cancelling the only
+        # contract left the order believing it still had one.
+        ContractService().cancel_contract(
+            contract_id, order_id,
+            reason=request.form.get('canceled_reason', ''))
         flash(t('Contract has been canceled successfully'), 'success')
-        logger.info(f"Contract {contract.contract_number} canceled by user. Reason: {canceled_reason}")
+    except ValueError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('dashboard.view_contract', contract_id=contract_id))
     except Exception as e:
         logger.error(f"Error canceling contract: {str(e)}")
         db.session.rollback()
         flash(t('Error canceling contract'), 'error')
     
-    return redirect(url_for('dashboard.view_order', order_id=contract.order_id))
+    return redirect(url_for('dashboard.view_order', order_id=order_id))
 
 
 @dashboard_bp.route('/api/contracts/<contract_id>', methods=['GET'])
@@ -1700,24 +1694,14 @@ def cancel_order(order_id):
         flash(t('Order not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_orders'))
     
-    if not order.can_cancel():
-        flash(t('Order cannot be canceled'), 'error')
-        return redirect(url_for('dashboard.view_order', order_id=order_id))
-    
     try:
-        canceled_reason = request.form.get('canceled_reason', '').strip()
-        if not canceled_reason:
-            flash(t('Cancellation reason is required'), 'error')
-            return redirect(url_for('dashboard.view_order', order_id=order_id))
-        
-        # Cancel the order
-        order.is_canceled = True
-        order.canceled_at = datetime.utcnow()
-        order.canceled_reason = canceled_reason
-        db.session.commit()
-        
+        OrderService().cancel_order(
+            order_id, company_id,
+            reason=request.form.get('canceled_reason', ''))
         flash(t('Order has been canceled successfully'), 'success')
-        logger.info(f"Order {order.order_code} canceled by user. Reason: {canceled_reason}")
+    except ValueError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('dashboard.view_order', order_id=order_id))
     except Exception as e:
         logger.error(f"Error canceling order: {str(e)}")
         db.session.rollback()

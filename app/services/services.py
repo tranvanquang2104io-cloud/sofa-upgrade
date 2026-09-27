@@ -419,6 +419,43 @@ class OrderService:
         return self.repo.get_orders_for_company(
             company_id, limit=per_page, offset=offset, store_ids=store_ids)
     
+    def cancel_order(self, order_id, company_id, reason=""):
+        """Cancel an order, with the reason, through one place.
+
+        `OrderService` had no cancel method at all: the route set the flags
+        itself. That matters less for tidiness than for where the DECISION
+        lives — an order carries quotations, contracts, handovers and
+        payments, and whatever is decided about that paperwork on
+        cancellation has to be decided once. A route cannot be that place,
+        because the next way to cancel an order (an API, a bulk action, the
+        approval queue) will not pass through it.
+
+        What this deliberately does NOT do: touch the child documents. The
+        owner's rule for correcting a mistake is void-with-a-reason and
+        re-create, one document at a time, each leaving its own trace — not a
+        cascade that silently rewrites paperwork the customer has already
+        been given. A cancelled order keeps its history visible, which is
+        also what Luật Kế toán 2015 Đ.27 expects. If a cascade is wanted it
+        is a business decision and belongs in the plan, not in this method.
+        """
+        order = self.get_order(order_id, company_id)
+        if not order:
+            raise ValueError('Đơn hàng không tồn tại hoặc không có quyền')
+
+        if not order.can_cancel():
+            raise ValueError('Đơn hàng này không huỷ được')
+
+        reason = (reason or '').strip()
+        if not reason:
+            raise ValueError('Phải nhập lý do huỷ')
+
+        order.is_canceled = True
+        order.canceled_at = datetime.utcnow()
+        order.canceled_reason = reason
+        db.session.commit()
+        logger.info('Order %s canceled: %s', order.order_code, reason)
+        return order
+
     def get_order_with_details(self, order_id, company_id):
         """Get order with all related data"""
         from app.repositories.repository import QuotationRepository, ContractRepository
@@ -729,7 +766,14 @@ class ContractService:
             raise
     
     def cancel_contract(self, contract_id, order_id, reason=""):
-        """Cancel contract and update lifecycle atomically"""
+        """Cancel a contract and put the order's lifecycle back.
+
+        The route used to do this itself and never called this method, so the
+        lifecycle rollback below ran only in tests. Cancelling the only
+        contract through the UI left `contract_created` True for ever, and the
+        order sat in a state the user had already undone with no way out but
+        a contract they did not want.
+        """
         try:
             contract = self.repo.get_by_id(contract_id)
             if not contract:
@@ -737,6 +781,13 @@ class ContractService:
             
             if not contract.can_cancel():
                 raise ValueError("Contract cannot be canceled (already signed or canceled)")
+
+            # The reason lived in the route, which is why moving the work had
+            # to bring it along. A cancelled document with no reason is the
+            # one people ask about six months later.
+            reason = (reason or '').strip()
+            if not reason:
+                raise ValueError('Phải nhập lý do huỷ')
             
             # Update contract
             contract.is_canceled = True
@@ -744,10 +795,12 @@ class ContractService:
             contract.canceled_reason = reason
             contract.is_active = False
             
-            # Update lifecycle - reset contract creation if no other active contract
+            # RECOMPUTED from the contracts that actually exist, not unpicked
+            # flag by flag. Unpicking assumes you know everything that turned
+            # the flag on; recomputing asks the data. Same choice, same
+            # reason, as `_resync_payment_lifecycle`.
             lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
             
-            # Check if there are any other active contracts
             other_active = db.session.query(Contract).filter(
                 Contract.order_id == order_id,
                 Contract.is_active == True,
@@ -757,6 +810,11 @@ class ContractService:
             if not other_active:
                 lifecycle.contract_created = False
                 lifecycle.contract_created_at = None
+                # A contract that could be cancelled was never signed, so this
+                # is already False — set rather than assumed, because the two
+                # flags are read independently by the screens.
+                lifecycle.contract_signed = False
+                lifecycle.contract_signed_at = None
             
             # Make both updates atomic
             db.session.add(contract)
