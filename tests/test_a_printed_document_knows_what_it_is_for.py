@@ -20,6 +20,29 @@ The four existing columns are kept and backfilled from, not dropped. They are
 what today's relationships and screens read, and removing them in the same
 change that introduces their replacement would mean one migration doing two
 jobs — the one that moves data and the one that can be rolled back cheaply.
+
+WHAT THIS FILE GOT WRONG, AND HOW IT HID IT (found 2026-09-28)
+--------------------------------------------------------------
+Every test below builds its `Document` by hand, setting `source_type` and
+`source_id` itself. They passed. Meanwhile NO CODE PATH IN THE APPLICATION
+EVER WROTE EITHER COLUMN: the columns were added, a migration backfilled the
+existing rows, `printing.documents_for` was written to read them, and
+`DocumentService._save_document` — the one place documents are actually
+created — never set them.
+
+So every document produced after that migration had NULL in both columns,
+while the backfilled old rows made the table look populated. And
+`documents_for`, the function this was all for, was called from nowhere but
+these tests.
+
+Four pieces, all finished, none connected: the seventh instance of
+finished-but-unreachable work in this repo, and the only one where the tests
+actively concealed it by manufacturing the data the product was failing to
+write.
+
+`test_generating_a_document_records_what_it_came_from` at the bottom is the
+test that was missing: it goes through the real generation path and asserts
+nothing by hand.
 """
 import datetime as dt
 
@@ -138,3 +161,101 @@ def test_an_unknown_object_returns_nothing_rather_than_raising(app, seed):
     with app.app_context():
         order = Order.query.filter_by(company_id=seed['company_id']).first()
         assert documents_for(object()) == []
+
+
+def test_generating_a_document_records_what_it_came_from(app, client, login,
+                                                         agreement):
+    """The test that was missing, and the reason the rest of this file lied.
+
+    Every other test here builds its Document by hand with `source_type` set.
+    That is exactly the data the application was failing to write, so those
+    tests proved the COLUMNS worked while the product never filled them.
+
+    This one presses the button and then looks. Nothing is set by hand.
+    """
+    pytest.importorskip('docx')
+
+    import os
+
+    from docx import Document as Docx
+
+    from app.config import db
+    from app.models.models import Document, DocumentTemplate
+
+    folder = app.config['TEMPLATES_FOLDER']
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, 'agreement_src_test.docx')
+    built = Docx()
+    built.add_paragraph('{{ company_name }}')
+    built.save(path)
+
+    with app.app_context():
+        db.session.add(DocumentTemplate(
+            company_id=agreement['company_id'], name='HDNT mau',
+            document_type='agreement',
+            template_file='agreement_src_test.docx', is_active=True))
+        db.session.commit()
+
+    login('admin')
+    client.post(f"/documents/generate/agreement/{agreement['agreement_id']}",
+                data={'format': 'docx'}, follow_redirects=True)
+
+    with app.app_context():
+        produced = Document.query.filter_by(document_type='agreement').first()
+        assert produced is not None, 'nothing was produced'
+        assert produced.source_type == 'master_agreement', (
+            f'the document does not record what it was printed from '
+            f'(source_type={produced.source_type!r}); the column is written '
+            f'by nobody and every new document has NULL in it')
+        assert str(produced.source_id) == agreement['agreement_id']
+
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def test_the_lookup_finds_a_document_the_product_actually_made(app, client,
+                                                               login,
+                                                               agreement):
+    """`documents_for` was called from nowhere but this file. Now it is fed
+    a row the application produced rather than one the test invented."""
+    pytest.importorskip('docx')
+
+    import os
+
+    from docx import Document as Docx
+
+    from app.config import db
+    from app.models.models import DocumentTemplate, MasterAgreement
+    from app.services.printing import documents_for
+
+    folder = app.config['TEMPLATES_FOLDER']
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, 'agreement_lookup_test.docx')
+    built = Docx()
+    built.add_paragraph('{{ company_name }}')
+    built.save(path)
+
+    with app.app_context():
+        db.session.add(DocumentTemplate(
+            company_id=agreement['company_id'], name='HDNT mau 2',
+            document_type='agreement',
+            template_file='agreement_lookup_test.docx', is_active=True))
+        db.session.commit()
+
+    login('admin')
+    client.post(f"/documents/generate/agreement/{agreement['agreement_id']}",
+                data={'format': 'docx'}, follow_redirects=True)
+
+    with app.app_context():
+        record = MasterAgreement.query.get(agreement['agreement_id'])
+        found = documents_for(record)
+        assert len(found) == 1, (
+            'the framework agreement screen can show no printing history for '
+            'a document the product itself just made')
+
+    try:
+        os.remove(path)
+    except OSError:
+        pass

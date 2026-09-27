@@ -1511,12 +1511,21 @@ class DocumentService:
     def _save_document(self, *, company_id, order_id, template, document_type,
                        document_format, context,
                        quotation_id=None, contract_id=None,
-                       handover_record_id=None, payment_report_id=None):
+                       handover_record_id=None, payment_report_id=None,
+                       source=None):
         """
         Render & persist a document record.
 
         Chooses docxtpl (DOCX template) or legacy text-substitution based on
         the template file extension.
+
+        `source` is the record the document was printed FROM. It fills
+        `source_type`/`source_id`, which until now no code path wrote: the
+        columns were added with a backfill, a lookup function was written
+        against them, and tests passed because their fixtures set the columns
+        by hand. So old rows had values, every NEW document had NULL, and a
+        glance at the table looked healthy. Passing the record itself rather
+        than a type string keeps the one mapping in `printing.SOURCE_TYPES`.
         """
         from io import BytesIO as _BytesIO
 
@@ -1599,10 +1608,13 @@ class DocumentService:
             handover_record_id=handover_record_id,
             payment_report_id=payment_report_id)
 
+        from app.services.printing import source_type_of
         document = self.repo.create(
             company_id          = company_id,
             order_id            = order_id,
             template_id         = template.id,
+            source_type         = source_type_of(source) if source else None,
+            source_id           = getattr(source, 'id', None),
             quotation_id        = quotation_id,
             contract_id         = contract_id,
             handover_record_id  = handover_record_id,
@@ -1682,6 +1694,7 @@ class DocumentService:
             company_id   = company_id,
             order_id     = order_id,
             quotation_id = quotation_id,
+            source       = quotation,
             template     = template,
             document_type   = 'quotation',
             document_format = format,
@@ -1716,6 +1729,7 @@ class DocumentService:
             company_id  = company_id,
             order_id    = order_id,
             contract_id = contract_id,
+            source      = contract,
             template    = template,
             document_type   = 'contract',
             document_format = format,
@@ -1750,6 +1764,7 @@ class DocumentService:
             company_id         = company_id,
             order_id           = order_id,
             handover_record_id = delivery_report_id,
+            source             = delivery_report,
             template           = template,
             document_type      = 'delivery',
             document_format    = format,
@@ -1793,6 +1808,7 @@ class DocumentService:
             company_id        = company_id,
             order_id          = order_id,
             payment_report_id = payment_report_id,
+            source            = payment_report,
             template          = template,
             document_type     = 'payment',
             document_format   = format,
@@ -1828,6 +1844,7 @@ class DocumentService:
             company_id=company_id,
             # A framework agreement belongs to a customer, not to one order.
             order_id=None,
+            source=agreement,
             template=template,
             document_type='agreement',
             document_format=format,
@@ -1863,6 +1880,7 @@ class DocumentService:
         return self._save_document(
             company_id=company_id,
             order_id=confirmation.order_id,
+            source=confirmation,
             template=template,
             document_type='order_confirmation',
             document_format=format,
@@ -1913,6 +1931,9 @@ class DocumentService:
         return self._save_document(
             company_id        = company_id,
             order_id          = order_id,
+            # No `source`: a payment request is raised for an ORDER, and Order
+            # is deliberately not in `SOURCE_TYPES` — `order_id` already says
+            # it. Left explicit so the omission reads as a decision.
             template          = template,
             document_type     = 'payment_request',
             document_format   = format,
