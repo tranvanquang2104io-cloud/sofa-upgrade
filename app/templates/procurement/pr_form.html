@@ -15,29 +15,33 @@
 
 <form method="POST" action="{{ url_for('dashboard.edit_requisition', pr_id=pr.id) if pr else url_for('dashboard.create_requisition') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {# `form` chỉ có khi vừa bấm "Điền từ đề xuất" — lúc đó màn hình vẽ lại và
+     phải giữ nguyên mọi thứ người dùng đã gõ. Không có nó thì các ô này đọc
+     từ `pr` như cũ. #}
+  {% set f = form if form is defined else None %}
   <div class="card mb-3"><div class="card-body sofa-card-row row g-3">
     <div class="col-md-5">
       <label class="form-label" for="f_title">{{ t('Title / Reason') }}</label>
-      <input type="text" class="form-control" name="title" value="{{ pr.title if pr else '' }}" placeholder="VD: Bổ sung vật tư dự phòng Q3" id="f_title">
+      <input type="text" class="form-control" name="title" value="{{ f.get('title') if f else (pr.title if pr else '') }}" placeholder="VD: Bổ sung vật tư dự phòng Q3" id="f_title">
     </div>
     <div class="col-md-3">
       <label class="form-label" for="f_store_id">{{ t('Requesting Store') }}</label>
       <select class="form-select" name="store_id" id="f_store_id">
         <option value="">{{ t('-- not specified --') }}</option>
-        {% for s in stores %}<option value="{{ s.id }}" {% if pr and pr.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+        {% for s in stores %}<option value="{{ s.id }}" {% if (f and f.get('store_id') == s.id|string) or (not f and pr and pr.store_id == s.id) %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-2">
       <label class="form-label" for="f_request_date">{{ t('Requested Date') }}</label>
-      <input type="date" class="form-control" name="request_date" value="{{ pr.request_date.isoformat() if pr and pr.request_date else '' }}" id="f_request_date">
+      <input type="date" class="form-control" name="request_date" value="{{ f.get('request_date') if f else (pr.request_date.isoformat() if pr and pr.request_date else '') }}" id="f_request_date">
     </div>
     <div class="col-md-2">
       <label class="form-label" for="f_expected_date">{{ t('Needed By') }}</label>
-      <input type="date" class="form-control" name="expected_date" value="{{ pr.expected_date.isoformat() if pr and pr.expected_date else '' }}" id="f_expected_date">
+      <input type="date" class="form-control" name="expected_date" value="{{ f.get('expected_date') if f else (pr.expected_date.isoformat() if pr and pr.expected_date else '') }}" id="f_expected_date">
     </div>
     <div class="col-12">
       <label class="form-label" for="f_notes">{{ t('Notes') }}</label>
-      <textarea class="form-control" name="notes" rows="1" id="f_notes">{{ pr.notes if pr else '' }}</textarea>
+      <textarea class="form-control" name="notes" rows="1" id="f_notes">{{ f.get('notes') if f else (pr.notes if pr else '') }}</textarea>
     </div>
   </div></div>
 
@@ -45,9 +49,14 @@
     <div class="card-header d-flex justify-content-between align-items-center">
       <span>{{ t('Materials requested') }}</span>
       {% if not pr %}
-      <a href="{{ url_for('dashboard.create_requisition', **{'from':'suggestions'}) }}" class="btn btn-outline-secondary btn-sm">
+      {# Nút submit, KHÔNG phải link. Link nằm trong form thì bấm vào là
+         điều hướng đi và mất sạch những gì đã gõ — không có cảnh báo nào, vì
+         trình duyệt không coi đó là rời bỏ form. Giờ nó gửi form lên, và các
+         dòng gợi ý được **cộng thêm** vào những gì đang có, đúng như nhãn nói. #}
+      <button type="submit" name="action" value="fill_suggestions"
+              class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-magic"></i> {{ t('Fill from auto suggestions') }}
-      </a>{% endif %}
+      </button>{% endif %}
     </div>
     <div class="card-body">
       <p class="text-muted small">Có thể đề nghị mua bất kỳ vật tư nào (kể cả khi tồn kho chưa chạm mức cảnh báo) để dự phòng.</p>

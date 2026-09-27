@@ -5405,6 +5405,30 @@ def create_requisition():
     from app.utils.extension_fields import collect_extension_values, apply_extension_values
     svc = RequisitionService()
     if request.method == 'POST':
+        # "Fill from auto suggestions" used to be a LINK inside the form, so
+        # clicking it navigated away and discarded the title, the branch, the
+        # date, the notes and every hand-typed line — silently, because a link
+        # is not a submit and the browser has nothing to warn about. It posts
+        # now, and the suggestions are MERGED into what is already there,
+        # which is what the label always said.
+        if request.form.get('action') == 'fill_suggestions':
+            typed = parse_material_lines(request.form, with_price=False)
+            already = {str(line.get('material_id')) for line in typed
+                       if line.get('material_id')}
+            merged = list(typed)
+            for suggestion in svc.suggest_lines(company_id):
+                # A material somebody typed by hand keeps THEIR quantity: they
+                # looked at the shelf, the suggestion is arithmetic. And it
+                # must appear once, or the supplier is asked for it twice.
+                if str(suggestion['material_id']) in already:
+                    continue
+                merged.append({'material_id': str(suggestion['material_id']),
+                               'quantity': suggestion['quantity'],
+                               'unit': suggestion['unit']})
+            return render_template(
+                'procurement/pr_form.html', pr=None, existing_lines=merged,
+                form=request.form, **_po_lists(company_id))
+
         try:
             ext = collect_extension_values(company_id, 'purchase_requisition', request.form)
             lines = parse_material_lines(request.form, with_price=False)

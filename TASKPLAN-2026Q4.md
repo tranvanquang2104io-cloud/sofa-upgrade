@@ -427,7 +427,23 @@ khai báo mà không tới được là một lời hứa với người đọc 
 
 ### T-12 · "Điền từ đề xuất" xoá trắng form đang nhập
 
-**Priority:** P2 · **Type:** Data loss · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P2 · **Type:** Data loss · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** Đổi `<a href>` thành **nút submit**, và server **gộp** gợi ý vào
+> những gì đang gõ dở thay vì vẽ lại từ đầu. Tiêu đề, chi nhánh, ngày, ghi chú
+> và mọi dòng gõ tay đều còn nguyên — nhãn "điền thêm vào" giờ mới đúng.
+>
+> **Một quyết định hành vi cũ không phải trả lời:** vật tư người dùng **tự gõ**
+> mà gợi ý cũng đề xuất thì giữ **số của người dùng** và chỉ hiện **một dòng**.
+> Họ nhìn kho thật, còn gợi ý chỉ là phép tính. Hai dòng cùng một vật tư là một
+> đề nghị đặt hàng nhà cung cấp hai lần.
+>
+> **Lỗi của tôi, lần thứ ba cùng một dạng trong phiên này:** test đầu tiên post
+> `material_id[]`/`quantity[]`, trong khi form gửi `line_material_id[]`. Tức là
+> **không có dòng nào được đọc là "đã gõ"**, hai assert xanh vì lý do sai và một
+> assert đỏ vì lý do đúng — chính cái đỏ đó lộ ra chuyện này. Post dữ liệu mà
+> form không bao giờ gửi là đang kiểm tra **trí nhớ của tôi về tên trường**,
+> không phải kiểm tra sản phẩm.
 
 `pr_form.html:48` là `<a href>` nằm **bên trong `<form>`** (mở ở `:16`). Bấm =
 điều hướng đi, **không cảnh báo**; tiêu đề, cửa hàng, ngày cần, ghi chú và mọi
