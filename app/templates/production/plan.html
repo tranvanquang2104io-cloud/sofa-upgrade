@@ -277,4 +277,9 @@ document.querySelectorAll('.warehouse-cell select').forEach(function (select) {
   });
 });
 </script>
+{# Lịch sử file đã in — cùng partial với các màn hình chứng từ khác. Bản in
+   này do Python dựng cứng (chưa phải Cách A, xem T-22b), nhưng từ giờ nó có
+   để lại dấu vết: ai in, lúc nào, và file nào đã gửi ra ngoài. #}
+{% include '_generated_documents.html' %}
+
 {% endblock %}

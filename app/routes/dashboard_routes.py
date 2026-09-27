@@ -4824,11 +4824,13 @@ def view_production_plan(order_id):
     # as the receiving screen. One warehouse means an empty question.
     from app.services.warehouses import must_choose, warehouses_of
     company_id = get_current_company_id()
+    from app.services.printing import documents_for
     return render_template('production/plan.html', order=order, plan=plan,
                            lock_message=lock_message,
                            materials=materials, units=units,
                            warehouses=(warehouses_of(company_id)
                                        if must_choose(company_id) else []),
+                           documents=documents_for(plan),
                            margin=margin, cost=cost, stock=stock)
 
 
@@ -5172,9 +5174,13 @@ def view_purchase_order(po_id):
     # means an empty question, and a field with a single option is worse than
     # no field: it asks the user to confirm a fact they cannot change.
     from app.services.warehouses import must_choose, warehouses_of
+    # What has already been printed and sent to this supplier. The PO print
+    # used to keep nothing at all, so this list was empty by construction.
+    from app.services.printing import documents_for
     return render_template(
         'procurement/po_view.html', po=po,
         warehouses=warehouses_of(company_id) if must_choose(company_id) else [],
+        documents=documents_for(po),
         **_po_lists(company_id))
 
 
@@ -5263,6 +5269,22 @@ def print_purchase_order(po_id):
     from app.utils.procurement_doc import build_purchase_order_docx
     company = Company.query.get(company_id)
     bio = build_purchase_order_docx(po, company)
+
+    # Recorded, not just streamed. This used to hand the file to the browser
+    # and keep nothing: no file, no Document row, so the PO screen could show
+    # no printing history and nobody could answer which version the supplier
+    # was sent. Recording failures must not stop the print — the person is
+    # standing there waiting for the file.
+    try:
+        DocumentService().record_prebuilt_document(
+            company_id=company_id, source=po, document_type='purchase_order',
+            content=bio.getvalue(), filename=f'{po.po_number}.docx',
+            folder_hint=getattr(po.supplier, 'supplier_code', None))
+    except Exception as exc:
+        logger.warning('Could not record the printed PO %s: %s',
+                       po.po_number, exc)
+    bio.seek(0)
+
     return send_file(bio, as_attachment=True, download_name=f'{po.po_number}.docx',
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
@@ -5445,6 +5467,19 @@ def print_production_plan(plan_id):
     order = plan.order
     customer = db.session.get(Customer, order.customer_id)
     bio = build_production_plan_docx(plan, order, customer, company)
+
+    try:
+        DocumentService().record_prebuilt_document(
+            company_id=company_id, source=plan,
+            document_type='production_plan', content=bio.getvalue(),
+            filename=f'LenhSanXuat_{plan.plan_number}.docx',
+            order_id=order.id,
+            folder_hint=getattr(customer, 'customer_code', None))
+    except Exception as exc:
+        logger.warning('Could not record the printed production plan %s: %s',
+                       plan.plan_number, exc)
+    bio.seek(0)
+
     return send_file(bio, as_attachment=True,
                      download_name=f'LenhSanXuat_{plan.plan_number}.docx',
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')

@@ -1629,6 +1629,56 @@ class DocumentService:
         logger.info(f"Document generated: {os.path.basename(file_path)}")
         return document
 
+    def record_prebuilt_document(self, *, company_id, source, document_type,
+                                 content, filename, order_id=None,
+                                 folder_hint=None):
+        """Store a document that was built in code rather than from a template.
+
+        Two prints — the purchase order and the production plan — are produced
+        by hardcoded Python builders and were streamed straight to the browser.
+        Nothing was written down: no file kept, no `Document` row, so those
+        screens can show no history and nobody can answer "which version did
+        we send the supplier?". A document that leaves the building and leaves
+        no trace is the one that causes the argument later.
+
+        This does NOT make them template-driven. That is T-22b and needs a
+        template authored, because a purchase-order layout has a row loop that
+        cannot be mechanically inverted out of the Python that writes it. What
+        this does is stop the record being lost in the meantime, which is the
+        half that costs something today.
+
+        `content` is the bytes already built. Kept deliberately narrow: this is
+        a recording function, not a second way to produce documents.
+        """
+        def _safe(value):
+            return (str(value or 'unknown')
+                    .replace('/', '_').replace(chr(92), '_'))
+
+        docs_dir = os.path.join(current_app.config['DOCUMENTS_FOLDER'],
+                                _safe(folder_hint or 'chung'), document_type)
+        os.makedirs(docs_dir, exist_ok=True)
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        stem, ext = os.path.splitext(filename)
+        file_path = os.path.join(docs_dir, f'{_safe(stem)}_{timestamp}{ext}')
+        with open(file_path, 'wb') as handle:
+            handle.write(content)
+
+        from app.services.printing import source_type_of
+        document = self.repo.create(
+            company_id     = company_id,
+            order_id       = order_id,
+            source_type    = source_type_of(source) if source else None,
+            source_id      = getattr(source, 'id', None),
+            document_name  = f'{stem}{ext}',
+            document_type  = document_type,
+            document_format= (ext or '.docx').lstrip('.'),
+            file_path      = file_path,
+            file_size      = len(content),
+        )
+        logger.info('Recorded prebuilt document %s', os.path.basename(file_path))
+        return document
+
     def _supersede_previous(self, *, order_id, document_type,
                             quotation_id=None, contract_id=None,
                             handover_record_id=None, payment_report_id=None):
