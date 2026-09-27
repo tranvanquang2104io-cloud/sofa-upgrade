@@ -168,7 +168,12 @@ class ProcurementService:
         from app.models.models import GoodsReceipt, GoodsReceiptLine, MaterialStock
         if not po.can_receive():
             raise ValueError("Chỉ nhập kho khi đơn mua đã gửi NCC và chưa nhập đủ.")
-        target_store = store_id if store_id is not None else po.store_id
+        # `store_id` arrives raw from a form and used to be written straight
+        # onto the stock row. Refused, not substituted, if it is not this
+        # company's or not one this user may act on.
+        from app.utils.scope import usable_store
+        chosen_store = usable_store(po.company_id, store_id)
+        target_store = chosen_store.id if chosen_store else po.store_id
 
         # Which warehouse the goods physically go into. `warehouse_id` given by
         # the caller wins; otherwise the branch's own, then the company's. A
@@ -178,6 +183,15 @@ class ProcurementService:
         from app.services.warehouses import resolve as _resolve_warehouse
         target_warehouse = _resolve_warehouse(
             po.company_id, chosen_id=warehouse_id, store_id=target_store)
+
+        # THE WAREHOUSE DECIDES THE BRANCH, not the other way round. The screen
+        # used to ask both, the warehouse only labelled the receipt, and the
+        # note under it — "Tồn kho sẽ tăng ở kho này" — was false. Stock is
+        # keyed by (material, store), so the warehouse is the finer answer and
+        # the branch follows from it. With no warehouses at all, the branch
+        # stands on its own as before.
+        if target_warehouse is not None:
+            target_store = target_warehouse.store_id
 
         gr = GoodsReceipt(company_id=po.company_id, po_id=po.id, store_id=target_store,
                           warehouse_id=target_warehouse.id if target_warehouse else None,

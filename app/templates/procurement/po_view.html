@@ -105,9 +105,12 @@
     <form method="POST" action="{{ url_for('dashboard.receive_purchase_order', po_id=po.id) }}" onsubmit="return confirm('{{ t('Confirm goods receipt? Stock will increase.') }}');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p class="text-muted">Nhập số lượng thực nhận đợt này — có thể nhận <strong>một phần</strong> và nhận thành <strong>nhiều đợt</strong>.</p>
-      {# Shown only when the company has more than one warehouse. A workshop at
-         one address never sees this field, and does not have to: the goods go
-         to the only warehouse there is. #}
+      {# The ONE place this form asks where the goods go. It used to ask twice —
+         this select, and an "Into Store" select below the quantity table — and
+         the branch one was what actually moved the stock while the note under
+         this one said otherwise. The branch is now derived from the warehouse.
+         A workshop at one address never sees this field: the goods go to the
+         only warehouse there is. #}
       {% if warehouses %}
       <div class="row mb-3">
         <div class="col-md-5">
@@ -136,6 +139,11 @@
         </tbody>
       </table>
       <div class="row g-2 align-items-end">
+        {# Only for a company that has no warehouses yet. Code and database are
+           deployed separately, so receiving has to keep working before the
+           warehouses exist. Where there ARE warehouses this would be a second
+           control for a question already asked above. #}
+        {% if not warehouses %}
         <div class="col-md-4">
           <label class="form-label" for="f_store_id">{{ t('Into Store') }}</label>
           <select class="form-select form-select-sm" name="store_id" id="f_store_id">
@@ -143,6 +151,7 @@
             {% for s in stores %}<option value="{{ s.id }}" {% if po.store_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
           </select>
         </div>
+        {% endif %}
         <div class="col-md-3"><label class="form-label" for="f_receipt_date">{{ t('Received Date') }}</label><input type="date" class="form-control form-control-sm" name="receipt_date" id="f_receipt_date"></div>
         <div class="col-md-3"><label class="form-label" for="f_notes">{{ t('Notes') }}</label><input type="text" class="form-control form-control-sm" name="notes" id="f_notes"></div>
         <div class="col-md-2"><button class="btn btn-success w-100"><i class="bi bi-check-lg"></i> {{ t('Receive Goods') }}</button></div>

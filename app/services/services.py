@@ -2005,6 +2005,12 @@ class MaterialService:
         if quantity < 0:
             raise ValueError('Số lượng không thể âm')
 
+        # The branch came straight off the form and went onto the stock row;
+        # only the MATERIAL's company was ever checked. Setting a figure by
+        # hand is already the event that most needs explaining afterwards.
+        from app.utils.scope import usable_store
+        usable_store(company_id, store_id)
+
         # Account for the CHANGE, not the new total. Somebody setting a figure
         # by hand is the event that most needs explaining later, and a movement
         # holding the new total could not be added up against the others.

@@ -77,3 +77,44 @@ def within_branch(row):
     if order is None:
         return row
     return row if order_is_within_reach(order) else None
+
+
+def usable_store(company_id, store_id):
+    """The branch a document may be written to, or ValueError.
+
+    `store_id` arrives raw from a form. `@store_admin_required` establishes
+    only that somebody is an admin of SOME branch, so without this a branch
+    manager could post another branch's id and have stock written there.
+
+    Refused rather than quietly replaced with a default: receiving into
+    somewhere nobody named is how stock ends up in a place that cannot be
+    explained afterwards. The caller decides what to do with no answer at all
+    (`None` in, `None` out) -- usually falling back to the document's own
+    branch, which is a stated default rather than a silent substitution.
+    """
+    if store_id is None:
+        return None
+
+    from app.models.models import Store
+
+    store = Store.query.get(store_id)
+    if store is None or str(store.company_id) != str(company_id):
+        raise ValueError('Chi nhánh không thuộc công ty này')
+
+    # NOT `order_is_within_reach(store)`. That reads `.store_id`, which a
+    # Store does not have -- it has `.id`. The AttributeError would be caught
+    # by that function's fail-open `except`, and this check would silently
+    # pass for every branch. Written out instead.
+    try:
+        from flask import has_request_context, session
+        if not has_request_context() or 'user_id' not in session:
+            return store
+        from app.utils.auth_utils import get_accessible_store_ids
+        allowed = get_accessible_store_ids(company_id)
+    except Exception:
+        logger.exception('Could not resolve store scope for %s', store_id)
+        return store
+
+    if not (store.id in allowed or str(store.id) in {str(s) for s in allowed}):
+        raise ValueError('Bạn không có quyền với chi nhánh này')
+    return store
