@@ -14,7 +14,23 @@ cuối tài liệu.
 
 ### T-01 · Chặn rò dữ liệu giữa các chi nhánh trên chứng từ con
 
-**Priority:** P0 · **Type:** Security · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P0 · **Type:** Security · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** Chặn ở **repository**, không phải ở service như dự kiến ban đầu.
+> Lý do đổi: nhiều route gọi thẳng `ContractRepository().get_by_id()` chứ
+> không đi qua service — `sign_contract`, `edit_contract`, `confirm_payment`,
+> `delete_document` đều thế. Vá ở service sẽ bỏ sót đúng những cửa đang hở.
+> `OrderScopedRepository` (`repository.py:301`) phủ cả 5 loại chứng từ con và
+> **không call site nào phải sửa**: chứng từ ngoài phạm vi trả về `None`, đúng
+> thứ các route đã xử lý sẵn là "không tìm thấy hoặc không có quyền".
+>
+> **Hai test xanh vì lý do sai, bắt được lúc viết test.** `confirm_payment` và
+> `cancel_payment` xanh ngay trên code CHƯA sửa — không phải vì bị chặn, mà vì
+> nhân viên không phải vai duyệt nên `request_or_do` chỉ *ghi đề nghị* chứ
+> không thực hiện. Cờ `is_confirmed` đứng yên vì hàng đợi duyệt, không vì phạm
+> vi. Test đã siết thêm: phải không có **ApprovalRequest** nào được tạo. Tự nó
+> là lỗ rò — một đề nghị chéo chi nhánh rơi vào hàng đợi của quản lý không có
+> phận sự với chứng từ đó.
 
 1. **Nội dung.** Khoảng 15 endpoint chỉ kiểm `company_id`, không kiểm `store_id`.
 2. **Mục đích.** Người của chi nhánh A không đọc, sửa, ký hay xác nhận tiền của
@@ -63,6 +79,12 @@ cuối tài liệu.
    so `user_id` với `requested_by_id` — chưa khai thác được nhưng là bẫy.
 4. **Giải pháp.** Thêm `approval_requests.store_id` (lấy từ chứng từ lúc tạo);
    lọc hàng đợi theo phạm vi cửa hàng của người duyệt; chặn tự duyệt.
+   **Phát hiện thêm khi làm T-01:** `approvals.py:30,40` nạp phiếu thu bằng
+   `PaymentReport.query.get()` thẳng từ model, **không qua repository**, nên
+   nó nằm ngoài lớp chặn chi nhánh vừa dựng ở `OrderScopedRepository`. Hiện
+   chưa khai thác được — T-01 đã chặn ngay ở khâu *tạo* đề nghị nên không có
+   đề nghị chéo chi nhánh nào để duyệt — nhưng đây là cánh cửa thứ hai vào
+   cùng một chứng từ, và nó phải đi qua repository.
 5. **Ảnh hưởng.** Hàng đợi duyệt, màn hình `/approvals`.
 6. **Database.** Migration thêm 1 cột, backfill từ `order.store_id` của chứng từ.
 7. **Backend.** `approvals.py`, `dashboard_routes.py:2940-3000`.

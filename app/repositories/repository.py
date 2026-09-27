@@ -298,9 +298,27 @@ class OrderRepository(BaseRepository):
         return self.model.query.filter_by(store_id=store_id, is_active=True).count()
 
 
-class QuotationRepository(BaseRepository):
+class OrderScopedRepository(BaseRepository):
+    """A repository whose rows belong to an order, and so to a branch.
+
+    `get_by_id` here refuses a row whose order sits in a branch the current
+    user is not in. See `app/utils/scope.py` for why the check lives at this
+    level and not on the routes.
+
+    The refusal reads as "not found", which is what the callers already do with
+    a missing id: `if not contract or str(contract.order.company_id) != ...`.
+    So no call site had to change to get the branch check -- and no call site
+    can forget it.
+    """
+
+    def get_by_id(self, id):
+        from app.utils.scope import within_branch
+        return within_branch(super().get_by_id(id))
+
+
+class QuotationRepository(OrderScopedRepository):
     """Repository for Quotation model"""
-    
+
     def __init__(self):
         super().__init__(Quotation)
     
@@ -331,7 +349,7 @@ class QuotationRepository(BaseRepository):
         ).first()
 
 
-class ContractRepository(BaseRepository):
+class ContractRepository(OrderScopedRepository):
     """Repository for Contract model"""
     
     def __init__(self):
@@ -362,7 +380,7 @@ class ContractRepository(BaseRepository):
         ).first()
 
 
-class HandoverRecordRepository(BaseRepository):
+class HandoverRecordRepository(OrderScopedRepository):
     """Repository for HandoverRecord model"""
     
     def __init__(self):
@@ -393,7 +411,7 @@ class HandoverRecordRepository(BaseRepository):
         ).first()
 
 
-class PaymentReportRepository(BaseRepository):
+class PaymentReportRepository(OrderScopedRepository):
     """Repository for PaymentReport model"""
     
     def __init__(self):
@@ -425,7 +443,7 @@ class PaymentReportRepository(BaseRepository):
         ).order_by(desc(self.model.created_at)).all()
 
 
-class DocumentRepository(BaseRepository):
+class DocumentRepository(OrderScopedRepository):
     """Repository for Document model"""
     
     def __init__(self):
