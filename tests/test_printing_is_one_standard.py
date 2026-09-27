@@ -47,15 +47,23 @@ CONVERGED = [
     'contracts/view.html',
     'handover/view.html',
     'payments/view.html',
+    'agreements/view.html',
 ]
 
 #: Screens that print and have not been converged yet. Each line is a debt,
 #: and removing a line is the definition of done for that screen.
 MIGRATING = {
-    'agreements/view.html': 'HĐNT: template-driven already, but a hand-written '
-                            'link with no format choice and no history',
     'procurement/po_view.html': 'PO: hardcoded builder, stores nothing',
     'production/plan.html': 'Lệnh sản xuất: hardcoded builder, stores nothing',
+}
+
+#: Print controls that live INSIDE a screen listed above rather than being the
+#: screen's own. `orders/view.html` uses the shared macro six times and then
+#: hand-wrote a seventh control for the ĐĐH — in the same file. It was in
+#: neither list, so nothing watched it, which is the same blind spot this file
+#: exists to close one level down.
+EMBEDDED_CONTROLS = {
+    'orders/view.html': 'order_confirmation',
 }
 
 
@@ -116,3 +124,51 @@ def test_the_shared_macro_offers_both_formats():
     assert 'pdf' in body, (
         'the shared dialog no longer offers PDF, so every screen lost it at '
         'once')
+
+
+@pytest.mark.parametrize('screen', sorted(EMBEDDED_CONTROLS))
+def test_a_control_inside_another_screen_uses_the_macro_too(screen):
+    """A hand-written form in a file that otherwise uses the macro.
+
+    `orders/view.html` calls `generate_document_modal` six times and then
+    posts to `generate_document` directly for the ĐĐH, with the format
+    hardcoded. Being inside a converged screen is what hid it: the file passes
+    every check above while one of its seven print controls is not the
+    standard one.
+    """
+    text = _text(screen)
+    doc_type = EMBEDDED_CONTROLS[screen]
+
+    assert f"doc_type='{doc_type}'" not in text, (
+        f'{screen} still posts straight to generate_document for '
+        f'{doc_type}, so that one control has no format choice and cannot '
+        f'pick up any change made to the shared popup')
+
+
+def test_every_screen_that_prints_is_accounted_for():
+    """No screen prints without appearing in one of these three lists.
+
+    The lists are hand-written, which is the failure mode this repo keeps
+    hitting, so this is the third thing that checks them: it finds every
+    template that posts to `generate_document` or links to a print route and
+    asserts it is named somewhere here.
+    """
+    known = set(CONVERGED) | set(MIGRATING) | set(EMBEDDED_CONTROLS)
+
+    prints = set()
+    for path in TEMPLATES.rglob('*.html'):
+        text = io.open(path, encoding='utf-8').read()
+        if ('generate_document' in text or 'print_purchase_order' in text
+                or 'print_production_plan' in text):
+            prints.add(path.relative_to(TEMPLATES).as_posix())
+
+    # The macro's own definition and the shared history partial are machinery,
+    # not screens.
+    prints -= {'macros/ui.html', '_generated_documents.html',
+               'documents/list.html'}
+
+    unaccounted = sorted(prints - known)
+    assert not unaccounted, (
+        f'these templates print but are named in none of CONVERGED, '
+        f'MIGRATING or EMBEDDED_CONTROLS: {unaccounted}. An unlisted screen '
+        f'is one no check in this file applies to.')

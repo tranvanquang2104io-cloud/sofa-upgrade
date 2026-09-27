@@ -4286,7 +4286,13 @@ def view_agreement(agreement_id):
     if not agreement:
         flash(t('Framework agreement not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_agreements'))
-    return render_template('agreements/view.html', agreement=agreement)
+    # What has already been printed from this HĐNT. Possible only since
+    # `source_type` started being written: a framework agreement has no
+    # per-kind foreign key on Document, which is why this screen showed no
+    # history at all while the four order-document screens did.
+    from app.services.printing import documents_for
+    return render_template('agreements/view.html', agreement=agreement,
+                           documents=documents_for(agreement))
 
 
 @dashboard_bp.route('/agreements/<agreement_id>/status', methods=['POST'])

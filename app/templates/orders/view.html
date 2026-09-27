@@ -554,15 +554,21 @@
                       {% endif %}
                       {# An ĐĐH is what a VAT invoice is raised against, so it
                          is the one document on this path that most needed a
-                         way to be printed. #}
-                      <form method="POST" class="mt-2"
-                            action="{{ url_for('dashboard.generate_document', doc_type='order_confirmation', ref_id=order_confirmation.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="format" value="docx">
-                        <button type="submit" class="btn btn-sm btn-outline-primary">
-                          <i class="bi bi-printer"></i> {{ t('In đơn đặt hàng') }}
-                        </button>
-                      </form>
+                         way to be printed.
+
+                         Through the shared popup like every other document on
+                         this screen. It used to be a hand-written form with
+                         the format hardcoded to DOCX — inside a file that
+                         calls the macro six times — so this one control could
+                         not pick up any change made to the shared dialog, and
+                         printing an ĐĐH as PDF was impossible while every
+                         other document offered it. #}
+                      <button type="button" class="btn btn-sm btn-outline-primary mt-2"
+                              data-bs-toggle="modal"
+                              data-bs-target="#generateModalDDH{{ order_confirmation.id }}">
+                        <i class="bi bi-printer"></i> {{ t('In đơn đặt hàng') }}
+                      </button>
+                      {{ generate_document_modal('generateModalDDH' ~ order_confirmation.id, 'order_confirmation', order_confirmation.id) }}
                     </div>
                     {% endif %}
 

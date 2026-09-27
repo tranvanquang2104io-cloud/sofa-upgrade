@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import page_header, status_badge, table_open, table_close with context %}
+{% from "macros/ui.html" import page_header, status_badge, table_open, table_close, generate_document_modal with context %}
 {% block title %}{{ agreement.agreement_number }} - SofaFlow{% endblock %}
 
 {% block content %}
@@ -16,15 +16,17 @@
   {% endif %}
   {# A HĐNT is what the customer signs, so it has to be printable. Its
      variable collector was written when the feature was built and reached by
-     nothing. #}
-  <form method="POST"
-        action="{{ url_for('dashboard.generate_document', doc_type='agreement', ref_id=agreement.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="format" value="docx">
-    <button type="submit" class="btn btn-sm btn-outline-primary">
-      <i class="bi bi-printer"></i> {{ t('In hợp đồng nguyên tắc') }}
-    </button>
-  </form>
+     nothing.
+
+     Through the shared popup, like every other screen that prints: the button,
+     the dialog and the format choice come from one macro, so they cannot drift
+     apart. This was a hand-written form with the format fixed to DOCX. #}
+  <button type="button" class="btn btn-sm btn-outline-primary"
+          data-bs-toggle="modal"
+          data-bs-target="#generateModalHDNT{{ agreement.id }}">
+    <i class="bi bi-printer"></i> {{ t('In hợp đồng nguyên tắc') }}
+  </button>
+  {{ generate_document_modal('generateModalHDNT' ~ agreement.id, 'agreement', agreement.id) }}
   {% if agreement.status == 'suspended' %}
     <span class="text-muted small">{{ t('No new orders may cite this agreement while it is suspended.') }}</span>
   {% endif %}
@@ -211,4 +213,9 @@
   </div>
 </div>
 {% endif %}
+{# Lịch sử file đã in, dùng chung partial với Báo giá / Hợp đồng / Bàn giao /
+   Thanh toán — cùng một khối, cùng nhãn "bản mới nhất", cùng nút xoá. Màn hình
+   này trước đây không có lịch sử nào cả. #}
+{% include '_generated_documents.html' %}
+
 {% endblock %}
