@@ -175,7 +175,12 @@ cuối tài liệu.
 
 ### T-04 · Hai ô chọn kho trên màn hình nhận hàng, chú thích nói sai
 
-**Priority:** P0 · **Type:** Data integrity + UX · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P0 · **Type:** Data integrity + UX · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** Một ô duy nhất: chọn **kho**, chi nhánh suy ra từ kho
+> (`procurement_service.receive`). Ô "Into Store" chỉ còn hiện với công ty
+> **chưa có kho nào** — code và database lên khác thời điểm, nhập hàng không
+> được dừng. Chú thích *"Tồn kho sẽ tăng ở kho này"* bây giờ mới đúng.
 
 1. **Nội dung.** `po_view.html:111` (`warehouse_id`, chú thích *"Tồn kho sẽ tăng
    ở kho này"*) và `:139` (`store_id`) — hai ô cho cùng một câu hỏi.
@@ -207,7 +212,17 @@ cuối tài liệu.
 
 ### T-05 · `store_id` thô từ form không được kiểm
 
-**Priority:** P0 · **Type:** Security · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P0 · **Type:** Security · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** `usable_store()` trong `app/utils/scope.py`: **từ chối**, không
+> thay bằng mặc định. Áp cho cả `receive` lẫn `MaterialService.update_stock`.
+>
+> **Suýt để lọt, ghi lại vì đúng dạng lỗi lặp lại cả tuần này.** Bản đầu tôi
+> viết `order_is_within_reach(store)` cho gọn. Hàm đó đọc `.store_id`, mà
+> `Store` chỉ có `.id` → `AttributeError` → rơi vào `except` fail-open của
+> chính hàm đó → **kiểm tra luôn luôn pass cho mọi chi nhánh**, dưới một dòng
+> comment do tôi viết khẳng định dùng lại như thế là hợp lý. Viết tường minh
+> ra, kèm lý do vì sao không dùng lại.
 
 1. **Nội dung.** `receive_purchase_order` (`dashboard_routes.py:5231`) và
    `update_material_stock` (`:3869`) nhận `store_id` thẳng từ form.
