@@ -650,15 +650,26 @@ thể thành công** trừ khi tạo dòng mẫu ngoài giao diện.
 
 ### Ba nhóm việc
 
-- **T-22** (P1): hai đường in cứng chuyển sang Cách A, và mọi bản in đều tạo
-  dòng `Document`.
-- **T-23** (P1): một chuẩn in duy nhất cho mọi màn hình — nút in, popup chọn
-  định dạng, lịch sử file đã in. Repo đã có sẵn test khung
-  `tests/test_printing_is_one_standard.py:46` với danh sách `CONVERGED` /
-  `MIGRATING`; việc là dọn hết `MIGRATING` (và thêm ĐĐH vào danh sách — hiện
-  **đang thiếu**, nên nó không bị test nào soi).
-- **T-24** (P1): quản lý mẫu in — đủ CRUD (thêm sửa xem trước tải về), có
-  **phiên bản**, và mẫu đã dùng để in thì không bị thay đổi âm thầm.
+- **T-22a** ✅ `DONE`: hai bản in dựng bằng Python giờ **có để lại dấu vết** —
+  lưu file, tạo dòng `Document`, và hai màn hình đó hiện lịch sử file đã in.
+  **Chưa phải Cách A** (xem T-22b).
+- **T-22b** `TODO` (P1): soạn mẫu `.docx` cho Đơn mua hàng và Lệnh sản xuất rồi
+  chuyển hẳn sang template. Không gộp vào T-22a được vì bố cục PO có vòng lặp
+  dòng (`{%tr for %}`), **không thể suy ngược ra từ code Python đang dựng nó** —
+  đây là việc soạn nội dung, không phải việc code.
+- **T-23a** ✅ `DONE`: HĐNT và ĐĐH đã vào chuẩn chung (nút, popup, chọn định
+  dạng, và HĐNT lần đầu có lịch sử file in). Thêm `EMBEDDED_CONTROLS` cho nút in
+  **nằm lẫn bên trong** một màn hình đã chuẩn — ĐĐH trước đây không nằm trong
+  danh sách nào nên không test nào soi. Và thêm một test **quét mọi template**
+  để không màn hình in nào đứng ngoài cả ba danh sách.
+- **T-23b** `TODO` (P1): Đơn mua hàng + Lệnh sản xuất vào chuẩn chung — chặn bởi
+  T-22b.
+- **T-24** ✅ `DONE`: có `version` (migration `b5c6d7e8f9a0`), tải bản mới thành
+  N+1 và **giữ nguyên bản N**, sửa được tên/mô tả nhưng **không thay được tệp**
+  của mẫu đã in ra chứng từ, tải mẫu về xem được, và quay lại bản cũ được.
+  Năm hàng rào do chính đợt refactor này dựng đã bắt lỗi tôi khi làm task này —
+  trong đó có luật "template không tự dựng bảng nhãn", và đi theo luật đó ra
+  code sạch hơn bản tôi viết ban đầu.
 
 > **Đã sửa ngay trong lúc khảo sát (không chờ):** `Document.source_type` /
 > `source_id` **chưa từng được ghi bởi bất kỳ đường code nào** — cột do tôi
