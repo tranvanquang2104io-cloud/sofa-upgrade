@@ -470,7 +470,26 @@ tay. Và `:179-182` hỏi xác nhận **hai lần** với hai câu chữ khác n
 
 ### T-14 · Nút bị chặn phải giải thích, không biến mất
 
-**Priority:** P2 · **Type:** UX · **Dependencies:** T-07 · **Status:** `TODO`
+**Priority:** P2 · **Type:** UX · **Dependencies:** không cho PO (xem ghi chú) · **Status:** `DONE` (phần Đơn mua hàng)
+
+> **Kết quả.** Khối nhận hàng **không biến mất nữa**: nó ở lại, màu xám, và nói
+> rõ bước kế tiếp — *"Đơn đang ở trạng thái Nháp — cần bấm Gửi NCC trước"*. Kèm
+> hai trạng thái chặn khác (đã nhận đủ, đã huỷ), vì "bấm không thấy gì xảy ra
+> và không biết vì sao" là cùng một thất bại ở cả ba.
+>
+> **Bỏ phụ thuộc T-07 sau khi đọc code.** Plan ghi task này chờ state machine
+> vì câu giải thích phải lấy từ đâu đó. Với đơn mua hàng thì không cần:
+> `PurchaseOrder.status` và `can_receive()` đã nói sẵn *đang ở đâu* và *cần làm
+> gì tiếp*. Phụ thuộc trong plan là phỏng đoán, không phải sự thật — cái này
+> không trụ được khi đối chiếu với code.
+>
+> **Vì sao đây là việc quan trọng chứ không phải làm đẹp:** với người dùng
+> không rành công nghệ, nút *biến mất* tệ hơn nút *xám*. Họ không biết nó từng
+> có, nên không hỏi "sao lại tắt?", mà kết luận **"phần mềm không làm được"** —
+> và đó là lúc người ta quay lại ghi sổ tay song song.
+>
+> **Còn lại:** các màn hình khác vẫn ẩn nút khi bị chặn (grep `disabled`: 7 chỗ,
+> không chỗ nào là "chặn kèm lý do"). Làm tiếp theo cùng T-07.
 
 Grep `disabled` trên toàn bộ template: 7 kết quả, **không cái nào là "chặn nút
 để giải thích lý do"**. Với người dùng không giỏi công nghệ, biến mất tệ hơn

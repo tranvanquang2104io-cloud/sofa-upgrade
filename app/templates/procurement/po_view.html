@@ -159,6 +159,35 @@
     </form>
   </div>
 </div>
+{% else %}
+{# Không ẩn, mà **nói lý do**.
+
+   Với người dùng không rành công nghệ, một nút biến mất tệ hơn một nút xám:
+   họ không biết nó từng tồn tại, nên không hỏi "sao lại tắt?" mà kết luận
+   "phần mềm không làm được việc này". Trước đây đơn ở trạng thái Nháp thì
+   toàn bộ khối nhận hàng biến mất và không chỗ nào nói phải Gửi NCC trước —
+   thủ kho đứng nhìn hàng về mà không có chỗ nào ghi.
+
+   Câu giải thích lấy từ chính trạng thái của chứng từ: đang ở đâu, và bước
+   kế tiếp là gì. #}
+<div class="card mb-3 border-secondary">
+  <div class="card-header text-muted">
+    <i class="bi bi-box-arrow-in-down"></i> Nhận hàng &amp; nhập kho (GR)
+  </div>
+  <div class="card-body">
+    {% if po.status == 'draft' %}
+      <p class="mb-1"><strong>{{ t('Chưa nhập kho được.') }}</strong>
+         {{ t('Đơn đang ở trạng thái Nháp — cần bấm "Gửi NCC" trước, rồi mới ghi nhận hàng về.') }}</p>
+    {% elif po.status == 'received' %}
+      <p class="mb-1"><strong>{{ t('Đơn này đã nhận đủ hàng.') }}</strong>
+         {{ t('Không còn gì để nhập thêm.') }}</p>
+    {% elif po.status == 'canceled' %}
+      <p class="mb-1"><strong>{{ t('Đơn đã huỷ nên không nhập kho được.') }}</strong></p>
+    {% else %}
+      <p class="mb-1">{{ t('Chưa nhập kho được ở trạng thái hiện tại.') }}</p>
+    {% endif %}
+  </div>
+</div>
 {% endif %}
 
 {# ---- Receipts history ---- #}

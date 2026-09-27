@@ -1122,6 +1122,14 @@ TRANSLATIONS['vi'].update({
     'Loại chứng từ không hợp lệ.': 'Loại chứng từ không hợp lệ.',
     # Quản lý mẫu in (T-24).
     'Phiên bản': 'Phiên bản',
+    # Nút bị chặn phải giải thích (T-14).
+    'Chưa nhập kho được.': 'Chưa nhập kho được.',
+    'Đơn đang ở trạng thái Nháp — cần bấm "Gửi NCC" trước, rồi mới ghi nhận hàng về.':
+        'Đơn đang ở trạng thái Nháp — cần bấm "Gửi NCC" trước, rồi mới ghi nhận hàng về.',
+    'Đơn này đã nhận đủ hàng.': 'Đơn này đã nhận đủ hàng.',
+    'Không còn gì để nhập thêm.': 'Không còn gì để nhập thêm.',
+    'Đơn đã huỷ nên không nhập kho được.': 'Đơn đã huỷ nên không nhập kho được.',
+    'Chưa nhập kho được ở trạng thái hiện tại.': 'Chưa nhập kho được ở trạng thái hiện tại.',
     'Tải mẫu về': 'Tải mẫu về',
     'Sửa tên / mô tả': 'Sửa tên / mô tả',
     'Muốn đổi nội dung mẫu thì tải lên bản mới — bản cũ vẫn được giữ lại.':
