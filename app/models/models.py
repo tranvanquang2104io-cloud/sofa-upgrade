@@ -682,6 +682,17 @@ class Document(db.Model):
     handover_record_id = db.Column(GUID(), db.ForeignKey('handover_records.id'))
     payment_report_id = db.Column(GUID(), db.ForeignKey('payment_reports.id'))
     
+    #: What this was printed from, generically. The four columns above are one
+    #: per document kind, so every new printable document would be a fifth
+    #: column, a fifth relationship, and a fifth branch everywhere that asks
+    #: "what was this printed from?". A new kind now adds a line of data
+    #: (app/services/printing.py SOURCE_TYPES) and nothing else.
+    #:
+    #: The old columns are kept, not replaced: they are what today's rows
+    #: carry and what today's relationships read.
+    source_type = db.Column(db.String(50), index=True)
+    source_id = db.Column(GUID(), index=True)
+
     document_name = db.Column(db.String(255), nullable=False)
     document_type = db.Column(db.String(50), nullable=False)  # quotation, contract, delivery, payment
     document_format = db.Column(db.String(10), nullable=False)  # pdf, docx

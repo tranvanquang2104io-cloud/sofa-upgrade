@@ -163,3 +163,67 @@ def test_the_warehouse_migration_moves_stock_without_changing_any_total(
             "ON w.id = s.warehouse_id WHERE s.id = 'k3'")).scalar()
         assert company_row == 'Kho công ty', (
             f"the company-level row was folded into {company_row!r}")
+
+
+def test_the_document_source_backfill_reaches_every_linked_row(empty_database):
+    """A data migration run on an empty database proves nothing about a backfill.
+
+    Seeded at the revision before, so there are rows for it to move.
+    """
+    pytest.importorskip('alembic')
+    import sqlalchemy as sa
+
+    result = _alembic(empty_database, 'upgrade', 'd1e2f3a4b5c6')
+    assert result.returncode == 0, result.stderr
+
+    engine = sa.create_engine(empty_database)
+    with engine.begin() as connection:
+        connection.execute(sa.text(
+            "INSERT INTO companies (id, company_code, name, email, is_active) "
+            "VALUES ('c9', 'DOCS', 'Nội Thất An Phát', 'a@b.test', 1)"))
+        connection.execute(sa.text(
+            "INSERT INTO stores (id, company_id, store_code, name, is_active) "
+            "VALUES ('s9', 'c9', 'SR', 'Showroom', 1)"))
+        connection.execute(sa.text(
+            "INSERT INTO customers (id, company_id, store_id, "
+            "customer_code, name, is_active) VALUES "
+            "('cu9', 'c9', 's9', 'KH', 'Chị Hà', 1)"))
+        connection.execute(sa.text(
+            "INSERT INTO orders (id, company_id, store_id, customer_id, "
+            "order_code, title, is_active) VALUES "
+            "('o9', 'c9', 's9', 'cu9', 'DH-9', 'Sofa', 1)"))
+        connection.execute(sa.text(
+            "INSERT INTO quotations (id, company_id, order_id, "
+            "quotation_number, quotation_date, total_amount) VALUES "
+            "('q9', 'c9', 'o9', 'BG-9', '2026-09-01', 1000000)"))
+        connection.execute(sa.text(
+            "INSERT INTO documents (id, company_id, order_id, quotation_id, "
+            "document_name, document_type, document_format, file_path) "
+            "VALUES ('d9', 'c9', 'o9', 'q9', 'BG-9', 'quotation', 'docx', "
+            "'q.docx')"))
+        # A document with no per-kind link at all — it must survive untouched
+        # rather than being given a source somebody guessed.
+        connection.execute(sa.text(
+            "INSERT INTO documents (id, company_id, order_id, document_name, "
+            "document_type, document_format, file_path) VALUES "
+            "('d10', 'c9', 'o9', 'KHAC', 'other', 'pdf', 'x.pdf')"))
+
+    result = _alembic(empty_database, 'upgrade', 'head')
+    assert result.returncode == 0, (
+        f'the document source migration failed:\n{result.stdout}\n'
+        f'{result.stderr}')
+
+    with engine.begin() as connection:
+        linked = connection.execute(sa.text(
+            "SELECT source_type, source_id FROM documents WHERE id = 'd9'")
+        ).one()
+        assert linked == ('quotation', 'q9'), linked
+
+        unlinked = connection.execute(sa.text(
+            "SELECT source_type, source_id FROM documents WHERE id = 'd10'")
+        ).one()
+        assert unlinked == (None, None), (
+            'a document with no link was given a source nobody recorded')
+
+        assert connection.execute(
+            sa.text('SELECT COUNT(*) FROM documents')).scalar() == 2
