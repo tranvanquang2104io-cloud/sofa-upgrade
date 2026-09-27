@@ -22,9 +22,11 @@ logger = logging.getLogger(__name__)
 from app.services.workflow_service import (  # noqa: E402  (after logger by convention)
     ACTION_CONTRACT_CREATE,
     ACTION_CONTRACT_SIGN,
+    ACTION_HANDOVER_CONFIRM,
     ACTION_HANDOVER_CREATE,
     ACTION_PAYMENT_ADVANCE,
     ACTION_PAYMENT_FINAL,
+    ACTION_QUOTATION_APPROVE,
     WorkflowService,
 )
 
@@ -560,7 +562,14 @@ class QuotationService:
         
         if not quotation.can_approve():
             raise ValueError("Quotation cannot be approved in its current state")
-        
+
+        # The company's own rules for this action. `quotation.approve` was
+        # offered on the workflow settings grid, accepted rules, saved them and
+        # showed them back — and nothing ever asked. An owner who set a control
+        # was told they had one they did not have, and the absence of a refusal
+        # is indistinguishable from a rule that was satisfied.
+        WorkflowService.require(quotation.order, ACTION_QUOTATION_APPROVE)
+
         quotation.is_approved = True
         db.session.commit()
         
@@ -905,7 +914,10 @@ class HandoverRecordService:
             
             if not record.can_confirm():
                 raise ValueError("Handover record cannot be confirmed (already confirmed or canceled)")
-            
+
+            # Same as `quotation.approve`: configurable and never checked.
+            WorkflowService.require(record.order, ACTION_HANDOVER_CONFIRM)
+
             # Update handover record
             record.is_confirmed = True
             record.confirmed_date = datetime.utcnow()

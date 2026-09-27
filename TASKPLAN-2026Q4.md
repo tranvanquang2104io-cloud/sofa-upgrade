@@ -347,7 +347,29 @@ bằng gán tắt, bỏ qua `TRANSITIONS`), và hai action workflow
 Mỗi mục: hoặc nối đường tới, hoặc xoá. **Không để nguyên** — một trạng thái
 khai báo mà không tới được là một lời hứa với người đọc code.
 
-15. **Trạng thái.** `TODO`
+> **Phần đã xong (2026-09-27): hai action workflow không ai thi hành.**
+> `quotation.approve` và `handover.confirm` giờ gọi `WorkflowService.require`
+> trong `QuotationService.approve_quotation` và
+> `HandoverRecordService.confirm_handover`.
+>
+> Đây là "nút ẩn" **ngược dấu, và nặng hơn**: nút ẩn lừa người đang nhìn màn
+> hình, còn ở đây người bị lừa là **chủ công ty** — họ đặt một luật, được màn
+> hình xác nhận là đã đặt, và tin rằng nhân viên không thể duyệt báo giá trước
+> điều kiện họ yêu cầu. Không ai phát hiện ra được, vì **không bị từ chối**
+> trông y hệt **luật đã thoả mãn**.
+>
+> **Nói rõ về phạm vi:** `DEFAULT_RULES` không có dòng nào cho hai action này,
+> nên mặc định `require()` không tìm thấy luật và cho qua — không đổi hành vi
+> với ai chưa đặt luật, và làm cho ô cấu hình có tác dụng với ai đã đặt. Không
+> test cũ nào đỏ là vì vậy, **không phải** vì thay đổi này không được kiểm.
+>
+> **Test canh cho tương lai**: đọc `ALL_ACTIONS` rồi khẳng định mọi action đều
+> xuất hiện ở đâu đó ngoài `workflow_service.py`. Test hành vi không thể thấy
+> một action chưa ai viết đường tới — đúng cách hai cái này ẩn mình bấy lâu.
+> Action thứ tám thêm vào năm sau không lặp lại được chuyện này trong im lặng.
+
+15. **Trạng thái.** Phần action workflow: `DONE`. Các trạng thái chết còn lại:
+    `TODO` (phụ thuộc T-07).
 
 ---
 
