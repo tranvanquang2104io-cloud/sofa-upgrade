@@ -1115,6 +1115,7 @@ TRANSLATIONS['vi'].update({
     'Đang sản xuất': 'Đang sản xuất',
     'Đang bị chậm': 'Đang bị chậm',
     # Warehouse management (§8.14).
+    'Phiếu đã huỷ thì không xác nhận được': 'Phiếu đã huỷ thì không xác nhận được',
     'Đề nghị chờ duyệt': 'Đề nghị chờ duyệt',
     'Việc': 'Việc',
     'Người đề nghị': 'Người đề nghị',

@@ -97,12 +97,40 @@ def test_the_search_term_survives_on_the_page(client, login, three_orders):
     assert 'value="Hùng"' in body
 
 
-def test_paging_keeps_the_search_term(app, client, login, three_orders):
-    """Page 2 of a search must still be that search, not the whole list."""
+def test_paging_keeps_the_search_term(app, client, login, seed):
+    """Page 2 of a search must still be that search, not the whole list.
+
+    This test used to guard its own assertion with `if 'page=2' in body:` on a
+    fixture of THREE orders, against a page size of twenty. Page two could not
+    exist, so the assertion never ran — the test was green for every possible
+    implementation, including a broken one. A conditional assertion is only as
+    real as the condition, and nobody had checked that the condition could be
+    true.
+
+    Twenty-five orders now, so there IS a page two, and the link to it is
+    asserted unconditionally.
+    """
+    from app.config import db
+    from app.models import Order
+
+    with app.app_context():
+        for index in range(25):
+            db.session.add(Order(
+                company_id=seed['company_id'], store_id=seed['store_id'],
+                customer_id=seed['customer_id'],
+                order_code=f'DH-2026-{index:03d}', title='Sofa góc L'))
+        db.session.commit()
+
     login("admin")
     body = client.get('/orders?search=DH-2026&page=1').get_data(as_text=True)
-    if 'page=2' in body:
-        assert 'search=DH-2026' in body
+
+    assert 'page=2' in body, (
+        'twenty-five matches and a page size of twenty produced no second '
+        'page; the fixture no longer exercises paging')
+    next_link = body[body.rindex('page=2') - 200:body.index('page=2') + 10]
+    assert 'search=DH-2026' in next_link, (
+        'the Next link drops the search, so page two of a search shows the '
+        'whole list — the classic filter-lost-on-paging bug')
 
 
 def test_search_does_not_cross_tenants(app, client, login, three_orders, seed):

@@ -141,10 +141,36 @@ def test_a_filter_and_a_search_apply_together(client, login,
     assert 'DH-A' not in body, 'DH-A is not completed, so it must not appear'
 
 
-def test_paging_keeps_the_filter(client, login, orders_at_different_stages):
-    """Page 2 must not quietly widen the list back out."""
+def test_paging_keeps_the_filter(app, client, login, seed,
+                                 orders_at_different_stages):
+    """Page 2 must not quietly widen the list back out.
+
+    This assertion used to sit inside `if 'page=2' in body:` over a fixture of
+    three orders, against a page size of twenty. Page two could not exist, so
+    the assertion never ran and the test was green for every implementation,
+    working or not. A conditional assertion is only as real as its condition,
+    and nobody had checked the condition could be true.
+    """
+    from app.config import db
+    from app.models import Order
+
+    with app.app_context():
+        # Cancelled, because that filter reads `Order.is_canceled` alone.
+        # `in_progress` and `awaiting_handover` read LifecycleStatus through an
+        # OUTER join, and an order with no lifecycle row compares NULL != True
+        # → NULL → excluded. Worth knowing separately; here it would only make
+        # the fixture silently empty and the test fail for the wrong reason.
+        for index in range(25):
+            db.session.add(Order(
+                company_id=seed['company_id'], store_id=seed['store_id'],
+                customer_id=seed['customer_id'],
+                order_code=f'DH-FILT-{index:03d}', title='Sofa góc L',
+                is_canceled=True))
+        db.session.commit()
+
     login('admin')
-    body = client.get('/orders?status=completed').get_data(as_text=True)
-    if 'page=2' in body:
-        assert 'status=completed' in body, (
-            'the next-page link drops the filter the user is looking through')
+    body = client.get('/orders?status=canceled').get_data(as_text=True)
+    assert 'page=2' in body, 'the fixture no longer exercises paging'
+    next_link = body[body.rindex('page=2') - 250:body.index('page=2') + 10]
+    assert 'status=canceled' in next_link, (
+        'the next-page link drops the filter the user is looking through')

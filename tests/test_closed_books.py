@@ -296,18 +296,19 @@ def test_the_same_invoice_can_be_cancelled_once_the_period_reopens(app, seed):
         assert invoice.status == SupplierInvoice.STATUS_CANCELED
 
 
-def test_the_customer_payment_path_is_guarded_but_not_yet_reachable(
+def test_the_customer_payment_path_is_now_reachable_and_guarded(
         app, confirmed_payment):
-    """Said out loud rather than left as a test that passes for the wrong reason.
+    """This predicted its own obsolescence, and the prediction came true.
 
-    The check is in `PaymentReportService.cancel_payment`, and today it never
-    runs: `can_cancel()` refuses every confirmed payment first (§3.2, awaiting
-    the owner's decision). So on this path the closing date adds nothing yet.
+    It used to record that the closing-date check in
+    `PaymentReportService.cancel_payment` never ran: `can_cancel()` refused
+    every confirmed payment first (§3.2), so on that path the closed period
+    added nothing. It was wired anyway, and the test said so out loud rather
+    than passing for the wrong reason — with the note that when
+    void-with-a-reason landed, the closed period would already be standing
+    behind it.
 
-    It is wired anyway, and this test pins WHY the refusal a user sees is the
-    confirmation one — so that when §3.2 lands and void-with-a-reason opens
-    that door, the closed period is already standing behind it rather than
-    being remembered.
+    §3.2 landed. The guard is now what refuses, and the message names the date.
     """
     from app.services.services import PaymentReportService
 
@@ -317,6 +318,20 @@ def test_the_customer_payment_path_is_guarded_but_not_yet_reachable(
             PaymentReportService().cancel_payment(
                 confirmed_payment['payment_id'],
                 confirmed_payment['order_id'], reason='nhầm đơn')
-        assert 'already confirmed' in str(refused.value), (
-            'the reason changed; re-check whether the closing date is now the '
-            'thing refusing this')
+        assert '31/03/2026' in str(refused.value), (
+            'the closing date is no longer what refuses this; check whether '
+            f'something else now refuses first: {refused.value}')
+
+
+def test_reopening_the_period_lets_the_void_through(app, confirmed_payment):
+    """The lock must be a lock, not a one-way door — on this path too."""
+    from app.models.models import PaymentReport
+    from app.services.services import PaymentReportService
+
+    _close_books(app, confirmed_payment['company_id'], dt.date(2026, 1, 31))
+    with app.app_context():
+        PaymentReportService().cancel_payment(
+            confirmed_payment['payment_id'],
+            confirmed_payment['order_id'], reason='nhầm đơn')
+        assert PaymentReport.query.get(
+            confirmed_payment['payment_id']).is_canceled is True

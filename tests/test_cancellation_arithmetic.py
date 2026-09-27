@@ -129,31 +129,47 @@ def test_voiding_the_advance_puts_the_money_back_on_the_bill(app, paid_order):
             paid_order['company_id'])['receivable'] == CONTRACT_VALUE
 
 
-def test_a_confirmed_payment_cannot_be_voided_or_edited(app, paid_order):
-    """A mistaken confirmation is permanent, and there is no way back.
+def test_a_confirmed_payment_can_now_be_voided_with_a_reason(app, paid_order):
+    """This pinned the opposite, and the owner changed the answer.
 
-    `PaymentReport.can_cancel()` and `can_edit()` both require `not
-    is_confirmed`, and no unconfirm route exists. So a payment confirmed by
-    mistake — wrong amount, wrong order, or simply entered twice — leaves the
-    customer showing as having paid, understates the receivable by that amount,
-    and cannot be corrected from anywhere in the product.
+    It used to record that a mistaken confirmation was permanent:
+    `can_cancel()` and `can_edit()` both required `not is_confirmed`, and no
+    unconfirm route existed anywhere. That was pinned as CURRENT behaviour and
+    written up as an owner decision (§3.2), because how an accounting mistake
+    gets corrected is a business policy and not something to invent.
 
-    Pinned as the CURRENT behaviour, not endorsed: written up as an owner
-    decision in REVIEW-2026Q3.md §3.2, because how an accounting mistake gets
-    corrected is a business policy, not something to invent here.
+    The owner decided: *"hủy có lý do rồi tạo lại, chứng từ hủy muốn hủy thì
+    phải được duyệt và hủy xong thì các data liên quan cũng phải được update
+    lại."*
+
+    So `can_cancel()` now allows it — with a mandatory reason, through the
+    approval queue, and with everything the confirmation touched recomputed.
+    `can_edit()` is deliberately NOT relaxed: void and re-create, never rewrite
+    (Luật Kế toán 2015 Đ.27).
+
+    This test failing when §3.2 landed is the test doing its job: it was
+    holding a decision, and the decision changed.
     """
     from app.models.models import PaymentReport
     from app.services.services import PaymentReportService
 
     with app.app_context():
         payment = PaymentReport.query.get(paid_order['payment_id'])
-        assert payment.can_cancel() is False
-        assert payment.can_edit() is False
+        assert payment.can_cancel() is True
+        assert payment.can_edit() is False, (
+            'a confirmed payment became editable; the rule is void and '
+            're-create, never rewrite')
 
         with pytest.raises(ValueError):
             PaymentReportService().cancel_payment(paid_order['payment_id'],
                                                   paid_order['order_id'],
-                                                  reason='Nhầm chứng từ')
+                                                  reason='')
+
+        PaymentReportService().cancel_payment(paid_order['payment_id'],
+                                              paid_order['order_id'],
+                                              reason='Nhầm chứng từ')
+        assert PaymentReport.query.get(
+            paid_order['payment_id']).is_canceled is True
 
 
 def test_an_unconfirmed_payment_can_still_be_voided(app, paid_order):

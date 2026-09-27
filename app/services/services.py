@@ -1149,6 +1149,25 @@ class PaymentReportService:
             if not report:
                 raise ValueError(f"Payment report {report_id} not found")
             
+            # Cancelled is checked FIRST. `is_confirmed` stays true on a
+            # voided payment — cancelling does not unset it, deliberately, so
+            # the record still shows it was once confirmed — and an early
+            # return on that flag meant a voided payment answered "already
+            # done" and the route reported success.
+            #
+            # `can_confirm()` checks both conditions and the template uses it
+            # to hide the button. Only the `is_confirmed` half was checked
+            # here, so the other half lived entirely in a template. Hiding a
+            # button is a convenience for whoever is looking at the screen; it
+            # was never a rule, and a POST to the URL was never subject to it.
+            #
+            # Reachable only since voiding a confirmed payment became
+            # possible: confirm, cancel (money goes back), POST confirm again.
+            # A rule enforced only where it happened to be unreachable was
+            # never working — it was untested.
+            if report.is_canceled:
+                raise ValueError('Phiếu đã huỷ thì không xác nhận được')
+
             if report.is_confirmed:
                 logger.warning(f"Payment {report_id} already confirmed at {report.confirmed_date}")
                 return report

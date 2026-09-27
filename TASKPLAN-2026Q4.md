@@ -1,0 +1,454 @@
+# Task Plan — 27/09/2026
+
+Nguồn: `AUDIT-2026Q4.md` (bốn agent rà độc lập, mọi phát hiện có `file:dòng`).
+
+Quy tắc trạng thái: `DONE` **chỉ** khi Acceptance Criteria đã pass, không phải
+khi code chạy. `NEEDS REVIEW` khi code xong nhưng chưa ai kiểm độc lập.
+
+Thứ tự ưu tiên có một chỗ **lệch khỏi P0→P4 vì phụ thuộc thật**, giải thích ở
+cuối tài liệu.
+
+---
+
+## P0 — Kiến trúc / Bảo mật / Toàn vẹn dữ liệu
+
+### T-01 · Chặn rò dữ liệu giữa các chi nhánh trên chứng từ con
+
+**Priority:** P0 · **Type:** Security · **Dependencies:** không · **Status:** `TODO`
+
+1. **Nội dung.** Khoảng 15 endpoint chỉ kiểm `company_id`, không kiểm `store_id`.
+2. **Mục đích.** Người của chi nhánh A không đọc, sửa, ký hay xác nhận tiền của
+   chi nhánh B.
+3. **Vấn đề hiện tại.** `view_order` chặn (`services.py:391`), nhưng
+   `sign_contract` (`dashboard_routes.py:1597`), `confirm_payment` (`:2278`),
+   `cancel_payment` (`:2434`), `edit_contract` (`:1512`), `confirm_handover`
+   (`:1895`), `delete_document` (`:2653`) và 9 endpoint khác thì không. Chặn
+   được cửa trước, cửa sau mở. `ensure_store_access` (`auth_utils.py:223`) tồn
+   tại và **được gọi đúng 1 lần** trong 5438 dòng route.
+4. **Giải pháp đề xuất.** Kiểm ở **getter của service/repository**, theo đúng
+   mẫu `OrderService.get_order` đã làm — **không** vá 15 route. Một chứng từ con
+   thừa kế phạm vi cửa hàng từ order của nó.
+   *Đánh đổi:* vá từng route rẻ hơn một lần nhưng là 15 chỗ phải nhớ; vá ở
+   getter đắt hơn lúc đầu và đúng cho mọi lối vào sau này, kể cả lối chưa viết.
+5. **Chức năng ảnh hưởng.** Toàn bộ chứng từ bán hàng + tài liệu in.
+6. **Database.** Không đổi.
+7. **Backend.** `services.py` (các getter), `auth_utils.py` (dùng lại helper sẵn có).
+8. **Frontend.** Không đổi.
+9. **API.** Không đổi hình dạng; thêm 403 cho trường hợp vượt phạm vi.
+10. **Permission/Security.** Đây chính là nội dung task.
+11. **UI/UX.** Trang lỗi phải nói "chứng từ này thuộc chi nhánh khác", không
+    phải "Forbidden".
+12. **Test.** Một **sweep** theo cửa hàng giống `test_tenant_isolation_sweep.py`,
+    phủ đủ 15 endpoint, **có đối chứng dương** (cùng hành động ở đúng chi nhánh
+    phải thành công) — vì sweep hiện tại chấp nhận `302` và có thể xanh khi
+    login hỏng.
+13. **Acceptance.** Staff chi nhánh A nhận 403 trên cả 15 endpoint với id của
+    chi nhánh B; đúng 15 endpoint đó trả 200/302-thành-công với id chi nhánh A.
+14. **Kỳ vọng.** Không còn đường nào đọc/ghi chéo chi nhánh trong nhóm này.
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-02 · Người duyệt bị ràng buộc theo chi nhánh, và không tự duyệt
+
+**Priority:** P0 · **Type:** Security · **Dependencies:** T-01 · **Status:** `TODO`
+
+1. **Nội dung.** `ApprovalRequest` không có `store_id`; `pending_for()` trả về
+   toàn công ty.
+2. **Mục đích.** Quản lý chi nhánh duyệt việc của chi nhánh mình — đúng điều
+   chủ sản phẩm nói: *"người duyệt phải là admin của chi nhánh/store"*.
+3. **Vấn đề hiện tại.** `models.py:963` thiếu cột; `approvals.py:125`
+   `pending_for(company_id)`; `dashboard_routes.py:2972` lọc theo company. Nên
+   quản lý chi nhánh A duyệt đề nghị chi nhánh B. Và `approve()` (`:88`) không
+   so `user_id` với `requested_by_id` — chưa khai thác được nhưng là bẫy.
+4. **Giải pháp.** Thêm `approval_requests.store_id` (lấy từ chứng từ lúc tạo);
+   lọc hàng đợi theo phạm vi cửa hàng của người duyệt; chặn tự duyệt.
+5. **Ảnh hưởng.** Hàng đợi duyệt, màn hình `/approvals`.
+6. **Database.** Migration thêm 1 cột, backfill từ `order.store_id` của chứng từ.
+7. **Backend.** `approvals.py`, `dashboard_routes.py:2940-3000`.
+8. **Frontend.** `approvals/list.html` — không đổi hình dạng.
+9. **API.** Không đổi.
+10. **Permission.** Nội dung task.
+11. **UI/UX.** Hàng đợi ngắn lại và đúng người; không cần đổi bố cục.
+12. **Test.** Quản lý chi nhánh A **không thấy** và **không duyệt được** đề nghị
+    của B; người đề nghị không tự duyệt được.
+13. **Acceptance.** Cả ba khẳng định trên pass qua HTTP.
+14. **Kỳ vọng.** Workflow duyệt có ý nghĩa thật thay vì hình thức.
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-03 · Sửa số sinh phiếu điều chuyển kho (`COUNT(*) + 1`)
+
+**Priority:** P0 · **Type:** Data integrity · **Dependencies:** không · **Status:** `TODO`
+
+1. **Nội dung.** `transfers.py:32-36` sinh số bằng `COUNT(*) + 1`.
+2. **Mục đích.** Không bao giờ cấp lại một số chứng từ đã dùng.
+3. **Vấn đề hiện tại.** Đây đúng là lỗi mà docstring của
+   `procurement_service.py:20` viết ra để cảnh báo: *"A count is not a sequence:
+   delete any row and the next number repeats one already used"*. Và
+   `StockTransfer` **có** unique constraint đó (`models.py:1101`). Lỗi này do
+   chính lượt refactor này tạo ra.
+4. **Giải pháp.** Dùng lại thuật toán MAX-của-dãy ở `procurement_service.py:15`
+   — và gộp ba bản sinh số (`procurement_service.py:15`,
+   `dashboard_routes.py:2818`, `transfers.py:32`) về một.
+5. **Ảnh hưởng.** Điều chuyển kho.
+6. **Database.** Không đổi.
+7. **Backend.** `transfers.py`, và một module `numbering` dùng chung.
+8. **Frontend.** Không đổi.
+9. **API.** Không đổi.
+10. **Permission.** Không đổi.
+11. **UI/UX.** Không đổi.
+12. **Test.** Tạo 3 phiếu, xoá phiếu giữa, tạo phiếu thứ 4 → số không trùng.
+13. **Acceptance.** Test trên pass; ba bản sinh số còn một.
+14. **Kỳ vọng.** Không còn IntegrityError bí ẩn khi xoá phiếu.
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-04 · Hai ô chọn kho trên màn hình nhận hàng, chú thích nói sai
+
+**Priority:** P0 · **Type:** Data integrity + UX · **Dependencies:** không · **Status:** `TODO`
+
+1. **Nội dung.** `po_view.html:111` (`warehouse_id`, chú thích *"Tồn kho sẽ tăng
+   ở kho này"*) và `:139` (`store_id`) — hai ô cho cùng một câu hỏi.
+2. **Mục đích.** Thủ kho chọn một chỗ, và hàng vào đúng chỗ đó.
+3. **Vấn đề hiện tại.** Tồn kho tăng theo **`store_id`**
+   (`procurement_service.py:171,201,211`); `warehouse_id` chỉ **dán nhãn**
+   (`:217`). Chú thích là của tôi và nó **mô tả sai hành vi thật**. Hai ô cách
+   nhau cả một bảng nhập số lượng nên khó nhận ra chúng cùng nói một chuyện.
+4. **Giải pháp.** Một ô duy nhất. Vì `MaterialStock` còn khoá theo `store_id`
+   (§8.15), ô đó phải là kho và hệ thống tự suy chi nhánh từ kho — không phải
+   ngược lại.
+   *Đánh đổi:* gộp ngay thì đúng ngữ nghĩa nhưng phụ thuộc T-10 (khoá tồn theo
+   kho); gộp tạm bằng cách suy `store_id` từ `warehouse_id` thì đúng **ngay**
+   và không chặn T-10.
+5. **Ảnh hưởng.** Nhận hàng, tồn kho.
+6. **Database.** Không đổi (bản tạm).
+7. **Backend.** `procurement_service.py:163`, `dashboard_routes.py:5231`.
+8. **Frontend.** `po_view.html:111-145`.
+9. **API.** Bỏ `store_id` khỏi form nhận hàng.
+10. **Permission.** Kèm T-05 (`store_id` thô từ form).
+11. **UI/UX.** Một ô, một chú thích đúng.
+12. **Test.** Chọn kho X → dòng tồn của **chi nhánh chứa X** tăng, và
+    `GoodsReceipt.warehouse_id = X`.
+13. **Acceptance.** Test trên pass; không còn hai ô.
+14. **Kỳ vọng.** Không còn ghi tăng tồn sai địa điểm trong khi tin là đã chọn đúng.
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-05 · `store_id` thô từ form không được kiểm
+
+**Priority:** P0 · **Type:** Security · **Dependencies:** không · **Status:** `TODO`
+
+1. **Nội dung.** `receive_purchase_order` (`dashboard_routes.py:5231`) và
+   `update_material_stock` (`:3869`) nhận `store_id` thẳng từ form.
+2. **Mục đích.** Không ai ghi tồn kho vào một chi nhánh họ không thuộc về.
+3. **Vấn đề hiện tại.** `MaterialService.update_stock` (`services.py:1981`)
+   chỉ kiểm company của **vật tư**, không kiểm store. `@store_admin_required`
+   chỉ xác nhận "là admin của **một** cửa hàng nào đó". Đối chiếu:
+   `create_warehouse` (`:3087`) và `create_order` (`:966`) **có** kiểm.
+4. **Giải pháp.** Kiểm store thuộc company **và** nằm trong phạm vi của người
+   dùng, ở service.
+5. **Ảnh hưởng.** Nhận hàng, điều chỉnh tồn kho tay.
+6. **Database.** Không đổi.
+7. **Backend.** `services.py`, `procurement_service.py`.
+8. **Frontend.** Không đổi.
+9. **API.** Thêm 403/ValueError.
+10. **Permission.** Nội dung task.
+11. **UI/UX.** Thông báo nói rõ chi nhánh không hợp lệ.
+12. **Test.** POST `store_id` của chi nhánh khác → từ chối, tồn kho không đổi.
+13. **Acceptance.** Test trên pass cho cả hai endpoint.
+14. **Kỳ vọng.** Không còn ghi tồn kho vào chi nhánh tuỳ ý.
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-06 · Huỷ hợp đồng và huỷ đơn không đi qua service
+
+**Priority:** P0 · **Type:** Data integrity · **Dependencies:** không · **Status:** `TODO`
+
+1. **Nội dung.** `cancel_contract` (`dashboard_routes.py:1629-1663`) sửa model
+   thẳng trong route.
+2. **Mục đích.** Huỷ một chứng từ phải gỡ đúng mọi thứ nó đã bật lên.
+3. **Vấn đề hiện tại.** Route **không gọi** `ContractService.cancel_contract`
+   (`services.py:731`), là hàm CÓ rollback `lifecycle.contract_created`. Đường
+   service ấy chỉ còn test gọi — **chết trong production**. Huỷ hợp đồng qua UI
+   để lại `contract_created=True` vĩnh viễn. `cancel_order` (`:1692`) cùng
+   hình dạng; `OrderService` không có phương thức huỷ nào.
+4. **Giải pháp.** Route gọi service; service **tính lại** lifecycle từ dữ liệu
+   thay vì gỡ từng cờ — theo đúng mẫu `_resync_payment_lifecycle` đã làm.
+5. **Ảnh hưởng.** Huỷ hợp đồng, huỷ đơn, mọi màn hình đọc lifecycle.
+6. **Database.** Không đổi.
+7. **Backend.** `dashboard_routes.py`, `services.py`.
+8. **Frontend.** Không đổi.
+9. **API.** Không đổi.
+10. **Permission.** Không đổi.
+11. **UI/UX.** Không đổi.
+12. **Test.** Huỷ hợp đồng qua **HTTP** → `lifecycle.contract_created` False;
+    và đường service cũ có test dương tính.
+13. **Acceptance.** Test trên pass; không còn `db.session.commit()` cho việc
+    huỷ trong route.
+14. **Kỳ vọng.** Một đường huỷ, không phải hai.
+15. **Trạng thái.** `TODO`
+
+---
+
+## P1 — Vòng đời chứng từ
+
+### T-07 · State machine cho sáu chứng từ đang dùng cờ boolean
+
+**Priority:** P1 · **Type:** Architecture · **Dependencies:** T-06 · **Status:** `TODO`
+
+1. **Nội dung.** Order, Quotation, Contract, HandoverRecord, PaymentReport,
+   GoodsReceipt, StockTransfer không có state machine.
+2. **Mục đích.** Trạng thái là dữ liệu, không phải thứ suy ra ở tầng hiển thị.
+3. **Vấn đề hiện tại.** `status_tokens.py:147` quyết định trạng thái bằng
+   **object có thuộc tính nào**; `books.py:116` suy ra "đã vào sổ" theo cách
+   thứ ba; 23 phương thức `can_*` dùng **hai quy ước ngược nhau** (danh sách
+   trắng ở mua hàng, danh sách đen ở bán hàng), và `Quotation.can_edit()`
+   (`:419`) **quên `is_canceled`** — báo giá đã huỷ vẫn sửa được.
+4. **Giải pháp.** `StateMachineMixin` (status + TRANSITIONS + can/allowed);
+   migration thêm cột `status` + backfill từ tổ hợp cờ; giữ cờ cũ một release.
+   *Đánh đổi:* làm từng chứng từ một thì an toàn và lâu; làm cả bảy cùng lúc
+   thì rẻ hơn và một migration sai là sai trên toàn sản phẩm. **Chọn từng cái
+   một, bắt đầu từ Quotation** (ít quan hệ nhất, và đang có lỗi `can_edit`).
+5–15. *(chi tiết mở khi bắt đầu; phụ thuộc T-06 vì huỷ phải sạch trước khi mô
+   hình hoá lại trạng thái)*
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-08 · Audit trail: ai làm gì
+
+**Priority:** P1 · **Type:** Architecture · **Dependencies:** T-07 · **Status:** `TODO`
+
+1. **Nội dung.** Toàn schema có đúng 3 cột `*_by_id`.
+2. **Mục đích.** Duyệt mà không ghi ai duyệt thì không phải kiểm soát.
+3. **Vấn đề hiện tại.** Không chứng từ nào ghi ai tạo, ai duyệt, **ai ký**, ai
+   xác nhận tiền, ai huỷ. `Quotation` không có cả `approved_at`
+   (`models.py:400`). Chủ sản phẩm vừa yêu cầu maker–checker — đây là nền
+   móng còn thiếu của chính yêu cầu đó.
+4. **Giải pháp.** Bảng `document_transitions` (chứng từ, từ trạng thái, tới
+   trạng thái, ai, khi nào, lý do) thay cho việc rải thêm cặp cờ + `_at`.
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-09 · Gỡ trạng thái chết và luật không thi hành
+
+**Priority:** P1 · **Type:** Correctness · **Dependencies:** T-07 · **Status:** `TODO`
+
+`MasterAgreement.EXPIRED` (không dòng gán nào), `SupplierPayment.CANCELED`
+(**phiếu chi NCC không bao giờ huỷ được**), `Document.SIGNED` (chỉ được đọc —
+và là chỗ ký số sẽ bám vào), `PO.PARTIAL/RECEIVED` và `PR.CONVERTED` (tới được
+bằng gán tắt, bỏ qua `TRANSITIONS`), và hai action workflow
+(`quotation.approve`, `handover.confirm`) **hiện trên lưới cấu hình cho admin
+đặt luật mà không nơi nào thi hành**.
+
+Mỗi mục: hoặc nối đường tới, hoặc xoá. **Không để nguyên** — một trạng thái
+khai báo mà không tới được là một lời hứa với người đọc code.
+
+15. **Trạng thái.** `TODO`
+
+---
+
+## P2 — UI/UX
+
+### T-11 · Tách phần Nhận hàng khỏi màn hình đơn mua
+
+**Priority:** P2 · **Type:** UX · **Dependencies:** T-04 · **Status:** `TODO`
+
+1. **Nội dung.** `po_view.html:100-153` — form GR luôn mở sẵn, đã điền đủ số
+   lượng, một cú bấm là ghi tăng tồn cả đơn.
+2. **Vấn đề hiện tại.** "Vật tư đặt mua" là `<h5>` trần (`:69`), "Nhận hàng" là
+   card-header **xanh lá** (`:103`) — hai mức nổi bật cho hai phần ngang cấp,
+   và màu xanh đó **duy nhất trong toàn sản phẩm**, đang bù cho việc thiếu
+   phân cấp thật. Hai bảng liền nhau **cùng có cột "Outstanding"**.
+   `can_receive()` đúng với phần lớn vòng đời một PO, nên "luôn hiện" nghĩa là
+   trang xem đơn và trang ghi nghiệp vụ kho bị hợp nhất.
+3. **Giải pháp.** Modal, mở từ hàng hành động ở `:17-44`.
+   *Đánh đổi:* trang riêng mất ngữ cảnh đơn hàng đúng lúc cần đối chiếu với
+   phiếu giao của tài xế, và phải thêm route GET mới; drawer là mẫu thứ ba
+   chưa từng có trong 86 template. Modal đã là ngôn ngữ chuẩn của sản phẩm cho
+   hành động nghiêm trọng.
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-12 · "Điền từ đề xuất" xoá trắng form đang nhập
+
+**Priority:** P2 · **Type:** Data loss · **Dependencies:** không · **Status:** `TODO`
+
+`pr_form.html:48` là `<a href>` nằm **bên trong `<form>`** (mở ở `:16`). Bấm =
+điều hướng đi, **không cảnh báo**; tiêu đề, cửa hàng, ngày cần, ghi chú và mọi
+dòng đã nhập tay **mất sạch**. Cơ chế khôi phục (`base.html:246`) chỉ chạy sau
+POST thất bại. Nhãn nói "điền thêm vào", hành vi là "bỏ hết làm lại".
+
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-13 · Bỏ nút trùng và hộp xác nhận hai lần trên màn hình đơn hàng
+
+**Priority:** P2 · **Type:** UX · **Dependencies:** không · **Status:** `TODO`
+
+`orders/view.html`: **năm hành động, mười nút** (timeline `:200,257,343,402,483`
+và Quick Actions `:504,532,570,579,585`), kích cỡ khác nhau nên trông như hai
+việc khác nhau. Trạng thái quy trình vẽ hai lần: timeline viết tay (`:138`) và
+`process_list()` (`:627`) — mà macro ấy sinh ra đúng để **thay thế** bản viết
+tay. Và `:179-182` hỏi xác nhận **hai lần** với hai câu chữ khác nhau.
+
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-14 · Nút bị chặn phải giải thích, không biến mất
+
+**Priority:** P2 · **Type:** UX · **Dependencies:** T-07 · **Status:** `TODO`
+
+Grep `disabled` trên toàn bộ template: 7 kết quả, **không cái nào là "chặn nút
+để giải thích lý do"**. Với người dùng không giỏi công nghệ, biến mất tệ hơn
+nút xám: họ không biết nút **từng tồn tại**. Ví dụ thật: PO ở `draft` thì
+`po_view.html:101` ẩn toàn bộ phần nhận hàng, và không gì nói "phải bấm Gửi NCC
+trước".
+
+Phụ thuộc T-07 vì câu giải thích đến từ state machine ("đang ở Nháp, cần Gửi
+NCC trước").
+
+15. **Trạng thái.** `TODO`
+
+---
+
+## P3 — Dọn dẹp
+
+### T-15 · Xoá `/materials/low-stock`, thay bằng bộ lọc
+
+**Priority:** P3 · **Type:** Cleanup · **Dependencies:** không · **Status:** `TODO`
+
+Đã kiểm: `low_stock_materials` (`services.py:2379`) chỉ là
+`Material.query.filter_by(is_active=True)` rồi lọc Python bằng `is_low_stock`.
+Và `materials/list.html` **đã hiển thị đủ**: tô `table-warning` (`:80`), badge
+`Low Stock` (`:85`), `total_stock / min_stock_level` (`:91`) — đúng 4 cột mà
+`low_stock.html` có, cộng 5 cột nữa. Màn hình riêng không thêm thông tin nào,
+chỉ **ẩn bớt dòng**.
+
+**Phải xoá theo:** route `dashboard_routes.py:5043`, template
+`materials/low_stock.html`, link menu `base.html:92`, dòng quyền
+`permission_map.py:92`, ba test (`test_permission_map.py:110`,
+`test_production_plan.py:113`, `test_empty_states.py:40`), đường dẫn trong
+`scripts/qc_audit.py:436`.
+
+**PHẢI GIỮ:** service `low_stock_materials` — `purchase_suggestions`
+(`services.py:2437`) dùng lại nó. Xoá service sẽ phá đề xuất mua hàng.
+
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-16 · `/materials/purchase-suggestions` — KHÔNG xoá, và đây là lý do
+
+**Priority:** P3 · **Type:** Cleanup · **Dependencies:** không · **Status:** `NEEDS REVIEW`
+
+Chủ sản phẩm yêu cầu xoá vì trùng với "Điền từ đề xuất tự động" trong
+`/requisitions/create`. **Đã kiểm bằng code, và chúng không trùng.**
+
+Cả hai trỏ cùng một URL (`purchase_suggestions.html:20` và `pr_form.html:48`)
+và gọi cùng service (`requisition_service.py:26` và `dashboard_routes.py:5058`).
+Nhưng `requisition_service.py:30` **chỉ giữ 3 trường** — `material_id`,
+`quantity`, `unit` — và **vứt bỏ** `required`, `available`, `min_level`,
+`unit_price`, `est_cost`, cùng **toàn bộ phần gộp theo nhà cung cấp**.
+
+Tức trang đề xuất trả lời **"tại sao cần mua và tốn bao nhiêu"**; nút trong form
+chỉ làm việc **"điền số vào"**. Quản đốc cần con số ước tính chi phí để xin
+duyệt, và dữ liệu đó không có trong form PR.
+
+**Đề xuất:** giữ cả hai, sửa T-12 (link xoá trắng form) và thống nhất tên gọi —
+hiện màn hình này có **ba tên** (`base.html:104`, `pr_list.html:17`,
+`purchase_suggestions.html:3`).
+
+**Cần chủ sản phẩm xác nhận** trước khi xoá, vì xoá sẽ mất phần ước tính chi phí.
+
+15. **Trạng thái.** `NEEDS REVIEW` — chờ quyết định.
+
+---
+
+## P4 — Test / Hardening
+
+### T-17 · Một hành trình HTTP vai nhân viên
+
+**Priority:** P4 · **Type:** Test · **Dependencies:** T-01, T-02 · **Status:** `TODO`
+
+918 test, **đúng một** test đổi vai giữa hành trình. `login("admin")` gần như
+khắp nơi — sản phẩm chưa từng được kiểm cho vai không phải admin.
+
+Một test: nhân viên tạo → sửa → gửi duyệt → (đổi vai) quản lý duyệt → nhân
+viên cố sửa lại → bị từ chối. Test này phủ đồng thời bốn dòng trống trong
+audit.
+
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-18 · Gọi thẳng API những endpoint mà UI đã ẩn nút
+
+**Priority:** P4 · **Type:** Security test · **Dependencies:** không · **Status:** `TODO`
+
+Đúng **một** test làm điều này (`test_a_voided_payment_stays_voided.py:74`) —
+và nó tìm ra một lỗ hổng thật ngay lần đầu. 23 endpoint còn lại trong
+`DESTRUCTIVE` (`test_confirmations.py:24`) chưa có test bypass nào: `sign_contract`
+trên hợp đồng đã ký, `approve_quotation` trên báo giá đã duyệt,
+`receive_purchase_order` trên PO chưa gửi, `delete_document`.
+
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-19 · 29 route POST chưa từng nhận một POST nào
+
+**Priority:** P4 · **Type:** Test · **Dependencies:** không · **Status:** `TODO`
+
+Gồm `create_material`, `create_store`, `edit_user`, `update_material_stock`,
+`create_supplier_invoice`, `delete_document`, `cancel_payment`,
+`edit_quotation`, `edit_contract`, `edit_handover`.
+
+Ba route (`cancel_contract`, `cancel_quotation`, `deactivate_material`) chỉ
+được kiểm bởi probe **âm tính** khẳng định "dữ liệu không đổi" — **xoá hẳn
+route đi, suite vẫn xanh**.
+
+15. **Trạng thái.** `TODO`
+
+---
+
+### T-20 · Siết các test xanh-vì-lý-do-sai đã xác định
+
+**Priority:** P4 · **Type:** Test · **Dependencies:** không · **Status:** `IN PROGRESS`
+
+Đã xong: hai test phân trang (`test_order_search.py:100`,
+`test_orders_list_filters.py:144`) — `assert` nằm trong `if 'page=2' in body:`
+trên fixture 3 bản ghi với trang 20 dòng, nên **chưa từng chạy**. Viết lại cho
+thật: tính năng hoá ra **đúng**, nhưng suốt thời gian qua không ai biết.
+
+Còn lại: `login()` trong `conftest.py:136` không khẳng định đăng nhập thành
+công (nên `in (302, 403)` có thể xanh vì khách vãng lai); `_guarded()` trong
+`test_confirmations.py:41` trả `True` khi **không tìm thấy form nào**;
+`test_suggestions_say_which_stock.py:34` khớp `inspect.getsource` nên trúng cả
+chú thích; `test_untested_routes.py:20` xanh vì `vi` đã là mặc định.
+
+15. **Trạng thái.** `IN PROGRESS`
+
+---
+
+## Lệch khỏi thứ tự P0→P4, và lý do
+
+**T-20 làm trước một phần**, dù là P4. Lý do: các task P0 sẽ được kiểm bằng
+chính bộ test này. Sửa bảo mật rồi khẳng định "test xanh" trong khi biết có
+test xanh-vì-lý-do-sai là xây trên nền không đo được. Phần đã làm là hai test
+rẻ nhất và đang che một lỗi kinh điển.
+
+**T-04 (P0) chặn T-11 (P2)** — không tách được phần Nhận hàng ra modal khi còn
+chưa rõ ô nào quyết định hàng vào đâu.
+
+**T-07 chặn T-14** — câu giải thích cho một nút bị chặn phải đến từ state
+machine, không phải từ một chuỗi viết tay ở mỗi template.
