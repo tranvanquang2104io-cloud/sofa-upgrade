@@ -456,7 +456,33 @@ POST thất bại. Nhãn nói "điền thêm vào", hành vi là "bỏ hết là
 
 ### T-13 · Bỏ nút trùng và hộp xác nhận hai lần trên màn hình đơn hàng
 
-**Priority:** P2 · **Type:** UX · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P2 · **Type:** UX · **Dependencies:** không · **Status:** `MỘT PHẦN DONE` — phần còn lại **CẦN CHỦ SẢN PHẨM QUYẾT**
+
+> **Đã làm (an toàn, không đổi diện mạo):** bỏ hộp xác nhận **trùng** ở 3 hành
+> động — duyệt báo giá, ký hợp đồng, xác nhận bàn giao. Mỗi chỗ có `confirm()`
+> trên *form* **và** một cái nữa trên *nút*, một cú bấm hai hộp thoại, **hai câu
+> chữ khác nhau**. Câu đầy đủ (câu nói rõ hậu quả — *"duyệt rồi thì không sửa
+> được nữa"*) lại là câu **thứ hai**, sau khi người ta vừa bấm OK cho câu mơ hồ
+> hơn. Lúc đó họ đang bấm cho hộp thoại biến mất — đúng thói quen mà xác nhận
+> sinh ra để ngăn. Với người không rành công nghệ còn tệ hơn: bị hỏi hai lần
+> dạy cho họ rằng câu hỏi đầu **không tính**, và người đã học điều đó thì thôi
+> đọc luôn câu thứ hai. Giữ lại hộp trên form vì nó có câu nói rõ hậu quả.
+>
+> **CẦN QUYẾT ĐỊNH — chưa làm:** hai phần còn lại **là cùng một thay đổi**, và
+> nó **đổi diện mạo màn hình chính**:
+> - Màn hình vẽ tiến trình **hai lần**: timeline viết tay (9 `timeline-marker`)
+>   và macro `process_list()` (dùng 1 lần) — macro vốn sinh ra để **thay thế**
+>   bản viết tay.
+> - Năm hành động, mười nút. Nhưng **một nửa số nút nằm ngay trong timeline
+>   viết tay đó**. Bỏ timeline = bỏ luôn nút trùng; hai việc là một.
+>
+> Đây là gỡ khoảng một nửa của `orders/view.html` (762 dòng). Chủ sản phẩm đã
+> dặn *"Đồng bộ cấu trúc, **giữ diện mạo**"* — nên tôi **không tự ý** gỡ. Hai
+> phương án:
+> **(a)** giữ timeline viết tay, bỏ `process_list()` → màn hình y như cũ, hết
+> trùng lặp trong code, nhưng macro dùng chung ở các màn khác sẽ không áp ở đây;
+> **(b)** bỏ timeline viết tay, dùng macro → hết trùng cả code lẫn nút, đồng bộ
+> với các màn khác, **nhưng màn hình chính trông khác đi rõ rệt**.
 
 `orders/view.html`: **năm hành động, mười nút** (timeline `:200,257,343,402,483`
 và Quick Actions `:504,532,570,579,585`), kích cỡ khác nhau nên trông như hai
@@ -779,7 +805,28 @@ thể thành công** trừ khi tạo dòng mẫu ngoài giao diện.
 
 ### T-21 · Cấp số chứng từ khi hai người lưu cùng lúc
 
-**Priority:** P2 · **Type:** Bug · **Dependencies:** T-03 · **Status:** `TODO`
+**Priority:** P2 · **Type:** Bug · **Dependencies:** T-03 · **Status:** `DONE`
+
+> **Kết quả.** `retry_if_the_number_was_taken` trong `app/services/numbering.py`,
+> áp cho `transfer_stock`. **Chỉ số tự sinh mới thử lại** — số người dùng tự gõ
+> vẫn để lỗi, vì âm thầm lưu DC-0007 của họ thành DC-0008 là ghi lên chứng từ
+> một số khác với số trên tờ giấy họ đang cầm.
+>
+> **Hai lần tôi sai, ghi lại cả hai:**
+> 1. *Test đầu không tái hiện được tranh chấp.* Tôi chèn số đã bị chiếm rồi mới
+>    lưu — nhưng lượt lưu **tính lại** số nên tự động né, và test **xanh dù chưa
+>    có retry nào**. Tranh chấp thật là **cả hai cùng tính ra một số trước khi
+>    ai kịp ghi**; giờ mô phỏng bằng cách cho bộ cấp số trả về một số cũ đúng
+>    một lần.
+> 2. *Bản retry đầu tiên sai theo kiểu test không bắt được.* Tôi rollback rồi
+>    gán số mới vào chính dòng đó. Nhưng `rollback()` xoá **mọi thứ** — cả trừ
+>    cộng tồn kho, cả các dòng, cả sổ movement — nên nó sẽ commit một phiếu
+>    điều chuyển **không dòng nào và không ảnh hưởng tồn kho**, tệ hơn lỗi nó
+>    thay thế. Phải thử lại **toàn bộ thao tác**, an toàn vì thao tác đọc lại
+>    dữ liệu từ DB mỗi lần.
+>
+> **Không hứa:** số liên tục không nhảy. Transaction rollback vì lý do khác vẫn
+> ăn mất một số — đúng như hoá đơn giấy hỏng vẫn mất số.
 
 1. **Nội dung.** `next_document_number` đọc số lớn nhất rồi +1. Hai người bấm
    lưu cùng lúc đọc ra cùng một số.

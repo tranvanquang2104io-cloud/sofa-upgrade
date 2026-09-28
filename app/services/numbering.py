@@ -53,3 +53,41 @@ def next_document_number(model, field_name, prefix, company_id, width=3):
             highest = max(highest, int(suffix))
 
     return f'{prefix}{highest + 1:0{width}d}'
+
+
+def retry_if_the_number_was_taken(operation, attempts=3):
+    """Run `operation`, and run it again if somebody took our number.
+
+    `next_document_number` reads the highest number and adds one, so two
+    people saving in the same instant read the same one. The unique
+    constraints mean the DATA stays correct; what breaks is the second
+    person's afternoon — an unexplained error for an action that worked a
+    moment ago, and a movement of stock that physically happened and is now
+    not recorded.
+
+    THE WHOLE OPERATION is retried, not just the number. A rollback discards
+    everything the operation did — the stock adjustments, the lines, the
+    movement ledger — so patching the number onto a rolled-back row would
+    commit a transfer with no lines and no stock effect. Re-running is safe
+    because the operation reads its inputs from the database each time.
+
+    A retry rather than a lock: every company and document type has its own
+    sequence, so real contention is rare, and locking a table on every save
+    would cost more than the error it prevents.
+
+    Not claimed: gapless numbering. A transaction that rolls back for any
+    other reason still consumes a number — exactly as a spoiled paper invoice
+    does.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    from app.config.database import db
+
+    for attempt in range(attempts):
+        try:
+            return operation()
+        except IntegrityError:
+            db.session.rollback()
+            if attempt == attempts - 1:
+                raise
+    raise RuntimeError('unreachable')

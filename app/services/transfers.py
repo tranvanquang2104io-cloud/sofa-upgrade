@@ -53,6 +53,26 @@ def _stock_row(company_id, material_id, store_id, create=False):
 
 def transfer_stock(company_id, from_warehouse_id, to_warehouse_id, lines,
                    transfer_date, notes=None, transfer_number=None):
+    """Move stock between warehouses, retrying if our number was taken.
+
+    Only an AUTOMATIC number is retried. A number somebody typed is left to
+    fail: quietly saving their DC-0007 as DC-0008 would put a different number
+    on the record from the one on the paper in their hand.
+    """
+    from app.services.numbering import retry_if_the_number_was_taken
+
+    def once():
+        return _transfer_stock(company_id, from_warehouse_id,
+                               to_warehouse_id, lines, transfer_date,
+                               notes=notes, transfer_number=transfer_number)
+
+    if transfer_number:
+        return once()
+    return retry_if_the_number_was_taken(once)
+
+
+def _transfer_stock(company_id, from_warehouse_id, to_warehouse_id, lines,
+                    transfer_date, notes=None, transfer_number=None):
     """Move `lines` between two warehouses and record why.
 
     `lines` is a list of ``{material_id, quantity, unit}``.
