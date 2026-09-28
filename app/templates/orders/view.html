@@ -179,7 +179,7 @@
                                             <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Approve this quotation? After approval it can no longer be edited.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" aria-label="Approve" onclick="return confirm('{{ t("Approve this quotation?") }}')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" aria-label="Approve">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
@@ -236,7 +236,7 @@
                                             <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Mark this contract as signed? A signed contract can no longer be edited or cancelled.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" aria-label="Sign" onclick="return confirm('{{ t("Sign this contract?") }}')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" aria-label="Sign">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
@@ -382,7 +382,7 @@
                                             <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Confirm this handover? It records that the customer accepted the goods and cannot be undone.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm" onclick="return confirm('{{ t("Confirm this handover?") }}')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
