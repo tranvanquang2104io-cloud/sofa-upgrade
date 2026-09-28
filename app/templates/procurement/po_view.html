@@ -132,7 +132,14 @@
           <tr>
             <td>{{ ln.material.name if ln.material else ln.material_id }}</td>
             <td class="text-end">{{ "{:,.2f}".format(ln.outstanding|float).rstrip('0').rstrip('.') }} {{ ln.unit }}</td>
-            <td><input type="number" step="0.01" min="0" max="{{ ln.outstanding|float }}" class="form-control form-control-sm" name="qty_{{ ln.id }}" value="{{ ln.outstanding|float }}"></td>
+            {# KHÔNG điền sẵn số lượng. Trước đây ô này có sẵn toàn bộ số còn lại, nên
+                 xem đơn và ghi nhập kho là cùng một màn hình, và chỉ một cú bấm là
+                 ghi nhận đã nhận đủ cả đơn. Giao hàng từng phần là chuyện bình
+                 thường của nghề này, nên "điền sẵn tất cả" là mặc định sai nhiều
+                 hơn đúng — và sai về phía đắt: tồn kho tăng cho hàng chưa ai nhìn
+                 thấy. Số còn lại vẫn hiện ở cột bên cạnh, để tham khảo chứ không
+                 phải để thay người ta trả lời. #}
+            <td><input type="number" step="0.01" min="0" max="{{ ln.outstanding|float }}" class="form-control form-control-sm" name="qty_{{ ln.id }}" value="" placeholder="{{ t('Thực nhận') }}"></td>
           </tr>
           {% endif %}
         {% endfor %}

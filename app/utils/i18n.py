@@ -1122,6 +1122,7 @@ TRANSLATIONS['vi'].update({
     'Loại chứng từ không hợp lệ.': 'Loại chứng từ không hợp lệ.',
     # Quản lý mẫu in (T-24).
     'Phiên bản': 'Phiên bản',
+    'Thực nhận': 'Thực nhận',
     # Nút bị chặn phải giải thích (T-14).
     'Chưa nhập kho được.': 'Chưa nhập kho được.',
     'Chỉ hiện vật tư dưới mức tồn tối thiểu': 'Chỉ hiện vật tư dưới mức tồn tối thiểu',
