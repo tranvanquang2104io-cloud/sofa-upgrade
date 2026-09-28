@@ -93,7 +93,14 @@ def test_workflow_settings_require_company_admin(client, login):
     """A store user must not be able to rewrite the company's process."""
     login("staff")
     resp = client.get('/settings/workflow', follow_redirects=False)
-    assert resp.status_code in (302, 403)
+    # 403, exactly. `in (302, 403)` accepted a redirect too — an outcome this
+    # route does not produce (measured), so the looser assertion bought
+    # nothing and would have gone on passing if the guard ever degraded into
+    # "bounce them to the login page", which looks the same to a test and
+    # very different to a user who IS logged in.
+    assert resp.status_code == 403, (
+        f'a store user was not refused the workflow settings '
+        f'(HTTP {resp.status_code})')
 
 
 # --- standardization -----------------------------------------------------
@@ -159,4 +166,6 @@ def test_standardization_page_ignores_unknown_primitives(app, client, login,
 def test_standardization_settings_require_company_admin(client, login):
     login("staff")
     resp = client.get('/settings/standardization', follow_redirects=False)
-    assert resp.status_code in (302, 403)
+    assert resp.status_code == 403, (
+        f'a store user was not refused this settings screen '
+        f'(HTTP {resp.status_code})')

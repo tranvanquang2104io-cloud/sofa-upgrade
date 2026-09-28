@@ -694,6 +694,34 @@ route đi, suite vẫn xanh**.
 
 **Priority:** P4 · **Type:** Test · **Dependencies:** không · **Status:** `IN PROGRESS`
 
+> **Kết quả.** Siết 4 chỗ, **đo trước rồi mới siết**, không đoán.
+>
+> **Hàng rào `login()` không bắt được lỗi nào — nói thẳng.** Fixture `login()`
+> post thông tin đăng nhập rồi **không kiểm gì cả**, 344 lời gọi phụ thuộc vào
+> nó. Nếu đăng nhập âm thầm hỏng thì mọi test kiểu "người này không được làm X"
+> biến thành "khách vãng lai không được làm X" — vẫn xanh, vẫn vô nghĩa. Rủi ro
+> là thật về nguyên tắc, nhưng **thực tế không dính**: cả suite đang đăng nhập
+> đúng. Giờ nó là lưới an toàn cho tương lai, **không phải** một lỗi tôi tìm ra.
+> (Cũng rút lại nghi ngờ của tôi về `badmin` — user đó dùng đúng mật khẩu mặc
+> định.)
+>
+> **Ba chỗ còn lại là điểm yếu thật:**
+> - `in (302, 403)` ở 2 màn settings: đo ra **luôn luôn 403**, không bao giờ
+>   302. Nhận thêm 302 chẳng được gì, mà lại **vẫn xanh** nếu chốt chặn thoái
+>   hoá thành "đá về trang login" — nhìn từ test thì giống hệt, nhìn từ người
+>   dùng **đang đăng nhập** thì khác hẳn.
+> - `in (403, 302, 404)` ở test cách ly chi nhánh: đo ra **302 → `/orders`**.
+>   Giờ ghim đúng mã **và ghim cả nơi người dùng bị đưa tới** — phần mà người
+>   dùng thực sự nhìn thấy.
+> - Test cảnh báo "không hoàn tác được" quét **toàn trang** tìm bất kỳ cụm từ
+>   nào, nên không phân biệt được *"hành động này có cảnh báo"* với *"trang này
+>   có chữ vĩnh viễn ở đâu đó"*. File đã có sẵn `_says_it_is_final(body,
+>   action_url)` neo vào đúng hộp thoại — test đó chỉ là không dùng.
+>
+> **Điểm chung:** một assert nhận **nhiều kết quả** thì không cho biết kết quả
+> nào đã xảy ra. Mọi chỗ như vậy trong suite đều do ai đó **không đo trước** —
+> kể cả tôi, **bốn lần** trong phiên này.
+
 Đã xong: hai test phân trang (`test_order_search.py:100`,
 `test_orders_list_filters.py:144`) — `assert` nằm trong `if 'page=2' in body:`
 trên fixture 3 bản ghi với trang 20 dòng, nên **chưa từng chạy**. Viết lại cho

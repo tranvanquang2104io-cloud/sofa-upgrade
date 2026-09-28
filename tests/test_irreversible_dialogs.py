@@ -130,8 +130,19 @@ def test_approving_a_quotation_says_it_cannot_then_be_cancelled(
 
 def test_the_existing_warnings_are_still_there(client, login,
                                                order_with_documents):
-    """Signing and cancelling already said so; they must keep saying it."""
+    """Signing and cancelling already said so; they must keep saying it.
+
+    Anchored to the action, like the three tests above it. This used to scan
+    the WHOLE page for any of the FINALITY phrases, which passes as long as
+    the words appear anywhere at all — including in a warning belonging to a
+    different button, or left behind after the one it was meant to guard was
+    removed. It cannot tell "this action warns you" from "this page contains
+    the word permanent somewhere".
+    """
     login("admin")
-    body = client.get(
-        f"/orders/{order_with_documents['order_id']}").get_data(as_text=True)
-    assert any(phrase in body.lower() for phrase in FINALITY)
+    order_id = order_with_documents['order_id']
+    body = client.get(f"/orders/{order_id}").get_data(as_text=True)
+
+    assert _says_it_is_final(body, f"/orders/{order_id}/cancel"), (
+        'cancelling an order no longer says it is permanent, in the dialog '
+        'that actually cancels it')

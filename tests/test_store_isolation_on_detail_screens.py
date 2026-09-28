@@ -102,18 +102,31 @@ def other_branch_order(app, seed, staff_can_work):
 def test_a_store_user_cannot_open_another_branch_s_order(client, login,
                                                          other_branch_order):
     login('staff')
-    response = client.get(f"/orders/{other_branch_order['order_id']}")
-    assert response.status_code in (403, 302, 404), (
+    response = client.get(f"/orders/{other_branch_order['order_id']}",
+                          follow_redirects=False)
+    # Measured, then pinned: this route sends them back to their own list.
+    # `in (403, 302, 404)` accepted any of three, so it could not tell a
+    # refusal from a crash-shaped redirect, and it would have kept passing if
+    # the behaviour changed to something worse that happened to be one of the
+    # three. Asserting WHERE they land is the part a user would notice.
+    assert response.status_code == 302, (
         "a store user opened another branch's order "
         f"(HTTP {response.status_code})")
+    assert response.headers['Location'].endswith('/orders'), (
+        f"refused, but sent somewhere unexpected: "
+        f"{response.headers['Location']}")
 
 
 def test_a_store_user_cannot_open_another_branch_s_production_plan(
         client, login, other_branch_order):
     login('staff')
     response = client.get(
-        f"/orders/{other_branch_order['order_id']}/production-plan")
-    assert response.status_code in (403, 302, 404)
+        f"/orders/{other_branch_order['order_id']}/production-plan",
+        follow_redirects=False)
+    assert response.status_code == 302, (
+        "a store user opened another branch's production plan "
+        f"(HTTP {response.status_code})")
+    assert response.headers['Location'].endswith('/orders')
 
 
 def test_a_store_user_cannot_issue_another_branch_s_stock(

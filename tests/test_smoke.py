@@ -25,7 +25,7 @@ def test_login_success_reaches_dashboard(login, client):
 
 
 def test_login_wrong_password_rejected(login, client):
-    login(password="wrong-password")
+    login(password="wrong-password", expect_success=False)
     # Still unauthenticated → protected page redirects to login.
     resp = client.get("/")
     assert resp.status_code == 302

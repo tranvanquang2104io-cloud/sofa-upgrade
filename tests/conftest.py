@@ -127,12 +127,33 @@ def login(client, seed, app):
     Still accepts ``username=`` for convenience — it is resolved to that user's
     email so existing callers keep working after the email-login switch.
     """
-    def _login(username="admin", password="secret123", company_code=None, email=None):
+    def _login(username="admin", password="secret123", company_code=None,
+               email=None, expect_success=True):
         if email is None:
             from app.models.models import User
             with app.app_context():
                 u = User.query.filter_by(username=username).first()
                 email = u.email if u else username
-        return client.post("/auth/login", data={"email": email, "password": password},
-                           follow_redirects=True)
+        response = client.post("/auth/login",
+                               data={"email": email, "password": password},
+                               follow_redirects=True)
+
+        # ASSERT THE LOGIN ACTUALLY HAPPENED.
+        #
+        # This fixture used to hand back the response and say nothing about
+        # it. 344 calls depend on it, and a silent failure — a renamed field,
+        # a deactivated user, a changed password — turns every "this user may
+        # not do X" test into a test that the LOGGED-OUT user may not do X.
+        # Those pass. They pass for a reason that has nothing to do with what
+        # they claim to check, and nothing anywhere would have said so.
+        #
+        # `expect_success=False` is for the one test that logs in ON PURPOSE
+        # with a bad password.
+        if expect_success:
+            with client.session_transaction() as session_data:
+                assert "user_id" in session_data, (
+                    f"login as {username!r} did not work, so every assertion "
+                    f"after this line is about an anonymous visitor rather "
+                    f"than about {username!r}")
+        return response
     return _login
