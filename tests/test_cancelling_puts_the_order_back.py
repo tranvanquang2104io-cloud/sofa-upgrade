@@ -172,3 +172,84 @@ def test_cancelling_an_order_goes_through_a_service(app, client, login,
         order = Order.query.get(order_with_contract['order_id'])
         assert order.is_canceled is True
         assert order.canceled_reason == 'Khach huy don'
+
+
+# --- the same defect, found in the sibling route nobody had posted to -------
+
+@pytest.fixture()
+def order_with_quotation(app, seed):
+    from app.config import db
+    from app.models import Order
+    from app.models.models import LifecycleStatus, Quotation
+
+    with app.app_context():
+        order = Order(company_id=seed['company_id'], store_id=seed['store_id'],
+                      customer_id=seed['customer_id'], order_code='DH-QCAN',
+                      title='Sofa goc L', total_amount=20_000_000)
+        db.session.add(order)
+        db.session.flush()
+        db.session.add(LifecycleStatus(
+            order_id=order.id, quotation_created=True,
+            quotation_created_at=dt.datetime(2026, 9, 1),
+            quotation_approved=False))
+        quotation = Quotation(
+            company_id=seed['company_id'], order_id=order.id,
+            quotation_number='BG-QCAN', quotation_date=dt.date(2026, 9, 1),
+            total_amount=20_000_000, is_approved=False, is_active=True)
+        db.session.add(quotation)
+        db.session.commit()
+        return {**seed, 'order_id': str(order.id),
+                'quotation_id': str(quotation.id)}
+
+
+def test_cancelling_the_only_quotation_lets_the_order_have_one_again(
+        app, client, login, order_with_quotation):
+    """`cancel_quotation` had the identical defect `cancel_contract` had.
+
+    Found by covering a route nobody had ever posted to — which is the whole
+    argument for T-19. The service cancelled the quotation and never touched
+    the lifecycle, so the order went on saying it had a quotation, and an
+    approved one at that, with nothing to show for it.
+    """
+    from app.models.models import Quotation
+
+    login('admin')
+    client.post(f"/quotations/{order_with_quotation['quotation_id']}/cancel",
+                data={'reason': 'Khach doi yeu cau'}, follow_redirects=True)
+
+    with app.app_context():
+        assert Quotation.query.get(
+            order_with_quotation['quotation_id']).is_canceled is True
+
+    lifecycle = _lifecycle(app, order_with_quotation['order_id'])
+    assert lifecycle.quotation_created is False, (
+        'the order still believes it has a quotation')
+    # Not asserting `quotation_approved` here: an APPROVED quotation cannot be
+    # cancelled at all (`can_cancel()` refuses it, exactly as a signed
+    # contract is refused), so there is no reachable path where that flag
+    # needs rolling back. My first version of this test set the quotation
+    # approved AND expected the cancel to work — two rules that cannot both
+    # hold, which is how I noticed.
+
+
+def test_a_second_active_quotation_keeps_the_flags(app, client, login,
+                                                   order_with_quotation):
+    """Recomputed from the data, not blindly cleared — as with contracts."""
+    from app.config import db
+    from app.models.models import Quotation
+
+    with app.app_context():
+        db.session.add(Quotation(
+            company_id=order_with_quotation['company_id'],
+            order_id=order_with_quotation['order_id'],
+            quotation_number='BG-QCAN-2', quotation_date=dt.date(2026, 9, 3),
+            total_amount=21_000_000, is_approved=False, is_active=True))
+        db.session.commit()
+
+    login('admin')
+    client.post(f"/quotations/{order_with_quotation['quotation_id']}/cancel",
+                data={'reason': 'Ban cu'}, follow_redirects=True)
+
+    lifecycle = _lifecycle(app, order_with_quotation['order_id'])
+    assert lifecycle.quotation_created is True, (
+        'the order was told it has no quotation while an active one remains')

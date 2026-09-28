@@ -602,6 +602,34 @@ class QuotationService:
         quotation.is_active = False
         quotation.canceled_at = datetime.utcnow()
         quotation.canceled_reason = reason
+
+        # Put the order's lifecycle back, the same way cancelling a contract
+        # does. This was missing, so cancelling the only quotation left the
+        # order saying it HAD one — and an approved one — with nothing to show
+        # for it. `quotation_approved` is what unlocks writing the contract,
+        # so the order would go on offering a step it had lost the basis for.
+        #
+        # The same defect `cancel_contract` had, found by covering a route no
+        # test had ever posted to.
+        from app.models.models import Quotation as _Quotation
+        other_active = db.session.query(_Quotation).filter(
+            _Quotation.order_id == quotation.order_id,
+            _Quotation.is_active == True,  # noqa: E712
+            _Quotation.id != quotation.id,
+        ).first()
+
+        if not other_active:
+            lifecycle = LifecycleStatusRepository().get_or_create_for_order(
+                quotation.order_id)
+            lifecycle.quotation_created = False
+            lifecycle.quotation_created_at = None
+            # `quotation_approved` is deliberately NOT touched: `can_cancel()`
+            # refuses an approved quotation, so this branch cannot be reached
+            # with the approval flag set. Clearing it here would be a rule
+            # written where nothing can execute it — the exact shape of defect
+            # this refactor has been removing.
+            db.session.add(lifecycle)
+
         db.session.commit()
         
         logger.info(f"Quotation canceled: {quotation.quotation_number}")
