@@ -580,7 +580,29 @@ hiện màn hình này có **ba tên** (`base.html:104`, `pr_list.html:17`,
 
 ### T-17 · Một hành trình HTTP vai nhân viên
 
-**Priority:** P4 · **Type:** Test · **Dependencies:** T-01, T-02 · **Status:** `TODO`
+**Priority:** P4 · **Type:** Test · **Dependencies:** T-01, T-02 · **Status:** `DONE`
+
+> **Kết quả.** Một hành trình liên tục của nhân viên: lập báo giá → khách mặc
+> cả, sửa lại → ký hợp đồng → ghi nhận tạm ứng → **xác nhận tiền không phải
+> việc của nhân viên**, đẩy lên hàng đợi → quản lý duyệt, và **lúc đó tiền mới
+> tính** → nhân viên sửa lại phiếu đã xác nhận thì bị chặn.
+>
+> Đo trước khi viết: suite `login("admin")` **319 lần**, `login("staff")` **25
+> lần**. Phần maker–checker vừa dựng lại đúng là phần **chạy khác nhau** giữa
+> hai vai — tức là test mù đúng chỗ hành vi mới nằm.
+>
+> **Sản phẩm sửa lại kịch bản của tôi.** Bản đầu đi thẳng báo giá → thu tiền và
+> bị từ chối: `payment.advance` cần `contract_signed`. Tôi đã viết một hành
+> trình **không tồn tại trong nghiệp vụ này**. Thêm bước hợp đồng vừa đúng vừa
+> làm test phủ thêm cả tạo và ký hợp đồng.
+>
+> **Đã chứng minh test bắt được lỗi — và suýt bị chính phép thử đó lừa.** Thêm
+> vai của nhân viên vào `DECIDING_ROLES` (đúng kiểu sửa ẩu biến maker–checker
+> thành hình thức) → test phải đỏ. Lần đầu tôi thêm `'staff'` và test **vẫn
+> xanh**, trông như test mù. Thật ra người dùng tên `staff` có role là
+> **`user`** — phép phá của tôi không phá gì cả. Bài học ngược với cả phiên
+> này: **khi phá code mà test không đỏ, khả năng "phá sai" cao ngang "test
+> sai"** — tin ngay vế sau thì đã đi sửa một test vốn đã đúng.
 
 918 test, **đúng một** test đổi vai giữa hành trình. `login("admin")` gần như
 khắp nơi — sản phẩm chưa từng được kiểm cho vai không phải admin.
