@@ -617,7 +617,26 @@ audit.
 
 ### T-18 · Gọi thẳng API những endpoint mà UI đã ẩn nút
 
-**Priority:** P4 · **Type:** Security test · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P4 · **Type:** Security test · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** 5 test gọi thẳng URL với tư cách người dùng hợp lệ, đã đăng nhập,
+> có quyền: ký lại hợp đồng đã ký, duyệt lại báo giá đã duyệt, nhập kho cho PO
+> còn Nháp, xoá tài liệu hai lần, huỷ hợp đồng hai lần.
+>
+> **Cả 5 đều xanh — sản phẩm đã chặn sẵn.** Đây là tin tốt thật, nhưng chỉ đáng
+> tin vì đã **kiểm lại**: xoá chốt `can_receive()` trong
+> `ProcurementService.receive` thì test PO-nháp **phải đỏ**.
+>
+> **Lần đầu thử thì nó vẫn xanh — và lỗi là của tôi.** Test đó post mỗi ngày
+> tháng, **không có số lượng**, nên chẳng có gì được nhập dù có chốt hay không.
+> Một request rỗng không phải là phép thử một lời từ chối. Post số lượng thật
+> vào thì xoá chốt là đỏ ngay, đúng câu *"tạo phiếu nhập cho đơn chưa từng gửi
+> NCC"*.
+>
+> Đây là **lần thứ tư trong phiên** cùng một dạng lỗi ở test do tôi viết:
+> fixture tự bịa dữ liệu, URL tôi đoán, tên trường tôi nhớ nhầm, và giờ là
+> request rỗng quá nên không chạm tới thứ cần kiểm. Cùng một hình dạng: **kiểm
+> tra hình dung của tôi về hệ thống, thay vì kiểm tra hệ thống.**
 
 Đúng **một** test làm điều này (`test_a_voided_payment_stays_voided.py:74`) —
 và nó tìm ra một lỗ hổng thật ngay lần đầu. 23 endpoint còn lại trong
