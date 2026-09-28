@@ -38,7 +38,13 @@ Thumbs.db
 # Uploads (generated at runtime, not source code)
 app/uploads/documents/
 app/uploads/items/
-# Keep the templates folder structure but not uploaded files
+# Keep the templates folder structure but not uploaded files.
+# The `**` matters: uploads land in a PER-COMPANY subfolder
+# (app/uploads/templates/<company_code>/...), which the old top-level-only
+# pattern did not match — so 132 test artefacts were sitting untracked,
+# waiting for a careless `git add -A`.
+app/uploads/templates/**/*.docx
+app/uploads/templates/**/*.pdf
 app/uploads/templates/*.docx
 app/uploads/templates/*.pdf
 
