@@ -406,7 +406,17 @@ khai báo mà không tới được là một lời hứa với người đọc 
 
 ### T-11 · Tách phần Nhận hàng khỏi màn hình đơn mua
 
-**Priority:** P2 · **Type:** UX · **Dependencies:** T-04 · **Status:** `TODO`
+**Priority:** P2 · **Type:** UX · **Dependencies:** T-04 · **Status:** `DONE`
+
+> **Đã làm phần nguy hiểm.** Ô số lượng nhận **không còn điền sẵn** toàn bộ số
+> còn lại. Trước đây form nhận hàng luôn mở sẵn trên màn hình đơn mua, mọi số
+> đã khớp sẵn, **một cú bấm là ghi nhận đã nhận đủ cả đơn**. Giao từng đợt là
+> chuyện thường của nghề này, nên "điền sẵn tất cả" là mặc định **sai nhiều hơn
+> đúng**, và sai về phía đắt: tồn kho tăng cho hàng chưa ai nhìn thấy. Giờ ô
+> trống, số còn lại vẫn hiện bên cạnh để tham khảo.
+>
+> **Chưa làm:** tách hẳn phần nhận hàng sang màn riêng — đổi bố cục, đụng
+> *"giữ diện mạo"*, cần chủ sản phẩm quyết cùng T-13.
 
 1. **Nội dung.** `po_view.html:100-153` — form GR luôn mở sẵn, đã điền đủ số
    lượng, một cú bấm là ghi tăng tồn cả đơn.
@@ -676,7 +686,32 @@ trên hợp đồng đã ký, `approve_quotation` trên báo giá đã duyệt,
 
 ### T-19 · 29 route POST chưa từng nhận một POST nào
 
-**Priority:** P4 · **Type:** Test · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P4 · **Type:** Test · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả: 77/77 endpoint POST đều có test.** 22 → 12 → 0 qua ba đợt.
+>
+> **Tìm ra một lỗi thật:** `cancel_quotation` không trả lifecycle về — đúng lỗi
+> mà `cancel_contract` từng mắc, ẩn được lâu vì **chưa test nào POST vào route
+> đó**. Đây chính là lý lẽ của cả task này.
+>
+> **Và một chỗ KHÔNG được "sửa":** `cancel_handover` cố ý không trả lifecycle,
+> và như vậy là **đúng** — `handover_confirmed` là cờ duy nhất, mà `can_cancel()`
+> từ chối biên bản đã xác nhận, nên lúc huỷ được thì không có gì để trả về. Hai
+> trong ba anh em có lỗi, nên phản xạ là sửa nốt cái thứ ba cho "nhất quán" —
+> làm vậy là **phá code đang đúng**. Đã ghim lại để người sau không sửa nhầm.
+>
+> **"Ngừng hoạt động" được kiểm bằng hậu quả, không bằng cờ:** vật tư ngừng dùng
+> phải **biến khỏi danh sách chọn** mà vẫn đọc được trên chứng từ cũ; kho đóng
+> phải rơi khỏi `warehouses_of()`. Assert `is_active is False` chỉ chứng minh
+> một cột đổi giá trị, không chứng minh có ai bị chặn.
+>
+> **Phát hiện đáng giá hơn cả đống test:** đoán tên trường làm tôi sai **lần thứ
+> năm** — tôi post `contract_value` vào màn sửa hợp đồng, nhưng route đó tính
+> giá trị **từ các dòng hàng**, nên hợp đồng ra **bằng 0** thay vì bị từ chối.
+> Form và route trong repo này **không dùng chung một bộ từ vựng**: báo giá dùng
+> `item_*[]`, đề nghị mua dùng `line_*[]`, chỗ khác dùng trường đơn — và không
+> có chỗ nào nói rõ cái nào dùng ở đâu. Cả 5 lần tôi đoán sai đều là vì chuyện
+> này, và người mới vào dự án sẽ đoán sai y hệt.
 
 Gồm `create_material`, `create_store`, `edit_user`, `update_material_stock`,
 `create_supplier_invoice`, `delete_document`, `cancel_payment`,
