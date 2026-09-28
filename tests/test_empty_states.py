@@ -37,7 +37,6 @@ NOTHING_YET = [
 
 # Empty because there is nothing to worry about. Deliberately different.
 NOTHING_WRONG = [
-    'materials/low_stock.html',
     'materials/purchase_suggestions.html',
 ]
 

@@ -89,7 +89,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_materials') }}"><i class="bi bi-box"></i> {{ t('Materials') }}</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('dashboard.low_stock_materials') }}"><i class="bi bi-exclamation-triangle"></i> {{ t('Low Stock') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_materials', low_stock=1) }}"><i class="bi bi-exclamation-triangle"></i> {{ t('Low Stock') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.material_suppliers') }}"><i class="bi bi-truck"></i> {{ t('Suppliers') }}</a></li>
                             </ul>
                         </li>

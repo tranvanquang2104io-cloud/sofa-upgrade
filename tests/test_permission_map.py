@@ -109,7 +109,6 @@ EXPECTED = {
     'list_supplier_invoices': 'purchasing',
     'list_templates': None,
     'list_users': None,
-    'low_stock_materials': 'inventory',
     'material_categories': 'inventory',
     'material_suppliers': 'inventory',
     'material_units': 'inventory',

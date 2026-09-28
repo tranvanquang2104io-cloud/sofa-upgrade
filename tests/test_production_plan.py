@@ -108,9 +108,15 @@ def test_low_stock_materials(app, seed):
 
 
 def test_plan_page_and_low_stock_render(login, client, seeded_order):
+    """The low-stock SCREEN is gone; the low-stock VIEW is a filter now.
+
+    This test pinned `/materials/low-stock` returning 200. The owner asked for
+    that screen to be removed and replaced by a filter on the materials list,
+    so it is red for the right reason — a decision changed, not a break.
+    """
     login(username="admin")
     assert client.get(f"/orders/{seeded_order['order_id']}/production-plan").status_code == 200
-    assert client.get("/materials/low-stock").status_code == 200
+    assert client.get("/materials/?low_stock=1").status_code == 200
 
 
 def test_plan_routes_add_and_issue(app, client, login, seed):

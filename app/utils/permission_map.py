@@ -89,7 +89,6 @@ ENDPOINT_FEATURE = {
     'list_purchase_orders':            'purchasing',
     'list_requisitions':               'purchasing',
     'list_supplier_invoices':          'purchasing',
-    'low_stock_materials':             'inventory',
     'material_categories':             'inventory',
     'material_suppliers':              'inventory',
     'material_units':                  'inventory',

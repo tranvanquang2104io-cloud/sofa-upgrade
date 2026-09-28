@@ -3721,14 +3721,27 @@ def list_materials():
     search = request.args.get('search', '').strip()
     category_id = request.args.get('category_id', '').strip() or None
     page = request.args.get('page', 1, type=int)
+    low_only = request.args.get('low_stock') in ('1', 'true', 'on')
     pagination = svc.list_materials(company_id, category_id=category_id,
                                     search=search, page=page)
+
+    # "Show me only the ones running out" was a whole second screen
+    # (/materials/low-stock) that displayed four columns this list already
+    # shows. The screen is gone; the capability is not, because it is the
+    # reason people opened that menu item.
+    #
+    # Filtered in Python, like `ProductionPlanService.low_stock_materials`
+    # does, because `is_low_stock` compares a total assembled across stores
+    # and is not a column SQL can filter on.
+    items = [m for m in pagination.items if m.is_low_stock] if low_only         else pagination.items
+
     categories = svc.list_categories(company_id)
     return render_template('materials/list.html',
-                           materials=pagination.items,
+                           materials=items,
                            pagination=pagination,
                            categories=categories,
                            selected_category_id=category_id,
+                           low_only=low_only,
                            search=search)
 
 
@@ -5130,13 +5143,6 @@ def save_plan_norm(plan_id, item_id):
     return redirect(url_for('dashboard.view_production_plan', order_id=plan.order_id))
 
 
-@dashboard_bp.route('/materials/low-stock', methods=['GET'])
-@login_required
-def low_stock_materials():
-    company_id = get_current_company_id()
-    from app.services.services import ProductionPlanService
-    materials = ProductionPlanService().low_stock_materials(company_id)
-    return render_template('materials/low_stock.html', materials=materials)
 
 
 @dashboard_bp.route('/materials/purchase-suggestions', methods=['GET'])

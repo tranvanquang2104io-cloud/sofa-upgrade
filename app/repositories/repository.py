@@ -8,6 +8,7 @@ from app.models import (
     MaterialUnit, MaterialCategory, Supplier, Material, MaterialStock,
 )
 from sqlalchemy import and_, desc
+from sqlalchemy.exc import StatementError
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 import logging
@@ -31,6 +32,16 @@ class BaseRepository:
     def get_by_id(self, id):
         """Get a record by id, WITHOUT any tenant check.
 
+        An id that is not a valid UUID returns None rather than raising. A
+        malformed id is a request for something that does not exist, which is
+        a 404 — the callers all treat None that way already. It used to reach
+        the database and come back as `ValueError: badly formed hexadecimal
+        UUID string`, i.e. a 500, so any mistyped or stale link crashed the
+        screen instead of saying "not found".
+
+        Found when `/materials/low-stock` was removed: the URL then fell
+        through to `/materials/<material_id>` and the whole page 500'd.
+
         Tenant safety is therefore the caller's responsibility. A sweep in
         tests/test_tenant_isolation_sweep.py confirms every current detail
         route does check ownership, but this default is a standing hazard:
@@ -39,7 +50,11 @@ class BaseRepository:
 
         Prefer :meth:`get_for_company` in new code.
         """
-        return self.model.query.get(id)
+        try:
+            return self.model.query.get(id)
+        except (ValueError, StatementError):
+            db.session.rollback()
+            return None
 
     def get_for_company(self, id, company_id):
         """Get a record by id ONLY if it belongs to ``company_id``.

@@ -508,7 +508,26 @@ NCC trước").
 
 ### T-15 · Xoá `/materials/low-stock`, thay bằng bộ lọc
 
-**Priority:** P3 · **Type:** Cleanup · **Dependencies:** không · **Status:** `TODO`
+**Priority:** P3 · **Type:** Cleanup · **Dependencies:** không · **Status:** `DONE`
+
+> **Kết quả.** Thêm bộ lọc `?low_stock=1` vào `/materials/` **trước**, rồi mới
+> xoá màn hình riêng. Bỏ một khả năng rồi gọi đó là dọn dẹp thì dọn dẹp thành
+> lỗi thoái lui — "chỉ xem thứ sắp hết" là lý do người ta bấm vào menu đó.
+>
+> **Giữ lại `ProductionPlanService.low_stock_materials`** — đó là phép tính mà
+> `purchase_suggestions` dựa vào. Xoá màn hình không phải lý do để xoá phép
+> tính, và nếu chỉ grep theo tên route thì sẽ tưởng là xoá được (đúng cái bẫy
+> "chọn theo tên" đã gặp 9 lần trong repo này).
+>
+> **Xoá xong lộ ra một lỗi đáng giá hơn cả việc dọn dẹp.** `/materials/low-stock`
+> rơi xuống khớp với `/materials/<material_id>`, đưa chuỗi `"low-stock"` xuống
+> DB như UUID → `ValueError: badly formed hexadecimal UUID string` → **500**.
+> Nghĩa là **bất kỳ link hỏng/cũ nào tới bất kỳ bản ghi nào cũng làm sập màn
+> hình** thay vì báo "không tìm thấy" — mọi model, mọi route chi tiết. Một
+> bookmark tới đơn đã xoá, một URL bị cắt trong email, một lỗi gõ. Sửa ở
+> `BaseRepository.get_by_id`: id sai định dạng là yêu cầu một thứ không tồn
+> tại, tức `None`, đúng thứ mọi caller đã xử lý sẵn. Test phủ cả `/orders/`
+> chứ không chỉ vật tư, vì lỗi này chưa bao giờ là của riêng vật tư.
 
 Đã kiểm: `low_stock_materials` (`services.py:2379`) chỉ là
 `Material.query.filter_by(is_active=True)` rồi lọc Python bằng `is_low_stock`.

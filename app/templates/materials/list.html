@@ -54,6 +54,21 @@
                     <i class="bi bi-search"></i> {{ t('Search') }}
                 </button>
             </div>
+            {# Thay cho màn hình /materials/low-stock đã bỏ. Màn hình đó hiện
+               đúng 4 cột mà bảng này vốn đã có (tô vàng, nhãn "Low Stock",
+               tồn/định mức), cộng thêm 5 cột nữa — nó không thêm thông tin,
+               chỉ thêm một chỗ nữa phải nhớ cập nhật. Nhưng việc "chỉ xem
+               những thứ sắp hết" là thật, nên nó thành bộ lọc chứ không mất. #}
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="low_stock"
+                           value="1" id="f_low_stock"
+                           {% if low_only %}checked{% endif %}>
+                    <label class="form-check-label small" for="f_low_stock">
+                        {{ t('Chỉ hiện vật tư dưới mức tồn tối thiểu') }}
+                    </label>
+                </div>
+            </div>
         </form>
     </div>
 </div>

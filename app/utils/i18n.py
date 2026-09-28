@@ -1124,6 +1124,7 @@ TRANSLATIONS['vi'].update({
     'Phiên bản': 'Phiên bản',
     # Nút bị chặn phải giải thích (T-14).
     'Chưa nhập kho được.': 'Chưa nhập kho được.',
+    'Chỉ hiện vật tư dưới mức tồn tối thiểu': 'Chỉ hiện vật tư dưới mức tồn tối thiểu',
     'Đơn đang ở trạng thái Nháp — cần bấm "Gửi NCC" trước, rồi mới ghi nhận hàng về.':
         'Đơn đang ở trạng thái Nháp — cần bấm "Gửi NCC" trước, rồi mới ghi nhận hàng về.',
     'Đơn này đã nhận đủ hàng.': 'Đơn này đã nhận đủ hàng.',
