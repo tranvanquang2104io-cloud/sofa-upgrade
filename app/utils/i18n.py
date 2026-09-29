@@ -1122,6 +1122,8 @@ TRANSLATIONS['vi'].update({
     'Loại chứng từ không hợp lệ.': 'Loại chứng từ không hợp lệ.',
     # Quản lý mẫu in (T-24).
     'Phiên bản': 'Phiên bản',
+    'Hệ thống tự động tổng hợp: nên mua gì, bao nhiêu, hết bao nhiêu tiền — gom theo nhà cung cấp.':
+        'Hệ thống tự động tổng hợp: nên mua gì, bao nhiêu, hết bao nhiêu tiền — gom theo nhà cung cấp.',
     # T-22b — Đơn mua hàng in theo mẫu.
     'Tạo mẫu mặc định cho Đơn mua hàng': 'Tạo mẫu mặc định cho Đơn mua hàng',
     'Tạo mẫu mặc định cho Lệnh sản xuất': 'Tạo mẫu mặc định cho Lệnh sản xuất',

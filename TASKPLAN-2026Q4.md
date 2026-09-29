@@ -296,7 +296,32 @@ cuối tài liệu.
 
 ### T-07 · State machine cho sáu chứng từ đang dùng cờ boolean
 
-**Priority:** P1 · **Type:** Architecture · **Dependencies:** T-06 · **Status:** `TODO`
+**Priority:** P1 · **Type:** Architecture · **Dependencies:** T-06 · **Status:** `CỐ Ý KHÔNG LÀM` — quyết định có lý do
+
+> **Quyết định: KHÔNG chuyển bốn chứng từ bán hàng sang cột `status`.** Đây là
+> quyết định, không phải bỏ sót — và lý do quan trọng hơn kết luận.
+>
+> **Giá trị của T-07 phần lớn đã được giao bằng đường khác:**
+> - *Ai làm gì, lúc nào, vì sao* → T-08 (`document_transitions`), đọc được ngay
+>   trên màn đơn hàng.
+> - *Luật chuyển trạng thái được thi hành* → T-09a (hai action workflow giờ có
+>   người kiểm), cộng với các chốt ở service từ T-01…T-06.
+> - *Nút bị chặn phải giải thích* → T-14 (đã làm cho đơn mua hàng).
+> - *Huỷ thì lifecycle phải quay lại* → T-06 và bản sửa `cancel_quotation`.
+>
+> Cái còn lại chủ yếu là **hình dạng code**: thay các cờ boolean bằng một cột
+> trạng thái. Đổi lại là **migration dữ liệu thật + sửa mọi màn hình bán hàng +
+> mọi chỗ đọc lifecycle**, trên một sản phẩm **đang chạy được**.
+>
+> Nguyên tắc của chính chủ sản phẩm — *"giữ nguyên sản phẩm đang có"*, *"đừng
+> over-engineer"*, *"hiểu trước khi refactor"* — đều nghiêng về không làm. Một
+> refactor cấu trúc lớn mà lợi ích đã thu được bằng cách rẻ hơn thì phần còn
+> lại là rủi ro thuần.
+>
+> **Sẽ đáng làm khi** có một trong hai điều sau, chứ không phải vì nó dang dở:
+> (1) cần một trạng thái mà cờ boolean **không diễn đạt nổi** (ví dụ "tạm giữ",
+> "chờ khách xác nhận"); hoặc (2) số cờ trên `LifecycleStatus` tăng tới mức đọc
+> một dòng không còn đoán nổi đơn hàng đang ở đâu.
 
 1. **Nội dung.** Order, Quotation, Contract, HandoverRecord, PaymentReport,
    GoodsReceipt, StockTransfer không có state machine.
@@ -364,7 +389,30 @@ cuối tài liệu.
 
 ### T-09 · Gỡ trạng thái chết và luật không thi hành
 
-**Priority:** P1 · **Type:** Correctness · **Dependencies:** T-07 · **Status:** `TODO`
+**Priority:** P1 · **Type:** Correctness · **Dependencies:** T-07 · **Status:** `DONE`
+
+> **Ba trạng thái chết, ba câu trả lời khác nhau — vì chúng khác nhau thật.**
+>
+> **`MasterAgreement.EXPIRED` → bỏ khỏi bộ lọc.** Không dòng code nào gán nó,
+> nhưng nó **đang được chào trong ô lọc trạng thái** — tức là một bộ lọc chỉ có
+> thể trả về rỗng dù dữ liệu thế nào. Một控 điều khiển luôn trả lời "không có"
+> còn tệ hơn không có điều khiển. Hết hạn là việc của **cuốn lịch**, suy ra từ
+> `effective_to`, không phải một trạng thái ai đó bấm.
+>
+> **`Document.SIGNED` → GIỮ, và ghi rõ vì sao.** Chủ sản phẩm đã nêu **ký số**
+> là hướng sắp tới. Một trạng thái để dành cho **một tính năng đã được gọi tên**
+> là chỗ dựa, không phải nợ; để dành mà không nói lý do mới là nợ. Đã ghi ngay
+> tại chỗ khai báo.
+>
+> **`SupplierPayment.CANCELED` → KHÔNG tự ý làm, báo lại.** Không có đường nào
+> huỷ được phiếu chi nhà cung cấp: **chi nhầm tiền cho NCC thì không sửa được**.
+> Đây là thiếu sót thật, và hình dạng đúng của nó chính là §3.2 mà chủ sản phẩm
+> đã chốt cho phiếu thu (*huỷ có lý do → cần duyệt → cập nhật lại dữ liệu liên
+> quan*). **Nhưng §3.2 được trả lời cho chứng từ THU của khách.** Thêm một
+> đường huỷ tiền cho phía CHI là **thêm nghiệp vụ mới**, không phải chọn giữa
+> các phương án có sẵn — nên dù được trao quyền quyết, tôi dừng ở đây và báo
+> lại. Ranh giới tôi tự đặt: **quyết cách làm, và quyết có làm việc đã liệt kê
+> hay không — nhưng không tự thêm một tính năng động đến tiền.**
 
 `MasterAgreement.EXPIRED` (không dòng gán nào), `SupplierPayment.CANCELED`
 (**phiếu chi NCC không bao giờ huỷ được**), `Document.SIGNED` (chỉ được đọc —
@@ -466,7 +514,25 @@ POST thất bại. Nhãn nói "điền thêm vào", hành vi là "bỏ hết là
 
 ### T-13 · Bỏ nút trùng và hộp xác nhận hai lần trên màn hình đơn hàng
 
-**Priority:** P2 · **Type:** UX · **Dependencies:** không · **Status:** `MỘT PHẦN DONE` — phần còn lại **CẦN CHỦ SẢN PHẨM QUYẾT**
+**Priority:** P2 · **Type:** UX · **Dependencies:** không · **Status:** `DONE`
+
+> **Chủ sản phẩm giao quyền quyết; đây là quyết định và lý do.**
+>
+> **Tiến trình vẽ hai lần → bỏ `process_list(order)` ở màn đơn hàng.** Giữ
+> timeline viết tay. Lý do: (a) timeline giàu hơn — có ngày, có chứng từ, có
+> nút theo ngữ cảnh; (b) *"giữ diện mạo"* — timeline **là** diện mạo màn hình
+> này; (c) lý do macro ra đời đã hết hiệu lực: docstring của nó nói bản viết
+> tay "không biết gì về việc bỏ qua tạm ứng", nhưng **kiểm lại thì timeline
+> hiện đã xử lý `advance_skipped` ở 3 chỗ**. Macro vẫn dùng ở các màn khác.
+>
+> **Năm hành động mười nút → tách theo nguyên tắc, không xoá bừa:**
+> - **Timeline giữ** hành động thuộc về **một chứng từ cụ thể đang hiện ở đó**
+>   (duyệt *báo giá này*, ký *hợp đồng này*, in *phiếu này*).
+> - **Quick Actions giữ** hành động **cấp đơn hàng** (ghi tạm ứng, lập biên bản
+>   bàn giao, thu đợt cuối) — đó là câu trả lời cho *"giờ tôi làm gì tiếp?"*.
+>
+> Không hành động nào mất chỗ, mỗi hành động **đúng một chỗ**, và **không khối
+> giao diện nào biến mất** — đúng nghĩa *"đồng bộ cấu trúc, giữ diện mạo"*.
 
 > **Đã làm (an toàn, không đổi diện mạo):** bỏ hộp xác nhận **trùng** ở 3 hành
 > động — duyệt báo giá, ký hợp đồng, xác nhận bàn giao. Mỗi chỗ có `confirm()`
@@ -588,6 +654,22 @@ chỉ **ẩn bớt dòng**.
 ### T-16 · `/materials/purchase-suggestions` — KHÔNG xoá, và đây là lý do
 
 **Priority:** P3 · **Type:** Cleanup · **Dependencies:** không · **Status:** `NEEDS REVIEW`
+
+> **Quyết định: GIỮ màn hình. Yêu cầu xoá dựa trên một tiền đề mà code bác bỏ.**
+>
+> Kiểm lại lần nữa trước khi quyết: `purchase_suggestions` dựng **14 trường**,
+> gồm `unit_price`, `est_cost`, `subtotal`, `total`, `required`, `available`,
+> `min_level` và **gom theo nhà cung cấp**. Đường "Điền từ đề xuất"
+> (`requisition_service.suggest_lines`) giữ lại **4**: vật tư, số lượng, đơn vị.
+>
+> Nghĩa là màn này trả lời *"mua của ai, hết bao nhiêu tiền"* — còn nút điền
+> nhanh chỉ dựng sẵn phiếu. **Xoá đi là mất phần tiền và phần nhà cung cấp**,
+> tức mất đúng cái giúp người mua ra quyết định.
+>
+> Nhưng sự nhầm lẫn là có thật (hai thứ trông giống nhau). Nên thay vì xoá:
+> **nói rõ màn này để làm gì** ngay trên tiêu đề phụ — *"Nên mua gì, bao nhiêu,
+> hết bao nhiêu tiền — gom theo nhà cung cấp"* — và ghi chú trong template giải
+> thích khác biệt. Giữ thông tin, bỏ nhầm lẫn.
 
 Chủ sản phẩm yêu cầu xoá vì trùng với "Điền từ đề xuất tự động" trong
 `/requisitions/create`. **Đã kiểm bằng code, và chúng không trùng.**

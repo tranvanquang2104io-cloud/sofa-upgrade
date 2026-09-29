@@ -726,6 +726,11 @@ class Document(db.Model):
     # superseded by a regeneration.
     STATUS_CURRENT = 'current'
     STATUS_SUPERSEDED = 'superseded'
+    #: Reserved for chữ ký số (digital signature), which the owner named as a
+    #: planned direction. Nothing sets it yet, and that is intentional rather
+    #: than an oversight: a state kept for a NAMED, planned feature is a
+    #: placeholder, while a state kept for no stated reason is debt. Read by
+    #: `is_current()` so a signed document keeps counting as current.
     STATUS_SIGNED = 'signed'
 
     status = db.Column(db.String(16), default=STATUS_CURRENT, nullable=False,

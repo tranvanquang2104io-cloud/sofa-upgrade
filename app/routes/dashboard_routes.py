@@ -4361,10 +4361,16 @@ def list_agreements():
     return render_template('agreements/list.html',
                            agreements=pagination.items, pagination=pagination,
                            status=status or '', search=search or '',
+                           # STATUS_EXPIRED is deliberately NOT offered here.
+                           # Nothing in the product ever sets it, so the filter
+                           # could only ever return an empty list — a control
+                           # that answers "none" whatever the data says is
+                           # worse than no control. Expiry is shown instead as
+                           # a derived fact from `effective_to`, which is where
+                           # it actually lives.
                            statuses=(MasterAgreement.STATUS_DRAFT,
                                      MasterAgreement.STATUS_ACTIVE,
                                      MasterAgreement.STATUS_SUSPENDED,
-                                     MasterAgreement.STATUS_EXPIRED,
                                      MasterAgreement.STATUS_TERMINATED))
 
 

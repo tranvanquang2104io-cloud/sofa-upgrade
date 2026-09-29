@@ -10,7 +10,13 @@
                crumbs=[(t('Dashboard'), url_for('dashboard.index')),
                        (t('Materials'), url_for('dashboard.list_materials')),
                        (t('Purchase Suggestions'), None)],
-               subtitle=t('Danh sách do hệ thống tự động tổng hợp.')) }}
+               subtitle=t('Hệ thống tự động tổng hợp: nên mua gì, bao nhiêu, hết bao nhiêu tiền — gom theo nhà cung cấp.')) }}
+{# Màn này KHÁC với nút "Điền từ đề xuất" trong phiếu đề nghị mua, dù cùng một
+   phép tính. Ở đây có **đơn giá, thành tiền, tổng tiền** và **gom theo nhà cung
+   cấp** — tức là đủ để quyết định *mua của ai, hết bao nhiêu*. Đường điền
+   nhanh kia chỉ lấy 4 trường (vật tư, số lượng, đơn vị) để dựng phiếu, bỏ hết
+   phần tiền và phần nhà cung cấp. Hai thứ trả lời hai câu hỏi khác nhau, nên
+   giữ cả hai — chỉ cần nói rõ cái nào dùng lúc nào. #}
 <div class="d-flex justify-content-end mb-3">
   <div class="d-flex gap-2">
     <a href="{{ url_for('dashboard.list_requisitions') }}" class="btn btn-outline-secondary btn-sm">
