@@ -74,6 +74,7 @@ EXPECTED = {
     'delete_plan_material': 'orders',
     'delete_template': None,
     'download_template': None,
+    'seed_default_template': None,
     'edit_template': None,
     'download_document': 'orders',
     'edit_agreement': 'orders',

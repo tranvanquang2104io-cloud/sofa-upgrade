@@ -241,8 +241,18 @@ class DocxTemplateEngine:
 
     Template design (Microsoft Word):
       - Use {{ variable }} for scalar substitutions.
-      - For repeating table rows, put {%tr for item in items %} in the first cell
-        of the row to repeat, and {%tr endfor %} in the last cell of that row.
+      - For repeating table rows, put {%tr for item in items %} in a row of its
+        OWN directly above the row to repeat, and {%tr endfor %} in a row of
+        its own directly below it. The two tag rows vanish when the document
+        is produced.
+
+        NOT both tags in the repeating row itself, which is what this docstring
+        used to say and what most docxtpl examples show. Measured against
+        docxtpl 0.20.2: `patch_xml` replaces an entire <w:tr> containing a
+        {%tr %} tag with just that tag, so putting both in one row deletes that
+        row — data cells included — and rendering fails with "Encountered
+        unknown tag 'endfor'". Nothing tested this, so the instruction sat here
+        being wrong.
       - Use {{ loop.index }} for row numbers inside loops.
       - Conditional blocks: {% if condition %}...{% endif %}
 

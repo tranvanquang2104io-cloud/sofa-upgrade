@@ -527,6 +527,71 @@ def upload_template():
     return redirect(url_for('dashboard.list_templates'))
 
 
+@dashboard_bp.route('/settings/templates/seed-default/<doc_type>',
+                    methods=['POST'])
+@company_admin_required
+def seed_default_template(doc_type):
+    """Turn a built-in Python layout into an editable template.
+
+    Only the purchase order has one: its layout lived in Python, so becoming
+    Cách A meant somebody authoring a .docx from scratch — which is how a
+    migration stalls. The generated template REPRODUCES the built-in layout,
+    so nothing about the document changes on the day it is created; what
+    changes is that it can now be edited, versioned and replaced.
+    """
+    import os
+
+    from app.models.models import DocumentTemplate as _DT
+    from app.utils.procurement_template import (
+        build_default_purchase_order_template,
+    )
+    from app.utils.production_template import (
+        build_default_production_plan_template,
+    )
+
+    builders = {'purchase_order': build_default_purchase_order_template,
+                'production_plan': build_default_production_plan_template}
+    if doc_type not in builders:
+        flash(t('Không có mẫu mặc định cho loại chứng từ này'), 'error')
+        return redirect(url_for('dashboard.list_templates'))
+
+    company_id = get_current_company_id()
+    try:
+        templates_base = current_app.config.get(
+            'TEMPLATES_FOLDER',
+            os.path.join(current_app.root_path, 'uploads', 'templates'))
+        from app.models.models import Company as _Co
+        company = db.session.get(_Co, company_id)
+        folder = (company.company_code if company else str(company_id))
+        folder = folder.replace('/', '_').replace(chr(92), '_')
+        company_dir = os.path.join(templates_base, folder)
+        os.makedirs(company_dir, exist_ok=True)
+
+        safe_name = f'{doc_type}_mac_dinh_{uuid.uuid4().hex[:8]}.docx'
+        builders[doc_type](os.path.join(company_dir, safe_name))
+
+        highest = db.session.query(db.func.max(_DT.version)).filter_by(
+            company_id=company_id, document_type=doc_type).scalar() or 0
+        db.session.query(_DT).filter_by(
+            company_id=company_id, document_type=doc_type, is_active=True
+        ).update({'is_active': False})
+        db.session.add(_DT(
+            company_id=company_id, name='Mẫu mặc định (sinh từ bản in sẵn có)',
+            document_type=doc_type,
+            description='Sinh tự động từ bố cục đang dùng. Sửa được, có phiên bản.',
+            template_file=safe_name, version=highest + 1, is_active=True))
+        db.session.commit()
+        flash(t('Đã tạo mẫu mặc định — sửa lại tuỳ ý, bản in không đổi.'),
+              'success')
+    except Exception as exc:
+        db.session.rollback()
+        logger.error('Could not seed the default %s template: %s',
+                     doc_type, exc, exc_info=True)
+        flash(t('Không tạo được mẫu mặc định'), 'error')
+
+    return redirect(url_for('dashboard.list_templates'))
+
+
 @dashboard_bp.route('/settings/templates/<template_id>/edit', methods=['POST'])
 @company_admin_required
 def edit_template(template_id):
@@ -5348,8 +5413,32 @@ def print_purchase_order(po_id):
     if not po:
         abort(404)
     from app.models.models import Company
-    from app.utils.procurement_doc import build_purchase_order_docx
     company = Company.query.get(company_id)
+
+    # TEMPLATE FIRST. A company that has uploaded (or generated) a
+    # purchase-order template prints from it, like every other document in
+    # this product — editable, versioned, and reproducible.
+    try:
+        bio, _document = DocumentService().generate_purchase_order_document(
+            po, company)
+        if bio is not None:
+            return send_file(
+                bio, as_attachment=True,
+                download_name=f'{po.po_number}.docx',
+                mimetype='application/vnd.openxmlformats-officedocument'
+                         '.wordprocessingml.document')
+    except Exception as exc:
+        # A broken or mis-edited template must not stop a purchase order
+        # reaching a supplier. Fall through to the built-in layout and say so
+        # in the log, rather than handing the buyer an error page.
+        logger.warning('Purchase-order template failed for %s, using the '
+                       'built-in layout: %s', po.po_number, exc)
+
+    # No template yet — the built-in layout, unchanged. This is the migration
+    # path, not a second mechanism to keep: `Tạo mẫu mặc định` on the template
+    # screen turns this very layout into an editable template, after which the
+    # branch above is what runs.
+    from app.utils.procurement_doc import build_purchase_order_docx
     bio = build_purchase_order_docx(po, company)
 
     # Recorded, not just streamed. This used to hand the file to the browser
@@ -5572,6 +5661,20 @@ def print_production_plan(plan_id):
     company = db.session.get(Company, company_id)
     order = plan.order
     customer = db.session.get(Customer, order.customer_id)
+    # Template first, same as the purchase order.
+    try:
+        bio, _doc = DocumentService().generate_production_plan_document(
+            plan, order, customer, company)
+        if bio is not None:
+            return send_file(
+                bio, as_attachment=True,
+                download_name=f'LenhSanXuat_{plan.plan_number}.docx',
+                mimetype='application/vnd.openxmlformats-officedocument'
+                         '.wordprocessingml.document')
+    except Exception as exc:
+        logger.warning('Production-plan template failed for %s, using the '
+                       'built-in layout: %s', plan.plan_number, exc)
+
     bio = build_production_plan_docx(plan, order, customer, company)
 
     try:

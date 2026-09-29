@@ -1122,6 +1122,14 @@ TRANSLATIONS['vi'].update({
     'Loại chứng từ không hợp lệ.': 'Loại chứng từ không hợp lệ.',
     # Quản lý mẫu in (T-24).
     'Phiên bản': 'Phiên bản',
+    # T-22b — Đơn mua hàng in theo mẫu.
+    'Tạo mẫu mặc định cho Đơn mua hàng': 'Tạo mẫu mặc định cho Đơn mua hàng',
+    'Tạo mẫu mặc định cho Lệnh sản xuất': 'Tạo mẫu mặc định cho Lệnh sản xuất',
+    'Đã tạo mẫu mặc định — sửa lại tuỳ ý, bản in không đổi.':
+        'Đã tạo mẫu mặc định — sửa lại tuỳ ý, bản in không đổi.',
+    'Không tạo được mẫu mặc định': 'Không tạo được mẫu mặc định',
+    'Không có mẫu mặc định cho loại chứng từ này':
+        'Không có mẫu mặc định cho loại chứng từ này',
     'Thực nhận': 'Thực nhận',
     # Nút bị chặn phải giải thích (T-14).
     'Chưa nhập kho được.': 'Chưa nhập kho được.',

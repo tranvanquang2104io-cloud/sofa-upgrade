@@ -60,6 +60,11 @@ PRINTABLE_TYPES = (
     ('payment_request', 'Đề nghị thanh toán'),
     ('agreement', 'Hợp đồng nguyên tắc'),
     ('order_confirmation', 'Đơn đặt hàng (ĐĐH)'),
+    # Đơn mua hàng: in ra bằng Python cứng trước đây (T-22a ghi lại dấu vết,
+    # T-22b đưa về Cách A). Bố cục mặc định sinh từ chính bản dựng Python cũ,
+    # nên không có gì bị bịa ra — đó vẫn là tờ đơn đang gửi nhà cung cấp.
+    ('purchase_order', 'Đơn mua hàng'),
+    ('production_plan', 'Lệnh sản xuất'),
 )
 
 

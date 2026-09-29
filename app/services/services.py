@@ -1657,6 +1657,72 @@ class DocumentService:
         logger.info(f"Document generated: {os.path.basename(file_path)}")
         return document
 
+    def generate_purchase_order_document(self, po, company, format='docx'):
+        """Print a purchase order FROM A TEMPLATE, the way everything else is.
+
+        Returns `(BytesIO, Document)` on the template path, or `(None, None)`
+        when the company has no purchase-order template yet — the caller then
+        falls back to the built-in Python layout.
+
+        The fallback is a MIGRATION PATH, not a second mechanism to keep. A
+        company that has never opened the template screen still gets its
+        purchase orders, unchanged, on the day this ships; once a template
+        exists, that is what prints. `build_default_purchase_order_template`
+        turns the built-in layout into exactly such a template, so becoming
+        Cách A is one click rather than a document somebody has to author.
+        """
+        template = self.template_repo.get_default_for_type(company.id,
+                                                           'purchase_order')
+        if template is None:
+            return None, None
+
+        from app.utils.procurement_template import (
+            collect_purchase_order_variables,
+        )
+        context = collect_purchase_order_variables(po, company)
+        document = self._save_document(
+            company_id=company.id,
+            order_id=None,
+            source=po,
+            template=template,
+            document_type='purchase_order',
+            document_format=format,
+            context=context)
+
+        with open(document.file_path, 'rb') as handle:
+            from io import BytesIO
+            return BytesIO(handle.read()), document
+
+    def generate_production_plan_document(self, plan, order, customer, company,
+                                          format='docx'):
+        """Print a production order FROM A TEMPLATE. See the PO twin above.
+
+        Returns `(BytesIO, Document)`, or `(None, None)` when no template
+        exists yet so the caller can fall back to the built-in layout.
+        """
+        template = self.template_repo.get_default_for_type(company.id,
+                                                           'production_plan')
+        if template is None:
+            return None, None
+
+        from app.utils.production_template import (
+            collect_production_plan_variables,
+        )
+        context = collect_production_plan_variables(plan, order, customer,
+                                                    company)
+        document = self._save_document(
+            company_id=company.id,
+            order_id=getattr(order, 'id', None),
+            source=plan,
+            template=template,
+            document_type='production_plan',
+            document_format=format,
+            context=context)
+
+        with open(document.file_path, 'rb') as handle:
+            from io import BytesIO
+            return BytesIO(handle.read()), document
+
     def record_prebuilt_document(self, *, company_id, source, document_type,
                                  content, filename, order_id=None,
                                  folder_hint=None):
