@@ -837,17 +837,48 @@ thể thành công** trừ khi tạo dòng mẫu ngoài giao diện.
 - **T-22a** ✅ `DONE`: hai bản in dựng bằng Python giờ **có để lại dấu vết** —
   lưu file, tạo dòng `Document`, và hai màn hình đó hiện lịch sử file đã in.
   **Chưa phải Cách A** (xem T-22b).
-- **T-22b** `TODO` (P1): soạn mẫu `.docx` cho Đơn mua hàng và Lệnh sản xuất rồi
-  chuyển hẳn sang template. Không gộp vào T-22a được vì bố cục PO có vòng lặp
-  dòng (`{%tr for %}`), **không thể suy ngược ra từ code Python đang dựng nó** —
-  đây là việc soạn nội dung, không phải việc code.
+- **T-22b** ✅ `DONE` · **T-23b** ✅ `DONE`: Đơn mua hàng **và** Lệnh sản xuất
+  giờ in từ template.
+
+  > **Tôi đã sai khi treo task này.** Tôi xếp nó là "chờ chủ sản phẩm gửi file
+  > .docx thật", với lý do: bịa ra giấy tờ của doanh nghiệp là chuyện không
+  > được đoán. Lý do đó đúng, nhưng **tiền đề thì sai** — bố cục **chưa bao giờ
+  > thiếu**: `build_purchase_order_docx` **chính là** tờ đơn đó, viết bằng
+  > Python. Sinh nó ra thành `.docx` có `{{ }}` là **chuyển đổi**, không phải
+  > bịa. Bấm *"Tạo mẫu mặc định"* một lần là xong; **ngày bấm, bản in không đổi
+  > một chữ** — chỉ khác là từ đó sửa được mà không cần lập trình viên.
+  >
+  > **Lỗi sản phẩm tìm ra khi làm, đáng giá hơn cả tính năng:** docstring của
+  > `template_engine` **bảo người dùng làm sai**. Nó hướng dẫn đặt
+  > `{%tr for %}` và `{%tr endfor %}` **trong cùng một dòng bảng** (đa số ví dụ
+  > docxtpl cũng vậy). Đo trên docxtpl 0.20.2: `patch_xml` **thay cả `<w:tr>`**
+  > chứa thẻ bằng đúng thẻ đó — để hai thẻ cùng dòng là **xoá sạch dòng**, mất
+  > luôn các ô dữ liệu, và render chết với *"Encountered unknown tag 'endfor'"*.
+  > Phải để mỗi thẻ **một dòng riêng**, trên và dưới dòng lặp. **Không test nào
+  > kiểm điều này**, nên ai làm theo tài liệu của chính chúng ta để dựng mẫu có
+  > bảng hàng hoá — hoá đơn, báo giá, phiếu giao — đều gặp lỗi không hiểu vì sao.
+  > Đã sửa cả hướng dẫn lẫn bộ sinh mẫu, kiểm tới đầu ra thật.
+  >
+  > **Giữ bản dựng Python làm phương án lùi** cho công ty chưa tạo mẫu — đây là
+  > **đường di trú có điểm kết**, không phải cơ chế thứ hai: có mẫu rồi thì mẫu
+  > là thứ được in, và bản dựng cũ thành code chết, xoá được khi mọi tenant đã
+  > có mẫu.
+  >
+  > **Lệnh sản xuất:** danh sách vật tư **rỗng là bình thường** (in cho xưởng
+  > trước khi gán định mức). Dòng *"Chưa gán vật tư"* do **collector** cấp, không
+  > phải `{% if %}` trong template — để tờ mẫu người dùng mở ra chỉ có một vòng
+  > lặp, không có điều kiện. Logic nằm ở dữ liệu, không nằm trong tờ giấy.
 - **T-23a** ✅ `DONE`: HĐNT và ĐĐH đã vào chuẩn chung (nút, popup, chọn định
   dạng, và HĐNT lần đầu có lịch sử file in). Thêm `EMBEDDED_CONTROLS` cho nút in
   **nằm lẫn bên trong** một màn hình đã chuẩn — ĐĐH trước đây không nằm trong
   danh sách nào nên không test nào soi. Và thêm một test **quét mọi template**
   để không màn hình in nào đứng ngoài cả ba danh sách.
-- **T-23b** `TODO` (P1): Đơn mua hàng + Lệnh sản xuất vào chuẩn chung — chặn bởi
-  T-22b.
+- **T-23b (phần nút bấm)** `TODO` — **cần chủ sản phẩm quyết**: hai màn này giờ
+  in theo template và có lịch sử file, nhưng **nút in** vẫn là link GET tải
+  thẳng file, chưa qua popup dùng chung. Đổi sang popup là đổi **thao tác của
+  người dùng** (bấm → chuyển trang → tải từ lịch sử) — đụng *"giữ diện mạo"*,
+  nên không tự ý làm. Mô tả nợ đã sửa lại cho đúng hiện trạng thay vì đánh dấu
+  xong.
 - **T-24** ✅ `DONE`: có `version` (migration `b5c6d7e8f9a0`), tải bản mới thành
   N+1 và **giữ nguyên bản N**, sửa được tên/mô tả nhưng **không thay được tệp**
   của mẫu đã in ra chứng từ, tải mẫu về xem được, và quay lại bản cũ được.
