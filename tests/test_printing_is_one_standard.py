@@ -53,8 +53,22 @@ CONVERGED = [
 #: Screens that print and have not been converged yet. Each line is a debt,
 #: and removing a line is the definition of done for that screen.
 MIGRATING = {
-    'procurement/po_view.html': 'PO: hardcoded builder, stores nothing',
-    'production/plan.html': 'Lệnh sản xuất: hardcoded builder, stores nothing',
+    # Both were "hardcoded builder, stores nothing". T-22a gave them a
+    # Document row and a printing history; T-22b/T-23b made them
+    # template-driven, with the built-in layout kept only as a fallback for a
+    # company that has not generated its template yet.
+    #
+    # What is still not converged is the CONTROL: they print via their own GET
+    # link, which streams the file, rather than through the shared popup that
+    # posts to `generate_document` and offers a format. Moving them would
+    # change what the user does — click, redirect, then download from the
+    # history — instead of getting a file straight away. That is a visible
+    # change to a working screen, and "giữ diện mạo" makes it the owner's call,
+    # not a tidy-up to slip in.
+    'procurement/po_view.html': 'PO: template-driven and recorded; still its '
+                                'own GET link, not the shared popup',
+    'production/plan.html': 'Lệnh sản xuất: template-driven and recorded; '
+                            'still its own GET link, not the shared popup',
 }
 
 #: Print controls that live INSIDE a screen listed above rather than being the
