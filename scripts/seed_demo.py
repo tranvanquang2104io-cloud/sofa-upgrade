@@ -67,6 +67,12 @@ def wipe(company_id):
     """Remove the demo company and everything hanging off it."""
     from app.models import Company, Customer, Document, Order, Quotation, Store, User
     from app.models.models import (
+    Warehouse,
+    StockTransferLine,
+    StockTransfer,
+    StockMovement,
+    DocumentTransition,
+    ApprovalRequest,
         Contract, DocumentTemplate, GoodsReceipt, GoodsReceiptLine,
         HandoverRecord, LifecycleStatus, MasterAgreement,
         MasterAgreementPriceLine, Material, MaterialCategory, MaterialStock,
@@ -142,6 +148,7 @@ def wipe(company_id):
 def seed():
     from app.models import Company, Customer, Document, Order, Quotation, Store, User
     from app.models.models import (
+        ApprovalRequest, DocumentTransition, StockMovement, StockTransfer, StockTransferLine, Warehouse,
         Contract, DocumentTemplate, GoodsReceipt, GoodsReceiptLine,
         HandoverRecord, LifecycleStatus, MasterAgreement,
         MasterAgreementPriceLine, Material, MaterialCategory, MaterialStock,
@@ -885,6 +892,98 @@ def seed():
         document_name='HD-2607-009', document_type='contract',
         document_format='pdf', file_path='documents/HD-2607-009.pdf',
         file_size=184_320, status='current', generated_at=dt.datetime(2026, 7, 14)))
+
+    # ----------------------------------------------------------------
+    # Kho, điều chuyển, hàng đợi duyệt và lịch sử chứng từ
+    #
+    # Năm bảng này ra đời trong đợt refactor 2026-Q4 và chưa có trong seed,
+    # nên demo trước đây không chạm tới: tách kho khỏi cửa hàng, sổ xuất/nhập,
+    # duyệt hai cấp, và vết "ai làm gì". Không có dữ liệu thì bốn màn hình mới
+    # mở ra trống trơn và không ai biết chúng đúng hay sai.
+    # ----------------------------------------------------------------
+
+    # CASE: hai kho trong cùng một chi nhánh — đúng tình huống buộc người dùng
+    # phải chọn, và là lý do `must_choose()` tồn tại.
+    kho_chinh = Warehouse(
+        company_id=company.id, store_id=showroom.id, warehouse_code='KHO-VP',
+        name='Kho vải & phụ liệu', is_default=True, is_active=True)
+    kho_go = Warehouse(
+        company_id=company.id, store_id=showroom.id, warehouse_code='KHO-GO',
+        name='Kho gỗ & khung', is_active=True)
+    # CASE: kho ở chi nhánh thứ hai — để thấy tồn kho tách theo chi nhánh.
+    kho_cn2 = Warehouse(
+        company_id=company.id, store_id=workshop.id, warehouse_code='KHO-CN2',
+        name='Kho xưởng sản xuất', is_default=True, is_active=True)
+    # CASE: một kho đã đóng cửa — phải biến khỏi ô chọn mà chứng từ cũ vẫn đọc được.
+    kho_cu = Warehouse(
+        company_id=company.id, store_id=showroom.id, warehouse_code='KHO-CU',
+        name='Kho cũ (đã đóng)', is_active=False)
+    db.session.add_all([kho_chinh, kho_go, kho_cn2, kho_cu])
+    db.session.flush()
+
+    # CASE: một phiếu điều chuyển đã thực hiện, kèm hai dòng sổ kho đối ứng.
+    # Chuyển vải từ kho chính sang kho chi nhánh 2.
+    vai = Material.query.filter_by(company_id=company.id).first()
+    if vai is not None:
+        transfer = StockTransfer(
+            company_id=company.id, from_warehouse_id=kho_chinh.id,
+            to_warehouse_id=kho_cn2.id, transfer_number='DC-0001',
+            transfer_date=d(-12),
+            notes='Xưởng hết vải nền, điều từ kho showroom sang.')
+        db.session.add(transfer)
+        db.session.flush()
+        db.session.add(StockTransferLine(
+            transfer_id=transfer.id, material_id=vai.id,
+            quantity=20, unit=vai.unit.name if vai.unit else 'm'))
+        # Sổ kho: một dòng xuất, một dòng nhập. Ghi mức THAY ĐỔI, không ghi
+        # tồn mới — cộng dồn lại phải ra đúng tồn hiện tại.
+        db.session.add(StockMovement(
+            company_id=company.id, material_id=vai.id, store_id=showroom.id,
+            warehouse_id=kho_chinh.id, quantity=-20,
+            movement_type=StockMovement.TYPE_TRANSFER_OUT,
+            ref_type='stock_transfer', ref_id=transfer.id,
+            notes='Điều chuyển sang xưởng'))
+        db.session.add(StockMovement(
+            company_id=company.id, material_id=vai.id, store_id=workshop.id,
+            warehouse_id=kho_cn2.id, quantity=20,
+            movement_type=StockMovement.TYPE_TRANSFER_IN,
+            ref_type='stock_transfer', ref_id=transfer.id,
+            notes='Nhận điều chuyển từ showroom'))
+
+    # CASE: một đề nghị ĐANG CHỜ DUYỆT — nhân viên xin xác nhận một phiếu thu,
+    # quản lý chi nhánh chưa quyết. Đây là trạng thái màn /approvals tồn tại vì nó.
+    pending_payment = PaymentReport.query.filter_by(
+        company_id=company.id, is_confirmed=False, is_canceled=False).first()
+    if pending_payment is not None and sales is not None:
+        db.session.add(ApprovalRequest(
+            company_id=company.id, store_id=showroom.id,
+            action='payment.confirm', target_type='payment',
+            target_id=pending_payment.id,
+            reason='Khách đã chuyển khoản, em có ảnh màn hình.',
+            requested_by_id=sales.id,
+            status=ApprovalRequest.STATUS_PENDING,
+            requested_at=dt.datetime.combine(d(-1), dt.time(16, 5))))
+
+    # CASE: lịch sử chứng từ của một đơn đã đi hết vòng — ai ký, ai xác nhận
+    # tiền, lúc nào. Không có nó thì màn đơn hàng không có gì để kể.
+    signed = Contract.query.filter_by(
+        company_id=company.id, is_signed=True).first()
+    if signed is not None and admin is not None:
+        db.session.add(DocumentTransition(
+            company_id=company.id, document_type='contract',
+            document_id=signed.id, action='contract.sign',
+            from_state='draft', to_state='signed',
+            user_id=admin.id, user_name=admin.full_name,
+            occurred_at=dt.datetime.combine(d(-20), dt.time(9, 0))))
+    confirmed_payment = PaymentReport.query.filter_by(
+        company_id=company.id, is_confirmed=True).first()
+    if confirmed_payment is not None and admin is not None:
+        db.session.add(DocumentTransition(
+            company_id=company.id, document_type='payment',
+            document_id=confirmed_payment.id, action='payment.confirm',
+            from_state='draft', to_state='confirmed',
+            user_id=admin.id, user_name=admin.full_name,
+            occurred_at=dt.datetime.combine(d(-18), dt.time(14, 30))))
 
     db.session.commit()
     return company

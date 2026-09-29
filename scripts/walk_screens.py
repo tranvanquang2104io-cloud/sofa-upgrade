@@ -25,9 +25,9 @@ import urllib.parse
 
 import requests
 
-APP = 'http://127.0.0.1:5000'
+import os; APP = os.environ.get('SOFA_APP','http://127.0.0.1:5000')
 LOGIN = ('demo@sofa.test', 'demo1234')
-DB = 'devdata.sqlite3'
+DB = os.environ.get('SOFA_DB','devdata.sqlite3')
 TEMPLATES = pathlib.Path('app/templates')
 
 # Routes that are not screens: downloads, images and the logout that would end
@@ -71,6 +71,16 @@ def sample_ids():
         'plan_id': one('select id from production_plans where company_id=?'),
         'template_id': one('select id from document_templates where company_id=?'),
         'document_id': one('select id from documents where company_id=?'),
+        # Added 2026-Q4: these tables did not exist when this map was written,
+        # so their screens reported "no demo data" and were silently skipped —
+        # a walker that cannot reach a screen says nothing about it, which is
+        # the same blind spot this script exists to remove.
+        'warehouse_id': one('select id from warehouses where company_id=?'),
+        'request_id': one('select id from approval_requests where company_id=?'),
+        'transfer_id': one('select id from stock_transfers where company_id=?'),
+        'payment_id': one('select id from payment_reports where company_id=?'),
+        'quotation_id': one('select id from quotations where company_id=?'),
+        'contract_id': one('select id from contracts where company_id=?'),
     }
     for key, sql in [
         ('quotation_id', 'select q.id from quotations q join orders o on '
