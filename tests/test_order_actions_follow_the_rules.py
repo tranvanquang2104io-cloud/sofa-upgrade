@@ -101,14 +101,19 @@ def test_the_advance_can_always_be_recorded_when_it_is_optional(app, client,
 
     Checks the labelled button, not just the word `/payment/`: that substring
     appears in other links on the page and would have proved nothing.
+
+    The label used to be matched in ENGLISH, and that passed for a reason
+    worth keeping: the timeline carried a hardcoded `Record Advance Payment`
+    with no `t()` around it, so a Vietnamese user saw English there. When the
+    duplicate button was removed the only remaining one goes through `t()` and
+    renders as `Tạo Biên Bản Tạm Ứng` — so the English match broke while the
+    capability was untouched. The button is asserted by its real label now.
     """
     order_id = _order_with_contract(app, seed, 0, 'DH-UI-0A')
 
     login("admin")
     body = client.get(f'/orders/{order_id}').get_data(as_text=True)
-    assert ('Record Advance Payment' in body
-            or 'Ghi Nhận Tạm Ứng' in body
-            or 'Ghi nhận tạm ứng' in body), (
+    assert 'Tạo Biên Bản Tạm Ứng' in body, (
         "a customer may still choose to pay something up front"
     )
 
