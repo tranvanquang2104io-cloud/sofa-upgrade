@@ -16,7 +16,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold" for="f_full_name">Full Name <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" for="f_full_name">{{ t('Full Name') }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="full_name" required
                                    placeholder="Nguyễn Văn A" maxlength="255" id="f_full_name">
                         </div>
@@ -60,7 +60,7 @@
                             <div class="form-text">
                                 <strong>{{ t('Employee') }}:</strong> handles tasks at assigned store.<br>
                                 <strong>{{ t('Store Manager') }}:</strong> manages assigned store.<br>
-                                <strong>{{ t('Company Manager') }}:</strong> full company access, not assigned to a store.
+                                <strong>{{ t('Company Manager') }}:</strong> {{ t('toàn quyền trong công ty, không gắn với cửa hàng nào.') }}
                             </div>
                         </div>
                         <div class="col-md-6" id="storeFieldGroup">

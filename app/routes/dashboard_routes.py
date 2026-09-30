@@ -297,61 +297,60 @@ def set_language(lang):
 
 # ===== DASHBOARD =====
 
+def _report_scope(company_id):
+    """Which branches this person may see figures for, and the branch picked.
+
+    A company admin sees the whole company (`None`) and may narrow it to one
+    branch with `?store=`. Anyone else sees their own branches only, whatever
+    the URL says — the reports used to be company-wide for everybody.
+
+    Returns (store_ids, selected_store_id, branches_to_offer).
+    """
+    from app.models.models import Store
+
+    if is_company_admin():
+        branches = Store.query.filter_by(company_id=company_id, is_active=True).order_by(Store.name).all()
+        wanted = request.args.get('store') or ''
+        chosen = next((s for s in branches if str(s.id) == wanted), None)
+        return ([chosen.id] if chosen else None), (str(chosen.id) if chosen else ''), branches
+    return get_accessible_store_ids(company_id), '', []
+
+
 @dashboard_bp.route('/')
 @login_required
 def index():
-    """Main dashboard — stats scoped to the current user's accessible stores"""
+    """What is waiting on this person — for their role and their branches.
+
+    Everyone gets the work queue for the features they hold. Branch managers
+    and company admins also get this month's four headline figures for what
+    they run; the analysis itself lives on Reports.
+    """
+    from app.services.approvals import DECIDING_ROLES
+    from app.services.home_service import scope_counts, work_queue
+    from app.services.periods import period, previous
+    from app.services.report_service import ReportService
+    from app.utils.auth_utils import current_user_can
+
     company_id = get_current_company_id()
+    store_ids = None if is_company_admin() else get_accessible_store_ids(company_id)
+    role = session.get('role')
 
-    store_repo       = StoreRepository()
-    customer_service = CustomerService()
+    cards = work_queue(company_id, store_ids, current_user_can, role in DECIDING_ROLES)
+    headline = None
+    if role in DECIDING_ROLES:
+        this_month = period('month')
+        headline = ReportService().headline(company_id, store_ids, this_month, previous(this_month))
 
-    # Stores the user can see
-    accessible_store_ids = get_accessible_store_ids(company_id)
-    stores = store_repo.get_stores_for_company(company_id) if is_company_admin() \
-             else [store_repo.get_by_id(sid) for sid in accessible_store_ids if store_repo.get_by_id(sid)]
-
-    # Scope orders to accessible stores
-    from app.repositories.repository import OrderRepository as _OrderRepo
-    from app.models.models import Customer as _Customer, Order as _Order
-    order_repo = _OrderRepo()
-
-    if is_company_admin():
-        all_orders = order_repo.get_orders_for_company(company_id)
-        # is_active matters: every customer LIST and lookup filters it, so
-        # counting deactivated customers here made the front page disagree with
-        # the page it links to - 4 on the card, 3 in the list.
-        total_customers = db.session.query(_Customer).filter_by(
-            company_id=company_id, is_active=True).count()
-    else:
-        # One query rather than one per store, and the same method the
-        # company-wide branch uses — so the two paths cannot drift apart.
-        all_orders = order_repo.get_orders_for_company(
-            company_id, store_ids=accessible_store_ids)
-        total_customers = db.session.query(_Customer).filter(
-            _Customer.store_id.in_(accessible_store_ids),
-            _Customer.is_active == True,
-        ).count()
-
-    total_orders = len(all_orders)
-    in_progress  = sum(1 for o in all_orders if not o.is_canceled and o.lifecycle and not o.lifecycle.completed)
-    completed    = sum(1 for o in all_orders if o.lifecycle and o.lifecycle.completed)
-    canceled     = sum(1 for o in all_orders if o.is_canceled)
-
-    # Recent orders (last 10)
-    order_service = OrderService()
-    recent_orders = order_service.list_orders_for_company(
-        company_id, page=1, per_page=10,
-        store_ids=None if is_company_admin() else accessible_store_ids)
+    recent_orders = OrderService().list_orders_for_company(
+        company_id, page=1, per_page=10, store_ids=store_ids)
 
     return render_template('dashboard/index.html',
+                           cards=cards,
+                           waiting=sum(c['count'] for c in cards),
+                           headline=headline,
+                           counts=scope_counts(company_id, store_ids),
                            orders=recent_orders,
-                           stores=stores,
-                           total_orders=total_orders,
-                           total_customers=total_customers,
-                           in_progress=in_progress,
-                           completed=completed,
-                           canceled=canceled)
+                           role=role)
 
 
 # ===== COMPANY SETTINGS =====
@@ -823,7 +822,7 @@ def list_customers():
         q = _Customer.query.filter_by(store_id=store_id, is_active=True)
         q = _apply_customer_search(q, search)
         q = q.order_by(_Customer.customer_code)
-        pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
+        pagination = q.paginate(page=page, per_page=per_page, error_out=False)
         customers, total = pagination.items, pagination.total
     else:
         # "All Stores" — company admin sees every accessible store's customers
@@ -832,7 +831,7 @@ def list_customers():
         )
         q = _apply_customer_search(q, search)
         q = q.order_by(_Customer.customer_code)
-        pagination = db.paginate(q, page=page, per_page=per_page, error_out=False)
+        pagination = q.paginate(page=page, per_page=per_page, error_out=False)
         customers, total = pagination.items, pagination.total
 
     # Preserve store/search filters across pagination links.
@@ -1081,16 +1080,31 @@ def list_orders():
         if status in conditions:
             query = query.filter(conditions[status])
 
+    # A home-screen card: exactly the orders it counted, from the same
+    # definition (home_service.queue_order_ids), so the two cannot disagree.
+    from app.services.home_service import ORDER_QUEUES, queue_order_ids
+    queue = (request.args.get('queue') or '').strip()
+    queue_label = None
+    if queue in ORDER_QUEUES:
+        ids = queue_order_ids(queue, company_id,
+                              None if is_company_admin() else get_accessible_store_ids(company_id))
+        query = query.filter(_Order.id.in_(ids or ['00000000-0000-0000-0000-000000000000']))
+        queue_label = ORDER_QUEUES[queue][0]
+
     query = query.options(
         joinedload(_Order.customer),
         joinedload(_Order.lifecycle),
     ).order_by(_Order.created_at.desc())
 
     # error_out=False → an out-of-range page renders empty instead of 404.
-    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    # `query.paginate`, not `db.paginate(query)`: the latter re-executes the
+    # legacy Query without its `.options()`, so the joinedloads above were
+    # silently dropped and every row lazy-loaded its customer and lifecycle.
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     return render_template('orders/list.html', orders=pagination.items,
                            pagination=pagination, page=page, search=search,
-                           selected_status=status)
+                           selected_status=status, queue=queue if queue_label else '',
+                           queue_label=queue_label)
 
 
 @dashboard_bp.route('/orders/create', methods=['GET', 'POST'])
@@ -1732,6 +1746,10 @@ def edit_contract(contract_id):
             contract.num_date_notice_cancel = num_date_notice_cancel
             contract.contract_days_complete = contract_days_complete
             contract.updated_at = datetime.utcnow()
+            # Same rule as ContractService.create_contract: the active contract
+            # is what the order is worth.
+            if contract.is_active and contract.order is not None:
+                contract.order.total_amount = contract_value
             db.session.commit()
             
             flash(t('Contract updated successfully'), 'success')
@@ -2732,7 +2750,10 @@ def customer_receivables():
     from app.services.report_service import ReportService
 
     company_id = get_current_company_id()
-    rows = ReportService().customer_receivables(company_id)
+    # Branch-scoped like every other report: this lists customers BY NAME with
+    # what they owe, and used to show every branch's to anyone with "reports".
+    store_ids, _selected, _branches = _report_scope(company_id)
+    rows = ReportService().customer_receivables(company_id, store_ids)
 
     if request.args.get('only') == 'owing':
         rows = [r for r in rows if not r['settled']]
@@ -2740,7 +2761,7 @@ def customer_receivables():
     # The footnote on this screen already said that money promised but not
     # confirmed still shows as owed. Listing those payments here turns that
     # caveat into something the reader can act on without leaving the page.
-    pending = ReportService().unconfirmed_payments(company_id)
+    pending = ReportService().unconfirmed_payments(company_id, store_ids)
 
     return render_template(
         'reports/receivables.html',
@@ -2754,11 +2775,41 @@ def customer_receivables():
 @dashboard_bp.route('/reports')
 @login_required
 def reports():
-    """Admin BI/KPI dashboard split by domain (sales / purchasing / accounting) — item 9."""
+    """Figures for a period, for the branches this person may see.
+
+    Who sees what:
+      * everyone granted "reports" — sales, cash, delivery punctuality, and
+        purchasing if they hold that feature, for their own branches;
+      * branch managers and company admins — also the material margin of
+        finished orders (cost and profit are management information);
+      * company admins — also every branch side by side, and a branch filter.
+    """
+    from app.services.approvals import DECIDING_ROLES
+    from app.services.periods import PERIOD_KEYS, PERIOD_LABELS, period, previous
     from app.services.report_service import ReportService
+    from app.utils.auth_utils import current_user_can
+
     company_id = get_current_company_id()
-    data = ReportService().dashboard(company_id)
-    return render_template('reports/index.html', **data)
+    store_ids, selected_store, branches = _report_scope(company_id)
+    current = period(request.args.get('period') or 'month')
+    before = previous(current)
+    svc = ReportService()
+    manager = session.get('role') in DECIDING_ROLES
+
+    return render_template(
+        'reports/index.html',
+        period=current, before=before,
+        period_options=[(k, PERIOD_LABELS[k]) for k in PERIOD_KEYS],
+        branches=branches, selected_store=selected_store,
+        headline=svc.headline(company_id, store_ids, current, before),
+        sales=svc.sales(company_id, store_ids, current),
+        delivery=svc.delivery(company_id, store_ids, current),
+        purchasing=svc.purchasing(company_id, store_ids, current) if current_user_can('purchasing') else None,
+        accounting=svc.accounting(company_id, store_ids, current),
+        margins=svc.margins(company_id, store_ids, current) if manager else None,
+        by_branch=svc.by_branch(company_id, current) if is_company_admin() and not selected_store else None,
+        scope_note=None if is_company_admin() else t('Số liệu của chi nhánh bạn phụ trách.'),
+    )
 
 
 @dashboard_bp.route('/uploads/items/<path:filename>')
@@ -4644,8 +4695,20 @@ def view_supplier_invoice(invoice_id):
         flash(t('Supplier invoice not found or access denied'), 'error')
         return redirect(url_for('dashboard.list_supplier_invoices'))
 
+    # The pay form asked the user to invent a voucher number and type today's
+    # date, on the one screen in the purchase flow that did not suggest them.
+    # Same series as the seeded vouchers (CHI-yymm-nnnn); the unique check in
+    # `create_payment` still refuses a number somebody took meanwhile.
+    from datetime import date as _date
+    from app.models.models import SupplierPayment
+    from app.services.procurement_service import _next_document_number
+    suggested_payment_number = _next_document_number(
+        SupplierPayment, SupplierPayment.payment_number, company_id, 'CHI')
+
     return render_template('payables/view.html', invoice=invoice,
-                           payment_status=PayablesService.payment_status(invoice.po))
+                           payment_status=PayablesService.payment_status(invoice.po),
+                           suggested_payment_number=suggested_payment_number,
+                           today=_date.today().isoformat())
 
 
 @dashboard_bp.route('/supplier-invoices/<invoice_id>/confirm', methods=['POST'])
@@ -4950,8 +5013,8 @@ def list_production_plans():
     query = query.options(joinedload(_Plan.order)).order_by(
         _Plan.is_delayed.desc(), _Plan.created_at.desc())
 
-    pagination = db.paginate(query, page=page, per_page=per_page,
-                             error_out=False)
+    # `query.paginate` keeps the joinedload; `db.paginate(query)` drops it.
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     return render_template('production/list.html', plans=pagination.items,
                            pagination=pagination, selected_status=status)
 

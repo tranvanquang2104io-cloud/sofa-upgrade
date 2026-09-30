@@ -40,7 +40,7 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">{{ t('Payment Type') }}</label>
-                            <input type="text" class="form-control" disabled value="{% if payment.payment_type == 'advance' %}Advance{% else %}Final Payment{% endif %}">
+                            <input type="text" class="form-control" disabled value="{% if payment.payment_type == 'advance' %}{{ t('Advance') }}{% else %}{{ t('Final Payment') }}{% endif %}">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="report_date" class="form-label">{{ t('Date *') }}</label>
@@ -59,7 +59,7 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="payment_method" class="form-label">{{ t('Payment Method') }}</label>
-                            <input type="text" class="form-control" id="payment_method" name="payment_method" value="{{ payment.payment_method or '' }}" placeholder="Bank Transfer / Cash">
+                            <input type="text" class="form-control" id="payment_method" name="payment_method" value="{{ payment.payment_method or '' }}" placeholder="{{ t('Bank Transfer / Cash') }}">
                         </div>
                     </div>
 
@@ -71,7 +71,7 @@
                             <table class="table table-sm table-bordered">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width:5%" class="text-center">No.</th>
+                                        <th style="width:5%" class="text-center">{{ t('No.') }}</th>
                                         <th style="width:38%">{{ t('Item Name') }}</th>
                                         <th style="width:9%">{{ t('Unit') }}</th>
                                         <th style="width:9%" class="text-end">{{ t('Qty') }}</th>
@@ -143,24 +143,24 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="amount_in_words" class="form-label">Amount in Words</label>
+                        <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="amount_in_words" name="amount_in_words" value="{{ payment.amount_in_words or '' }}">
-                            <button type="button" class="btn btn-outline-secondary" title="Auto-fill" aria-label="Auto-fill" onclick="autoFillWords()">
+                            <button type="button" class="btn btn-outline-secondary" title="{{ t('Auto-fill') }}" aria-label="{{ t('Auto-fill') }}" onclick="autoFillWords()">
                                 <i class="bi bi-arrow-clockwise"></i>
                             </button>
                         </div>
-                        <div class="form-text">Auto-updated from remaining balance. Edit manually to override.</div>
+                        <div class="form-text">{{ t('Tự cập nhật theo số tiền còn lại. Có thể sửa trực tiếp.') }}</div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="work_completed_summary" class="form-label">Work Completion Summary</label>
+                        <label for="work_completed_summary" class="form-label">{{ t('Work Completion Summary') }}</label>
                         <textarea class="form-control" id="work_completed_summary" name="work_completed_summary" rows="2">{{ payment.work_completed_summary or '' }}</textarea>
                     </div>
 
                     <!-- Bank Accounts -->
                     <div class="mb-3">
-                        <h6><i class="bi bi-bank2"></i> Payment Bank Accounts</h6>
+                        <h6><i class="bi bi-bank2"></i> {{ t('Payment Bank Accounts') }}</h6>
                         {% set saved_bank_info = payment.bank_account_info if payment.bank_account_info else [] %}
                         {% set saved_acct_nums = saved_bank_info | map(attribute='account_number') | list %}
                         {% set first_saved_acct = saved_bank_info[0].account_number if saved_bank_info else '' %}
@@ -192,7 +192,7 @@
                                 <a href="{{ url_for('dashboard.company_settings') }}" target="_blank">Thêm trong Cài đặt</a> hoặc nhập thủ công:
                             </span>
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addBankRow()">
-                                <i class="bi bi-plus"></i> Add account
+                                <i class="bi bi-plus"></i> {{ t('Add account') }}
                             </button>
                         </div>
                         {% endif %}
@@ -201,9 +201,9 @@
                             {% for bank in saved_bank_info %}
                             {% if bank.account_number not in company_acct_nums %}
                             <div class="row mb-2 bank-row">
-                                <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="Bank name" value="{{ bank.bank_name or '' }}"></div>
-                                <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="Account number" value="{{ bank.account_number or '' }}"></div>
-                                <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="Account holder" value="{{ bank.account_holder or '' }}"></div>
+                                <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="{{ t('Bank name') }}" value="{{ bank.bank_name or '' }}"></div>
+                                <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="{{ t('Account number') }}" value="{{ bank.account_number or '' }}"></div>
+                                <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="{{ t('Account holder') }}" value="{{ bank.account_holder or '' }}"></div>
                                 <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.bank-row').remove()" title="{{ t('Remove this bank account') }}" aria-label="{{ t('Remove this bank account') }}"><i class="bi bi-trash"></i></button></div>
                             </div>
                             {% endif %}
@@ -213,7 +213,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="transaction_reference" class="form-label">Transaction Reference</label>
+                        <label for="transaction_reference" class="form-label">{{ t('Transaction Reference') }}</label>
                         <input type="text" class="form-control" id="transaction_reference" name="transaction_reference" value="{{ payment.transaction_reference or '' }}">
                     </div>
 
@@ -303,9 +303,9 @@ function addBankRow(bankName='', accountNumber='', accountHolder='') {
     const div = document.createElement('div');
     div.className = 'row mb-2 bank-row';
     div.innerHTML = `
-        <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="Bank name" value="${bankName}"></div>
-        <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="Account number" value="${accountNumber}"></div>
-        <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="Account holder" value="${accountHolder}"></div>
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-name" placeholder="{{ t('Bank name') }}" value="${bankName}"></div>
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm bank-account" placeholder="{{ t('Account number') }}" value="${accountNumber}"></div>
+        <div class="col-md-3"><input type="text" class="form-control form-control-sm bank-holder" placeholder="{{ t('Account holder') }}" value="${accountHolder}"></div>
         <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)" title="{{ t('Remove this bank account') }}" aria-label="{{ t('Remove this bank account') }}"><i class="bi bi-trash"></i></button></div>
     `;
     container.appendChild(div);

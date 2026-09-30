@@ -48,7 +48,7 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="city" class="form-label">{{ t('Location') }}</label>
-                                <input type="text" class="form-control" id="city" name="city" placeholder="E.g. Ho Chi Minh City">
+                                <input type="text" class="form-control" id="city" name="city" placeholder="{{ t('E.g. Ho Chi Minh City') }}">
                             </div>
                         </div>
                     </div>
@@ -113,7 +113,7 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        VAT Tax
+                                        {{ t('VAT Tax') }}
                                         (<input
                                             type="number"
                                             id="vat_rate"
@@ -156,13 +156,13 @@
                     {{ form_section(t('Điều khoản và ghi chú'), icon='bi-card-text') }}
                     <div class="mb-3">
                         <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
-                        <input type="text" class="form-control" id="amount_in_words" name="amount_in_words" placeholder="E.g. One hundred twenty-five million, seven hundred thirty thousand dong">
+                        <input type="text" class="form-control" id="amount_in_words" name="amount_in_words" placeholder="{{ t('E.g. One hundred twenty-five million, seven hundred thirty thousand dong') }}">
                     </div>
 
                     <!-- Payment Terms -->
                     <div class="mb-3">
                         <label for="payment_terms" class="form-label">{{ t('Payment Terms') }}</label>
-                        <textarea class="form-control" id="payment_terms" name="payment_terms" rows="3" placeholder="E.g. 30% deposit on contract signing, 70% on delivery..."></textarea>
+                        <textarea class="form-control" id="payment_terms" name="payment_terms" rows="3" placeholder="{{ t('E.g. 30% deposit on contract signing, 70% on delivery...') }}"></textarea>
                     </div>
 
                     <div class="mb-3">
@@ -244,6 +244,15 @@ document.getElementById('another_fee_display').addEventListener('blur', function
     recalcAll();
 });
 
+// Every row — the ones rendered with the page AND the ones added later — is
+// recalculated through ONE listener on the table. Listeners used to be
+// attached only inside addRow(), so the row the page opens with never
+// recalculated: typing 2 × 12.500.000 left the line, the total and the words
+// at 0 / "Không đồng", and "Không đồng" was then saved next to 27.000.000.
+document.getElementById('items-tbody').addEventListener('input', function(e) {
+    if (e.target.matches('.qty-input, .price-input, .vat-input')) recalcAll();
+});
+
 function recalcAll() {
     let subtotal = 0;
     document.querySelectorAll('#items-tbody .item-row').forEach(row => {
@@ -302,9 +311,6 @@ function addRow() {
     const tbody = document.getElementById('items-tbody');
     const row = cloneItemRow();
     tbody.appendChild(row);
-    row.querySelector('.qty-input').addEventListener('input', recalcAll);
-    row.querySelector('.price-input').addEventListener('input', recalcAll);
-    row.querySelector('.vat-input').addEventListener('input', recalcAll);
     attachImagePreview(row);
     updateRowNumbers();
 }

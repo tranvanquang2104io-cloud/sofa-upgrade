@@ -89,7 +89,7 @@
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-center" style="width:5%">No.</th>
+                                <th class="text-center" style="width:5%">{{ t('No.') }}</th>
                                 <th>{{ t('Item Name') }}</th>
                                 <th style="width:8%">{{ t('Unit') }}</th>
                                 <th class="text-end" style="width:8%">{{ t('Qty') }}</th>
@@ -242,7 +242,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="canceled_reason" class="form-label">{{ t('Cancellation Reason *') }}</label>
-                        <textarea class="form-control" id="canceled_reason" name="canceled_reason" rows="3" required placeholder="Please provide a reason for canceling this contract..."></textarea>
+                        <textarea class="form-control" id="canceled_reason" name="canceled_reason" rows="3" required placeholder="{{ t('Please provide a reason for canceling this contract...') }}"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

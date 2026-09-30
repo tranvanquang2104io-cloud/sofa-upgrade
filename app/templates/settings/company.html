@@ -31,7 +31,7 @@
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label" for="f_tax_code">{{ t('Tax Code') }}</label>
-                            <input type="text" class="form-control" name="tax_code" value="{{ company.tax_code or '' }}" placeholder="e.g., 0312742744" id="f_tax_code">
+                            <input type="text" class="form-control" name="tax_code" value="{{ company.tax_code or '' }}" placeholder="{{ t('e.g., 0312742744') }}" id="f_tax_code">
                         </div>
                     </div>
                 </div>
@@ -150,15 +150,15 @@
                     {% for acct in accounts %}
                     <div class="row bank-row mb-2" data-index="{{ loop.index0 }}">
                         <div class="col-md-4">
-                            <input type="text" class="form-control form-control-sm" placeholder="Bank name (e.g. LPBank)" 
+                            <input type="text" class="form-control form-control-sm" placeholder="{{ t('Bank name (e.g. LPBank)') }}" 
                                    data-field="bank_name" value="{{ acct.bank_name or '' }}">
                         </div>
                         <div class="col-md-4">
-                            <input type="text" class="form-control form-control-sm" placeholder="Account number" 
+                            <input type="text" class="form-control form-control-sm" placeholder="{{ t('Account number') }}" 
                                    data-field="account_number" value="{{ acct.account_number or '' }}">
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" placeholder="Account holder" 
+                            <input type="text" class="form-control form-control-sm" placeholder="{{ t('Account holder') }}" 
                                    data-field="account_holder" value="{{ acct.account_holder or '' }}">
                         </div>
                         <div class="col-md-1">
@@ -168,7 +168,7 @@
                     {% endfor %}
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addBankRow()">
-                    <i class="bi bi-plus"></i> Add Bank Account
+                    <i class="bi bi-plus"></i> {{ t('Add Bank Account') }}
                 </button>
                 <input type="hidden" name="bank_accounts" id="bank_accounts_json" value='{{ (company.bank_accounts or []) | tojson }}'>
             </div>
@@ -208,9 +208,9 @@ function addBankRow() {
     row.className = 'row bank-row mb-2';
     row.setAttribute('data-index', idx);
     row.innerHTML = `
-        <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="Bank name (e.g. LPBank)" data-field="bank_name" value=""></div>
-        <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="Account number" data-field="account_number" value=""></div>
-        <div class="col-md-3"><input type="text" class="form-control form-control-sm" placeholder="Account holder" data-field="account_holder" value=""></div>
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="{{ t('Bank name (e.g. LPBank)') }}" data-field="bank_name" value=""></div>
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm" placeholder="{{ t('Account number') }}" data-field="account_number" value=""></div>
+        <div class="col-md-3"><input type="text" class="form-control form-control-sm" placeholder="{{ t('Account holder') }}" data-field="account_holder" value=""></div>
         <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBankRow(this)" title="{{ t('Remove this bank account') }}" aria-label="{{ t('Remove this bank account') }}"><i class="bi bi-trash"></i></button></div>
     `;
     container.appendChild(row);

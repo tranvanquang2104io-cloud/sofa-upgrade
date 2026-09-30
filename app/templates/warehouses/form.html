@@ -50,6 +50,6 @@
   </div>
   {{ form_section_end() }}
 
-  {{ form_actions(cancel_url=url_for('dashboard.list_warehouses')) }}
+  {{ form_actions(t('Save'), cancel_url=url_for('dashboard.list_warehouses')) }}
 </form>
 {% endblock %}

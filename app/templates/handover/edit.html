@@ -106,7 +106,7 @@
                             <table class="table table-sm table-bordered">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width:5%">No.</th>
+                                        <th style="width:5%">{{ t('No.') }}</th>
                                         <th style="width:22%">{{ t('Item Name') }}</th>
                                         <th style="width:7%">{{ t('Unit') }}</th>
                                         <th style="width:7%">{{ t('Delivered') }}</th>
@@ -188,7 +188,7 @@
                                     </td>
                                 </tr>
                                 <tr class="table-primary">
-                                    <th>Grand Total:</th>
+                                    <th>{{ t('Grand Total:') }}</th>
                                     <td class="text-end fw-bold"><input type="text" id="total_display" class="form-control form-control-sm text-end fw-bold bg-light" readonly value="{{ handover.total_amount|int if handover.total_amount else '' }}"></td>
                                 </tr>
                             </table>

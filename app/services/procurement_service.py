@@ -84,14 +84,6 @@ class ProcurementService:
         db.session.commit()
         return created
 
-    def create_manual_po(self, company_id, supplier_id=None, store_id=None):
-        from app.models.models import PurchaseOrder
-        po = PurchaseOrder(company_id=company_id, supplier_id=supplier_id, store_id=store_id,
-                           po_number=self._gen_po_number(company_id),
-                           status=PurchaseOrder.STATUS_DRAFT, order_date=date.today(),
-                           vat_rate=Decimal('0'))
-        db.session.add(po); db.session.commit()
-        return po
 
     # ---- PO editing -------------------------------------------------------
     def add_line(self, po, material_id, quantity, unit=None, unit_price=None):
@@ -114,34 +106,7 @@ class ProcurementService:
         db.session.commit()
         return po
 
-    def delete_line(self, po, line_id):
-        from app.models.models import PurchaseOrderLine
-        if not po.can_edit():
-            raise ValueError("Đơn mua đã gửi/hủy — không sửa được dòng.")
-        line = PurchaseOrderLine.query.get(line_id)
-        if line and str(line.po_id) == str(po.id):
-            db.session.delete(line); db.session.flush()
-            po.recompute_totals()
-            db.session.commit()
-        return po
 
-    def set_header(self, po, supplier_id=None, store_id=None, expected_date=None,
-                   vat_rate=None, notes=None):
-        if not po.can_edit():
-            raise ValueError("Đơn mua đã gửi/hủy — không sửa được.")
-        if supplier_id is not None:
-            po.supplier_id = supplier_id or None
-        if store_id is not None:
-            po.store_id = store_id or None
-        if expected_date is not None:
-            po.expected_date = expected_date or None
-        if vat_rate is not None:
-            po.vat_rate = Decimal(str(vat_rate or 0))
-        if notes is not None:
-            po.notes = notes
-        po.recompute_totals()
-        db.session.commit()
-        return po
 
     def transition(self, po, action):
         tr = po.TRANSITIONS.get(action)
@@ -349,7 +314,11 @@ class ProcurementService:
         """
         from app.models.models import PurchaseOrder, Supplier
         q = PurchaseOrder.query.filter_by(company_id=company_id)
-        if status:
+        if status == 'awaiting_receipt':
+            # The home screen's "waiting for goods": sent, and not all here yet.
+            q = q.filter(PurchaseOrder.status.in_((PurchaseOrder.STATUS_ORDERED,
+                                                   PurchaseOrder.STATUS_PARTIAL)))
+        elif status:
             q = q.filter_by(status=status)
         if search:
             term = f'%{search.strip()}%'

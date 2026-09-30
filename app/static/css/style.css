@@ -32,6 +32,34 @@ body {
     transition: color 0.15s ease-in-out;
 }
 
+/* A menu label is one line or it is two items. Letting "Khách Hàng" break
+   into "Khách / Hàng" doubled the bar's height at 1366px; the bar collapses
+   to the menu button (navbar-expand-xl) before it would need to wrap. */
+.sofa-nav .nav-link,
+.sofa-nav .navbar-brand {
+    white-space: nowrap;
+}
+.sofa-nav-user {
+    display: inline-block;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+/* Where you are, visible at a glance: brighter text alone (100% vs 75%
+   white) was the only cue, and on a dark bar it barely reads. */
+@media (min-width: 1200px) {
+    .sofa-nav .navbar-nav > .nav-item > .nav-link.active {
+        box-shadow: inset 0 -3px 0 #ffc107;
+    }
+}
+@media (max-width: 1199.98px) {
+    .sofa-nav .navbar-nav > .nav-item > .nav-link.active {
+        border-left: 3px solid #ffc107;
+        padding-left: .5rem;
+    }
+}
+
 /* --- Cards --- */
 .card {
     border: 1px solid #e9ecef;
@@ -448,3 +476,15 @@ footer .app-version {
 .item-table.vat-per-line-off .vat-cell {
   display: none;
 }
+
+/* --- Home: work-queue cards ---
+   One per thing waiting on the reader; the left edge carries the same tone
+   the status badges use, so "red" means the same here as on a document. */
+.sf-queue { border-left-width: 4px !important; transition: box-shadow .15s ease-in-out; }
+.sf-queue:hover, .sf-queue:focus { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.sf-queue--critical  { border-left-color: var(--bs-danger) !important; }
+.sf-queue--attention { border-left-color: var(--bs-warning) !important; }
+.sf-queue--neutral   { border-left-color: var(--bs-secondary) !important; }
+/* Nothing waiting: still there, so "zero" is said rather than implied. */
+.sf-queue--empty { border-left-color: var(--bs-border-color) !important; opacity: .6; }
+.sf-queue--empty .sf-queue__count { color: var(--bs-secondary-color); }

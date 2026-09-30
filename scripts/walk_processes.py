@@ -21,7 +21,6 @@ silently: a step that cannot run says so and why.
 """
 import os
 import re
-import sqlite3
 import sys
 
 import requests
@@ -42,7 +41,8 @@ def record(process, step, ok, detail=''):
 
 
 def q(sql, *args):
-    conn = sqlite3.connect(DB)
+    from walk_screens import connect
+    conn = connect(DB)
     try:
         row = conn.execute(sql, args).fetchone()
         return row[0] if row else None

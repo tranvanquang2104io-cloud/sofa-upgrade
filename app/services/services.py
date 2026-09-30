@@ -14,7 +14,7 @@ from app.repositories.repository import (
     SupplierRepository, MaterialRepository, MaterialStockRepository,
 )
 from app.utils.template_engine import TemplateEngine, DocxTemplateEngine, DocumentVariableCollector
-from app.models import Document, Order, Quotation, Contract, HandoverRecord
+from app.models import Contract
 import logging
 
 logger = logging.getLogger(__name__)
@@ -82,13 +82,7 @@ class CompanyService:
         logger.info(f"Company created: {company_code}")
         return company
     
-    def get_company(self, company_id):
-        """Get company by ID"""
-        return self.repo.get_by_id(company_id)
     
-    def list_companies(self):
-        """List all active companies"""
-        return self.repo.get_active_companies()
 
 
 class StoreService:
@@ -121,9 +115,6 @@ class StoreService:
         MaterialService().ensure_stock_entries_for_stores_of_company(company_id)
         return store
     
-    def get_store(self, store_id, company_id):
-        """Get store"""
-        return self.repo.get_active_store(company_id, store_id)
     
     def list_stores_for_company(self, company_id):
         """List all stores for company"""
@@ -189,12 +180,6 @@ class UserService:
         logger.info(f"User created: {username} for company {company_id}")
         return user
 
-    def authenticate_user(self, username, password, company_id):
-        """Authenticate user"""
-        user = self.repo.get_by_username(username, company_id)
-        if user and user.check_password(password):
-            return user
-        return None
 
     def authenticate_by_email(self, email, password):
         """Authenticate by email + password (global — email is unique).
@@ -213,9 +198,6 @@ class UserService:
             return user
         return None
 
-    def get_user(self, user_id):
-        """Get user by ID"""
-        return self.repo.get_by_id(user_id)
 
     def list_users_for_company(self, company_id):
         """List all active users for company"""
@@ -298,19 +280,8 @@ class CustomerService:
         logger.info(f"Customer created: {customer_code}")
         return customer
     
-    def get_customer(self, customer_id):
-        """Get customer"""
-        return self.repo.get_by_id(customer_id)
     
-    def list_customers_for_store(self, store_id, page=1, per_page=20):
-        """List customers for store with pagination"""
-        offset = (page - 1) * per_page
-        return self.repo.get_customers_for_store(store_id, limit=per_page, offset=offset)
     
-
-    def count_customers_for_store(self, store_id):
-        """Count customers in store"""
-        return self.repo.count_for_store(store_id)
 
     def update_customer(self, customer_id, name=None, phone=None, email=None,
                         address=None, city=None, postal_code=None, country=None,
@@ -409,10 +380,6 @@ class OrderService:
         """List orders for customer"""
         return self.repo.get_orders_for_customer(customer_id)
     
-    def list_orders_for_store(self, store_id, page=1, per_page=20):
-        """List orders for store"""
-        offset = (page - 1) * per_page
-        return self.repo.get_orders_for_store(store_id, limit=per_page, offset=offset)
     
     def list_orders_for_company(self, company_id, page=1, per_page=20,
                                 store_ids=None):
@@ -553,9 +520,6 @@ class QuotationService:
         """Get quotation"""
         return self.repo.get_by_id(quotation_id)
     
-    def list_quotations_for_order(self, order_id):
-        """List quotations for order"""
-        return self.repo.get_for_order(order_id)
     
     def approve_quotation(self, quotation_id, order_id):
         """Mark quotation as approved"""
@@ -677,11 +641,6 @@ class QuotationService:
         logger.info(f"Quotation updated: {quotation.quotation_number}")
         return quotation
     
-    def get_active_quotation_for_order(self, order_id):
-        """Get the currently active quotation for an order"""
-        return db.session.query(Quotation).filter_by(
-            order_id=order_id, is_active=True, is_canceled=False
-        ).first()
     
     def _get_or_create_lifecycle(self, order_id):
         """Helper to get or create lifecycle"""
@@ -716,7 +675,6 @@ class ContractService:
         
         # IMPORTANT: Single-active-contract constraint
         # Mark any existing active contracts as inactive
-        from app.repositories.repository import ContractRepository
         active_contracts = db.session.query(Contract).filter(
             Contract.order_id == order_id,
             Contract.is_active == True
@@ -745,6 +703,14 @@ class ContractService:
             terms_and_conditions=terms_and_conditions
         )
         
+        # The contract is the later, binding agreement: it is what the order is
+        # worth now. Only a quotation used to set this, so an order contracted
+        # without one showed 0 ₫ on every list, and a renegotiated price showed
+        # the quotation's figure instead of the one signed.
+        order = OrderRepository().get_by_id(order_id)
+        if order is not None:
+            order.total_amount = contract_value
+
         # Update lifecycle atomically - mark contract as created
         lifecycle = LifecycleStatusRepository().get_or_create_for_order(order_id)
         lifecycle.contract_created = True
@@ -939,9 +905,6 @@ class HandoverRecordService:
         logger.info(f"Handover record created: {report_number}")
         return record
     
-    def get_handover_record(self, record_id):
-        """Get handover record"""
-        return self.repo.get_by_id(record_id)
     
     def confirm_handover(self, record_id, order_id):
         """Mark handover as confirmed and update lifecycle atomically"""
@@ -1142,6 +1105,35 @@ def order_commitment(order):
     ).order_by(_Confirmation.confirmation_date.desc()).first()
 
 
+def order_due_date(order, commitment=None):
+    """The day this order was promised to the customer, or None.
+
+    It was always written down and never read back. A contract states "Số
+    ngày hoàn thành" (`contract_days_complete`, printed on the document) from
+    its start date — or from signing, when no start date was given. A Đơn đặt
+    hàng under a framework agreement states its `delivery_date` outright.
+    Nothing compared either against the handover, so an order could run past
+    what was promised with no one told.
+
+    Pass `commitment` when the caller already holds it, to skip the lookup.
+    """
+    from datetime import timedelta
+
+    from app.models.models import Contract as _Contract
+
+    commitment = commitment if commitment is not None else order_commitment(order)
+    if commitment is None:
+        return None
+    if isinstance(commitment, _Contract):
+        start = (commitment.contract_start_date or commitment.contract_date
+                 or (commitment.signed_date.date() if commitment.signed_date else None))
+        days = commitment.contract_days_complete
+        if start is None or not days:
+            return None
+        return start + timedelta(days=int(days))
+    return commitment.delivery_date
+
+
 def order_agreed_value(order):
     """What this order is worth, as currently agreed.
 
@@ -1208,6 +1200,16 @@ class PaymentReportService:
                              quotation_reference_date=None,
                              bank_account_info=None):
         """Create payment report"""
+        # A receipt for nothing. Found by doing the sale in Chrome: the payment
+        # form opens with an EMPTY line table until "Tải hạng mục từ hợp đồng"
+        # is pressed, and saving it as it opens recorded a 0 đ advance — which
+        # could then be confirmed, marking the order's advance as paid.
+        # Only a receipt that records no money at all: an advance can be taken
+        # with no line items (amount 0, advance_amount set), and that is money.
+        if float(amount or 0) <= 0 and float(advance_amount or 0) <= 0:
+            raise ValueError('Phiếu thanh toán chưa có số tiền. Bấm "Tải hạng mục từ '
+                             'hợp đồng" hoặc nhập hạng mục trước khi lưu.')
+
         _order = OrderRepository().get_by_id(order_id)
         existing = self.repo.get_by_company_and_number(
             _order.company_id if _order else None, report_number)
@@ -1226,7 +1228,7 @@ class PaymentReportService:
             WorkflowService.require(order, ACTION_PAYMENT_ADVANCE)
         elif payment_type == 'final':
             WorkflowService.require(order, ACTION_PAYMENT_FINAL)
-        
+
         report = self.repo.create(
             order_id=order_id,
             report_number=report_number,
@@ -1255,9 +1257,6 @@ class PaymentReportService:
         logger.info(f"Payment report created: {report_number}")
         return report
     
-    def get_payment_report(self, report_id):
-        """Get payment report"""
-        return self.repo.get_by_id(report_id)
     
     def mark_confirmed(self, report_id, order_id):
         """Mark payment as confirmed and update lifecycle atomically"""
@@ -2033,7 +2032,7 @@ class DocumentService:
 
     def generate_payment_request_document(self, order_id, company_id, format='docx'):
         """Generate a payment request document (Đề nghị thanh toán) for an order"""
-        from app.repositories.repository import OrderRepository, CustomerRepository, PaymentReportRepository
+        from app.repositories.repository import OrderRepository, CustomerRepository
         
         order = OrderRepository().get_by_id(order_id)
         customer = CustomerRepository().get_by_id(order.customer_id)
@@ -2088,9 +2087,6 @@ class DocumentService:
     # Query helpers
     # ------------------------------------------------------------------
 
-    def get_document(self, document_id):
-        """Get document"""
-        return self.repo.get_by_id(document_id)
 
     def list_documents_for_order(self, order_id):
         """List documents for order"""
@@ -2256,10 +2252,11 @@ class MaterialService:
         entries = self.stock_repo.get_for_material(material_id)
         result = []
         for e in entries:
-            store_name = 'Kho công ty' if e.store_id is None else (
-                self.store_repo.get_by_id(e.store_id).name
-                if self.store_repo.get_by_id(e.store_id) else str(e.store_id)
-            )
+            if e.store_id is None:
+                store_name = 'Kho công ty'
+            else:
+                store = self.store_repo.get_by_id(e.store_id)
+                store_name = store.name if store else str(e.store_id)
             result.append({'entry': e, 'store_name': store_name})
         return result
 
@@ -2322,11 +2319,6 @@ class SupplierService:
     def list_suppliers(self, company_id, active_only=True):
         return self.repo.get_for_company(company_id, active_only=active_only)
 
-    def get_supplier(self, supplier_id, company_id=None):
-        s = self.repo.get_by_id(supplier_id)
-        if s and company_id and str(s.company_id) != str(company_id):
-            return None
-        return s
 
     def create_supplier(self, company_id, name, contact_person=None, phone=None,
                         email=None, address=None, tax_code=None,
@@ -2511,7 +2503,6 @@ class ProductionPlanService:
         """Cấp phát: kiểm tồn trước; nếu thiếu → trả danh sách shortage, KHÔNG trừ.
         Nếu đủ → trừ MaterialStock, set quantity_issued, status=in_progress."""
         from decimal import Decimal
-        order = plan.order
         needs = []
         for line in plan.material_lines:
             need = Decimal(str(line.quantity_required or 0)) - Decimal(str(line.quantity_issued or 0))
@@ -2623,7 +2614,6 @@ class ProductionPlanService:
         figure as if it were profit, which would flatter every job.
         """
         from decimal import Decimal
-        from app.models.models import Contract, OrderConfirmation
 
         order = plan.order
         cost = self.material_cost(plan)
@@ -2722,7 +2712,14 @@ class ProductionPlanService:
             if missing > 0:
                 shortfall[material_id] = shortfall.get(material_id, Decimal('0')) + missing
 
-        mats = {m.id: m for m in Material.query.filter_by(company_id=company_id, is_active=True).all()}
+        # Every active material is read, unpaginated, and each one is asked for
+        # its stock (`is_low_stock`), supplier and unit. Loaded lazily that was
+        # three queries per material — a thousand for a real catalogue.
+        from sqlalchemy.orm import joinedload, selectinload
+        mats = {m.id: m for m in Material.query.filter_by(company_id=company_id, is_active=True)
+                .options(selectinload(Material.stock_entries),
+                         joinedload(Material.supplier),
+                         joinedload(Material.unit)).all()}
         # Candidate materials: needed by a plan OR below their min stock level.
         per_site_materials = set(required)
         candidates = per_site_materials | {mid for mid, m in mats.items() if m.is_low_stock}

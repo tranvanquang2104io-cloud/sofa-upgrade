@@ -132,6 +132,10 @@ class RequisitionService:
             q = q.filter(PurchaseRequisition.pr_number.ilike(term))
         q = q.order_by(PurchaseRequisition.created_at.desc())
         if page:
+            # The list shows each requisition's line count: one query for all
+            # of them rather than one per row.
+            from sqlalchemy.orm import selectinload
+            q = q.options(selectinload(PurchaseRequisition.lines))
             return q.paginate(page=page, per_page=per_page, error_out=False)
         return q.all()
 

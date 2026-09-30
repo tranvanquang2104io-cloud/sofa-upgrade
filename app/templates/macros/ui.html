@@ -326,7 +326,7 @@
 {% endmacro %}
 
 
-{% macro form_actions(submit_label, cancel_url, submit_icon='bi-check-circle',
+{% macro form_actions(submit_label=None, cancel_url=None, submit_icon='bi-check-circle',
                       cancel_label='Cancel', extra=None) %}
   {#
     The save bar. Pinned to the bottom of the viewport while there is form
@@ -336,10 +336,13 @@
     Save is always first and always primary; Cancel is always a plain link to
     the same place a Back would go. Swapping those around between screens is
     how people press the wrong one.
+
+    `submit_label` falls back to "Save": two screens called this without one,
+    and the primary button rendered as a bare tick with no word on it.
   #}
   <div class="d-flex flex-wrap gap-2 sofa-form-actions">
     <button type="submit" class="btn btn-primary">
-      <i class="bi {{ submit_icon }}"></i> {{ submit_label }}
+      <i class="bi {{ submit_icon }}"></i> {{ submit_label or t('Save') }}
     </button>
     {% if cancel_url %}
       <a href="{{ cancel_url }}" class="btn btn-secondary">{{ t(cancel_label) }}</a>

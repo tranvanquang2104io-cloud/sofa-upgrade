@@ -21,6 +21,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+import app.models.types  # noqa: F401  (GUID: UUID on PostgreSQL, CHAR(36) elsewhere)
+
 revision: str = 'd5e6f7a8b9c0'
 down_revision: Union[str, Sequence[str], None] = 'c4d5e6f7a8b9'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -29,10 +31,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     with op.batch_alter_table('goods_receipts') as batch:
-        batch.add_column(sa.Column('warehouse_id', sa.String(length=36),
+        batch.add_column(sa.Column('warehouse_id', app.models.types.GUID(),
                                    nullable=True))
     with op.batch_alter_table('purchase_orders') as batch:
-        batch.add_column(sa.Column('warehouse_id', sa.String(length=36),
+        batch.add_column(sa.Column('warehouse_id', app.models.types.GUID(),
                                    nullable=True))
 
     connection = op.get_bind()

@@ -29,6 +29,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+import app.models.types  # noqa: F401  (GUID: UUID on PostgreSQL, CHAR(36) elsewhere)
+
 revision: str = 'e2f3a4b5c6d7'
 down_revision: Union[str, Sequence[str], None] = 'd1e2f3a4b5c6'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -46,7 +48,7 @@ def upgrade() -> None:
     with op.batch_alter_table('documents') as batch:
         batch.add_column(sa.Column('source_type', sa.String(length=50),
                                    nullable=True))
-        batch.add_column(sa.Column('source_id', sa.String(length=36),
+        batch.add_column(sa.Column('source_id', app.models.types.GUID(),
                                    nullable=True))
 
     connection = op.get_bind()

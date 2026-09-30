@@ -67,8 +67,8 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ t('Min Stock Alert') }}</label>
-                            <input type="number" class="form-control" name="min_stock_level" step="0.01" min="0" value="0"
+                            <label class="form-label" for="f_min_stock">{{ t('Min Stock Alert') }}</label>
+                            <input type="number" class="form-control" name="min_stock_level" id="f_min_stock" step="0.01" min="0" value="0"
                                    title="{{ t('Alert when total stock falls below this level') }}">
                         </div>
                     </div>
@@ -215,7 +215,7 @@
             <div class="card mb-3">
                 <div class="card-header fw-semibold"><i class="bi bi-chat-left-text"></i> {{ t('Notes') }}</div>
                 <div class="card-body">
-                    <textarea class="form-control" name="notes" rows="2"
+                    <textarea class="form-control" name="notes" rows="2" aria-label="{{ t('Notes') }}"
                               aria-label="{{ t('Notes') }}"></textarea>
                 </div>
             </div>

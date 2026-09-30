@@ -284,10 +284,14 @@ def test_every_translation_key_has_a_vietnamese_entry():
 
     vi = TRANSLATIONS['vi']
     missing = []
+    # Every t('...') / t("...") call — as `{{ t('X') }}` AND as an argument,
+    # `detail_row(t('Payment Date'), ...)`. Matching only the `{{ t(` form let
+    # nineteen English labels reach Vietnamese screens (found in Chrome,
+    # 2026-09-30). `\bt\(` still skips JS like createElement('tr').
+    call = re.compile(r"""\bt\(\s*(['"])(.+?)(?<!\\)\1\s*[,)]""")
     for path in sorted(TEMPLATES.rglob('*.html')):
         text = io.open(path, encoding='utf-8').read()
-        # only Jinja calls, not JS like createElement('tr')
-        for key in re.findall(r"\{\{-?\s*t\('([^']+)'\)", text):
+        for _quote, key in call.findall(text):
             if key not in vi:
                 missing.append(f"{'/'.join(path.relative_to(TEMPLATES).parts)}: {key!r}")
 
@@ -545,3 +549,44 @@ def test_no_route_passes_a_context_variable_the_template_ignores():
         "these values are computed and passed to a template that never uses "
         f"them: {sorted(set(offenders))}"
     )
+
+
+# Words that mark a label, tooltip or placeholder as English prose.
+_ENGLISH_HINT = re.compile(
+    r'\b(the|to|of|and|for|with|from|this|your|Add|Auto|Edit|Enter|Select|Click|Load|'
+    r'Save|Total|Subtotal|Tax|Payment|Advance|Final|Amount|Words|Date|Number|Name|'
+    r'Value|Contract|Order|Customer|Balance|manually|override|check|transfer|Search|'
+    r'Remove|Delete|Upload|Status|Type|Record|Report|Reference|Summary|Items?|Goods|'
+    r'Price|Quantity|Unit|Bank|Account|Method|Cash|Sign|Start|Description|Details?|'
+    r'Information|Cancel|Close|Confirm|Create|View|Print|Download|Generate|Approve|'
+    r'Optional|Required|E\.g\.)(?![\w-])', re.I)
+_VIETNAMESE = re.compile('[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]', re.I)
+# Deliberate English: the switch that offers English, and stored option codes.
+_ENGLISH_ON_PURPOSE = {'Switch to English', 'Bank Transfer'}
+
+
+def test_no_literal_english_in_tenant_templates():
+    """A label that never goes through t() is English on every Vietnamese screen.
+
+    The t()-key lint cannot see these — there is no key. Walking every screen
+    in Chrome in Vietnamese mode found eighty-five of them (2026-09-30): the
+    order screen's action tooltips, half the payment form, the create screens
+    that hard-coded what their own edit screens translated.
+    """
+    offenders = []
+    for path in sorted(TEMPLATES.rglob('*.html')):
+        rel = '/'.join(path.relative_to(TEMPLATES).parts)
+        if rel.startswith(('admin/', 'errors/')):
+            continue  # the platform console, not a tenant screen
+        text = io.open(path, encoding='utf-8').read()
+        text = re.sub(r'\{#.*?#\}|<script\b.*?</script>|<style\b.*?</style>|<!--.*?-->',
+                      ' ', text, flags=re.S | re.I)
+        candidates = [m.group(2).strip() for m in re.finditer(
+            r'\b(placeholder|title|aria-label)="([^"{]+)"', text)]
+        bare = re.sub(r'\{\{.*?\}\}|\{%.*?%\}', ' ', text, flags=re.S)
+        candidates += [' '.join(c.split()) for c in re.findall(r'>([^<>]+)<', bare)]
+        for s in candidates:
+            if (s and s not in _ENGLISH_ON_PURPOSE and not _VIETNAMESE.search(s)
+                    and _ENGLISH_HINT.search(s)):
+                offenders.append(f'{rel}: {s[:60]!r}')
+    assert offenders == [], f'English that never passes through t(): {offenders}'

@@ -142,6 +142,13 @@ def create_app(config_name=None):
             app.logger.exception("Could not surface normalization suggestions")
         return response
 
+    # A missing value renders as nothing, never as the word "None". Found in
+    # Chrome: a supplier with no tax code pre-filled the invoice's seller tax
+    # code with the text "None", which would have been saved as the MST.
+    # Output only — `{% if x %}` and `x or 'N/A'` are unaffected, and document
+    # generation (docxtpl) has its own environment.
+    app.jinja_env.finalize = lambda value: '' if value is None else value
+
     @app.context_processor
     def inject_user():
         """Inject user, utilities and app version into templates"""
@@ -171,16 +178,52 @@ def create_app(config_name=None):
         return dict(can_feature=current_user_can)
 
     @app.context_processor
+    def inject_navigation():
+        """Which menu item is current, and what is waiting on this user.
+
+        `pending_approvals()` is a function, not a value, so the count query
+        runs only for the roles the menu shows it to.
+        """
+        from flask import request as _request, session as _session
+        from app.utils.nav import nav_section
+
+        def pending_approvals():
+            from app.services.approvals import DECIDING_ROLES, pending_count
+            from app.utils.auth_utils import get_accessible_store_ids, is_company_admin
+            cid = g.get('company_id') or _session.get('company_id')
+            if not cid or _session.get('role') not in DECIDING_ROLES:
+                return 0
+            store_ids = None if is_company_admin() else get_accessible_store_ids(cid)
+            return pending_count(cid, store_ids)
+
+        from flask import has_request_context
+        endpoint = _request.endpoint if has_request_context() else None
+        return dict(nav_section=nav_section(endpoint),
+                    pending_approvals=pending_approvals)
+
+    @app.context_processor
     def inject_material_units():
         """Expose the current company's active units of measure so document
         line-item forms can offer a standardized ĐVT dropdown instead of free text."""
         def material_units():
+            from flask import has_request_context, request
             from app.models.models import MaterialUnit
             cid = g.get('company_id')
             if not cid:
                 return []
-            return (MaterialUnit.query.filter_by(company_id=cid, is_active=True)
-                    .order_by(MaterialUnit.name).all())
+            # Every line-item row renders its own unit dropdown, so a form with
+            # twenty lines asked for the same list twenty times. Remembered for
+            # THIS request only — held on the request object, not on `g`, which
+            # can outlive one request when a caller holds an app context open.
+            holder = request._get_current_object() if has_request_context() else None
+            cache = getattr(holder, '_material_units_cache', None) if holder else None
+            if cache is not None and cid in cache:
+                return cache[cid]
+            units = (MaterialUnit.query.filter_by(company_id=cid, is_active=True)
+                     .order_by(MaterialUnit.name).all())
+            if holder is not None:
+                holder._material_units_cache = {cid: units}
+            return units
         return dict(material_units=material_units)
 
     # Data-standardization listeners live at the ORM boundary so every write

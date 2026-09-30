@@ -2,3 +2,6 @@
 -r requirements.txt
 pytest>=8.0
 alembic>=1.13
+# scripts/browser_check.py - drives real Chrome over the DevTools protocol
+requests>=2.31
+websocket-client>=1.7

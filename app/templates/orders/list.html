@@ -22,6 +22,15 @@
               filters=status_filter,
               reset_url=url_for('dashboard.list_orders') if (search or selected_status) else None) }}
 
+{% if queue_label %}
+{# Arrived from a card on the home screen: say which list this is, how many,
+   and how to get back to all orders — a filter nobody can see is a trap. #}
+<div class="alert alert-light border d-flex justify-content-between align-items-center" data-testid="queue-banner">
+    <span><i class="bi bi-funnel"></i> {{ t('Đang xem') }}: <strong>{{ t(queue_label) }}</strong> — {{ pagination.total }} {{ t('đơn') }}</span>
+    <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-sm btn-outline-secondary">{{ t('Xem tất cả đơn') }}</a>
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-body">
         {% if orders %}
@@ -67,6 +76,7 @@
             {% set extra_query = {} %}
             {% if search %}{% set _ = extra_query.update({'search': search}) %}{% endif %}
             {% if selected_status %}{% set _ = extra_query.update({'status': selected_status}) %}{% endif %}
+            {% if queue %}{% set _ = extra_query.update({'queue': queue}) %}{% endif %}
             {% with extra_query = extra_query %}
             {% include '_pagination.html' %}
             {% endwith %}

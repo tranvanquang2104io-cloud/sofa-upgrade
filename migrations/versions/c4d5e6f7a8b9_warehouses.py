@@ -36,6 +36,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+import app.models.types  # noqa: F401  (GUID: UUID on PostgreSQL, CHAR(36) elsewhere)
+
 revision: str = 'c4d5e6f7a8b9'
 down_revision: Union[str, Sequence[str], None] = 'b3c4d5e6f7a8'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -51,10 +53,10 @@ def _totals_by_material(connection):
 def upgrade() -> None:
     op.create_table(
         'warehouses',
-        sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('company_id', sa.String(length=36),
+        sa.Column('id', app.models.types.GUID(), primary_key=True),
+        sa.Column('company_id', app.models.types.GUID(),
                   sa.ForeignKey('companies.id'), nullable=False, index=True),
-        sa.Column('store_id', sa.String(length=36), sa.ForeignKey('stores.id'),
+        sa.Column('store_id', app.models.types.GUID(), sa.ForeignKey('stores.id'),
                   nullable=False, index=True),
         sa.Column('warehouse_code', sa.String(length=50), nullable=False),
         sa.Column('name', sa.String(length=255), nullable=False),
@@ -78,9 +80,11 @@ def upgrade() -> None:
     before = _totals_by_material(connection)
 
     with op.batch_alter_table('material_stock') as batch:
-        batch.add_column(sa.Column('warehouse_id', sa.String(length=36),
+        batch.add_column(sa.Column('warehouse_id', app.models.types.GUID(),
                                    nullable=True))
 
+    # TRUE/FALSE, not 1/0: PostgreSQL refuses an integer for a boolean column
+    # (SQLite accepts both, which is why only a real QAS-like upgrade found it).
     # One warehouse per existing location, named after it.
     stores = connection.execute(sa.text(
         'SELECT id, company_id, store_code, name FROM stores')).all()
@@ -89,7 +93,7 @@ def upgrade() -> None:
         connection.execute(sa.text(
             'INSERT INTO warehouses (id, company_id, store_id, '
             'warehouse_code, name, is_default, is_active) VALUES '
-            '(:id, :company, :store, :code, :name, 1, 1)'),
+            '(:id, :company, :store, :code, :name, TRUE, TRUE)'),
             {'id': warehouse_id, 'company': company_id, 'store': store_id,
              'code': f'{store_code}-KHO', 'name': f'Kho {name}'})
         connection.execute(sa.text(
@@ -115,7 +119,7 @@ def upgrade() -> None:
             connection.execute(sa.text(
                 'INSERT INTO stores (id, company_id, store_code, name, '
                 'is_active, is_sales_site, is_production_site) VALUES '
-                '(:id, :company, :code, :name, 1, 1, 1)'),
+                '(:id, :company, :code, :name, TRUE, TRUE, TRUE)'),
                 {'id': anchor_id, 'company': company_id, 'code': 'MAIN',
                  'name': 'Cơ sở chính'})
         else:
@@ -125,7 +129,7 @@ def upgrade() -> None:
         connection.execute(sa.text(
             'INSERT INTO warehouses (id, company_id, store_id, '
             'warehouse_code, name, is_default, is_active) VALUES '
-            '(:id, :company, :store, :code, :name, 0, 1)'),
+            '(:id, :company, :store, :code, :name, FALSE, TRUE)'),
             {'id': warehouse_id, 'company': company_id, 'store': anchor_id,
              'code': 'KHO-CT', 'name': 'Kho công ty'})
         connection.execute(sa.text(

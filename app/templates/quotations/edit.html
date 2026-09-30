@@ -31,7 +31,7 @@
                         <div class="col-md-4 mb-3">
                             <label for="city" class="form-label">{{ t('Location') }}</label>
                             <input type="text" class="form-control" id="city" name="city"
-                                   value="{{ quotation.city or '' }}" placeholder="E.g. Ho Chi Minh City">
+                                   value="{{ quotation.city or '' }}" placeholder="{{ t('E.g. Ho Chi Minh City') }}">
                         </div>
                     </div>
 
@@ -72,7 +72,7 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        VAT Tax
+                                        {{ t('VAT Tax') }}
                                         (<input
                                             type="number"
                                             id="vat_rate"
@@ -113,7 +113,7 @@
                     <div class="mb-3">
                         <label for="amount_in_words" class="form-label">{{ t('Amount in Words') }}</label>
                         <input type="text" class="form-control" id="amount_in_words" name="amount_in_words"
-                               value="{{ quotation.amount_in_words or '' }}" placeholder="E.g. One hundred twenty-five million, seven hundred thirty thousand dong">
+                               value="{{ quotation.amount_in_words or '' }}" placeholder="{{ t('E.g. One hundred twenty-five million, seven hundred thirty thousand dong') }}">
                     </div>
 
                     <div class="mb-3">
@@ -149,7 +149,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Track manual editing of amount_in_words
     const wordsInput = document.getElementById('amount_in_words');
     if (wordsInput) {
-        if (wordsInput.value.trim()) wordsInput._userEdited = true;
         wordsInput.addEventListener('input', function() { this._userEdited = true; });
     }
 });
@@ -170,6 +169,16 @@ document.getElementById('another_fee_display').addEventListener('blur', function
     recalcAll();
 });
 
+// Every row — the ones rendered with the page AND the ones added later — is
+// recalculated through ONE listener on the table. Listeners used to be
+// attached only inside addRow(), so the row the page opens with never
+// recalculated: typing 2 × 12.500.000 left the line, the total and the words
+// at 0 / "Không đồng", and "Không đồng" was then saved next to 27.000.000.
+document.getElementById('items-tbody').addEventListener('input', function(e) {
+    if (e.target.matches('.qty-input, .price-input, .vat-input')) recalcAll();
+});
+
+let totalAtLoad = null;  // the total the stored words were written for
 function recalcAll() {
     let subtotal = 0;
     document.querySelectorAll('#items-tbody .item-row').forEach(row => {
@@ -194,8 +203,14 @@ function recalcAll() {
     document.getElementById('shipping_fee').value = shippingFee;
     document.getElementById('another_fee').value = anotherFee;
 
+    // Stored words are kept while the total is the one they were written for;
+    // once the amount changes they describe a different number, so they are
+    // rewritten. They used to be frozen the moment the page opened, and a
+    // price change left the old amount in words beside the new figure.
+    if (totalAtLoad === null) totalAtLoad = grandTotal;
     const wordsEl = document.getElementById('amount_in_words');
-    if (wordsEl && !wordsEl._userEdited) wordsEl.value = numberToWordsVi(grandTotal);
+    if (wordsEl && !wordsEl._userEdited && (grandTotal !== totalAtLoad || !wordsEl.value.trim()))
+        wordsEl.value = numberToWordsVi(grandTotal);
 }
 
 function attachImagePreview(row) {
@@ -224,8 +239,6 @@ function addRow() {
     const tbody = document.getElementById('items-tbody');
     const row = cloneItemRow();
     tbody.appendChild(row);
-    row.querySelector('.qty-input').addEventListener('input', recalcAll);
-    row.querySelector('.price-input').addEventListener('input', recalcAll);
     row.querySelector('.vat-input').addEventListener('input', recalcAll);
     attachImagePreview(row);
     updateRowNumbers();

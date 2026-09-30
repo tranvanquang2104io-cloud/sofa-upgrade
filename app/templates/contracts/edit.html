@@ -31,7 +31,7 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="city" class="form-label">{{ t('Signing Location') }}</label>
-                            <input type="text" class="form-control" id="city" name="city" value="{{ contract.city or '' }}" placeholder="E.g. Ho Chi Minh City">
+                            <input type="text" class="form-control" id="city" name="city" value="{{ contract.city or '' }}" placeholder="{{ t('E.g. Ho Chi Minh City') }}">
                         </div>
                     </div>
 
@@ -102,7 +102,7 @@
                                 </tr>
                                 <tr>
                                     <th class="bg-light">
-                                        VAT Tax
+                                        {{ t('VAT Tax') }}
                                         (<input
                                             type="number"
                                             id="vat_rate"
@@ -231,7 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     const aiw = document.getElementById('amount_in_words');
     if (aiw) {
-        if (aiw.value.trim()) aiw.dataset.manualEdit = '1';
         aiw.addEventListener('input', () => { aiw.dataset.manualEdit = '1'; });
     }
     // Format initial fee display values
@@ -310,6 +309,7 @@ function updateRowNumbers() {
     });
 }
 
+let contractTotalAtLoad = null;  // the total the stored words were written for
 function recalcAll() {
     let subtotal = 0;
     document.querySelectorAll('#items-body .item-row').forEach(row => {
@@ -339,7 +339,10 @@ function recalcAll() {
     document.getElementById('advance_amount').value = advAmount;
 
     const aiw = document.getElementById('amount_in_words');
-    if (aiw && !aiw.dataset.manualEdit) aiw.value = numberToVietnamese(grandTotal);
+    // Same rule as the quotation: stored words stand until the amount changes.
+    if (contractTotalAtLoad === null) contractTotalAtLoad = grandTotal;
+    if (aiw && !aiw.dataset.manualEdit && (grandTotal !== contractTotalAtLoad || !aiw.value.trim()))
+        aiw.value = numberToVietnamese(grandTotal);
 }
 </script>
 {% endblock %}

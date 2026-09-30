@@ -265,6 +265,12 @@ class AgreementService:
         from datetime import datetime
 
         confirmation.status = OrderConfirmation.STATUS_CONFIRMED
+        # The accepted ĐĐH is what the order is worth, as a signed contract is
+        # on the ordinary path (ContractService.create_contract).
+        from app.models.models import Order
+        order = db.session.get(Order, confirmation.order_id)
+        if order is not None:
+            order.total_amount = confirmation.total_amount
 
         lifecycle = LifecycleStatusRepository().get_or_create_for_order(
             confirmation.order_id)

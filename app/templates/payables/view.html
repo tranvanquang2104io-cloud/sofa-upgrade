@@ -158,11 +158,11 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="col-auto">
       <label class="form-label small" for="f_payment_number">{{ t('Payment No.') }}</label>
-      <input type="text" name="payment_number" class="form-control form-control-sm" required id="f_payment_number">
+      <input type="text" name="payment_number" class="form-control form-control-sm" required id="f_payment_number" value="{{ suggested_payment_number }}">
     </div>
     <div class="col-auto">
       <label class="form-label small" for="f_payment_date">{{ t('Date') }}</label>
-      <input type="date" name="payment_date" class="form-control form-control-sm" required id="f_payment_date">
+      <input type="date" name="payment_date" class="form-control form-control-sm" required id="f_payment_date" value="{{ today }}">
     </div>
     <div class="col-auto">
       <label class="form-label small" for="f_amount">{{ t('Amount') }}</label>

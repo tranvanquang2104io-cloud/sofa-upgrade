@@ -1,148 +1,145 @@
 {% extends "base.html" %}
 {% from "macros/ui.html" import order_badge, page_header with context %}
 
-{% block title %}Dashboard - SofaFlow{% endblock %}
+{% block title %}{{ t('Tổng quan') }} - SofaFlow{% endblock %}
+
+{#
+  The home screen answers "what is waiting on me", for this person's role and
+  branches (app/services/home_service.py). It used to show everybody the same
+  four counts — how big the business is — which nobody opens the app to ask.
+
+  Every card links to exactly the rows it counted. Cards at zero stay, muted:
+  "nothing waiting" is information, and a card that vanishes cannot say it.
+#}
+{% macro money(v) %}{{ "{:,.0f}".format(v or 0) }} ₫{% endmacro %}
+{% macro delta(pct) %}
+  {% if pct is not none %}
+    <span class="small {{ 'text-success' if pct >= 0 else 'text-danger' }}">
+      <i class="bi {{ 'bi-arrow-up-right' if pct >= 0 else 'bi-arrow-down-right' }}"></i>
+      {{ pct|abs }}% {{ t('so với tháng trước') }}
+    </span>
+  {% else %}
+    <span class="small text-muted">{{ t('chưa có số tháng trước để so') }}</span>
+  {% endif %}
+{% endmacro %}
 
 {% block content %}
-{# The landing page has no breadcrumb — it IS the first crumb everywhere
-   else — but its title should be the same size as every other title, which
-   is what a browser-default <h1> was not. #}
-{{ page_header(t('Dashboard'), icon='bi-speedometer2') }}
+{{ page_header(t('Tổng quan'), icon='bi-speedometer2') }}
 
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card stats-card text-white bg-primary">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-white-50 mb-1">{{ t('Total Orders') }}</h6>
-                        <h2 class="card-text mb-0">{{ total_orders }}</h2>
-                    </div>
-                    <i class="bi bi-boxes" style="font-size: 2.5rem; opacity: 0.5;"></i>
-                </div>
-            </div>
-        </div>
-    </div>
+<p class="text-muted mb-4" data-testid="scope-line">
+  {{ t('Xin chào') }}, <strong>{{ session.full_name }}</strong> —
+  <strong>{{ counts.orders }}</strong> {{ t('đơn hàng') }} ·
+  <strong>{{ counts.customers }}</strong> {{ t('khách hàng') }} ·
+  <strong>{{ counts.stores }}</strong> {{ t('cửa hàng') }}
+  {% if role != 'company_admin' %}<span class="small">({{ t('trong chi nhánh của bạn') }})</span>{% endif %}
+</p>
 
-    <div class="col-md-3">
-        <div class="card stats-card text-white bg-success">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-white-50 mb-1">{{ t('Customers') }}</h6>
-                        <h2 class="card-text mb-0">{{ total_customers }}</h2>
-                    </div>
-                    <i class="bi bi-people" style="font-size: 2.5rem; opacity: 0.5;"></i>
-                </div>
-            </div>
-        </div>
+{% if headline %}
+{# Branch managers and company admins: the month so far, for what they run. #}
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+  <h2 class="h6 text-uppercase text-muted mb-0">{{ t('Tháng này') }}</h2>
+  {% if can_feature('reports') %}
+  <a class="small" href="{{ url_for('dashboard.reports') }}">{{ t('Xem báo cáo chi tiết') }} <i class="bi bi-chevron-right"></i></a>
+  {% endif %}
+</div>
+<div class="row g-3 mb-4" data-testid="headline">
+  <div class="col-6 col-lg-3">
+    <div class="border rounded p-3 h-100 bg-white">
+      <div class="text-muted small">{{ t('Doanh số đã ký') }}</div>
+      <div class="fs-5 fw-bold">{{ money(headline.booked) }}</div>
+      {{ delta(headline.booked_delta) }}
     </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="border rounded p-3 h-100 bg-white">
+      <div class="text-muted small">{{ t('Tiền đã thu') }}</div>
+      <div class="fs-5 fw-bold">{{ money(headline.cash) }}</div>
+      {{ delta(headline.cash_delta) }}
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a class="d-block border rounded p-3 h-100 bg-white text-decoration-none text-body"
+       href="{{ url_for('dashboard.customer_receivables') if can_feature('reports') else '#' }}">
+      <div class="text-muted small">{{ t('Khách còn nợ') }}</div>
+      <div class="fs-5 fw-bold">{{ money(headline.receivable) }}</div>
+      <span class="small text-muted">{{ t('tính đến hôm nay') }}</span>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a class="d-block border rounded p-3 h-100 bg-white text-decoration-none text-body"
+       href="{{ url_for('dashboard.list_orders', queue='late') }}">
+      <div class="text-muted small">{{ t('Đơn trễ hạn giao') }}</div>
+      <div class="fs-5 fw-bold {{ 'text-danger' if headline.late else '' }}">{{ headline.late }}</div>
+      <span class="small text-muted">{{ t('so với ngày đã cam kết') }}</span>
+    </a>
+  </div>
+</div>
+{% endif %}
 
-    <div class="col-md-3">
-        <div class="card stats-card text-white bg-info">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-white-50 mb-1">{{ t('Stores') }}</h6>
-                        <h2 class="card-text mb-0">{{ stores|length }}</h2>
-                    </div>
-                    <i class="bi bi-shop" style="font-size: 2.5rem; opacity: 0.5;"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card stats-card text-white bg-warning">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-white-50 mb-1">{{ t('In Progress') }}</h6>
-                        <h2 class="card-text mb-0">{{ in_progress }}</h2>
-                    </div>
-                    <i class="bi bi-hourglass-split" style="font-size: 2.5rem; opacity: 0.5;"></i>
-                </div>
-            </div>
-        </div>
-    </div>
+<h2 class="h6 text-uppercase text-muted mb-2">{{ t('Việc đang chờ') }}</h2>
+{% if not cards %}
+<div class="alert alert-info" data-testid="no-areas">
+  <i class="bi bi-info-circle"></i>
+  {{ t('Tài khoản của bạn chưa được cấp quyền khu vực làm việc nào, nên chưa có việc để hiện ở đây.') }}
+  {{ t('Hãy nhờ quản trị viên cấp quyền tại mục Quản trị → Người dùng.') }}
+</div>
+{% elif not waiting %}
+<div class="alert alert-success" data-testid="nothing-waiting">
+  <i class="bi bi-check2-circle"></i> {{ t('Không có việc gì đang chờ bạn.') }}
+</div>
+{% endif %}
+<div class="row g-3 mb-4" data-testid="work-queue">
+  {% for card in cards %}
+  <div class="col-6 col-md-4 col-xl-3">
+    <a href="{{ card.url }}" data-testid="queue-{{ card.key }}"
+       class="sf-queue sf-queue--{{ card.tone }} {{ 'sf-queue--empty' if not card.count }} d-block h-100 p-3 bg-white border rounded text-decoration-none text-body">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="fw-semibold">{{ t(card.label) }}</span>
+        <span class="fs-4 fw-bold sf-queue__count">{{ card.count }}</span>
+      </div>
+      <div class="small text-muted">{{ t(card.hint) }}</div>
+    </a>
+  </div>
+  {% endfor %}
 </div>
 
-<!-- Second row: completed + canceled -->
-<!-- <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card stats-card text-white bg-secondary">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-white-50 mb-1">Hoàn Thành</h6>
-                        <h2 class="card-text mb-0">{{ completed }}</h2>
-                    </div>
-                    <i class="bi bi-check-circle" style="font-size: 2.5rem; opacity: 0.5;"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stats-card text-white bg-danger">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-white-50 mb-1">Đã Hủy</h6>
-                        <h2 class="card-text mb-0">{{ canceled }}</h2>
-                    </div>
-                    <i class="bi bi-x-circle" style="font-size: 2.5rem; opacity: 0.5;"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div> -->
-
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-boxes"></i> {{ t('Recent Orders') }}
-                    <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-sm btn-primary float-end">{{ t('View All') }}</a>
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if orders %}
-                    <div class="table-responsive"><table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>{{ t('Order Code') }}</th>
-                                <th>{{ t('Customer') }}</th>
-                                <th>{{ t('Title') }}</th>
-                                <th>{{ t('Value') }}</th>
-                                <th>{{ t('Status') }}</th>
-                                <th>{{ t('Actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for order in orders %}
-                            <tr>
-                                <td><strong>{{ order.order_code }}</strong></td>
-                                <td>{{ order.customer.name }}</td>
-                                <td>{{ order.title }}</td>
-                                <td>{{ "{:,.0f}".format(order.total_amount|default(0)|float) }} ₫</td>
-                                <td>
-                                    {{ order_badge(order) }}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-info">
-                                        <i class="bi bi-eye"></i> {{ t('View') }}
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table></div>
-                {% else %}
-                    <p class="text-muted">{{ t('No orders yet.') }} <a href="{{ url_for('dashboard.create_order') }}">{{ t('Create new') }}</a></p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="bi bi-boxes"></i> {{ t('Recent Orders') }}</h5>
+    <a href="{{ url_for('dashboard.list_orders') }}" class="btn btn-sm btn-primary">{{ t('View All') }}</a>
+  </div>
+  <div class="card-body">
+    {% if orders %}
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ t('Order Code') }}</th>
+          <th>{{ t('Customer') }}</th>
+          <th>{{ t('Title') }}</th>
+          <th class="text-end">{{ t('Value') }}</th>
+          <th>{{ t('Status') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <td><strong>{{ order.order_code }}</strong></td>
+          <td>{{ order.customer.name if order.customer }}</td>
+          <td>{{ order.title }}</td>
+          <td class="text-end">{{ money(order.total_amount|default(0)|float) }}</td>
+          <td>{{ order_badge(order) }}</td>
+          <td class="text-end">
+            <a href="{{ url_for('dashboard.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-primary"
+               title="{{ t('View') }}" aria-label="{{ t('View') }}"><i class="bi bi-eye"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+    <p class="text-muted mb-0">{{ t('Chưa có đơn hàng nào.') }}</p>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

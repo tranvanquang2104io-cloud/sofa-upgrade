@@ -7,12 +7,10 @@ Two engines are available:
 """
 import os
 import re
-import json
 from datetime import datetime
 from io import BytesIO
-from flask import current_app
 from docx import Document as DocxDocument
-from docx.shared import Pt, RGBColor, Inches
+from docx.shared import RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import logging
 
@@ -27,19 +25,6 @@ class TemplateEngine:
     # Variable pattern - matches {{variable_name}}
     VARIABLE_PATTERN = r'\{\{(\w+)\}\}'
     
-    @staticmethod
-    def extract_variables(template_content):
-        """
-        Extract all variables from template
-        
-        Args:
-            template_content: RTF or text template content
-            
-        Returns:
-            list: List of variable names found in template
-        """
-        matches = re.findall(TemplateEngine.VARIABLE_PATTERN, template_content)
-        return list(set(matches))
     
     @staticmethod
     def render_template(template_content, variables_dict):
@@ -70,22 +55,6 @@ class TemplateEngine:
         
         return rendered
     
-    @staticmethod
-    def rtf_to_text(rtf_content):
-        """
-        Convert RTF content to plain text
-        
-        Args:
-            rtf_content: RTF formatted content
-            
-        Returns:
-            str: Plain text without RTF formatting
-        """
-        # Simple RTF stripping - removes common RTF control sequences
-        # For production, consider using striprtf library
-        text = re.sub(r'\\[a-z]+\d*\s?', '', rtf_content)
-        text = re.sub(r'[{}]', '', text)
-        return text.strip()
     
     @staticmethod
     def create_docx_document(rendered_content, document_title="Generated Document"):

@@ -194,7 +194,11 @@ def seed():
     sales = User(company_id=company.id, store_id=showroom.id, username='minh',
                  email='minh@sofa.test', full_name='Trần Văn Minh',
                  position='Nhân viên kinh doanh', role='user',
-                 phone='0977 111 222')
+                 phone='0977 111 222',
+                 # A salesperson sells: without these grants the demo had no
+                 # staff account that could see anything, so the staff home
+                 # screen could not be looked at at all.
+                 allowed_features=['customers', 'orders'])
     sales.set_password('demo1234')
     # CASE: a user who has left — the list must not offer them work
     left = User(company_id=company.id, store_id=showroom.id, username='cunhanvien',
@@ -984,6 +988,28 @@ def seed():
             from_state='draft', to_state='confirmed',
             user_id=admin.id, user_name=admin.full_name,
             occurred_at=dt.datetime.combine(d(-18), dt.time(14, 30))))
+
+    # What the app does when a quotation or contract is saved: the order is
+    # worth its active contract, else its latest quotation. Writing documents
+    # straight to the tables skipped it, so the order list and the home screen
+    # showed 0 ₫ for orders with a quotation — or a signed contract — behind them.
+    db.session.flush()
+    for order in Order.query.filter_by(company_id=company.id).all():
+        if order.total_amount:
+            continue
+        contract = (Contract.query.filter_by(order_id=order.id, is_active=True, is_canceled=False)
+                    .order_by(Contract.contract_date.desc()).first())
+        latest = (Quotation.query.filter_by(order_id=order.id, is_canceled=False)
+                  .order_by(Quotation.quotation_date.desc()).first())
+        confirmation = (OrderConfirmation.query.filter_by(
+            order_id=order.id, status=OrderConfirmation.STATUS_CONFIRMED, is_canceled=False)
+            .order_by(OrderConfirmation.confirmation_date.desc()).first())
+        if contract is not None:
+            order.total_amount = contract.contract_value
+        elif confirmation is not None:
+            order.total_amount = confirmation.total_amount
+        elif latest is not None:
+            order.total_amount = latest.total_amount
 
     db.session.commit()
     return company

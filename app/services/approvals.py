@@ -175,8 +175,24 @@ def pending_for(company_id, store_ids=None):
     """
     from app.models.models import ApprovalRequest
 
+    return (_pending_query(company_id, store_ids)
+            .order_by(ApprovalRequest.requested_at).all())
+
+
+def pending_count(company_id, store_ids=None):
+    """How many `pending_for` would list — for the menu badge.
+
+    Same query, so the number on the badge and the rows on the screen cannot
+    disagree about which branches a manager is shown.
+    """
+    return _pending_query(company_id, store_ids).count()
+
+
+def _pending_query(company_id, store_ids):
+    from app.models.models import ApprovalRequest
+
     query = ApprovalRequest.query.filter_by(
         company_id=company_id, status=ApprovalRequest.STATUS_PENDING)
     if store_ids is not None:
         query = query.filter(ApprovalRequest.store_id.in_(list(store_ids)))
-    return query.order_by(ApprovalRequest.requested_at).all()
+    return query

@@ -60,7 +60,7 @@
       <div class="col-md-2">
         <label class="form-label" for="f_seller_tax_code">{{ t('Seller Tax Code') }}</label>
         <input type="text" name="seller_tax_code" class="form-control"
-               value="{{ po.supplier.tax_code if po.supplier else '' }}" id="f_seller_tax_code">
+               value="{{ (po.supplier.tax_code or '') if po.supplier else '' }}" id="f_seller_tax_code">
       </div>
     </div>
   </div>

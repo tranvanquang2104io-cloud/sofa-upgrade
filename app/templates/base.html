@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SofaFlow - SaaS Customer Lifecycle Management{% endblock %}</title>
+    <title>{% block title %}SofaFlow{% endblock %}</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
@@ -27,47 +27,51 @@
 </head>
 <body>
     {% if current_user %}
+        {# Which item is current comes from app/utils/nav.py, an explicit map.
+           It used to be substring tests here, and `'order' in endpoint` lit
+           Orders on every purchase-order screen. #}
+        {% macro nav_active(section) %}{% if nav_section == section %}active{% endif %}{% endmacro %}
         {# First focusable thing on the page, on purpose. The navigation is
            five items plus three dropdowns — about twenty tab stops — and a
            keyboard user paid it on every one of the 47 screens, with the flash
            message confirming their save sitting after all of it. #}
         <a class="skip-link" href="#main-content">{{ t('Bỏ qua thanh điều hướng') }}</a>
         <!-- Navigation -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        {# Six business areas, in the order the work flows: sell → make → stock →
+           buy → report → administer. It used to be twelve top-level items, and at
+           1366px (the commonest laptop) every label wrapped onto two lines; at
+           1024px the bar pushed the page sideways and cut the last items off.
+           Labels never wrap now (`.sofa-nav`); below 1200px the bar collapses to
+           the menu button instead of breaking into more lines. #}
+        <nav class="navbar navbar-expand-xl navbar-dark bg-dark sofa-nav">
             <div class="container-fluid">
-                <a class="navbar-brand" href="{{ url_for('dashboard.index') }}">
+                <a class="navbar-brand {{ nav_active('home') }}" href="{{ url_for('dashboard.index') }}" title="{{ t('Tổng quan') }}">
                     <i class="bi bi-house-door-fill"></i> SofaFlow
                 </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="{{ t('Menu') }}">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto">
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
-                                <i class="bi bi-speedometer2"></i> Dashboard
+                        {# ── Bán hàng ── the mirror of Mua hàng: orders, the
+                           customers they are for, and the framework agreements
+                           some of them run under. #}
+                        {% if can_feature('orders') or can_feature('customers') %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {{ nav_active('sales') }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-bag"></i> {{ t('Sales') }}
                             </a>
-                        </li>
-                        {% if can_feature('customers') %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if 'customer' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_customers') }}">
-                                <i class="bi bi-people"></i> {{ t('Customers') }}
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% if can_feature('orders') %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if 'order' in (request.endpoint or '') or 'quotation' in (request.endpoint or '') or 'contract' in (request.endpoint or '') or 'handover' in (request.endpoint or '') or 'payment' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_orders') }}">
-                                <i class="bi bi-boxes"></i> {{ t('Orders') }}
-                            </a>
-                        </li>
-                        {% endif %}
-                        {# ── Hợp đồng nguyên tắc ── #}
-                        {% if can_feature('orders') %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if 'agreement' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_agreements') }}">
-                                <i class="bi bi-file-earmark-text"></i> {{ t('Agreements') }}
-                            </a>
+                            <ul class="dropdown-menu">
+                                {% if can_feature('orders') %}
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_orders') }}"><i class="bi bi-boxes"></i> {{ t('Orders') }}</a></li>
+                                {% endif %}
+                                {% if can_feature('customers') %}
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_customers') }}"><i class="bi bi-people"></i> {{ t('Customers') }}</a></li>
+                                {% endif %}
+                                {% if can_feature('orders') %}
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_agreements') }}"><i class="bi bi-file-earmark-text"></i> {{ t('Agreements') }}</a></li>
+                                {% endif %}
+                            </ul>
                         </li>
                         {% endif %}
                         {# ── Sản xuất ──
@@ -76,7 +80,7 @@
                            its own order. #}
                         {% if can_feature('orders') %}
                         <li class="nav-item">
-                            <a class="nav-link {% if 'production' in (request.endpoint or '') %}active{% endif %}" href="{{ url_for('dashboard.list_production_plans') }}">
+                            <a class="nav-link {{ nav_active('production') }}" href="{{ url_for('dashboard.list_production_plans') }}">
                                 <i class="bi bi-hammer"></i> {{ t('Production') }}
                             </a>
                         </li>
@@ -84,20 +88,30 @@
                         {# ── Kho & Vật tư ── #}
                         {% if can_feature('inventory') %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if 'material' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                            <a class="nav-link dropdown-toggle {{ nav_active('inventory') }}" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-box-seam"></i> {{ t('Inventory') }}
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_materials') }}"><i class="bi bi-box"></i> {{ t('Materials') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_materials', low_stock=1) }}"><i class="bi bi-exclamation-triangle"></i> {{ t('Low Stock') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.material_suppliers') }}"><i class="bi bi-truck"></i> {{ t('Suppliers') }}</a></li>
+                                {# Where the stock physically is, and moving it between
+                                   places, are inventory work. They were filed under
+                                   Administration between Stores and Users, so someone
+                                   looking for "chuyển vải sang xưởng" opened the wrong
+                                   menu first. Still admin-only, exactly as the routes are. #}
+                                {% if session.role in ('company_admin', 'store_admin') %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_warehouses') }}"><i class="bi bi-buildings"></i> {{ t('Kho hàng') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_stock_transfers') }}"><i class="bi bi-arrow-left-right"></i> {{ t('Điều chuyển kho') }}</a></li>
+                                {% endif %}
                             </ul>
                         </li>
                         {% endif %}
                         {# ── Mua hàng (cung ứng) ── #}
                         {% if can_feature('purchasing') %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if 'purchase' in (request.endpoint or '') or 'requisition' in (request.endpoint or '') or 'goods_receipt' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                            <a class="nav-link dropdown-toggle {{ nav_active('purchasing') }}" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-cart"></i> {{ t('Purchasing') }}
                             </a>
                             <ul class="dropdown-menu">
@@ -115,7 +129,7 @@
                                dropdown, beside Stores and Company Settings — a
                                report filed among the settings, while the
                                Reports menu did not know it existed. #}
-                            <a class="nav-link dropdown-toggle {% if 'report' in (request.endpoint or '') or 'receivable' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                            <a class="nav-link dropdown-toggle {{ nav_active('reports') }}" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-graph-up-arrow"></i> {{ t('Reports') }}
                             </a>
                             <ul class="dropdown-menu">
@@ -128,14 +142,11 @@
                         {# ── Quản trị ── #}
                         {% if session.role in ('company_admin', 'store_admin') %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if 'store' in (request.endpoint or '') or 'user' in (request.endpoint or '') or 'settings' in (request.endpoint or '') or 'template' in (request.endpoint or '') %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                            <a class="nav-link dropdown-toggle {{ nav_active('admin') }}" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-building-gear"></i> {{ t('Administration') }}
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_stores') }}"><i class="bi bi-shop"></i> {{ t('Stores') }}</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_warehouses') }}"><i class="bi bi-box-seam"></i> {{ t('Kho hàng') }}</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_stock_transfers') }}"><i class="bi bi-arrow-left-right"></i> {{ t('Điều chuyển kho') }}</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('dashboard.list_approvals') }}"><i class="bi bi-check2-square"></i> {{ t('Đề nghị chờ duyệt') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('dashboard.list_users') }}"><i class="bi bi-person-lines-fill"></i> {{ t('Users') }}</a></li>
                                 {% if session.role == 'company_admin' %}
                                 <li><hr class="dropdown-divider"></li>
@@ -150,6 +161,25 @@
                         {% endif %}
                     </ul>
                     <ul class="navbar-nav ms-auto">
+                        {# ── Chờ duyệt ──
+                           A request from staff waits on a manager, and the only way
+                           in used to be the fourth item of the Administration menu,
+                           with no count. Nothing told the manager anything was
+                           waiting, so the staff member waited too. Now it sits where
+                           it is seen on every page, with the number. #}
+                        {% if session.role in ('company_admin', 'store_admin') %}
+                        {% set _waiting = pending_approvals() %}
+                        <li class="nav-item">
+                            {# Icon + count on the bar; the words stay available as the
+                               tooltip, to a screen reader, and in the collapsed menu. #}
+                            <a class="nav-link {{ nav_active('approvals') }}" href="{{ url_for('dashboard.list_approvals') }}"
+                               title="{{ t('Đề nghị chờ duyệt') }}{% if _waiting %}: {{ _waiting }}{% endif %}"
+                               aria-label="{{ t('Đề nghị chờ duyệt') }}{% if _waiting %}: {{ _waiting }}{% endif %}" data-testid="nav-approvals">
+                                <i class="bi bi-inbox"></i><span class="d-xl-none ms-1">{{ t('Awaiting approval') }}</span>
+                                {% if _waiting %}<span class="badge rounded-pill bg-warning text-dark" data-testid="nav-approvals-count">{{ _waiting }}</span>{% endif %}
+                            </a>
+                        </li>
+                        {% endif %}
                         <!-- Language Switcher -->
                         <li class="nav-item">
                             {% if current_lang == 'vi' %}
@@ -163,14 +193,17 @@
                             {% endif %}
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            {% set _role_label = t('Company Admin') if session.role == 'company_admin' else (t('Store Admin') if session.role == 'store_admin' else t('Staff')) %}
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                               title="{{ session.full_name }} · {{ _role_label }}">
                                 <i class="bi bi-person-circle fs-5"></i>
-                                <span class="d-flex flex-column lh-1">
-                                    <span style="font-size:.9rem">{{ session.full_name }}</span>
-                                    <span class="badge bg-secondary mt-1" style="font-weight:500;align-self:flex-start">{% if session.role == 'company_admin' %}{{ t('Company Admin') }}{% elif session.role == 'store_admin' %}{{ t('Store Admin') }}{% else %}{{ t('Staff') }}{% endif %}</span>
-                                </span>
+                                <span class="sofa-nav-user">{{ session.full_name }}</span>
                             </a>
+                            {# The role moved in here: it is looked up, not read on every
+                               page, and it cost the bar a second line. #}
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><span class="dropdown-item-text fw-semibold">{{ session.full_name }}</span></li>
+                                <li><span class="dropdown-item-text"><span class="badge bg-secondary">{{ _role_label }}</span></span></li>
                                 <li><span class="dropdown-item-text text-muted small">{{ session.username }}</span></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> {{ t('Log Out') }}</a></li>

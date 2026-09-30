@@ -1,110 +1,277 @@
 {% extends "base.html" %}
 {% from "macros/ui.html" import page_header with context %}
-
 {% block title %}{{ t('Reports') }} - SofaFlow{% endblock %}
 
-{% macro kpi(label, value, money=True, sub='') %}
-<div class="col-6 col-md-3 mb-3">
+{#
+  Figures for a PERIOD, for the branches the reader may see
+  (app/services/report_service.py). The old page showed all-time,
+  company-wide totals to anyone with "reports": no way to tell whether a figure
+  was good, and a branch manager read every branch's numbers.
+
+  Each section answers one question a manager asks, and says which period it
+  covers — or that it is "as of today", for what is owed and what is late.
+#}
+{% macro money(v) %}{{ "{:,.0f}".format(v or 0) }} ₫{% endmacro %}
+{% macro delta(pct) %}
+  {% if pct is not none %}
+    <span class="small {{ 'text-success' if pct >= 0 else 'text-danger' }}">
+      <i class="bi {{ 'bi-arrow-up-right' if pct >= 0 else 'bi-arrow-down-right' }}"></i>
+      {{ pct|abs }}% {{ t('so với kỳ trước') }}
+    </span>
+  {% elif before %}
+    <span class="small text-muted">{{ t('kỳ trước chưa có số') }}</span>
+  {% endif %}
+{% endmacro %}
+{% macro tile(label, value, sub='', href=None, danger=False) %}
+<div class="col-6 col-lg-3">
+  {% if href %}<a class="d-block text-decoration-none text-body h-100" href="{{ href }}">{% endif %}
   <div class="border rounded p-3 h-100 bg-white">
     <div class="text-muted small">{{ label }}</div>
-    <div class="fs-5 fw-bold">{% if money %}{{ "{:,.0f}".format(value) }} ₫{% else %}{{ value }}{% endif %}</div>
-    {% if sub %}<div class="text-muted small">{{ sub }}</div>{% endif %}
+    <div class="fs-5 fw-bold {{ 'text-danger' if danger }}">{{ value }}</div>
+    {{ sub }}
   </div>
+  {% if href %}</a>{% endif %}
 </div>
 {% endmacro %}
 
 {% block content %}
-<div class="container-fluid py-3">
-  {{ page_header(t('Reports'), icon='bi-graph-up-arrow',
-                 crumbs=[(t('Dashboard'), url_for('dashboard.index')),
-                         (t('Reports'), None)]) }}
+{{ page_header(t('Reports'), icon='bi-graph-up-arrow',
+               crumbs=[(t('Dashboard'), url_for('dashboard.index')), (t('Reports'), None)]) }}
 
-  {# This page showed three cards of figures and led nowhere: the one report
-     the product actually has was filed in the Administration menu instead.
-     The figures are the overview; the reports beneath it are where a person
-     goes to act on one. #}
-  <div class="card mb-4">
-    <div class="card-header"><strong>{{ t('Các báo cáo') }}</strong></div>
-    <div class="list-group list-group-flush">
-      <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-         href="{{ url_for('dashboard.customer_receivables') }}">
-        <span>
-          <i class="bi bi-cash-stack text-warning-emphasis"></i>
-          <strong>{{ t('Customer Debt') }}</strong>
-          <div class="small text-muted">{{ t('Ai đang nợ, nợ bao nhiêu, và khoản nào đang chờ xác nhận.') }}</div>
-        </span>
-        <i class="bi bi-chevron-right text-muted"></i>
-      </a>
-    </div>
+{# Period and branch. Plain GET, so a view can be bookmarked or sent on. #}
+<form method="get" class="row g-2 align-items-end mb-3" data-testid="report-filters">
+  <div class="col-auto">
+    <label class="form-label small mb-1" for="f_period">{{ t('Kỳ báo cáo') }}</label>
+    <select id="f_period" name="period" class="form-select form-select-sm" style="min-width: 11rem">
+      {% for key, label in period_options %}
+      <option value="{{ key }}" {{ 'selected' if key == period.key }}>{{ t(label) }}</option>
+      {% endfor %}
+    </select>
   </div>
+  {% if branches %}
+  <div class="col-auto">
+    <label class="form-label small mb-1" for="f_store">{{ t('Chi nhánh') }}</label>
+    <select id="f_store" name="store" class="form-select form-select-sm" style="min-width: 11rem">
+      <option value="">{{ t('Toàn công ty') }}</option>
+      {% for s in branches %}
+      <option value="{{ s.id }}" {{ 'selected' if selected_store == s.id|string }}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {# A button, not onchange: a select that reloads the page on every arrow
+     key cannot be used from the keyboard (test_keyboard_navigation). #}
+  <div class="col-auto"><button type="submit" class="btn btn-sm btn-primary">{{ t('Xem') }}</button></div>
+  <div class="col text-end small text-muted">
+    {% if period.start %}{{ period.start.strftime('%d/%m/%Y') }} – {{ period.last_day.strftime('%d/%m/%Y') if period.last_day }}
+      {% if before %}· {{ t('so với') }} {{ before.start.strftime('%m/%Y') if period.key in ('month', 'last_month') else before.start.strftime('%d/%m/%Y') ~ ' – ' ~ before.last_day.strftime('%d/%m/%Y') }}{% endif %}
+    {% endif %}
+    {% if scope_note %}<div data-testid="scope-note"><i class="bi bi-shop"></i> {{ scope_note }}</div>{% endif %}
+  </div>
+</form>
 
-  <!-- ── Sales ─────────────────────────────────────────── -->
-  <div class="card mb-4">
-    <div class="card-header bg-primary text-white"><i class="bi bi-cart-check"></i> {{ t('Sales') }}</div>
-    <div class="card-body">
-      <div class="row">
-        {{ kpi(t('Orders'), sales.orders_total, money=False) }}
-        {{ kpi(t('In progress'), sales.in_progress, money=False, sub=t('Completed') ~ ': ' ~ sales.completed) }}
-        {{ kpi(t('Booked (signed)'), sales.booked_value) }}
-        {{ kpi(t('Cash collected'), sales.collected) }}
-      </div>
-      {% if sales.top_customers %}
-      <h6 class="mt-2">{{ t('Top customers') }}</h6>
-      <div class="table-responsive">
+{# ── The four figures ─────────────────────────────────────────────── #}
+<div class="row g-3 mb-4" data-testid="headline">
+  {{ tile(t('Doanh số đã ký'), money(headline.booked), delta(headline.booked_delta)) }}
+  {{ tile(t('Tiền đã thu'), money(headline.cash), delta(headline.cash_delta)) }}
+  {% set debt_note %}<span class="small text-muted">{{ t('tính đến hôm nay') }} · {{ t('xem ai đang nợ') }}</span>{% endset %}
+  {{ tile(t('Khách còn nợ'), money(headline.receivable), debt_note,
+          href=url_for('dashboard.customer_receivables', store=selected_store or None)) }}
+  {% set punctual_note %}<span class="small text-muted">{{ delivery.on_time }}/{{ delivery.judged }} {{ t('lần bàn giao trong kỳ') }}</span>{% endset %}
+  {{ tile(t('Giao đúng hẹn'),
+          (delivery.on_time_pct ~ '%') if delivery.on_time_pct is not none else '—', punctual_note) }}
+</div>
+
+<div class="row g-4">
+  {# ── Sales ─────────────────────────────────────────────────────── #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bag"></i> <strong>{{ t('Bán hàng') }}</strong> <span class="text-muted small">— {{ t(period.label) }}</span></div>
+      <div class="card-body">
+        <div class="row text-center mb-3">
+          <div class="col"><div class="fs-4 fw-bold">{{ sales.orders_total }}</div><div class="small text-muted">{{ t('đơn mới') }}</div></div>
+          <div class="col"><div class="fs-4 fw-bold">{{ sales.completed }}</div><div class="small text-muted">{{ t('đơn hoàn thành') }}</div></div>
+          <div class="col"><div class="fs-4 fw-bold">{{ sales.in_progress }}</div><div class="small text-muted">{{ t('đang làm') }}</div></div>
+          <div class="col"><div class="fs-4 fw-bold">{{ sales.canceled }}</div><div class="small text-muted">{{ t('đã hủy') }}</div></div>
+        </div>
+        <h3 class="h6">{{ t('Khách hàng ký nhiều nhất') }}</h3>
+        {% if sales.top_customers %}
         <table class="table table-sm mb-0">
-          <thead><tr><th>{{ t('Customer') }}</th><th class="text-end">{{ t('Value') }}</th></tr></thead>
           <tbody>
-            {% for c in sales.top_customers %}
-            <tr><td>{{ c.name }}</td><td class="text-end">{{ "{:,.0f}".format(c.value) }} ₫</td></tr>
-            {% endfor %}
+          {% for c in sales.top_customers %}
+            <tr><td>{{ c.name }}</td><td class="text-end">{{ money(c.value) }}</td></tr>
+          {% endfor %}
           </tbody>
         </table>
+        {% else %}<p class="text-muted small mb-0">{{ t('Chưa có hợp đồng nào được ký trong kỳ.') }}</p>{% endif %}
       </div>
-      {% endif %}
     </div>
   </div>
 
-  <!-- ── Purchasing ────────────────────────────────────── -->
-  <div class="card mb-4">
-    <div class="card-header bg-success text-white"><i class="bi bi-truck"></i> {{ t('Purchasing') }}</div>
-    <div class="card-body">
-      <div class="row">
-        {{ kpi(t('Requisitions'), purchasing.pr_count, money=False) }}
-        {{ kpi(t('Purchase orders'), purchasing.po_count, money=False, sub=t('Open') ~ ': ' ~ purchasing.open_pos) }}
-        {{ kpi(t('Goods receipts'), purchasing.gr_count, money=False) }}
-        {{ kpi(t('PO value'), purchasing.po_value) }}
-        {{ kpi(t('Received value'), purchasing.received_value) }}
-        {{ kpi(t('Outstanding (not received)'), purchasing.outstanding) }}
-      </div>
-      {% if purchasing.top_suppliers %}
-      <h6 class="mt-2">{{ t('Top suppliers') }}</h6>
-      <div class="table-responsive">
-        <table class="table table-sm mb-0">
-          <thead><tr><th>{{ t('Supplier') }}</th><th class="text-end">{{ t('Value') }}</th></tr></thead>
+  {# ── Delivery ──────────────────────────────────────────────────── #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-truck"></i> <strong>{{ t('Giao hàng đúng cam kết') }}</strong> <span class="text-muted small">— {{ t('tính đến hôm nay') }}</span></div>
+      <div class="card-body">
+        <p class="small text-muted">{{ t('Hạn giao lấy từ hợp đồng (ngày bắt đầu + số ngày hoàn thành) hoặc ngày giao trên đơn đặt hàng.') }}</p>
+        <h3 class="h6 {{ 'text-danger' if delivery.late }}">{{ t('Trễ hạn') }}: {{ delivery.late|length }}</h3>
+        {% if delivery.late %}
+        <table class="table table-sm" data-testid="late-orders">
           <tbody>
-            {% for s in purchasing.top_suppliers %}
-            <tr><td>{{ s.name }}</td><td class="text-end">{{ "{:,.0f}".format(s.value) }} ₫</td></tr>
-            {% endfor %}
+          {% for r in delivery.late[:8] %}
+            <tr>
+              <td><a href="{{ url_for('dashboard.view_order', order_id=r.order_id) }}">{{ r.order_code }}</a></td>
+              <td>{{ r.customer_name }}</td>
+              <td class="text-end text-danger">{{ t('trễ') }} {{ r.days }} {{ t('ngày') }}</td>
+            </tr>
+          {% endfor %}
           </tbody>
         </table>
+        {% if delivery.late|length > 8 %}<a class="small" href="{{ url_for('dashboard.list_orders', queue='late') }}">{{ t('Xem tất cả') }}</a>{% endif %}
+        {% endif %}
+        <h3 class="h6 mt-3">{{ t('Đến hạn trong 7 ngày') }}: {{ delivery.due_soon|length }}</h3>
+        {% if delivery.due_soon %}
+        <table class="table table-sm mb-0">
+          <tbody>
+          {% for r in delivery.due_soon[:8] %}
+            <tr>
+              <td><a href="{{ url_for('dashboard.view_order', order_id=r.order_id) }}">{{ r.order_code }}</a></td>
+              <td>{{ r.customer_name }}</td>
+              <td class="text-end">{{ r.due.strftime('%d/%m') if r.due }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
   </div>
 
-  <!-- ── Accounting ────────────────────────────────────── -->
-  <div class="card mb-4">
-    <div class="card-header bg-dark text-white"><i class="bi bi-cash-coin"></i> {{ t('Accounting') }}</div>
-    <div class="card-body">
-      <div class="row">
-        {{ kpi(t('Cash in'), accounting.cash_in) }}
-        {{ kpi(t('Receivable outstanding'), accounting.receivable) }}
-        {{ kpi(t('Advance collected'), accounting.advance_collected) }}
-        {{ kpi(t('Final collected'), accounting.final_collected) }}
-        {{ kpi(t('Pending confirmation'), accounting.pending_amount, sub=accounting.pending_count ~ ' ' ~ t('document(s)')) }}
+  {# ── Money in ──────────────────────────────────────────────────── #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-cash-stack"></i> <strong>{{ t('Thu tiền') }}</strong> <span class="text-muted small">— {{ t(period.label) }}</span></div>
+      <div class="card-body">
+        <table class="table table-sm mb-3">
+          <tbody>
+            <tr><td>{{ t('Tạm ứng đã thu') }}</td><td class="text-end">{{ money(accounting.advance_collected) }}</td></tr>
+            <tr><td>{{ t('Thanh toán cuối đã thu') }}</td><td class="text-end">{{ money(accounting.final_collected) }}</td></tr>
+            <tr class="fw-semibold"><td>{{ t('Tổng đã thu') }}</td><td class="text-end">{{ money(accounting.cash_in) }}</td></tr>
+          </tbody>
+        </table>
+        {% if accounting.pending_count %}
+        <div class="alert alert-warning small mb-0">
+          <i class="bi bi-hourglass-split"></i>
+          {{ accounting.pending_count }} {{ t('phiếu thu chưa xác nhận') }} ({{ money(accounting.pending_amount) }}) —
+          {{ t('chưa tính vào tiền đã thu.') }}
+          <a href="{{ url_for('dashboard.list_orders', queue='payment_unconfirmed') }}">{{ t('Xem') }}</a>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
 
+  {% if margins is not none %}
+  {# ── Margin (branch managers and company admins) ──────────────── #}
+  <div class="col-lg-6">
+    <div class="card h-100" data-testid="margins">
+      <div class="card-header"><i class="bi bi-percent"></i> <strong>{{ t('Lãi gộp vật tư') }}</strong> <span class="text-muted small">— {{ t('đơn hoàn thành trong kỳ') }}</span></div>
+      <div class="card-body">
+        {% if margins.orders %}
+        <div class="row text-center mb-2">
+          <div class="col"><div class="fw-bold">{{ money(margins.revenue) }}</div><div class="small text-muted">{{ t('doanh thu') }}</div></div>
+          <div class="col"><div class="fw-bold">{{ money(margins.material_cost) }}</div><div class="small text-muted">{{ t('vật tư đã xuất') }}</div></div>
+          <div class="col"><div class="fw-bold">{{ money(margins.gross_margin) }}{% if margins.margin_pct is not none %} <span class="small">({{ margins.margin_pct }}%)</span>{% endif %}</div><div class="small text-muted">{{ t('lãi gộp') }}</div></div>
+        </div>
+        <table class="table table-sm mb-2">
+          <thead><tr><th>{{ t('Đơn') }}</th><th class="text-end">{{ t('Doanh thu') }}</th><th class="text-end">{{ t('Lãi gộp') }}</th></tr></thead>
+          <tbody>
+          {% for o in margins.orders[:8] %}
+            <tr>
+              <td><a href="{{ url_for('dashboard.view_order', order_id=o.order_id) }}">{{ o.order_code }}</a>
+                {% if not o.material_cost_complete %}<span class="badge bg-warning text-dark" title="{{ t('Có vật tư chưa có giá vốn') }}">{{ t('thiếu giá') }}</span>{% endif %}</td>
+              <td class="text-end">{{ money(o.revenue) }}</td>
+              <td class="text-end">{{ money(o.gross_margin) }}{% if o.margin_pct is not none %} ({{ o.margin_pct }}%){% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<p class="text-muted small">{{ t('Chưa có đơn nào hoàn thành trong kỳ.') }}</p>{% endif %}
+        <p class="small text-muted mb-0">
+          {{ t('Mới tính vật tư — hệ thống chưa ghi nhận công thợ, nên đây chưa phải lợi nhuận cuối cùng.') }}
+          {% if margins.incomplete %}{{ margins.incomplete }} {{ t('đơn có vật tư chưa có giá vốn.') }}{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if purchasing %}
+  {# ── Purchasing ────────────────────────────────────────────────── #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-cart"></i> <strong>{{ t('Mua hàng') }}</strong> <span class="text-muted small">— {{ t(period.label) }}</span></div>
+      <div class="card-body">
+        <table class="table table-sm mb-3">
+          <tbody>
+            <tr><td>{{ t('Đơn mua trong kỳ') }}</td><td class="text-end">{{ purchasing.po_count }} · {{ money(purchasing.po_value) }}</td></tr>
+            <tr><td>{{ t('Đã nhận hàng (chưa VAT)') }}</td><td class="text-end">{{ money(purchasing.received_value) }}</td></tr>
+            <tr><td>{{ t('Còn chờ nhận (chưa VAT)') }}</td><td class="text-end">{{ money(purchasing.outstanding) }}</td></tr>
+            <tr><td>{{ t('Đơn mua đang mở') }} <span class="small text-muted">({{ t('tính đến hôm nay') }})</span></td>
+                <td class="text-end"><a href="{{ url_for('dashboard.list_purchase_orders', status='awaiting_receipt') }}">{{ purchasing.open_pos }}</a></td></tr>
+          </tbody>
+        </table>
+        {% if purchasing.top_suppliers %}
+        <h3 class="h6">{{ t('Nhà cung cấp mua nhiều nhất') }}</h3>
+        <table class="table table-sm mb-0"><tbody>
+          {% for s in purchasing.top_suppliers %}<tr><td>{{ s.name }}</td><td class="text-end">{{ money(s.value) }}</td></tr>{% endfor %}
+        </tbody></table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if by_branch %}
+{# ── Branches side by side (company admins only) ──────────────────── #}
+<div class="card mt-4" data-testid="by-branch">
+  <div class="card-header"><i class="bi bi-shop"></i> <strong>{{ t('Theo chi nhánh') }}</strong> <span class="text-muted small">— {{ t(period.label) }}</span></div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr><th>{{ t('Chi nhánh') }}</th><th class="text-end">{{ t('Doanh số đã ký') }}</th><th class="text-end">{{ t('Tiền đã thu') }}</th>
+            <th class="text-end">{{ t('Khách còn nợ') }}</th><th class="text-end">{{ t('Trễ hạn giao') }}</th></tr>
+      </thead>
+      <tbody>
+      {% for b in by_branch %}
+        <tr>
+          <td><a href="{{ url_for('dashboard.reports', period=period.key, store=b.store_id) }}">{{ b.name }}</a></td>
+          <td class="text-end">{{ money(b.booked) }}</td>
+          <td class="text-end">{{ money(b.cash) }}</td>
+          <td class="text-end">{{ money(b.receivable) }}</td>
+          <td class="text-end {{ 'text-danger fw-semibold' if b.late }}">{{ b.late }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# The detailed reports, where a person goes to act on a figure. #}
+<div class="card mt-4">
+  <div class="card-header"><strong>{{ t('Các báo cáo') }}</strong></div>
+  <div class="list-group list-group-flush">
+    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+       href="{{ url_for('dashboard.customer_receivables', store=selected_store or None) }}">
+      <span>
+        <i class="bi bi-cash-stack text-warning-emphasis"></i>
+        <strong>{{ t('Customer Debt') }}</strong>
+        <div class="small text-muted">{{ t('Ai đang nợ, nợ bao nhiêu, và khoản nào đang chờ xác nhận.') }}</div>
+      </span>
+      <i class="bi bi-chevron-right text-muted"></i>
+    </a>
+  </div>
 </div>
 {% endblock %}

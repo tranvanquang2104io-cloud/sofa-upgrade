@@ -7,7 +7,7 @@ from app.models import (
     HandoverRecord, PaymentReport, Document, DocumentTemplate, LifecycleStatus,
     MaterialUnit, MaterialCategory, Supplier, Material, MaterialStock,
 )
-from sqlalchemy import and_, desc
+from sqlalchemy import desc
 from sqlalchemy.exc import StatementError
 from sqlalchemy.orm import joinedload
 from datetime import datetime
@@ -70,14 +70,6 @@ class BaseRepository:
             )
         return self.model.query.filter_by(id=id, company_id=company_id).first()
     
-    def get_all(self, limit=None, offset=None):
-        """Get all records"""
-        query = self.model.query
-        if limit:
-            query = query.limit(limit)
-        if offset:
-            query = query.offset(offset)
-        return query.all()
     
     def update(self, id, **kwargs):
         """Update record"""
@@ -156,13 +148,6 @@ class UserRepository(BaseRepository):
             is_active=True
         ).first()
     
-    def get_by_email(self, email, company_id):
-        """Get user by email in company"""
-        return self.model.query.filter_by(
-            email=email,
-            company_id=company_id,
-            is_active=True
-        ).first()
     
     def get_users_for_company(self, company_id):
         """Get all active users for a company"""
@@ -172,13 +157,6 @@ class UserRepository(BaseRepository):
         """Get all active users assigned to a specific store"""
         return self.model.query.filter_by(store_id=store_id, is_active=True).all()
 
-    def get_admins_for_company(self, company_id):
-        """Get company_admin users for a company"""
-        return self.model.query.filter_by(
-            company_id=company_id,
-            role='company_admin',
-            is_active=True
-        ).all()
 
 
 class CustomerRepository(BaseRepository):
@@ -204,13 +182,6 @@ class CustomerRepository(BaseRepository):
             is_active=True
         ).first()
 
-    def get_by_store_and_code(self, store_id, customer_code):
-        """Get customer by store and code"""
-        return self.model.query.filter_by(
-            store_id=store_id,
-            customer_code=customer_code,
-            is_active=True
-        ).first()
     
     def get_customers_for_store(self, store_id, limit=None, offset=None):
         """Get all customers for a store"""
@@ -221,23 +192,6 @@ class CustomerRepository(BaseRepository):
             query = query.offset(offset)
         return query.all()
 
-    def get_customers_for_stores(self, store_ids, limit=None, offset=None):
-        """Get all customers across multiple stores"""
-        query = self.model.query.filter(
-            self.model.store_id.in_(store_ids), self.model.is_active == True
-        ).order_by(self.model.customer_code)
-        if offset:
-            query = query.offset(offset)
-        if limit:
-            query = query.limit(limit)
-        return query.all()
-
-
-    def count_for_stores(self, store_ids):
-        """Count customers across multiple stores"""
-        return self.model.query.filter(
-            self.model.store_id.in_(store_ids), self.model.is_active == True
-        ).count()
 
 
     def count_for_store(self, store_id):
@@ -259,13 +213,6 @@ class OrderRepository(BaseRepository):
             is_active=True
         ).first()
 
-    def get_by_store_and_code(self, store_id, order_code):
-        """Get order by store and code"""
-        return self.model.query.filter_by(
-            store_id=store_id,
-            order_code=order_code,
-            is_active=True
-        ).first()
     
     def get_orders_for_customer(self, customer_id):
         """Get all orders for a customer"""
@@ -337,9 +284,6 @@ class QuotationRepository(OrderScopedRepository):
     def __init__(self):
         super().__init__(Quotation)
     
-    def get_by_number(self, quotation_number):
-        """Get quotation by number"""
-        return self.model.query.filter_by(quotation_number=quotation_number).first()
 
     def get_by_company_and_number(self, company_id, quotation_number):
         """Per-tenant duplicate check: a quotation with this number within the
@@ -357,11 +301,6 @@ class QuotationRepository(OrderScopedRepository):
             desc(self.model.created_at)
         ).all()
     
-    def get_latest_for_order(self, order_id):
-        """Get latest quotation for order"""
-        return self.model.query.filter_by(order_id=order_id).order_by(
-            desc(self.model.created_at)
-        ).first()
 
 
 class ContractRepository(OrderScopedRepository):
@@ -370,9 +309,6 @@ class ContractRepository(OrderScopedRepository):
     def __init__(self):
         super().__init__(Contract)
     
-    def get_by_number(self, contract_number):
-        """Get contract by number"""
-        return self.model.query.filter_by(contract_number=contract_number).first()
 
     def get_by_company_and_number(self, company_id, contract_number):
         """Per-tenant duplicate check via the contract's order company (W6b/B3)."""
@@ -388,11 +324,6 @@ class ContractRepository(OrderScopedRepository):
             desc(self.model.created_at)
         ).all()
     
-    def get_latest_for_order(self, order_id):
-        """Get latest contract for order"""
-        return self.model.query.filter_by(order_id=order_id).order_by(
-            desc(self.model.created_at)
-        ).first()
 
 
 class HandoverRecordRepository(OrderScopedRepository):
@@ -401,9 +332,6 @@ class HandoverRecordRepository(OrderScopedRepository):
     def __init__(self):
         super().__init__(HandoverRecord)
     
-    def get_by_number(self, report_number):
-        """Get handover record by number"""
-        return self.model.query.filter_by(report_number=report_number).first()
 
     def get_by_company_and_number(self, company_id, report_number):
         """Per-tenant duplicate check via the record's order company (W6b/B3)."""
@@ -419,11 +347,6 @@ class HandoverRecordRepository(OrderScopedRepository):
             desc(self.model.created_at)
         ).all()
     
-    def get_latest_for_order(self, order_id):
-        """Get latest delivery report for order"""
-        return self.model.query.filter_by(order_id=order_id).order_by(
-            desc(self.model.created_at)
-        ).first()
 
 
 class PaymentReportRepository(OrderScopedRepository):
@@ -432,9 +355,6 @@ class PaymentReportRepository(OrderScopedRepository):
     def __init__(self):
         super().__init__(PaymentReport)
     
-    def get_by_number(self, report_number):
-        """Get payment report by number"""
-        return self.model.query.filter_by(report_number=report_number).first()
 
     def get_by_company_and_number(self, company_id, report_number):
         """Per-tenant duplicate check via the report's order company (W6b/B3)."""
@@ -450,12 +370,6 @@ class PaymentReportRepository(OrderScopedRepository):
             desc(self.model.created_at)
         ).all()
     
-    def get_for_order_by_type(self, order_id, payment_type):
-        """Get payment reports of specific type for order"""
-        return self.model.query.filter_by(
-            order_id=order_id,
-            payment_type=payment_type
-        ).order_by(desc(self.model.created_at)).all()
 
 
 class DocumentRepository(OrderScopedRepository):
@@ -476,23 +390,8 @@ class DocumentRepository(OrderScopedRepository):
             desc(self.model.generated_at)
         ).all()
     
-    def get_for_contract(self, contract_id):
-        """Get documents for contract"""
-        return self.model.query.filter_by(contract_id=contract_id).order_by(
-            desc(self.model.generated_at)
-        ).all()
     
-    def get_for_delivery(self, handover_record_id):
-        """Get documents for handover record"""
-        return self.model.query.filter_by(handover_record_id=handover_record_id).order_by(
-            desc(self.model.generated_at)
-        ).all()
     
-    def get_for_payment(self, payment_report_id):
-        """Get documents for payment report"""
-        return self.model.query.filter_by(payment_report_id=payment_report_id).order_by(
-            desc(self.model.generated_at)
-        ).all()
 
 
 class DocumentTemplateRepository(BaseRepository):
@@ -611,6 +510,12 @@ class MaterialRepository(BaseRepository):
             )
         q = q.order_by(self.model.material_code)
         if page:
+            # The list screen shows each row's stock, low-stock flag, unit and
+            # category; loaded lazily that was a query per row for each.
+            from sqlalchemy.orm import selectinload
+            q = q.options(selectinload(self.model.stock_entries),
+                          joinedload(self.model.unit),
+                          joinedload(self.model.category))
             return q.paginate(page=page, per_page=per_page, error_out=False)
         return q.all()
 
@@ -620,12 +525,6 @@ class MaterialRepository(BaseRepository):
             company_id=company_id, material_code=material_code
         ).first()
 
-    def count_for_company(self, company_id, active_only=True):
-        """Count materials for a company."""
-        q = self.model.query.filter_by(company_id=company_id)
-        if active_only:
-            q = q.filter_by(is_active=True)
-        return q.count()
 
 
 class MaterialStockRepository(BaseRepository):
@@ -638,11 +537,6 @@ class MaterialStockRepository(BaseRepository):
         """All stock entries for a material."""
         return self.model.query.filter_by(material_id=material_id).all()
 
-    def get_for_store(self, company_id, store_id):
-        """All stock entries for a specific store."""
-        return self.model.query.filter_by(
-            company_id=company_id, store_id=store_id
-        ).all()
 
     def get_entry(self, material_id, store_id):
         """Get the single stock entry for material+store (store_id may be None for company warehouse)."""

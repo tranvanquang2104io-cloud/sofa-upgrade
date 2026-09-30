@@ -7,7 +7,7 @@ Role hierarchy:
   user           - end-user; assigned to one store; handles operational documents
 """
 from functools import wraps
-from flask import session, redirect, url_for, g, abort, current_app
+from flask import session, redirect, url_for, g, abort
 from app.models import User, Company, Store
 from app.config.database import db
 
@@ -63,13 +63,6 @@ def clear_user_context():
     session.clear()
 
 
-def get_current_user() -> User | None:
-    """Return the currently logged-in User ORM object, or None."""
-    if 'user_id' in session:
-        return User.query.get(session['user_id'])
-    return None
-
-
 def get_current_company_id() -> str | None:
     """Return the current user's company UUID string."""
     return session.get('company_id')
@@ -122,20 +115,8 @@ def get_accessible_store_ids(company_id: str) -> list:
     return []
 
 
-def get_current_role() -> str | None:
-    return session.get('role')
-
-
 def is_company_admin() -> bool:
     return session.get('role') == User.ROLE_COMPANY_ADMIN
-
-
-def is_store_admin() -> bool:
-    return session.get('role') == User.ROLE_STORE_ADMIN
-
-
-def is_any_admin() -> bool:
-    return session.get('role') in (User.ROLE_COMPANY_ADMIN, User.ROLE_STORE_ADMIN)
 
 
 # ---------------------------------------------------------------------------

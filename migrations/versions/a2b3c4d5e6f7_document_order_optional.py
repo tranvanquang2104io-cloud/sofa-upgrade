@@ -19,6 +19,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+import app.models.types  # noqa: F401  (GUID: UUID on PostgreSQL, CHAR(36) elsewhere)
+
 revision: str = 'a2b3c4d5e6f7'
 down_revision: Union[str, Sequence[str], None] = 'd4e5f6a7b8c9'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -27,7 +29,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     with op.batch_alter_table('documents') as batch:
-        batch.alter_column('order_id', existing_type=sa.String(length=36),
+        batch.alter_column('order_id', existing_type=app.models.types.GUID(),
                            nullable=True)
 
 
@@ -49,5 +51,5 @@ def downgrade() -> None:
             'Reassign or remove them deliberately before downgrading.')
 
     with op.batch_alter_table('documents') as batch:
-        batch.alter_column('order_id', existing_type=sa.String(length=36),
+        batch.alter_column('order_id', existing_type=app.models.types.GUID(),
                            nullable=False)

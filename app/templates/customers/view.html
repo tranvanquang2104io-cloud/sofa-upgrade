@@ -154,7 +154,7 @@
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Total orders</span>
+                    <span class="text-muted">{{ t('Total orders') }}</span>
                     <strong>{{ orders|length }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
@@ -171,7 +171,7 @@
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between">
-                    <span class="text-muted">Total value</span>
+                    <span class="text-muted">{{ t('Total value') }}</span>
                     <strong>
                         {{ "{:,.0f}".format(orders|sum(attribute='total_amount') if orders else 0) }} ₫
                     </strong>
@@ -182,7 +182,7 @@
         <div class="d-grid gap-2">
             <a href="{{ url_for('dashboard.edit_customer', customer_id=customer.id) }}"
                class="btn btn-primary">
-                <i class="bi bi-pencil-fill"></i> {{ t('Edit') }} Information
+                <i class="bi bi-pencil-fill"></i> {{ t('Edit') }} {{ t('Information') }}
             </a>
             <a href="{{ url_for('dashboard.list_customers') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> {{ t('Customers') }} List

@@ -25,6 +25,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+import app.models.types  # noqa: F401  (GUID: UUID on PostgreSQL, CHAR(36) elsewhere)
+
 revision: str = 'b9c0d1e2f3a4'
 down_revision: Union[str, Sequence[str], None] = 'a8b9c0d1e2f3'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -34,23 +36,23 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         'stock_movements',
-        sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('company_id', sa.String(length=36),
+        sa.Column('id', app.models.types.GUID(), primary_key=True),
+        sa.Column('company_id', app.models.types.GUID(),
                   sa.ForeignKey('companies.id'), nullable=False, index=True),
-        sa.Column('material_id', sa.String(length=36),
+        sa.Column('material_id', app.models.types.GUID(),
                   sa.ForeignKey('materials.id'), nullable=False, index=True),
-        sa.Column('store_id', sa.String(length=36), sa.ForeignKey('stores.id'),
+        sa.Column('store_id', app.models.types.GUID(), sa.ForeignKey('stores.id'),
                   index=True),
-        sa.Column('warehouse_id', sa.String(length=36),
+        sa.Column('warehouse_id', app.models.types.GUID(),
                   sa.ForeignKey('warehouses.id'), index=True),
         sa.Column('quantity', sa.Numeric(15, 2), nullable=False),
         sa.Column('movement_type', sa.String(length=20), nullable=False,
                   index=True),
         sa.Column('ref_type', sa.String(length=30)),
-        sa.Column('ref_id', sa.String(length=36), index=True),
+        sa.Column('ref_id', app.models.types.GUID(), index=True),
         sa.Column('notes', sa.Text()),
         sa.Column('created_at', sa.DateTime(), index=True),
-        sa.Column('created_by_id', sa.String(length=36),
+        sa.Column('created_by_id', app.models.types.GUID(),
                   sa.ForeignKey('users.id')),
     )
 

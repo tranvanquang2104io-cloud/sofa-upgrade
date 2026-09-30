@@ -66,5 +66,6 @@ def test_the_kept_sentence_is_the_one_that_names_the_consequence():
 def test_the_actions_still_work_after_the_dialogs_were_tidied(action):
     """The buttons must still submit; only the duplicate ask is removed."""
     text = _text()
-    assert f'title="{action.capitalize()}"' in text, (
+    # The tooltip now goes through t() (it was English on Vietnamese screens).
+    assert f"title=\"{{{{ t('{action.capitalize()}') }}}}\"" in text, (
         f'the {action} button disappeared along with its duplicate dialog')

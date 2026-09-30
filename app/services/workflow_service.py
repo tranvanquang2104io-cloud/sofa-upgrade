@@ -187,12 +187,32 @@ class WorkflowService:
         existing = WorkflowRule.query.filter_by(
             company_id=company_id, action=action,
         ).order_by(WorkflowRule.sort_order).all()
+        return WorkflowService._effective(company_id, action, existing)
+
+    @staticmethod
+    def _effective(company_id, action, existing):
+        """The one place that turns stored rows into the rules that apply."""
         if existing:
             return [rule for rule in existing if rule.is_active]
         return [
             WorkflowRule(company_id=company_id, action=a, prerequisite=p, mode=m)
             for (a, p, m) in DEFAULT_RULES if a == action
         ]
+
+    @staticmethod
+    def rules_by_action(company_id):
+        """`rules_for` for every action at once, in one query.
+
+        The order screen asks about all ten actions to draw its advice, and
+        asking one action at a time read the same table ten times per page.
+        """
+        stored = {}
+        for rule in (WorkflowRule.query.filter_by(company_id=company_id)
+                     .order_by(WorkflowRule.sort_order).all()):
+            stored.setdefault(rule.action, []).append(rule)
+        return {action: WorkflowService._effective(company_id, action,
+                                                    stored.get(action))
+                for action in ALL_ACTIONS}
 
     # ---- evaluation --------------------------------------------------
 
@@ -211,7 +231,7 @@ class WorkflowService:
         return f"Bước này yêu cầu {label}."
 
     @classmethod
-    def check(cls, order, action):
+    def check(cls, order, action, rules=None):
         """Evaluate ``action`` against ``order``.
 
         Returns ``(blocked, warnings)``:
@@ -219,6 +239,9 @@ class WorkflowService:
                            with no recorded waiver)
           * ``warnings`` — optional rules whose prerequisite is unmet
         Both are lists of ``(rule, message)``.
+
+        ``rules`` lets a caller that already holds this action's rules (from
+        `rules_by_action`) skip reading them again.
         """
         if order is None:
             raise WorkflowBlocked('Order not found')
@@ -226,7 +249,9 @@ class WorkflowService:
         lifecycle = order.lifecycle
         blocked, warnings = [], []
 
-        for rule in cls.rules_for(order.company_id, action):
+        if rules is None:
+            rules = cls.rules_for(order.company_id, action)
+        for rule in rules:
             met = bool(getattr(lifecycle, rule.prerequisite, False)) if lifecycle else False
             if met:
                 continue
@@ -261,17 +286,21 @@ class WorkflowService:
         quotation first, but not always"; dropping the warning turned that
         advice into silence.
 
-        Returns ``[{'action': ..., 'message': ...}]``. Advice only: nothing here
+        Returns ``[{'action': ..., 'message': ..., 'label': ...}]``. Advice only: nothing here
         prevents anything, and an empty list means the page shows nothing.
         """
         if order is None:
             return []
 
         advisories = []
+        rules = cls.rules_by_action(order.company_id)
         for action in ALL_ACTIONS:
-            _blocked, warnings = cls.check(order, action)
+            _blocked, warnings = cls.check(order, action, rules=rules[action])
             for _rule, message in warnings:
-                advisories.append({'action': action, 'message': message})
+                # The label names the step: the message says "this step",
+                # which on its own told the reader nothing about which one.
+                advisories.append({'action': action, 'message': message,
+                                   'label': ACTION_LABELS_VI.get(action, action)})
         return advisories
 
     @staticmethod

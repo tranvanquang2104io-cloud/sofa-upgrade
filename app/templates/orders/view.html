@@ -168,24 +168,24 @@
                                             {{ doc_badge(quotation) }}
                                         </div>
                                         <div class="d-flex gap-1">
-                                            <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
+                                            <a href="{{ url_for('dashboard.view_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="{{ t('View') }}" aria-label="{{ t('View') }}">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if not quotation.is_approved %}
-                                            <a href="{{ url_for('dashboard.edit_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
+                                            <a href="{{ url_for('dashboard.edit_quotation', quotation_id=quotation.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if quotation.can_approve() %}
                                             <form method="POST" action="{{ url_for('dashboard.approve_quotation', quotation_id=quotation.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Approve this quotation? After approval it can no longer be edited.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Approve" aria-label="Approve">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="{{ t('Approve') }}" aria-label="{{ t('Approve') }}">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
                                             {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ quotation.id }}" title="Generate" aria-label="Generate">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ quotation.id }}" title="{{ t('Generate') }}" aria-label="{{ t('Generate') }}">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -198,7 +198,7 @@
                             {% else %}
                                 <p class="text-muted">{{ t('Pending') }}</p>
                                 <a href="{{ url_for('dashboard.create_quotation', order_id=order.id) }}" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-plus"></i> Create Quotation
+                                    <i class="bi bi-plus"></i> {{ t('Create Quotation') }}
                                 </a>
                             {% endif %}
                         </div>
@@ -225,24 +225,24 @@
                                             {{ doc_badge(contract) }}
                                         </div>
                                         <div class="d-flex gap-1">
-                                            <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
+                                            <a href="{{ url_for('dashboard.view_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="{{ t('View') }}" aria-label="{{ t('View') }}">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if not contract.is_signed %}
-                                            <a href="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
+                                            <a href="{{ url_for('dashboard.edit_contract', contract_id=contract.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if contract.can_sign() %}
                                             <form method="POST" action="{{ url_for('dashboard.sign_contract', contract_id=contract.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Mark this contract as signed? A signed contract can no longer be edited or cancelled.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Sign" aria-label="Sign">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="{{ t('Sign') }}" aria-label="{{ t('Sign') }}">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
                                             {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ contract.id }}" title="Generate" aria-label="Generate">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModal{{ contract.id }}" title="{{ t('Generate') }}" aria-label="{{ t('Generate') }}">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -255,7 +255,7 @@
                                 <p class="text-muted">{{ t('Pending') }}</p>
                                 {% if lifecycle.quotation_approved %}
                                 <a href="{{ url_for('dashboard.create_contract', order_id=order.id) }}" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-plus"></i> Create Contract
+                                    <i class="bi bi-plus"></i> {{ t('Create Contract') }}
                                 </a>
                                 {% endif %}
                             {% endif %}
@@ -288,14 +288,14 @@
                                                 {{ doc_badge(payment) }}
                                             </div>
                                             <div class="d-flex gap-1">
-                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
+                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="{{ t('View') }}" aria-label="{{ t('View') }}">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                                 {% if not payment.is_confirmed and not payment.is_canceled %}
-                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
+                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="{{ t('Confirm') }}" aria-label="{{ t('Confirm') }}" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                                 <div class="modal fade" id="confirmPayModal{{ payment.id }}" tabindex="-1">
@@ -327,7 +327,7 @@
                                                 </div>
                                                 {% endif %}
                                                 {% if not payment.is_canceled %}
-                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="Generate" aria-label="Generate">
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalAdv{{ payment.id }}" title="{{ t('Generate') }}" aria-label="{{ t('Generate') }}">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
                                                 {% endif %}
@@ -373,22 +373,22 @@
                                             {{ doc_badge(handover) }}
                                         </div>
                                         <div class="d-flex gap-1">
-                                            <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
+                                            <a href="{{ url_for('dashboard.view_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="{{ t('View') }}" aria-label="{{ t('View') }}">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if not handover.is_confirmed %}
-                                            <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
+                                            <a href="{{ url_for('dashboard.edit_handover', handover_id=handover.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             <form method="POST" action="{{ url_for('dashboard.confirm_handover', handover_id=handover.id) }}" style="display:inline;"
                                                   onsubmit="return confirm('{{ t('Confirm this handover? It records that the customer accepted the goods and cannot be undone.') }}');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="{{ t('Confirm') }}" aria-label="{{ t('Confirm') }}">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                             </form>
                                             {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalHO{{ handover.id }}" title="Generate" aria-label="Generate">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalHO{{ handover.id }}" title="{{ t('Generate') }}" aria-label="{{ t('Generate') }}">
                                                 <i class="bi bi-file-text"></i>
                                             </button>
                                         </div>
@@ -427,14 +427,14 @@
                                                 {{ doc_badge(payment) }}
                                             </div>
                                             <div class="d-flex gap-1">
-                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="View" aria-label="View">
+                                                <a href="{{ url_for('dashboard.view_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill" style="margin: 0 3px;" title="{{ t('View') }}" aria-label="{{ t('View') }}">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                                 {% if not payment.is_confirmed and not payment.is_canceled %}
-                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="Edit" aria-label="Edit">
+                                                <a href="{{ url_for('dashboard.edit_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" style="margin: 0 3px;" title="{{ t('Edit') }}" aria-label="{{ t('Edit') }}">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="Confirm" aria-label="Confirm" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" style="margin: 0 3px;" title="{{ t('Confirm') }}" aria-label="{{ t('Confirm') }}" data-bs-toggle="modal" data-bs-target="#confirmPayModal{{ payment.id }}">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                                 <div class="modal fade" id="confirmPayModal{{ payment.id }}" tabindex="-1">
@@ -466,7 +466,7 @@
                                                 </div>
                                                 {% endif %}
                                                 {% if not payment.is_canceled %}
-                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="Generate" aria-label="Generate">
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" style="margin: 0 3px;" data-bs-toggle="modal" data-bs-target="#generateModalFinal{{ payment.id }}" title="{{ t('Generate') }}" aria-label="{{ t('Generate') }}">
                                                     <i class="bi bi-file-text"></i>
                                                 </button>
                                                 {% endif %}
@@ -499,7 +499,7 @@
                 <div class="d-grid gap-2">
                     {% if not lifecycle.quotation_created %}
                     <a href="{{ url_for('dashboard.create_quotation', order_id=order.id) }}" class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Create Quotation
+                        <i class="bi bi-plus"></i> {{ t('Create Quotation') }}
                     </a>
                     {% endif %}
                     
@@ -658,7 +658,7 @@
                 <div class="workflow-advisory alert alert-light border small mt-3 mb-0">
                   <i class="bi bi-info-circle text-primary"></i>
                   {% for advisory in workflow_advisories %}
-                  <div class="text-muted">{{ t(advisory.message) }}</div>
+                  <div class="text-muted"><strong>{{ t(advisory.label) }}:</strong> {{ t(advisory.message) }}</div>
                   {% endfor %}
                 </div>
                 {% endif %}
@@ -714,13 +714,13 @@
                         {{ t('Warning:') }} {{ t('This action cannot be undone. The order will be marked as canceled.') }}
                     </div>
                     <div class="alert alert-info">
-                        <strong>Order Code:</strong> {{ order.order_code }}<br>
-                        <strong>Customer:</strong> {{ order.customer.name }}<br>
+                        <strong>{{ t('Order Code:') }}</strong> {{ order.order_code }}<br>
+                        <strong>{{ t('Customer:') }}</strong> {{ order.customer.name }}<br>
                         <strong>{{ t('Amount:') }}</strong> {{ "{:,.0f}".format(order.total_amount|default(0)|float) }} đ
                     </div>
                     <div class="mb-3">
                         <label for="canceled_reason" class="form-label">{{ t('Cancellation Reason *') }}</label>
-                        <textarea class="form-control" id="canceled_reason" name="canceled_reason" rows="3" required placeholder="Please provide a reason for canceling this order..."></textarea>
+                        <textarea class="form-control" id="canceled_reason" name="canceled_reason" rows="3" required placeholder="{{ t('Please provide a reason for canceling this order...') }}"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -109,7 +109,7 @@
                             <table class="table table-sm table-bordered">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width:5%">No.</th>
+                                        <th style="width:5%">{{ t('No.') }}</th>
                                         <th style="width:22%">{{ t('Item / Work') }}</th>
                                         <th style="width:7%">{{ t('Unit') }}</th>
                                         <th style="width:7%">{{ t('Delivered') }}</th>
@@ -229,32 +229,32 @@
 
     <div class="col-md-3">
         <div class="card mb-3">
-            <div class="card-header"><h6 class="mb-0"><i class="bi bi-info-circle"></i> Order Information</h6></div>
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-info-circle"></i> {{ t('Order Information') }}</h6></div>
             <div class="card-body">
                 <dl class="row mb-0 small">
-                    <dt class="col-sm-5">Order:</dt>
+                    <dt class="col-sm-5">{{ t('Order:') }}</dt>
                     <dd class="col-sm-7">{{ order.order_code }}</dd>
-                    <dt class="col-sm-5">Customer:</dt>
+                    <dt class="col-sm-5">{{ t('Customer:') }}</dt>
                     <dd class="col-sm-7">{{ order.customer.name }}</dd>
-                    <dt class="col-sm-5">Value:</dt>
+                    <dt class="col-sm-5">{{ t('Value:') }}</dt>
                     <dd class="col-sm-7">{{ "{:,.0f}".format(order.total_amount) }} đ</dd>
                 </dl>
             </div>
         </div>
         {% if active_contract %}
         <div class="card border-success">
-            <div class="card-header bg-success bg-opacity-10"><h6 class="mb-0 text-success"><i class="bi bi-file-earmark-text"></i> Contract</h6></div>
+            <div class="card-header bg-success bg-opacity-10"><h6 class="mb-0 text-success"><i class="bi bi-file-earmark-text"></i> {{ t('Contract') }}</h6></div>
             <div class="card-body">
                 <dl class="row mb-0 small">
-                    <dt class="col-sm-5">Contract No.:</dt>
+                    <dt class="col-sm-5">{{ t('Contract No.:') }}</dt>
                     <dd class="col-sm-7"><strong>{{ active_contract.contract_number }}</strong></dd>
-                    <dt class="col-sm-5">Sign Date:</dt>
+                    <dt class="col-sm-5">{{ t('Sign Date:') }}</dt>
                     <dd class="col-sm-7">{{ active_contract.contract_date.strftime('%d/%m/%Y') if active_contract.contract_date else '—' }}</dd>
-                    <dt class="col-sm-5">Value:</dt>
+                    <dt class="col-sm-5">{{ t('Value:') }}</dt>
                     <dd class="col-sm-7">{{ "{:,.0f}".format(active_contract.contract_value) }} ₫</dd>
                     <dt class="col-sm-5">VAT:</dt>
                     <dd class="col-sm-7">{{ active_contract.vat_rate }}%</dd>
-                    <dt class="col-sm-5">Advance:</dt>
+                    <dt class="col-sm-5">{{ t('Advance:') }}</dt>
                     <dd class="col-sm-7">{{ active_contract.advance_percentage }}%</dd>
                 </dl>
             </div>

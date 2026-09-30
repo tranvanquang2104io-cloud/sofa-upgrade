@@ -25,7 +25,7 @@ import urllib.parse
 
 import requests
 
-import os; APP = os.environ.get('SOFA_APP','http://127.0.0.1:5000')
+APP = os.environ.get('SOFA_APP', 'http://127.0.0.1:5000')
 LOGIN = ('demo@sofa.test', 'demo1234')
 DB = os.environ.get('SOFA_DB','devdata.sqlite3')
 TEMPLATES = pathlib.Path('app/templates')
@@ -34,6 +34,27 @@ TEMPLATES = pathlib.Path('app/templates')
 # the session we are walking with.
 SKIP = {'/auth/logout', '/logout'}
 BINARY = ('/download', '/uploads/', '/print')
+
+
+class _QmarkConnection:
+    """A PostgreSQL connection that takes the same `?` placeholders as sqlite3,
+    so the walkers can check a QAS-like database as well as a demo file."""
+
+    def __init__(self, url):
+        import psycopg
+        self._conn = psycopg.connect(url.replace('postgresql+psycopg://', 'postgresql://', 1))
+
+    def execute(self, sql, params=()):
+        return self._conn.execute(sql.replace('?', '%s'), params)
+
+    def close(self):
+        self._conn.close()
+
+
+def connect(db=None):
+    """SOFA_DB may be a SQLite file or a PostgreSQL URL."""
+    db = db or DB
+    return _QmarkConnection(db) if '://' in db else sqlite3.connect(db)
 
 
 def login():
@@ -48,7 +69,7 @@ def login():
 
 def sample_ids():
     """One real id per entity, from the demo company."""
-    con = sqlite3.connect(DB)
+    con = connect()
     company = list(con.execute(
         "select id from companies where company_code='SOFADEMO'"))[0][0]
 
